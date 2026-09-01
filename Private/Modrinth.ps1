@@ -40,7 +40,7 @@ function Get-ModrinthCompatibleVersions {
         $query.Add('loaders=' + [System.Uri]::EscapeDataString($loaders))
     }
     $query.Add('include_changelog=false')
-    $response = @(Invoke-ModrinthApiRequest -PathAndQuery ("project/$projectId/version?" + ($query -join '&')) -FailureLabel 'version lookup')
+    $response = @(Invoke-ModrinthApiRequest -PathAndQuery ("project/$projectId/version?" + ($query -join '&')) -FailureLabel 'version lookup' | Sort-Object { [datetime](Get-MpPropertyValue -InputObject $_ -Name date_published) } -Descending)
     $versions = @(
         $index = 0
         foreach ($version in $response) {

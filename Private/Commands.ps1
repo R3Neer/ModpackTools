@@ -353,7 +353,7 @@ function Invoke-MpVersions {
 function Invoke-MpUpdate {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Show-MpHelp update; return }
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project', 'type', 'to') -SwitchOptions @('all')
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project', 'type', 'to') -SwitchOptions @('all', 'strict')
     if ($parsed.Options.ContainsKey('all') -and $parsed.Positionals.Count) {
         Throw-MpError -Message "Content selectors and '--all' cannot be combined" -Hint 'remove the selectors or --all' -ErrorId 'Option.ForbiddenCombination' -Category InvalidArgument
     }
@@ -377,6 +377,7 @@ function Invoke-MpUpdate {
     Write-MpStep "Updating $label in $($project.Id)..."
     $parameters = @{ Project = $project; Selectors = $selectors; All = $parsed.Options.ContainsKey('all'); Type = $type }
     if ($parsed.Options.ContainsKey('to')) { $parameters.To = [string]$parsed.Options.to }
+    if ($parsed.Options.ContainsKey('strict')) { $parameters.Strict = $true }
     $result = Update-ModpackContent @parameters
     Write-ModUpdateSummary -Update $result
 }

@@ -1025,6 +1025,7 @@ side = "client"
 mod-id = "vivid-id"
 version = "old"
 '@)
+            Mock Test-ModpackUpdatePreflight { [pscustomobject]@{ Checked = 4; Warnings = @(); Complete = $true } }
         }
 
         It 'lists compatible Modrinth versions and resolves a numbered choice in context' {
@@ -1167,6 +1168,63 @@ version = "new-version"
             { Update-ModpackContent -Project $project -Selectors @('sodium') } | Should Throw 'changes were restored'
             Test-Path -LiteralPath $sodiumPath | Should Be $true
             [System.Linq.Enumerable]::SequenceEqual([byte[]]$before, [byte[]][System.IO.File]::ReadAllBytes($sodiumPath)) | Should Be $true
+        }
+    }
+
+    Describe 'Update dependency preflight' {
+        BeforeEach {
+            $fixtureRoot = Join-Path $TestDrive ('compatibility-' + [guid]::NewGuid().ToString('N'))
+            [System.IO.Directory]::CreateDirectory($fixtureRoot) | Out-Null
+            $projectPath = New-TestModpack $fixtureRoot 'Pack' 'compatibility'
+            $project = Read-ModpackProject $projectPath
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'mods/target.pw.toml'), @'
+name = "Target"
+filename = "target-old.jar"
+side = "both"
+[update.modrinth]
+mod-id = "target-project"
+version = "target-old"
+'@)
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'mods/owner.pw.toml'), @'
+name = "Owner"
+filename = "owner.jar"
+side = "both"
+[update.modrinth]
+mod-id = "owner-project"
+version = "owner-current"
+'@)
+            $target = (Resolve-ModpackUpdateSelectors -Project $project -Selectors @('target'))[0]
+            $candidate = [pscustomobject]@{ Id='target-new'; Name='Target 2'; VersionNumber='2.0'; Dependencies=@() }
+            Mock Get-ModrinthCompatibleVersions { [pscustomobject]@{ Versions = @($candidate) } }
+        }
+
+        It 'blocks when another installed mod requires the previous target version' {
+            Mock Get-ModrinthVersionById {
+                [pscustomobject]@{ id='owner-current'; name='Owner'; dependencies=@([pscustomobject]@{ dependency_type='required'; project_id='target-project'; version_id='target-old' }) }
+            }
+            { Test-ModpackUpdatePreflight -Project $project -Targets @($target) } | Should Throw 'known dependency conflict'
+        }
+
+        It 'blocks when the candidate introduces a missing required dependency' {
+            $candidate.Dependencies = @([pscustomobject]@{ dependency_type='required'; project_id='missing-project'; version_id=$null })
+            Mock Get-ModrinthVersionById { [pscustomobject]@{ id='owner-current'; name='Owner'; dependencies=@() } }
+            { Test-ModpackUpdatePreflight -Project $project -Targets @($target) } | Should Throw 'requires missing Modrinth project missing-project'
+        }
+
+        It 'reports incomplete metadata by default and blocks it in strict mode' {
+            Mock Get-ModrinthVersionById { throw 'offline fixture' }
+            $result = Test-ModpackUpdatePreflight -Project $project -Targets @($target)
+            $result.Complete | Should Be $false
+            $result.Warnings.Count | Should Be 1
+            { Test-ModpackUpdatePreflight -Project $project -Targets @($target) -Strict } | Should Throw 'Strict dependency checking could not verify'
+        }
+
+        It 'accepts a fully verified compatible resulting graph' {
+            $candidate.Dependencies = @([pscustomobject]@{ dependency_type='required'; project_id='owner-project'; version_id='owner-current' })
+            Mock Get-ModrinthVersionById { [pscustomobject]@{ id='owner-current'; name='Owner'; dependencies=@() } }
+            $result = Test-ModpackUpdatePreflight -Project $project -Targets @($target) -Strict
+            $result.Complete | Should Be $true
+            $result.Checked | Should Be 2
         }
     }
 

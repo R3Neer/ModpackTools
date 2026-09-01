@@ -132,8 +132,9 @@ function Get-MpCommandCatalog {
                 New-MpHelpItem '--all' 'Update all matching Packwiz-managed content.'
                 New-MpHelpItem '--type <type>' 'Limit updates to mod, resourcepack, or shaderpack.'
                 New-MpHelpItem '--to <version>' 'Use a version ID, version number, or number from versions. Requires one selector.'
+                New-MpHelpItem '--strict' 'Block when dependency metadata is incomplete, not only on known conflicts.'
                 New-MpHelpItem '--project <id>' 'Use this project instead of the active one.'
-            ); Notes = @('Local files cannot be updated.', 'Multiple updates are transactional: metadata changes are rolled back if one fails.'); Examples = @('modpack update sodium', 'modpack update sodium --to 2', 'modpack update --all --type resourcepack')
+            ); Notes = @('Known required-version and incompatible-project conflicts block every update.', 'Without --strict, unavailable provider metadata is reported as a warning.', 'Multiple updates are transactional: metadata changes are rolled back if one fails.'); Examples = @('modpack update sodium', 'modpack update sodium --to 2 --strict', 'modpack update --all --type resourcepack')
         }
         build = [pscustomobject]@{
             Handler = 'Invoke-MpBuild'; Group = 'BUILD AND CONFIGURATION'; Summary = 'Generate an MRPack'; Description = 'Refresh project metadata and export a Modrinth .mrpack into dist/.'

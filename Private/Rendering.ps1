@@ -444,6 +444,11 @@ function Write-ModUpdateSummary {
     param([Parameter(Mandatory)]$Update)
 
     Write-MpBanner "UPDATE · $($Update.Project.DisplayName)"
+    if ($Update.PSObject.Properties['Preflight']) {
+        Write-MpKeyValue 'Dependency check' "$($Update.Preflight.Checked) version(s) inspected"
+        foreach ($warning in @($Update.Preflight.Warnings)) { Write-MpWarning $warning }
+        if (@($Update.Preflight.Warnings).Count) { Write-Host '' }
+    }
     foreach ($item in $Update.Items) {
         $status = if ($item.Changed) { 'UPDATED' } else { 'CURRENT' }
         $color = if ($item.Changed) { $script:Palette.Success } else { $script:Palette.Secondary }

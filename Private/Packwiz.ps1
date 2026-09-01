@@ -586,7 +586,8 @@ function Update-ModpackContent {
         [string[]]$Selectors = @(),
         [switch]$All,
         [string]$Type = 'all',
-        [string]$To
+        [string]$To,
+        [switch]$Strict
     )
 
     Assert-ModpackStructure -Project $Project
@@ -606,13 +607,16 @@ function Update-ModpackContent {
     }
     if ($targets.Count -eq 0) { Throw-MpError -Message "Project '$($Project.Id)' has no matching Packwiz-managed content to update" -Hint 'modpack inventory' -ErrorId 'Content.NoUpdateTargets' -Category ObjectNotFound -TargetObject $Project.Id }
 
+    $chosenVersion = $null
+    if ($To) {
+        $versionView = Get-ModrinthCompatibleVersions -Project $Project -Item $targets[0]
+        $chosenVersion = Resolve-ModrinthVersionChoice -Selector $To -Project $Project -Item $targets[0] -VersionView $versionView
+    }
+    $preflight = Test-ModpackUpdatePreflight -Project $Project -Targets $targets -ExactVersion $chosenVersion -Strict:$Strict
     $snapshot = Get-PackwizStateSnapshot -Project $Project
     $log = [System.Collections.Generic.List[string]]::new()
-    $chosenVersion = $null
     try {
         if ($To) {
-            $versionView = Get-ModrinthCompatibleVersions -Project $Project -Item $targets[0]
-            $chosenVersion = Resolve-ModrinthVersionChoice -Selector $To -Project $Project -Item $targets[0] -VersionView $versionView
             $exact = Set-ModpackContentExactVersion -Project $Project -Target $targets[0] -Version $chosenVersion
             foreach ($line in $exact.Log) { $log.Add($line) }
         }
@@ -649,7 +653,7 @@ function Update-ModpackContent {
                 }
             }
         )
-        return [pscustomobject]@{ Project = $Project; Items = $results; Log = @($log) }
+        return [pscustomobject]@{ Project = $Project; Items = $results; Log = @($log); Preflight = $preflight }
     }
     catch {
         Restore-PackwizStateSnapshot -Project $Project -Snapshot $snapshot
