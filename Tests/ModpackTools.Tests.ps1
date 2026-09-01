@@ -441,8 +441,8 @@ $Loader = "loader-version"
     Describe 'CLI help' {
         It 'uses one catalog for every executable command' {
             $catalog = Get-MpCommandCatalog
-            @($catalog.Keys).Count | Should Be 16
-            @($catalog.Keys) | Should Be @('list', 'use', 'status', 'new', 'init', 'inventory', 'search', 'add', 'classify', 'resource', 'side', 'update', 'build', 'diff', 'doctor', 'config')
+            @($catalog.Keys).Count | Should Be 17
+            @($catalog.Keys) | Should Be @('list', 'use', 'status', 'new', 'init', 'inventory', 'search', 'add', 'classify', 'resource', 'side', 'versions', 'update', 'build', 'diff', 'doctor', 'config')
             foreach ($name in $catalog.Keys) {
                 $catalog[$name].Summary | Should Not BeNullOrEmpty
                 $catalog[$name].Description | Should Not BeNullOrEmpty
@@ -1025,6 +1025,81 @@ side = "client"
 mod-id = "vivid-id"
 version = "old"
 '@)
+        }
+
+        It 'lists compatible Modrinth versions and resolves a numbered choice in context' {
+            $script:ConfigHomeOverride = Join-Path $TestDrive 'version-config'
+            Mock Invoke-ModrinthApiRequest {
+                return @(
+                    [pscustomobject]@{
+                        id='new-version'; project_id='AANobbMI'; name='Sodium 2'; version_number='2.0.0'; version_type='release'; date_published='2026-01-02T00:00:00Z'
+                        loaders=@('fabric'); game_versions=@('1.21.1'); dependencies=@(); files=@([pscustomobject]@{ primary=$true; filename='sodium-new.jar' })
+                    },
+                    [pscustomobject]@{
+                        id='old'; project_id='AANobbMI'; name='Sodium 1'; version_number='1.0.0'; version_type='release'; date_published='2025-01-02T00:00:00Z'
+                        loaders=@('fabric'); game_versions=@('1.21.1'); dependencies=@(); files=@([pscustomobject]@{ primary=$true; filename='sodium-old.jar' })
+                    }
+                )
+            }
+            $item = (Resolve-ModpackUpdateSelectors -Project $project -Selectors @('sodium'))[0]
+            $view = Get-ModrinthCompatibleVersions -Project $project -Item $item
+            $view.Versions.Count | Should Be 2
+            $view.Versions[1].Installed | Should Be $true
+            (Resolve-ModrinthVersionChoice -Selector 1 -Project $project -Item $item).Id | Should Be 'new-version'
+            Assert-MockCalled Invoke-ModrinthApiRequest -Times 1 -ParameterFilter { $PathAndQuery -match 'game_versions=' -and $PathAndQuery -match 'loaders=' }
+        }
+
+        It 'rejects a numbered version list from another content item' {
+            $script:ConfigHomeOverride = Join-Path $TestDrive 'version-context-config'
+            Mock Invoke-ModrinthApiRequest {
+                return @([pscustomobject]@{ id='new-version'; project_id='AANobbMI'; name='New'; version_number='2.0.0'; version_type='release'; date_published='2026-01-02'; loaders=@('fabric'); game_versions=@('1.21.1'); dependencies=@(); files=@() })
+            }
+            $sodium = (Resolve-ModpackUpdateSelectors -Project $project -Selectors @('sodium'))[0]
+            [void](Get-ModrinthCompatibleVersions -Project $project -Item $sodium)
+            $lithium = (Resolve-ModpackUpdateSelectors -Project $project -Selectors @('lithium'))[0]
+            { Resolve-ModrinthVersionChoice -Selector 1 -Project $project -Item $lithium } | Should Throw "belongs to 'Sodium'"
+        }
+
+        It 'moves managed content to an exact compatible version transactionally' {
+            $script:ConfigHomeOverride = Join-Path $TestDrive 'exact-version-config'
+            Mock Invoke-ModrinthApiRequest {
+                return @([pscustomobject]@{
+                    id='new-version'; project_id='AANobbMI'; name='Sodium 2'; version_number='2.0.0'; version_type='release'; date_published='2026-01-02'
+                    loaders=@('fabric'); game_versions=@('1.21.1'); dependencies=@(); files=@([pscustomobject]@{ primary=$true; filename='sodium-new.jar' })
+                })
+            }
+            Mock Invoke-Packwiz {
+                param($Arguments, $WorkingDirectory)
+                if ($Arguments -contains '--version-id') {
+                    [System.IO.File]::WriteAllText((Join-Path $projectPath 'mods/sodium.pw.toml'), @'
+name = "Sodium"
+filename = "sodium-new.jar"
+side = "both"
+[update.modrinth]
+mod-id = "AANobbMI"
+version = "new-version"
+'@)
+                    return @('installed exact version')
+                }
+                return @('refreshed')
+            }
+            $result = Update-ModpackContent -Project $project -Selectors @('sodium') -To 1
+            $result.Items[0].Filename | Should Be 'sodium-new.jar'
+            $result.Items[0].VersionId | Should Be 'new-version'
+            $result.Items[0].VersionNumber | Should Be '2.0.0'
+            (Get-TomlString -Text (Get-Content -Raw -LiteralPath (Join-Path $projectPath 'mods/sodium.pw.toml')) -Key side) | Should Be 'client'
+            Assert-MockCalled Invoke-Packwiz -Times 1 -ParameterFilter { $Arguments -contains '--version-id' -and $Arguments -contains 'new-version' }
+            Assert-MockCalled Invoke-Packwiz -Times 1 -ParameterFilter { $Arguments -contains 'refresh' }
+        }
+
+        It 'rolls back an exact version replacement that cannot be normalized' {
+            $script:ConfigHomeOverride = Join-Path $TestDrive 'exact-rollback-config'
+            $path = Join-Path $projectPath 'mods/sodium.pw.toml'
+            $before = [System.IO.File]::ReadAllBytes($path)
+            Mock Invoke-ModrinthApiRequest { return @([pscustomobject]@{ id='bad'; project_id='AANobbMI'; name='Bad'; version_number='9'; version_type='release'; date_published='2026-01-02'; loaders=@('fabric'); game_versions=@('1.21.1'); dependencies=@(); files=@() }) }
+            Mock Invoke-Packwiz { [System.IO.File]::WriteAllText($path, 'invalid'); return @('invalid metadata') }
+            { Update-ModpackContent -Project $project -Selectors @('sodium') -To bad } | Should Throw 'changes were restored'
+            [System.Linq.Enumerable]::SequenceEqual([byte[]]$before, [byte[]][System.IO.File]::ReadAllBytes($path)) | Should Be $true
         }
 
         It 'resolves every managed content type by name ID filename and metadata stem' {

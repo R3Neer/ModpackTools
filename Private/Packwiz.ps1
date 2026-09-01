@@ -547,16 +547,51 @@ function Restore-PackwizStateSnapshot {
     }
 }
 
+function Set-ModpackContentExactVersion {
+    param(
+        [Parameter(Mandatory)]$Project,
+        [Parameter(Mandatory)]$Target,
+        [Parameter(Mandatory)]$Version
+    )
+    $projectId = Get-ModrinthProjectIdFromItem -Item $Target
+    $originalPath = $Target.MetadataPath
+    $originalSide = $Target.Side
+    $log = @(Invoke-Packwiz -Arguments @('modrinth', 'add', '--project-id', $projectId, '--version-id', ([string]$Version.Id), '--yes') -WorkingDirectory $Project.Root)
+    $matches = @(
+        Get-ChildItem -LiteralPath $Project.Root -Filter '*.pw.toml' -File -Recurse -ErrorAction SilentlyContinue | Where-Object {
+            $text = Get-Content -Raw -LiteralPath $_.FullName -Encoding UTF8
+            (Get-TomlString -Text $text -Section 'update.modrinth' -Key 'mod-id') -eq $projectId
+        }
+    )
+    $selected = @($matches | Where-Object {
+        $text = Get-Content -Raw -LiteralPath $_.FullName -Encoding UTF8
+        (Get-TomlString -Text $text -Section 'update.modrinth' -Key version) -eq [string]$Version.Id
+    })
+    if ($selected.Count -ne 1) { Throw-MpError -Message "Packwiz did not produce exactly one metadata file for version '$($Version.Id)'" -Hint 'the complete update was rolled back' -ErrorId 'Versions.NormalizationFailed' -Category InvalidResult -TargetObject $Version.Id }
+    foreach ($duplicate in $matches) {
+        if (-not $duplicate.FullName.Equals($selected[0].FullName, [System.StringComparison]::OrdinalIgnoreCase)) { Remove-Item -LiteralPath $duplicate.FullName -Force }
+    }
+    $text = Get-Content -Raw -LiteralPath $selected[0].FullName -Encoding UTF8
+    if ($originalSide -in @('client', 'server', 'both') -and (Get-TomlString -Text $text -Key side) -ne $originalSide) {
+        $text = Set-TomlString -Text $text -Key side -Value $originalSide
+        Write-Utf8TextFileAtomic -Path $selected[0].FullName -Text $text
+    }
+    $log += @(Invoke-Packwiz -Arguments @('refresh') -WorkingDirectory $Project.Root)
+    return [pscustomobject]@{ MetadataPath = $selected[0].FullName; Log = $log; OriginalPath = $originalPath }
+}
+
 function Update-ModpackContent {
     param(
         [Parameter(Mandatory)]$Project,
         [string[]]$Selectors = @(),
         [switch]$All,
-        [string]$Type = 'all'
+        [string]$Type = 'all',
+        [string]$To
     )
 
     Assert-ModpackStructure -Project $Project
     if ($All -and $Selectors.Count) { Throw-MpError -Message "Content selectors and '--all' cannot be combined" -Hint 'remove the selectors or --all' -ErrorId 'Option.ForbiddenCombination' -Category InvalidArgument }
+    if ($To -and ($All -or $Selectors.Count -ne 1)) { Throw-MpError -Message "Option '--to' requires exactly one content selector" -Hint 'modpack update <selector> --to <version>' -ErrorId 'Option.VersionTargetConflict' -Category InvalidArgument -TargetObject $To }
     if (-not $All -and $Selectors.Count -eq 0) { Throw-MpError -Message "The update operation requires at least one selector or '--all'" -Hint 'modpack update --help' -ErrorId 'Command.MissingUpdateTarget' -Category InvalidArgument }
     $normalizedType = Resolve-InventoryType -Type $Type
 
@@ -573,8 +608,15 @@ function Update-ModpackContent {
 
     $snapshot = Get-PackwizStateSnapshot -Project $Project
     $log = [System.Collections.Generic.List[string]]::new()
+    $chosenVersion = $null
     try {
-        if ($All -and $normalizedType -eq 'all') {
+        if ($To) {
+            $versionView = Get-ModrinthCompatibleVersions -Project $Project -Item $targets[0]
+            $chosenVersion = Resolve-ModrinthVersionChoice -Selector $To -Project $Project -Item $targets[0] -VersionView $versionView
+            $exact = Set-ModpackContentExactVersion -Project $Project -Target $targets[0] -Version $chosenVersion
+            foreach ($line in $exact.Log) { $log.Add($line) }
+        }
+        elseif ($All -and $normalizedType -eq 'all') {
             foreach ($line in @(Invoke-Packwiz -Arguments @('update', '--all', '--yes') -WorkingDirectory $Project.Root)) { $log.Add($line) }
         }
         else {
@@ -588,12 +630,12 @@ function Update-ModpackContent {
         $afterItems = @(Get-ModpackUpdateItems -Inventory $afterInventory)
         $results = @(
             foreach ($target in $targets) {
-                $updated = $afterItems | Where-Object MetadataPath -eq $target.MetadataPath | Select-Object -First 1
+                $updated = if ($To) { $afterItems | Where-Object Id -eq $target.Id | Select-Object -First 1 } else { $afterItems | Where-Object MetadataPath -eq $target.MetadataPath | Select-Object -First 1 }
                 if (-not $updated) { Throw-MpError -Message "Updated metadata '$($target.MetadataPath)' could not be normalized" -Hint 'inspect the .pw.toml file before retrying' -ErrorId 'Content.NormalizationFailed' -Category InvalidResult -TargetObject $target.MetadataPath }
-                $relative = [System.IO.Path]::GetRelativePath($Project.Root, $target.MetadataPath)
-                $beforeBytes = $snapshot[$relative]
-                $afterBytes = [System.IO.File]::ReadAllBytes($target.MetadataPath)
-                $changed = -not [System.Linq.Enumerable]::SequenceEqual([byte[]]$beforeBytes, [byte[]]$afterBytes)
+                $relative = [System.IO.Path]::GetRelativePath($Project.Root, $updated.MetadataPath)
+                $changed = if (-not $snapshot.ContainsKey($relative)) { $true } else {
+                    -not [System.Linq.Enumerable]::SequenceEqual([byte[]]$snapshot[$relative], [byte[]][System.IO.File]::ReadAllBytes($updated.MetadataPath))
+                }
                 [pscustomobject]@{
                     Id             = $updated.Id
                     Kind           = $updated.Kind
@@ -602,6 +644,8 @@ function Update-ModpackContent {
                     Filename       = $updated.Filename
                     Changed        = $changed
                     MetadataPath   = $updated.MetadataPath
+                    VersionId      = $updated.VersionId
+                    VersionNumber  = $(if ($chosenVersion) { $chosenVersion.VersionNumber } else { $null })
                 }
             }
         )

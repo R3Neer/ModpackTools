@@ -2,6 +2,109 @@ function Get-ModrinthSearchCachePath {
     Join-Path (Get-ModpackToolsConfigDirectory) 'last-search.json'
 }
 
+function Get-ModrinthVersionCachePath {
+    Join-Path (Get-ModpackToolsConfigDirectory) 'last-versions.json'
+}
+
+function Invoke-ModrinthApiRequest {
+    param([Parameter(Mandatory)][string]$PathAndQuery, [string]$FailureLabel = 'request')
+    $uri = "https://api.modrinth.com/v2/$PathAndQuery"
+    $headers = @{ 'User-Agent' = "R3Neer-ModpackTools/$script:ModuleVersion" }
+    try { return Invoke-RestMethod -Method Get -Uri $uri -Headers $headers -ErrorAction Stop }
+    catch {
+        Throw-MpError -Message "Modrinth $FailureLabel could not be completed" -Details $_.Exception.Message -Hint 'check the network connection and retry' -ErrorId 'Versions.RequestFailed' -Category ConnectionError
+    }
+}
+
+function Get-ModrinthProjectIdFromItem {
+    param([Parameter(Mandatory)]$Item)
+    if (-not ([string]$Item.Id).StartsWith('modrinth:', [System.StringComparison]::OrdinalIgnoreCase)) {
+        Throw-MpError -Message "Content '$($Item.Name)' does not use Modrinth version metadata" -Hint 'version selection currently requires Modrinth-managed content' -ErrorId 'Versions.UnsupportedProvider' -Category NotImplemented -TargetObject $Item.Id
+    }
+    return ([string]$Item.Id).Substring(9)
+}
+
+function Get-ModrinthCompatibleVersions {
+    param([Parameter(Mandatory)]$Project, [Parameter(Mandatory)]$Item)
+
+    $projectId = Get-ModrinthProjectIdFromItem -Item $Item
+    $query = [System.Collections.Generic.List[string]]::new()
+    $gameVersions = ConvertTo-Json -Compress -InputObject @([string]$Project.MinecraftVersion)
+    $query.Add('game_versions=' + [System.Uri]::EscapeDataString($gameVersions))
+    if ($Item.Kind -eq 'mod' -and $Project.Loader) {
+        $loaders = ConvertTo-Json -Compress -InputObject @(([string]$Project.Loader).ToLowerInvariant())
+        $query.Add('loaders=' + [System.Uri]::EscapeDataString($loaders))
+    }
+    elseif ($Item.Kind -eq 'resourcepack') {
+        $loaders = ConvertTo-Json -Compress -InputObject @('minecraft')
+        $query.Add('loaders=' + [System.Uri]::EscapeDataString($loaders))
+    }
+    $query.Add('include_changelog=false')
+    $response = @(Invoke-ModrinthApiRequest -PathAndQuery ("project/$projectId/version?" + ($query -join '&')) -FailureLabel 'version lookup')
+    $versions = @(
+        $index = 0
+        foreach ($version in $response) {
+            $index++
+            $primary = @($version.files | Where-Object primary | Select-Object -First 1)
+            if (-not $primary.Count) { $primary = @($version.files | Select-Object -First 1) }
+            [pscustomobject]@{
+                Index         = $index
+                Id            = [string]$version.id
+                ProjectId     = [string]$version.project_id
+                Name          = [string]$version.name
+                VersionNumber = [string]$version.version_number
+                VersionType   = [string]$version.version_type
+                Published     = [string]$version.date_published
+                Filename      = $(if ($primary.Count) { [string]$primary[0].filename } else { $null })
+                Loaders       = @($version.loaders | ForEach-Object { [string]$_ })
+                GameVersions  = @($version.game_versions | ForEach-Object { [string]$_ })
+                Dependencies  = @($version.dependencies)
+                Installed     = ([string]$version.id).Equals([string]$Item.VersionId, [System.StringComparison]::OrdinalIgnoreCase)
+            }
+        }
+    )
+    $view = [pscustomobject]@{
+        SchemaVersion = 1; CreatedUtc = [datetime]::UtcNow.ToString('o'); ProjectId = $Project.Id
+        MinecraftVersion = $Project.MinecraftVersion; Loader = $Project.Loader; ItemId = $Item.Id
+        ItemName = $Item.Name; ItemKind = $Item.Kind; InstalledVersionId = $Item.VersionId; Versions = $versions
+    }
+    $path = Get-ModrinthVersionCachePath
+    [System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($path)) | Out-Null
+    Write-Utf8TextFileAtomic -Path $path -Text ($view | ConvertTo-Json -Depth 10)
+    return $view
+}
+
+function Read-ModrinthVersionCache {
+    $path = Get-ModrinthVersionCachePath
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { return $null }
+    try { return Get-Content -Raw -LiteralPath $path -Encoding UTF8 | ConvertFrom-Json }
+    catch { Throw-MpError -Message "Version cache '$path' is invalid" -Hint 'modpack versions <content>' -ErrorId 'Versions.InvalidCache' -Category InvalidData -TargetObject $path }
+}
+
+function Resolve-ModrinthVersionChoice {
+    param(
+        [Parameter(Mandatory)][string]$Selector,
+        [Parameter(Mandatory)]$Project,
+        [Parameter(Mandatory)]$Item,
+        $VersionView
+    )
+    $view = if ($VersionView) { $VersionView } else { Read-ModrinthVersionCache }
+    if (-not $view) { Throw-MpError -Message "Version '$Selector' cannot be resolved because no version list has been saved" -Hint "modpack versions $($Item.Id)" -ErrorId 'Versions.CacheNotFound' -Category ObjectNotFound -TargetObject $Selector }
+    if (-not (Test-MpCacheTimestamp -CreatedUtc $view.CreatedUtc)) { Throw-MpError -Message 'The saved version list has expired' -Hint "modpack versions $($Item.Id)" -ErrorId 'Versions.CacheExpired' -Category InvalidData }
+    if (-not ([string]$view.ProjectId).Equals($Project.Id, [System.StringComparison]::OrdinalIgnoreCase) -or -not ([string]$view.ItemId).Equals($Item.Id, [System.StringComparison]::OrdinalIgnoreCase)) {
+        Throw-MpError -Message "The saved version list belongs to '$($view.ItemName)' in project '$($view.ProjectId)'" -Hint "modpack versions $($Item.Id) --project $($Project.Id)" -ErrorId 'Versions.CacheContextMismatch' -Category InvalidData -TargetObject $Selector
+    }
+    $matches = if ($Selector -match '^[1-9][0-9]*$') {
+        @($view.Versions | Where-Object { [int]$_.Index -eq [int]$Selector })
+    }
+    else {
+        @($view.Versions | Where-Object { ([string]$_.Id).Equals($Selector, [System.StringComparison]::OrdinalIgnoreCase) -or ([string]$_.VersionNumber).Equals($Selector, [System.StringComparison]::OrdinalIgnoreCase) })
+    }
+    if ($matches.Count -eq 0) { Throw-MpError -Message "Compatible version '$Selector' was not found for '$($Item.Name)'" -Hint "modpack versions $($Item.Id)" -ErrorId 'Versions.NotFound' -Category ObjectNotFound -TargetObject $Selector }
+    if ($matches.Count -gt 1) { Throw-MpError -Message "Version number '$Selector' identifies more than one Modrinth release" -Details (@($matches | ForEach-Object Id) -join ', ') -Hint 'use the exact version ID or a numbered result' -ErrorId 'Versions.Ambiguous' -Category InvalidArgument -TargetObject $Selector }
+    return $matches[0]
+}
+
 function ConvertTo-ModrinthProjectType {
     param([string]$Type = 'all')
     $normalized = Resolve-InventoryType -Type $Type

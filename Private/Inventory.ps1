@@ -30,6 +30,7 @@ function Get-PackwizItems {
             $name = Get-TomlString -Text $text -Key 'name'
             $filename = Get-TomlString -Text $text -Key 'filename'
             $side = Get-TomlString -Text $text -Key 'side'
+            $versionId = Get-TomlString -Text $text -Section 'update.modrinth' -Key 'version'
             if (-not $name) { $name = $file.Name -replace '\.pw\.toml$', '' }
             if ($side) { $side = $side.ToLowerInvariant() } else { $side = 'unknown' }
             [pscustomobject]@{
@@ -38,6 +39,7 @@ function Get-PackwizItems {
                 Name         = $name
                 Filename     = $filename
                 Side         = $side
+                VersionId    = $versionId
                 Source       = 'packwiz'
                 MetadataPath = $file.FullName
                 Category     = $null

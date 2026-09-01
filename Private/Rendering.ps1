@@ -508,6 +508,29 @@ function Write-ModrinthSearchResults {
     Write-MpInfo 'Install a result with modpack add <number>. You can also use its ID or slug.'
 }
 
+function Write-ModrinthVersionResults {
+    param([Parameter(Mandatory)]$View, [Parameter(Mandatory)]$Project)
+    Write-MpBanner "VERSIONS · $($View.ItemName)"
+    Write-MpKeyValue 'Project' "$($Project.Id) · Minecraft $($Project.MinecraftVersion) · $($Project.Loader)"
+    Write-MpKeyValue 'Type' $View.ItemKind
+    Write-MpKeyValue 'Compatible' @($View.Versions).Count
+    if (@($View.Versions).Count -eq 0) { Write-Host ''; Write-MpInfo 'No compatible versions were found.'; return }
+    Write-MpSection 'AVAILABLE VERSIONS' @($View.Versions).Count
+    $referenceWidth = Get-MpReferenceWidth -Items @($View.Versions) -PropertyName Index
+    foreach ($version in $View.Versions) {
+        $label = Format-MpReferenceLabel -Reference $version.Index -Width $referenceWidth
+        $marker = if ($version.Installed) { 'INSTALLED' } elseif ([int]$version.Index -eq 1) { 'LATEST' } else { '' }
+        Write-Host "  $($script:Palette.Process)$label$($script:Palette.Reset) " -NoNewline
+        Write-Host "$($script:Palette.Value)$($PSStyle.Bold)$($version.VersionNumber)$($PSStyle.Reset) " -NoNewline
+        if ($marker) { Write-Host "$($script:Palette.Success)$marker$($script:Palette.Reset) " -NoNewline }
+        Write-Host "$($script:Palette.Secondary)$($version.VersionType) · $($version.Id)$($script:Palette.Reset)"
+        $details = @($version.Filename, $version.Published) | Where-Object { $_ }
+        if ($details.Count) { Write-Host "      $($script:Palette.Secondary)$($details -join ' · ')$($script:Palette.Reset)" }
+    }
+    Write-Host ''
+    Write-MpInfo 'Select one with modpack update <content> --to <number>. Exact version IDs also work.'
+}
+
 function Write-ModpackCategoryList {
     param([Parameter(Mandatory)]$View)
     Write-MpBanner "CATEGORIES · $($View.Project.Id)"

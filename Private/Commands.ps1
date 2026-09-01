@@ -335,15 +335,33 @@ function Invoke-MpSearch {
     Write-ModrinthSearchResults -Search $search -Project $project
 }
 
+function Invoke-MpVersions {
+    param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
+    if ($Arguments -contains '--help') { Show-MpHelp versions; return }
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project')
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack versions <selector> [--project <id>]' -OptionNames @('project')
+    $project = Resolve-MpCommandProject -Options $parsed.Options
+    $rawSelector = [string]$parsed.Positionals[0]
+    $reference = Resolve-ModpackInventoryNumber -Selector $rawSelector -Project $project -AllowedKinds @('mod', 'resourcepack', 'shaderpack') -RequirePackwiz
+    $selector = if ($reference) { [string]$reference.Selector } else { $rawSelector }
+    $item = (Resolve-ModpackUpdateSelectors -Project $project -Selectors @($selector))[0]
+    Write-MpStep "Finding compatible versions for '$($item.Name)'..."
+    $view = Get-ModrinthCompatibleVersions -Project $project -Item $item
+    Write-ModrinthVersionResults -View $view -Project $project
+}
+
 function Invoke-MpUpdate {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Show-MpHelp update; return }
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project', 'type') -SwitchOptions @('all')
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project', 'type', 'to') -SwitchOptions @('all')
     if ($parsed.Options.ContainsKey('all') -and $parsed.Positionals.Count) {
         Throw-MpError -Message "Content selectors and '--all' cannot be combined" -Hint 'remove the selectors or --all' -ErrorId 'Option.ForbiddenCombination' -Category InvalidArgument
     }
     if (-not $parsed.Options.ContainsKey('all') -and $parsed.Positionals.Count -eq 0) {
         Throw-MpError -Message "The update command requires at least one selector or '--all'" -Hint 'modpack update --help' -ErrorId 'Command.MissingUpdateTarget' -Category InvalidArgument
+    }
+    if ($parsed.Options.ContainsKey('to') -and ($parsed.Options.ContainsKey('all') -or $parsed.Positionals.Count -ne 1)) {
+        Throw-MpError -Message "Option '--to' requires exactly one content selector" -Hint 'modpack update <selector> --to <version>' -ErrorId 'Option.VersionTargetConflict' -Category InvalidArgument -TargetObject $parsed.Options.to
     }
     $project = Resolve-MpCommandProject -Options $parsed.Options
     $type = if ($parsed.Options.ContainsKey('type')) { $parsed.Options.type } else { 'all' }
@@ -357,7 +375,9 @@ function Invoke-MpUpdate {
         }
     )
     Write-MpStep "Updating $label in $($project.Id)..."
-    $result = Update-ModpackContent -Project $project -Selectors $selectors -All:$parsed.Options.ContainsKey('all') -Type $type
+    $parameters = @{ Project = $project; Selectors = $selectors; All = $parsed.Options.ContainsKey('all'); Type = $type }
+    if ($parsed.Options.ContainsKey('to')) { $parameters.To = [string]$parsed.Options.to }
+    $result = Update-ModpackContent @parameters
     Write-ModUpdateSummary -Update $result
 }
 

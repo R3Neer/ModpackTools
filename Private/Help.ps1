@@ -118,14 +118,22 @@ function Get-MpCommandCatalog {
                 New-MpHelpItem '--project <id>' 'Use this project instead of the active one.'
             ); Notes = @('For Packwiz content this changes side in the .pw.toml source of truth.', 'For local JARs it stores an explicit project override. This does not change the mod executable itself.'); Examples = @('modpack side set sodium client', 'modpack side set 3 both --project vp26')
         }
+        versions = [pscustomobject]@{
+            Handler = 'Invoke-MpVersions'; Group = 'CONTENT'; Summary = 'List compatible content versions'; Description = 'Show numbered Modrinth versions compatible with the project Minecraft version and loader.'
+            Usage = @('modpack versions <selector> [--project <id>]'); Items = @(
+                New-MpHelpItem '<selector>' 'Name, ID, filename, or latest inventory number.'
+                New-MpHelpItem '--project <id>' 'Use this project instead of the active one.'
+            ); Notes = @('The numbered list is saved for update --to and expires after 24 hours.', 'Only Modrinth-managed content has a compatible version list.'); Examples = @('modpack versions sodium', 'modpack versions 3 --project vp26')
+        }
         update = [pscustomobject]@{
             Handler = 'Invoke-MpUpdate'; Group = 'CONTENT'; Summary = 'Update Packwiz-managed content'; Description = 'Update Packwiz-managed mods, resource packs, and shaders.'
             Usage = @('modpack update <selector...> [options]', 'modpack update --all [options]'); Items = @(
                 New-MpHelpItem '<selector>' 'Name, ID, filename, or latest inventory number.'
                 New-MpHelpItem '--all' 'Update all matching Packwiz-managed content.'
                 New-MpHelpItem '--type <type>' 'Limit updates to mod, resourcepack, or shaderpack.'
+                New-MpHelpItem '--to <version>' 'Use a version ID, version number, or number from versions. Requires one selector.'
                 New-MpHelpItem '--project <id>' 'Use this project instead of the active one.'
-            ); Notes = @('Local files cannot be updated.', 'Multiple updates are transactional: metadata changes are rolled back if one fails.'); Examples = @('modpack update sodium', 'modpack update 2 5', 'modpack update --all --type resourcepack')
+            ); Notes = @('Local files cannot be updated.', 'Multiple updates are transactional: metadata changes are rolled back if one fails.'); Examples = @('modpack update sodium', 'modpack update sodium --to 2', 'modpack update --all --type resourcepack')
         }
         build = [pscustomobject]@{
             Handler = 'Invoke-MpBuild'; Group = 'BUILD AND CONFIGURATION'; Summary = 'Generate an MRPack'; Description = 'Refresh project metadata and export a Modrinth .mrpack into dist/.'
