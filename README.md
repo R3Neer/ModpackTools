@@ -217,6 +217,21 @@ modpack new quilt-demo --name "Quilt Demo" --minecraft 1.21.1 --loader quilt
 
 Fabric, Quilt, Forge, and NeoForge are supported for project creation. By default, Packwiz selects the latest compatible loader version; the technical pack version is `0.1.0`, the display version matches Minecraft, and the directory is `<Name>-<Minecraft>`. These can be adjusted with `--loader-version`, `--pack-version`, `--display-version`, and `--path`. Packwiz validates the Minecraft/loader combination. Creation uses a temporary directory and never overwrites the destination.
 
+### Adopting an existing Packwiz project
+
+An existing Fabric, Quilt, Forge, or NeoForge Packwiz project can be initialized for ModpackTools without changing its Packwiz metadata or installed content:
+
+```powershell
+cd "D:\Minecraft\Existing Pack"
+modpack init existing-pack
+
+modpack init another-pack --path "D:\Minecraft\Another Pack"
+```
+
+The project must be a direct child of the configured root and must contain a valid `pack.toml` plus its configured Packwiz index file. Custom relative index paths are supported. `init` creates the minimal `.modpack/project.psd1` and an empty editorial metadata file. Technical name, pack version, Minecraft version, loader, and index location continue to come exclusively from `pack.toml`. Use `--display-name`, `--display-version`, or `--output-name` only when an editorial override is wanted.
+
+Existing `README.md` and `.gitignore` files are preserved. When either file is absent, ModpackTools creates its standard project README or a `.gitignore` containing `dist/`. Initialization is transactional and removes only the files it created if validation fails.
+
 ### Adding content
 
 `modpack add` delegates technical selection and writing to `packwiz modrinth add`, then reads the generated `.pw.toml`. It accepts a Modrinth ID, slug, or a number from the last search and can install mods, resource packs, and shaders. When `--category` is provided, the result must be a mod and only that editorial decision is written to metadata; the category must already exist. The former `modpack add mod` form is invalid.
@@ -239,7 +254,7 @@ modpack update <name|id|filename...> [--type <type>] [--project <id>]
 modpack update --all [--type <type>] [--project <id>]
 ```
 
-A selector can be the displayed name, stable ID, current filename, or `.pw.toml` stem. It can identify a mod, resource pack, or shader. Several selectors are updated as one transaction: all are validated before Packwiz runs, and if any update fails, `pack.toml`, `index.toml`, and all `.pw.toml` files are restored to their original bytes.
+A selector can be the displayed name, stable ID, current filename, or `.pw.toml` stem. It can identify a mod, resource pack, or shader. Several selectors are updated as one transaction: all are validated before Packwiz runs, and if any update fails, `pack.toml`, its configured index, and all `.pw.toml` files are restored to their original bytes.
 
 `--all` means all Packwiz-managed external content: mods, resource packs, and shaders. `--type mod|resourcepack|shaderpack` narrows either a selector operation or `--all`. Local JAR and ZIP files are never updated and are reported as non-updatable when explicitly selected. Updating does not generate a build; use `modpack diff` to review the changes and `modpack build` when ready.
 

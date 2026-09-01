@@ -360,6 +360,28 @@ function Invoke-MpNew {
     Write-MpSuccess "Project created at $($project.Root)"
 }
 
+function Invoke-MpInit {
+    param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
+    if ($Arguments -contains '--help') { Show-MpHelp init; return }
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('path', 'display-name', 'display-version', 'output-name')
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack init <id> [--path <directory>] [options]' -OptionNames @('path', 'display-name', 'display-version', 'output-name')
+    $parameters = @{ Id = $parsed.Positionals[0] }
+    if ($parsed.Options.ContainsKey('path')) { $parameters.Path = $parsed.Options.path }
+    if ($parsed.Options.ContainsKey('display-name')) { $parameters.DisplayName = $parsed.Options['display-name'] }
+    if ($parsed.Options.ContainsKey('display-version')) { $parameters.DisplayVersion = $parsed.Options['display-version'] }
+    if ($parsed.Options.ContainsKey('output-name')) { $parameters.OutputName = $parsed.Options['output-name'] }
+    $location = if ($parameters.ContainsKey('Path')) { $parameters.Path } else { (Get-Location).Path }
+    Write-MpStep "Initializing Packwiz project '$location' as '$($parsed.Positionals[0])'..."
+    $result = Initialize-ExistingModpackProject @parameters
+    $project = $result.Project
+    Write-MpSuccess 'Existing Packwiz project initialized for ModpackTools.'
+    Write-MpKeyValue 'ID' $project.Id
+    Write-MpKeyValue 'Minecraft' $project.MinecraftVersion
+    Write-MpKeyValue 'Loader' $(if ($project.LoaderVersion) { "$($project.Loader) $($project.LoaderVersion)" } else { $project.Loader })
+    Write-MpKeyValue 'Root' $project.Root
+    Write-MpInfo "Created $(@($result.CreatedFiles).Count) file(s). Next: modpack use $($project.Id)"
+}
+
 function Invoke-MpConfig {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Show-MpHelp config; return }

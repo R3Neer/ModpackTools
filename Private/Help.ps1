@@ -38,6 +38,16 @@ function Get-MpCommandCatalog {
                 New-MpHelpItem '--display-version <version>' 'Initial user-facing version.'
             ); Notes = @('Packwiz validates the Minecraft and loader version combination.'); Examples = @('modpack new vanilla-plus --name "Vanilla Plus" --minecraft 1.21.1 --loader fabric', 'modpack new forge-pack --name "Forge Pack" --minecraft 1.20.1 --loader forge', 'modpack new quilt-pack --name "Quilt Pack" --minecraft 1.21.1 --loader quilt')
         }
+        init = [pscustomobject]@{
+            Handler = 'Invoke-MpInit'; Group = 'PROJECTS'; Summary = 'Adopt a Packwiz project'; Description = 'Initialize an existing Packwiz project for ModpackTools without changing its technical Packwiz data.'
+            Usage = @('modpack init <id> [--path <directory>] [options]'); Items = @(
+                New-MpHelpItem '<id>' 'New stable lowercase project ID.'
+                New-MpHelpItem '--path <directory>' 'Existing Packwiz project. Default: current directory.'
+                New-MpHelpItem '--display-name <name>' 'Optional display-name override; otherwise use pack.toml.'
+                New-MpHelpItem '--display-version <version>' 'Optional display-version override; otherwise use pack.toml.'
+                New-MpHelpItem '--output-name <file>' 'Optional .mrpack build filename.'
+            ); Notes = @('The project must be a direct child of the configured root.', 'Packwiz files, content, and existing README or .gitignore files are preserved.', 'This command does not use the active project or accept --project.'); Examples = @('modpack init my-pack', 'modpack init legacy --path "D:\Minecraft\Legacy Pack"', 'modpack init my-pack --display-name "My Pack" --output-name MyPack.mrpack')
+        }
         inventory = [pscustomobject]@{
             Handler = 'Invoke-MpInventory'; Group = 'CONTENT'; Summary = 'Inspect installed content'; Description = 'Show and filter the mods, resource packs, and shaders in a project.'
             Usage = @('modpack inventory [id] [options]'); Items = @(

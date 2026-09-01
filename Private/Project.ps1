@@ -27,6 +27,7 @@ function Read-ModpackProject {
     }
 
     $pack = Get-PackTomlData -Path (Join-Path $root 'pack.toml')
+    $indexPath = Resolve-PackwizIndexPath -ProjectRoot $root -IndexFile $pack.IndexFile
     $displayName = if ($descriptor.ContainsKey('DisplayName')) { [string]$descriptor.DisplayName } else { $pack.Name }
     $displayVersion = if ($descriptor.ContainsKey('DisplayVersion')) { [string]$descriptor.DisplayVersion } else { $pack.Version }
     $defaultOutputBase = ($displayName -replace '[\\/:*?"<>|]', '-').Trim()
@@ -42,6 +43,8 @@ function Read-ModpackProject {
         OutputName       = $outputName
         TechnicalName    = $pack.Name
         PackVersion      = $pack.Version
+        IndexFile        = $pack.IndexFile
+        IndexPath        = $indexPath
         MinecraftVersion = $pack.MinecraftVersion
         Loader           = $pack.Loader
         LoaderVersion    = $pack.LoaderVersion
@@ -87,7 +90,7 @@ function Resolve-ModpackProject {
 function Assert-ModpackStructure {
     param([Parameter(Mandatory)]$Project)
 
-    foreach ($relative in @('pack.toml', 'index.toml', '.modpack/project.psd1', '.modpack/metadata.psd1')) {
+    foreach ($relative in @('pack.toml', $Project.IndexFile, '.modpack/project.psd1', '.modpack/metadata.psd1')) {
         $path = Join-Path $Project.Root $relative
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
             Throw-MpError -Message "Project '$($Project.Id)' is incomplete because '$relative' is missing" -Details "Project root: '$($Project.Root)'" -Hint 'restore the missing file or recreate the project' -ErrorId 'Project.Incomplete' -Category InvalidData -TargetObject (Join-Path $Project.Root $relative)

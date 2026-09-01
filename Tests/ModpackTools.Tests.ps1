@@ -186,6 +186,175 @@ neoforge = "21.1.200"
         }
     }
 
+    Describe 'Existing Packwiz project initialization' {
+        BeforeEach {
+            $script:ConfigHomeOverride = Join-Path $TestDrive ('init-config-' + [guid]::NewGuid().ToString('N'))
+            $script:InitRoot = Join-Path $TestDrive ('init-root-' + [guid]::NewGuid().ToString('N'))
+            [System.IO.Directory]::CreateDirectory($script:InitRoot) | Out-Null
+            Set-ModpackToolsConfigValue -Name root -Value $script:InitRoot | Out-Null
+        }
+
+        function New-ConventionalPackwizProject {
+            param([string]$Name, [string]$Loader = 'fabric', [switch]$ExistingDocumentation)
+            $path = Join-Path $script:InitRoot $Name
+            [System.IO.Directory]::CreateDirectory($path) | Out-Null
+            [System.IO.File]::WriteAllText((Join-Path $path 'pack.toml'), @"
+name = "$Name"
+version = "0.4.0"
+pack-format = "packwiz:1.1.0"
+
+[index]
+file = "index.toml"
+hash-format = "sha256"
+hash = "fixture"
+
+[versions]
+minecraft = "1.21.1"
+$Loader = "loader-version"
+"@)
+            [System.IO.File]::WriteAllText((Join-Path $path 'index.toml'), 'hash-format = "sha256"')
+            [System.IO.Directory]::CreateDirectory((Join-Path $path 'mods')) | Out-Null
+            [System.IO.File]::WriteAllText((Join-Path $path 'mods/existing.pw.toml'), 'name = "Existing"')
+            if ($ExistingDocumentation) {
+                [System.IO.File]::WriteAllText((Join-Path $path 'README.md'), 'original readme')
+                [System.IO.File]::WriteAllText((Join-Path $path '.gitignore'), 'custom-cache/')
+            }
+            return $path
+        }
+
+        It 'adopts a conventional project with a minimal descriptor and preserves existing files' {
+            $path = New-ConventionalPackwizProject -Name 'Existing Forge' -Loader forge -ExistingDocumentation
+            $packBefore = Get-Content -Raw -LiteralPath (Join-Path $path 'pack.toml')
+            $indexBefore = Get-Content -Raw -LiteralPath (Join-Path $path 'index.toml')
+            $modBefore = Get-Content -Raw -LiteralPath (Join-Path $path 'mods/existing.pw.toml')
+
+            $result = Initialize-ExistingModpackProject -Id existing-forge -Path $path
+
+            $result.Project.Id | Should Be 'existing-forge'
+            $result.Project.Loader | Should Be 'forge'
+            $result.Project.DisplayName | Should Be 'Existing Forge'
+            $result.Project.DisplayVersion | Should Be '0.4.0'
+            $descriptor = Import-PowerShellDataFile (Join-Path $path '.modpack/project.psd1')
+            @($descriptor.Keys | Sort-Object) | Should Be @('Id', 'SchemaVersion')
+            $metadata = Import-PowerShellDataFile (Join-Path $path '.modpack/metadata.psd1')
+            @($metadata.Categories.Keys).Count | Should Be 0
+            @($metadata.Mods.Keys).Count | Should Be 0
+            @($metadata.ResourcePacks.Keys).Count | Should Be 0
+            (Get-Content -Raw -LiteralPath (Join-Path $path 'pack.toml')) | Should Be $packBefore
+            (Get-Content -Raw -LiteralPath (Join-Path $path 'index.toml')) | Should Be $indexBefore
+            (Get-Content -Raw -LiteralPath (Join-Path $path 'mods/existing.pw.toml')) | Should Be $modBefore
+            (Get-Content -Raw -LiteralPath (Join-Path $path 'README.md')) | Should Be 'original readme'
+            (Get-Content -Raw -LiteralPath (Join-Path $path '.gitignore')) | Should Be 'custom-cache/'
+            @(Get-ModpackProjects | Where-Object Id -eq 'existing-forge').Count | Should Be 1
+        }
+
+        It 'adopts every recognized loader and creates only missing convenience files' {
+            $index = 0
+            foreach ($loader in @('fabric', 'quilt', 'forge', 'neoforge')) {
+                $index++
+                $path = New-ConventionalPackwizProject -Name "Pack $index" -Loader $loader
+                $result = Initialize-ExistingModpackProject -Id "pack-$index" -Path $path
+                $result.Project.Loader | Should Be $loader
+                Test-Path -LiteralPath (Join-Path $path 'README.md') | Should Be $true
+                (Get-Content -Raw -LiteralPath (Join-Path $path '.gitignore')) | Should Be "dist/`n"
+            }
+        }
+
+        It 'uses the current directory when path is omitted and accepts editorial overrides' {
+            $path = New-ConventionalPackwizProject -Name 'Current Pack' -Loader quilt
+            Push-Location $path
+            try {
+                $result = Initialize-ExistingModpackProject -Id current-pack -DisplayName 'Current Display' -DisplayVersion 'Release' -OutputName 'Current.mrpack'
+            }
+            finally { Pop-Location }
+            $result.Project.DisplayName | Should Be 'Current Display'
+            $result.Project.DisplayVersion | Should Be 'Release'
+            $result.Project.OutputName | Should Be 'Current.mrpack'
+        }
+
+        It 'supports a custom relative Packwiz index and includes it in rollback snapshots' {
+            $path = New-ConventionalPackwizProject -Name 'Custom Index' -Loader fabric
+            $packPath = Join-Path $path 'pack.toml'
+            $packText = (Get-Content -Raw -LiteralPath $packPath).Replace('file = "index.toml"', 'file = "meta/custom-index.toml"')
+            [System.IO.File]::WriteAllText($packPath, $packText)
+            [System.IO.Directory]::CreateDirectory((Join-Path $path 'meta')) | Out-Null
+            [System.IO.File]::WriteAllText((Join-Path $path 'meta/custom-index.toml'), 'hash-format = "sha256"')
+
+            $result = Initialize-ExistingModpackProject -Id custom-index -Path $path
+            $result.Project.IndexFile | Should Be 'meta/custom-index.toml'
+            $result.Project.IndexPath | Should Be (Join-Path $path 'meta/custom-index.toml')
+            Assert-ModpackStructure -Project $result.Project
+            $snapshot = Get-PackwizStateSnapshot -Project $result.Project
+            $snapshot.ContainsKey('meta\custom-index.toml') | Should Be $true
+        }
+
+        It 'rejects projects outside the configured root and duplicate IDs' {
+            $outside = Join-Path $TestDrive ('outside-' + [guid]::NewGuid().ToString('N'))
+            [System.IO.Directory]::CreateDirectory($outside) | Out-Null
+            { Initialize-ExistingModpackProject -Id outside -Path $outside } | Should Throw 'not a direct child'
+
+            $first = New-ConventionalPackwizProject -Name 'First'
+            $second = New-ConventionalPackwizProject -Name 'Second'
+            Initialize-ExistingModpackProject -Id duplicate -Path $first | Out-Null
+            { Initialize-ExistingModpackProject -Id duplicate -Path $second } | Should Throw 'already registered'
+            { Initialize-ExistingModpackProject -Id duplicate -Path $first } | Should Throw 'already initialized'
+        }
+
+        It 'rejects missing Packwiz files, invalid manifests, and conflicting ModpackTools state' {
+            $missing = Join-Path $script:InitRoot 'Missing'
+            [System.IO.Directory]::CreateDirectory($missing) | Out-Null
+            { Initialize-ExistingModpackProject -Id missing -Path $missing } | Should Throw 'pack.toml'
+
+            $invalid = Join-Path $script:InitRoot 'Invalid'
+            [System.IO.Directory]::CreateDirectory($invalid) | Out-Null
+            [System.IO.File]::WriteAllText((Join-Path $invalid 'pack.toml'), 'name = "Invalid"')
+            [System.IO.File]::WriteAllText((Join-Path $invalid 'index.toml'), 'hash-format = "sha256"')
+            { Initialize-ExistingModpackProject -Id invalid -Path $invalid } | Should Throw 'missing required data'
+
+            $escaping = New-ConventionalPackwizProject -Name 'Escaping Index'
+            $escapingPack = Join-Path $escaping 'pack.toml'
+            $escapingText = (Get-Content -Raw -LiteralPath $escapingPack).Replace('file = "index.toml"', 'file = "../outside.toml"')
+            [System.IO.File]::WriteAllText($escapingPack, $escapingText)
+            { Initialize-ExistingModpackProject -Id escaping -Path $escaping } | Should Throw 'escapes project root'
+
+            $partial = New-ConventionalPackwizProject -Name 'Partial'
+            [System.IO.Directory]::CreateDirectory((Join-Path $partial '.modpack')) | Out-Null
+            [System.IO.File]::WriteAllText((Join-Path $partial '.modpack/foreign.txt'), 'preserve')
+            { Initialize-ExistingModpackProject -Id partial -Path $partial } | Should Throw 'will not overwrite'
+            (Get-Content -Raw -LiteralPath (Join-Path $partial '.modpack/foreign.txt')) | Should Be 'preserve'
+
+            $fileConflict = New-ConventionalPackwizProject -Name 'File Conflict'
+            [System.IO.File]::WriteAllText((Join-Path $fileConflict '.modpack'), 'foreign file')
+            { Initialize-ExistingModpackProject -Id file-conflict -Path $fileConflict } | Should Throw 'is not a directory'
+
+            $invalidOutput = New-ConventionalPackwizProject -Name 'Invalid Output'
+            { Initialize-ExistingModpackProject -Id invalid-output -Path $invalidOutput -OutputName '..\outside.mrpack' } | Should Throw 'valid .mrpack filename'
+        }
+
+        It 'is exposed through the public command with the same output contract' {
+            $path = New-ConventionalPackwizProject -Name 'Public Init' -Loader neoforge
+            $output = (modpack init public-init --path $path 6>&1 | Out-String)
+            $output | Should Match 'Existing Packwiz project initialized for ModpackTools'
+            $output | Should Match 'Next: modpack use public-init'
+            $output | Should Match "(`r?`n){2}$"
+            (Read-ModpackProject -ProjectRoot $path).Id | Should Be 'public-init'
+        }
+
+        It 'rolls back every created file when initialization fails' {
+            $path = New-ConventionalPackwizProject -Name 'Rollback'
+            Mock Write-ModpackProjectReadme { throw 'injected README failure' }
+
+            { Initialize-ExistingModpackProject -Id rollback -Path $path } | Should Throw 'injected README failure'
+
+            Test-Path -LiteralPath (Join-Path $path '.modpack/project.psd1') | Should Be $false
+            Test-Path -LiteralPath (Join-Path $path '.modpack/metadata.psd1') | Should Be $false
+            Test-Path -LiteralPath (Join-Path $path '.modpack') | Should Be $false
+            Test-Path -LiteralPath (Join-Path $path 'README.md') | Should Be $false
+            Test-Path -LiteralPath (Join-Path $path '.gitignore') | Should Be $false
+            Test-Path -LiteralPath (Join-Path $path 'pack.toml') | Should Be $true
+        }
+    }
+
     Describe 'MRPack diff' {
         It 'reads manifest entries and uncompressed overrides semantically' {
             $path = Join-Path $TestDrive 'sample.mrpack'
@@ -270,8 +439,8 @@ neoforge = "21.1.200"
     Describe 'CLI help' {
         It 'uses one catalog for every executable command' {
             $catalog = Get-MpCommandCatalog
-            @($catalog.Keys).Count | Should Be 14
-            @($catalog.Keys) | Should Be @('list', 'use', 'status', 'new', 'inventory', 'search', 'add', 'classify', 'resource', 'update', 'build', 'diff', 'doctor', 'config')
+            @($catalog.Keys).Count | Should Be 15
+            @($catalog.Keys) | Should Be @('list', 'use', 'status', 'new', 'init', 'inventory', 'search', 'add', 'classify', 'resource', 'update', 'build', 'diff', 'doctor', 'config')
             foreach ($name in $catalog.Keys) {
                 $catalog[$name].Summary | Should Not BeNullOrEmpty
                 $catalog[$name].Description | Should Not BeNullOrEmpty

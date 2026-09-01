@@ -57,12 +57,34 @@ function Get-PackTomlData {
         }
     }
 
+    $indexFile = Get-TomlString -Text $text -Section 'index' -Key 'file'
+    if ([string]::IsNullOrWhiteSpace($indexFile)) { $indexFile = 'index.toml' }
+
     [pscustomobject]@{
         Name             = Get-TomlString -Text $text -Key 'name'
         Author           = Get-TomlString -Text $text -Key 'author'
         Version          = Get-TomlString -Text $text -Key 'version'
+        IndexFile        = $indexFile
         MinecraftVersion = Get-TomlString -Text $text -Section 'versions' -Key 'minecraft'
         Loader           = $loader
         LoaderVersion    = $loaderVersion
     }
+}
+
+function Resolve-PackwizIndexPath {
+    param(
+        [Parameter(Mandatory)][string]$ProjectRoot,
+        [Parameter(Mandatory)][string]$IndexFile
+    )
+
+    if ([System.IO.Path]::IsPathRooted($IndexFile)) {
+        Throw-MpError -Message "Packwiz index path '$IndexFile' must be relative to the project" -Hint 'repair the [index] file value in pack.toml' -ErrorId 'Project.InvalidIndexPath' -Category InvalidData -TargetObject $IndexFile
+    }
+    $root = [System.IO.Path]::GetFullPath($ProjectRoot).TrimEnd('\', '/')
+    $resolved = [System.IO.Path]::GetFullPath((Join-Path $root $IndexFile))
+    $prefix = $root + [System.IO.Path]::DirectorySeparatorChar
+    if (-not $resolved.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        Throw-MpError -Message "Packwiz index path '$IndexFile' escapes project root '$root'" -Hint 'repair the [index] file value in pack.toml' -ErrorId 'Project.InvalidIndexPath' -Category InvalidData -TargetObject $IndexFile
+    }
+    return $resolved
 }

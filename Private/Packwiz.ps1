@@ -146,7 +146,7 @@ Search, inventory, and category numbers have separate contexts. `modpack add <nu
 
 ## Sources of truth
 
-- `pack.toml`, `index.toml`, and `.pw.toml` files own technical Packwiz data.
+- `pack.toml`, its configured index, and `.pw.toml` files own technical Packwiz data.
 - `.modpack/project.psd1` owns the short ID and display/build identity.
 - `.modpack/metadata.psd1` owns editorial categories and display-name overrides.
 - `config/defaultoptions-common.toml` owns enabled resource packs and their order.
@@ -165,6 +165,21 @@ function Write-ModpackProjectReadme {
     return $path
 }
 
+function Write-ModpackRegistrationFiles {
+    param(
+        [Parameter(Mandatory)][string]$Root,
+        [Parameter(Mandatory)][System.Collections.IDictionary]$Descriptor
+    )
+
+    [System.IO.Directory]::CreateDirectory((Join-Path $Root '.modpack')) | Out-Null
+    Write-PowerShellDataFileAtomic -Path (Join-Path $Root '.modpack/project.psd1') -Data $Descriptor
+    Write-PowerShellDataFileAtomic -Path (Join-Path $Root '.modpack/metadata.psd1') -Data ([ordered]@{
+        Categories    = [ordered]@{}
+        Mods          = [ordered]@{}
+        ResourcePacks = [ordered]@{}
+    })
+}
+
 function New-ModpackProjectFiles {
     param(
         [Parameter(Mandatory)][string]$Root,
@@ -177,22 +192,132 @@ function New-ModpackProjectFiles {
         [System.IO.Directory]::CreateDirectory((Join-Path $Root $directory)) | Out-Null
     }
     $outputName = (($DisplayName -replace '[\\/:*?"<>|]', '-').Trim() + "-$DisplayVersion.mrpack")
-    Write-PowerShellDataFileAtomic -Path (Join-Path $Root '.modpack/project.psd1') -Data ([ordered]@{
+    Write-ModpackRegistrationFiles -Root $Root -Descriptor ([ordered]@{
         SchemaVersion  = 1
         Id             = $Id
         DisplayName    = $DisplayName
         DisplayVersion = $DisplayVersion
         OutputName     = $outputName
     })
-    Write-PowerShellDataFileAtomic -Path (Join-Path $Root '.modpack/metadata.psd1') -Data ([ordered]@{
-        Categories    = [ordered]@{}
-        Mods          = [ordered]@{}
-        ResourcePacks = [ordered]@{}
-    })
 
     $project = Read-ModpackProject -ProjectRoot $Root
     [void](Write-ModpackProjectReadme -Project $project)
     [System.IO.File]::WriteAllText((Join-Path $Root '.gitignore'), "dist/`n", [System.Text.UTF8Encoding]::new($false))
+}
+
+function Initialize-ExistingModpackProject {
+    param(
+        [Parameter(Mandatory)][string]$Id,
+        [string]$Path = (Get-Location).Path,
+        [string]$DisplayName,
+        [string]$DisplayVersion,
+        [string]$OutputName
+    )
+
+    if ($Id -notmatch '^[a-z][a-z0-9-]*$') {
+        Throw-MpError -Message "Project ID '$Id' is invalid; allowed characters: lowercase letters, numbers, hyphens" -Hint 'choose an ID such as my-pack' -ErrorId 'Project.InvalidId' -Category InvalidArgument -TargetObject $Id
+    }
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        Throw-MpError -Message 'Packwiz project path cannot be empty' -Hint 'modpack init <id> --path <existing-directory>' -ErrorId 'Project.InvalidPath' -Category InvalidArgument -TargetObject $Path
+    }
+    $root = Get-ModpackRoot
+    $projectRoot = [System.IO.Path]::GetFullPath($Path)
+    if (-not (Test-Path -LiteralPath $projectRoot -PathType Container)) {
+        Throw-MpError -Message "Packwiz project directory '$projectRoot' does not exist" -Hint 'modpack init <id> --path <existing-directory>' -ErrorId 'Project.PathNotFound' -Category ObjectNotFound -TargetObject $projectRoot
+    }
+    $parent = [System.IO.Path]::GetFullPath((Split-Path -Parent $projectRoot)).TrimEnd('\', '/')
+    $normalizedRoot = $root.TrimEnd('\', '/')
+    if (-not $parent.Equals($normalizedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        Throw-MpError -Message "Packwiz project '$projectRoot' is not a direct child of configured root '$root'" -Hint 'move the project directly below the configured root or configure its parent as the root' -ErrorId 'Project.OutsideRoot' -Category InvalidArgument -TargetObject $projectRoot
+    }
+
+    $modpackDirectory = Join-Path $projectRoot '.modpack'
+    $descriptorPath = Join-Path $modpackDirectory 'project.psd1'
+    $metadataPath = Join-Path $modpackDirectory 'metadata.psd1'
+    if ((Test-Path -LiteralPath $modpackDirectory) -and -not (Test-Path -LiteralPath $modpackDirectory -PathType Container)) {
+        Throw-MpError -Message "Path '$modpackDirectory' exists but is not a directory" -Hint 'move the conflicting path, then retry' -ErrorId 'Project.InitializationConflict' -Category ResourceExists -TargetObject $modpackDirectory
+    }
+    if (Test-Path -LiteralPath $descriptorPath -PathType Leaf) {
+        Throw-MpError -Message "Packwiz project '$projectRoot' is already initialized for ModpackTools" -Hint 'modpack list' -ErrorId 'Project.AlreadyInitialized' -Category ResourceExists -TargetObject $descriptorPath
+    }
+    if (Test-Path -LiteralPath $modpackDirectory) {
+        $conflicts = @(Get-ChildItem -LiteralPath $modpackDirectory -Force -ErrorAction Stop)
+        if ($conflicts.Count -gt 0) {
+            Throw-MpError -Message "Directory '$modpackDirectory' contains files that ModpackTools will not overwrite" -Details (($conflicts.Name | Sort-Object) -join ', ') -Hint 'review or move the existing .modpack contents, then retry' -ErrorId 'Project.InitializationConflict' -Category ResourceExists -TargetObject $modpackDirectory
+        }
+    }
+
+    $packPath = Join-Path $projectRoot 'pack.toml'
+    if (-not (Test-Path -LiteralPath $packPath -PathType Leaf)) {
+        Throw-MpError -Message "Directory '$projectRoot' is not a Packwiz project because 'pack.toml' is missing" -Hint 'run this command from an existing Packwiz project' -ErrorId 'Project.ManifestNotFound' -Category ObjectNotFound -TargetObject $packPath
+    }
+    $pack = Get-PackTomlData -Path $packPath
+    $indexPath = Resolve-PackwizIndexPath -ProjectRoot $projectRoot -IndexFile $pack.IndexFile
+    if (-not (Test-Path -LiteralPath $indexPath -PathType Leaf)) {
+        Throw-MpError -Message "Packwiz project '$projectRoot' is incomplete because index '$($pack.IndexFile)' is missing" -Hint 'restore the Packwiz index before initializing ModpackTools' -ErrorId 'Project.IndexNotFound' -Category ObjectNotFound -TargetObject $indexPath
+    }
+    $missingFields = @(
+        if ([string]::IsNullOrWhiteSpace([string]$pack.Name)) { 'name' }
+        if ([string]::IsNullOrWhiteSpace([string]$pack.Version)) { 'version' }
+        if ([string]::IsNullOrWhiteSpace([string]$pack.MinecraftVersion)) { 'versions.minecraft' }
+        if ([string]::IsNullOrWhiteSpace([string]$pack.Loader)) { 'versions.<loader>' }
+    )
+    if ($missingFields.Count -gt 0) {
+        Throw-MpError -Message "Packwiz manifest '$packPath' is missing required data" -Details ($missingFields -join ', ') -Hint 'repair pack.toml before initializing ModpackTools' -ErrorId 'Project.InvalidManifest' -Category InvalidData -TargetObject $packPath
+    }
+    if (@(Get-ModpackProjects | Where-Object Id -eq $Id).Count -gt 0) {
+        Throw-MpError -Message "Project ID '$Id' is already registered" -Hint 'choose a different project ID or run modpack use <id>' -ErrorId 'Project.AlreadyExists' -Category ResourceExists -TargetObject $Id
+    }
+    if ($PSBoundParameters.ContainsKey('DisplayName') -and [string]::IsNullOrWhiteSpace($DisplayName)) {
+        Throw-MpError -Message "Display name cannot be empty" -Hint '--display-name <name>' -ErrorId 'Project.InvalidDisplayName' -Category InvalidArgument -TargetObject $DisplayName
+    }
+    if ($PSBoundParameters.ContainsKey('DisplayVersion') -and [string]::IsNullOrWhiteSpace($DisplayVersion)) {
+        Throw-MpError -Message "Display version cannot be empty" -Hint '--display-version <version>' -ErrorId 'Project.InvalidDisplayVersion' -Category InvalidArgument -TargetObject $DisplayVersion
+    }
+    if ($PSBoundParameters.ContainsKey('OutputName')) {
+        $invalidFileName = [System.IO.Path]::GetInvalidFileNameChars() | Where-Object { $OutputName.Contains([string]$_) } | Select-Object -First 1
+        if ([string]::IsNullOrWhiteSpace($OutputName) -or $invalidFileName -or [System.IO.Path]::GetFileName($OutputName) -ne $OutputName -or -not $OutputName.EndsWith('.mrpack', [System.StringComparison]::OrdinalIgnoreCase)) {
+            Throw-MpError -Message "Output name '$OutputName' must be a valid .mrpack filename" -Hint '--output-name <filename.mrpack>' -ErrorId 'Project.InvalidOutputName' -Category InvalidArgument -TargetObject $OutputName
+        }
+    }
+
+    $descriptor = [ordered]@{ SchemaVersion = 1; Id = $Id }
+    if ($PSBoundParameters.ContainsKey('DisplayName')) { $descriptor.DisplayName = $DisplayName }
+    if ($PSBoundParameters.ContainsKey('DisplayVersion')) { $descriptor.DisplayVersion = $DisplayVersion }
+    if ($PSBoundParameters.ContainsKey('OutputName')) { $descriptor.OutputName = $OutputName }
+
+    $createdModpackDirectory = -not (Test-Path -LiteralPath $modpackDirectory)
+    $createdFiles = [System.Collections.Generic.List[string]]::new()
+    try {
+        Write-ModpackRegistrationFiles -Root $projectRoot -Descriptor $descriptor
+        $createdFiles.Add($descriptorPath)
+        $createdFiles.Add($metadataPath)
+        $project = Read-ModpackProject -ProjectRoot $projectRoot
+        Assert-ModpackStructure -Project $project
+
+        $readmePath = Join-Path $projectRoot 'README.md'
+        if (-not (Test-Path -LiteralPath $readmePath)) {
+            [void](Write-ModpackProjectReadme -Project $project)
+            $createdFiles.Add($readmePath)
+        }
+        $gitIgnorePath = Join-Path $projectRoot '.gitignore'
+        if (-not (Test-Path -LiteralPath $gitIgnorePath)) {
+            [System.IO.File]::WriteAllText($gitIgnorePath, "dist/`n", [System.Text.UTF8Encoding]::new($false))
+            $createdFiles.Add($gitIgnorePath)
+        }
+        return [pscustomobject]@{ Project = $project; CreatedFiles = @($createdFiles) }
+    }
+    catch {
+        foreach ($createdFile in @($createdFiles | Select-Object -Unique)) {
+            if (Test-Path -LiteralPath $createdFile -PathType Leaf) { Remove-Item -LiteralPath $createdFile -Force }
+        }
+        if (Test-Path -LiteralPath $metadataPath -PathType Leaf) { Remove-Item -LiteralPath $metadataPath -Force }
+        if (Test-Path -LiteralPath $descriptorPath -PathType Leaf) { Remove-Item -LiteralPath $descriptorPath -Force }
+        if ($createdModpackDirectory -and (Test-Path -LiteralPath $modpackDirectory -PathType Container) -and @(Get-ChildItem -LiteralPath $modpackDirectory -Force).Count -eq 0) {
+            Remove-Item -LiteralPath $modpackDirectory -Force
+        }
+        throw
+    }
 }
 
 function Get-PackwizInitArguments {
@@ -379,7 +504,7 @@ function Get-PackwizStateSnapshot {
     param([Parameter(Mandatory)]$Project)
 
     $paths = [System.Collections.Generic.List[string]]::new()
-    foreach ($name in @('pack.toml', 'index.toml')) {
+    foreach ($name in @('pack.toml', $Project.IndexFile)) {
         $path = Join-Path $Project.Root $name
         if (Test-Path -LiteralPath $path -PathType Leaf) { $paths.Add($path) }
     }
