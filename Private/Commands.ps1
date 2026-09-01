@@ -127,18 +127,67 @@ function Invoke-MpResource {
 function Invoke-MpClassify {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Show-MpHelp classify; return }
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum 2 -Usage 'modpack classify <name|id|filename> <category|unclassified> [--project <id>]' -OptionNames @('project')
-    $project = Resolve-MpCommandProject -Options $parsed.Options
-    $rawSelector = [string]$parsed.Positionals[0]
-    $reference = Resolve-ModpackInventoryNumber -Selector $rawSelector -Project $project -AllowedKinds @('mod')
-    $selector = if ($reference) { [string]$reference.Selector } else { $rawSelector }
-    $label = if ($reference) { "#$rawSelector $($reference.Name)" } else { $rawSelector }
-    Write-MpStep "Classifying '$label'..."
-    $result = Set-ModpackModClassification -Project $project -Selector $selector -Category $parsed.Positionals[1]
-    Write-MpSuccess "$($result.Item.Name) is classified as '$($result.Category)'."
-    Write-MpKeyValue 'Previous' $result.PreviousCategory
-    Write-MpKeyValue 'ID' $result.Item.Id
+    if (-not $Arguments.Count) {
+        Throw-MpError -Message 'The classify command requires an operation; allowed values: list, create, remove, set' -Hint 'modpack classify --help' -ErrorId 'Command.MissingOperation' -Category InvalidArgument
+    }
+    $operation = ([string]$Arguments[0]).ToLowerInvariant()
+    $remaining = if ($Arguments.Count -gt 1) { @($Arguments | Select-Object -Skip 1) } else { @() }
+    switch ($operation) {
+        'list' {
+            $parsed = ConvertFrom-MpOptions -Arguments $remaining -ValueOptions @('project')
+            Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 0 -Usage 'modpack classify list [--project <id>]' -OptionNames @('project')
+            $project = Resolve-MpCommandProject -Options $parsed.Options
+            $view = Get-ModpackCategoryView -Project $project
+            Write-ModpackCategoryCache -View $view
+            Write-ModpackCategoryList -View $view
+        }
+        'create' {
+            $parsed = ConvertFrom-MpOptions -Arguments $remaining -ValueOptions @('project', 'name', 'order')
+            Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack classify create <id> [--name <name>] [--order <n>] [--project <id>]' -OptionNames @('project', 'name', 'order')
+            $project = Resolve-MpCommandProject -Options $parsed.Options
+            $order = 0
+            if ($parsed.Options.ContainsKey('order') -and -not [int]::TryParse([string]$parsed.Options.order, [ref]$order)) {
+                Throw-MpError -Message "Category order '$($parsed.Options.order)' is not an integer" -Hint '--order <integer>' -ErrorId 'Option.InvalidOrder' -Category InvalidArgument -TargetObject $parsed.Options.order
+            }
+            $parameters = @{ Project = $project; Id = [string]$parsed.Positionals[0] }
+            if ($parsed.Options.ContainsKey('name')) { $parameters.Name = [string]$parsed.Options.name }
+            if ($parsed.Options.ContainsKey('order')) { $parameters.Order = $order }
+            $created = New-ModpackCategory @parameters
+            Write-MpSuccess "Category '$($created.Id)' was created."
+            $view = Get-ModpackCategoryView -Project $project
+            Write-ModpackCategoryCache -View $view
+            Write-ModpackCategoryList -View $view
+        }
+        'remove' {
+            $parsed = ConvertFrom-MpOptions -Arguments $remaining -ValueOptions @('project') -SwitchOptions @('unclassify')
+            Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack classify remove <category|number> [--unclassify] [--project <id>]' -OptionNames @('project', 'unclassify')
+            $project = Resolve-MpCommandProject -Options $parsed.Options
+            $removed = Remove-ModpackCategory -Project $project -Selector ([string]$parsed.Positionals[0]) -Unclassify:$parsed.Options.ContainsKey('unclassify')
+            Write-MpSuccess "Category '$($removed.Id)' was removed."
+            if ($removed.UnclassifiedCount) { Write-MpInfo "$($removed.UnclassifiedCount) mod(s) are now unclassified." }
+            $view = Get-ModpackCategoryView -Project $project
+            Write-ModpackCategoryCache -View $view
+            Write-ModpackCategoryList -View $view
+        }
+        'set' {
+            $parsed = ConvertFrom-MpOptions -Arguments $remaining -ValueOptions @('project')
+            Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum 2 -Usage 'modpack classify set <mod|inventory-number> <category|number|unclassified> [--project <id>]' -OptionNames @('project')
+            $project = Resolve-MpCommandProject -Options $parsed.Options
+            $rawSelector = [string]$parsed.Positionals[0]
+            $reference = Resolve-ModpackInventoryNumber -Selector $rawSelector -Project $project -AllowedKinds @('mod')
+            $selector = if ($reference) { [string]$reference.Selector } else { $rawSelector }
+            $label = if ($reference) { "#$rawSelector $($reference.Name)" } else { $rawSelector }
+            $categoryId = Resolve-ModpackCategoryId -Project $project -Selector ([string]$parsed.Positionals[1]) -AllowUnclassified
+            Write-MpStep "Classifying '$label'..."
+            $result = Set-ModpackModClassification -Project $project -Selector $selector -Category $categoryId
+            Write-MpSuccess "$($result.Item.Name) is classified as '$($result.Category)'."
+            Write-MpKeyValue 'Previous' $result.PreviousCategory
+            Write-MpKeyValue 'ID' $result.Item.Id
+        }
+        default {
+            Throw-MpError -Message "Classify operation '$($Arguments[0])' is not recognized; allowed values: list, create, remove, set" -Hint 'modpack classify --help' -ErrorId 'Metadata.UnknownClassificationOperation' -Category InvalidArgument -TargetObject $Arguments[0]
+        }
+    }
 }
 
 function Invoke-MpStatus {

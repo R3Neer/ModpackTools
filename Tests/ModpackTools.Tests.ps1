@@ -193,7 +193,11 @@ minecraft = "1.21.1"
             $text | Should Match 'Every command that operates on an existing project'
             $text | Should Match 'modpack resource enable'
             $text | Should Match 'modpack update <inventory-number>'
-            $text | Should Match 'Search and inventory numbers have separate contexts'
+            $text | Should Match 'modpack classify list'
+            $text | Should Match 'modpack classify create <id>'
+            $text | Should Match 'modpack classify set <name\|id\|filename>'
+            $text | Should Match 'modpack classify remove <category\|number>'
+            $text | Should Match 'Search, inventory, and category numbers have separate contexts'
             $text | Should Match 'defaultoptions-common.toml'
             $text | Should Match 'modpack --help'
             $text | Should Match 'modpack inventory --help'
@@ -593,9 +597,68 @@ mod-id = "AANobbMI"
             $view = Select-ModpackInventory -Inventory (Get-ModpackInventory -Project $project)
             [void](Set-ModpackInventoryReferences -View $view)
 
-            Invoke-MpClassify @('1', 'performance', '--project', $project.Id)
+            Invoke-MpClassify @('set', '1', 'performance', '--project', $project.Id)
 
             (Get-ModpackMetadata -Project $project).Mods['modrinth:AANobbMI'].Category | Should Be 'performance'
+        }
+
+        It 'creates a category with explicit presentation metadata' {
+            Invoke-MpClassify @('create', 'world-generation', '--name', 'WORLD GENERATION', '--order', '25', '--project', $project.Id)
+
+            $metadata = Get-ModpackMetadata -Project $project
+            $metadata.Categories['world-generation'].Name | Should Be 'WORLD GENERATION'
+            $metadata.Categories['world-generation'].Order | Should Be 25
+        }
+
+        It 'appends a category when no order is provided' {
+            Invoke-MpClassify @('create', 'visuals', '--project', $project.Id)
+
+            $category = (Get-ModpackMetadata -Project $project).Categories['visuals']
+            $category.Name | Should Be 'VISUALS'
+            $category.Order | Should Be 20
+        }
+
+        It 'reserves unclassified for clearing assignments' {
+            { Invoke-MpClassify @('create', 'unclassified', '--project', $project.Id) } | Should Throw "Category ID 'unclassified' is reserved"
+        }
+
+        It 'uses inventory numbers for mods and category-list numbers for categories' {
+            [void](New-ModpackCategory -Project $project -Id 'visuals' -Name 'VISUALS' -Order 5)
+            $inventory = Select-ModpackInventory -Inventory (Get-ModpackInventory -Project $project)
+            [void](Set-ModpackInventoryReferences -View $inventory)
+            Invoke-MpClassify @('list', '--project', $project.Id)
+
+            Invoke-MpClassify @('set', '1', '1', '--project', $project.Id)
+
+            (Get-ModpackMetadata -Project $project).Mods['modrinth:AANobbMI'].Category | Should Be 'visuals'
+        }
+
+        It 'removes an unused category by its latest category number' {
+            Invoke-MpClassify @('create', 'visuals', '--project', $project.Id)
+
+            Invoke-MpClassify @('remove', '2', '--project', $project.Id)
+
+            (Get-ModpackMetadata -Project $project).Categories.ContainsKey('visuals') | Should Be $false
+        }
+
+        It 'refuses to remove a category in use unless unclassification is explicit' {
+            $metadataPath = Join-Path $projectPath '.modpack/metadata.psd1'
+            $metadata = Get-ModpackMetadata -Project $project
+            $metadata.Mods['modrinth:AANobbMI'] = @{ Name = 'Fast Renderer'; Category = 'performance' }
+            Write-PowerShellDataFileAtomic -Path $metadataPath -Data $metadata
+
+            { Invoke-MpClassify @('remove', 'performance', '--project', $project.Id) } | Should Throw 'cannot be removed safely'
+            (Get-ModpackMetadata -Project $project).Categories.ContainsKey('performance') | Should Be $true
+
+            Invoke-MpClassify @('remove', 'performance', '--unclassify', '--project', $project.Id)
+            $updated = Get-ModpackMetadata -Project $project
+            $updated.Categories.ContainsKey('performance') | Should Be $false
+            $updated.Mods['modrinth:AANobbMI'].Name | Should Be 'Fast Renderer'
+            $updated.Mods['modrinth:AANobbMI'].ContainsKey('Category') | Should Be $false
+        }
+
+        It 'rejects the former classify syntax instead of treating it as an alias' {
+            { Invoke-MpClassify @('sodium', 'performance', '--project', $project.Id) } | Should Throw "Classify operation 'sodium' is not recognized"
         }
 
         It 'rejects an unknown category without modifying metadata' {

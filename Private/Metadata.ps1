@@ -111,11 +111,145 @@ function Set-ModMetadataCategory {
     $metadata = Get-ModpackMetadata -Project $Project
     $categoryId = $metadata.Categories.Keys | Where-Object { ([string]$_).Equals($Category, [System.StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1
     if (-not $categoryId) {
-        Throw-MpError -Message "Category '$Category' is not defined for project '$($Project.Id)'" -Hint 'choose a category shown by modpack inventory --type mod' -ErrorId 'Metadata.UnknownCategory' -Category InvalidArgument -TargetObject $Category
+        Throw-MpError -Message "Category '$Category' is not defined for project '$($Project.Id)'" -Hint 'modpack classify list' -ErrorId 'Metadata.UnknownCategory' -Category InvalidArgument -TargetObject $Category
     }
     if (-not $metadata.Mods.ContainsKey($ModId)) { $metadata.Mods[$ModId] = @{} }
     $metadata.Mods[$ModId]['Category'] = [string]$categoryId
     Write-PowerShellDataFileAtomic -Data $metadata -Path (Join-Path $Project.Root '.modpack/metadata.psd1')
+}
+
+function Get-ModpackCategoryCachePath {
+    Join-Path (Get-ModpackToolsConfigDirectory) 'last-categories.json'
+}
+
+function Get-ModpackCategoryView {
+    param([Parameter(Mandatory)]$Project)
+    $metadata = Get-ModpackMetadata -Project $Project
+    $categories = @(
+        foreach ($key in $metadata.Categories.Keys) {
+            $definition = $metadata.Categories[$key]
+            $count = @($metadata.Mods.Keys | Where-Object {
+                $entry = $metadata.Mods[$_]
+                $entry.ContainsKey('Category') -and ([string]$entry.Category).Equals([string]$key, [System.StringComparison]::OrdinalIgnoreCase)
+            }).Count
+            [pscustomobject]@{
+                Id = [string]$key
+                Name = $(if ($definition.ContainsKey('Name')) { [string]$definition.Name } else { ([string]$key).ToUpperInvariant() })
+                Order = $(if ($definition.ContainsKey('Order')) { [int]$definition.Order } else { 1000 })
+                ModCount = $count
+            }
+        }
+    ) | Sort-Object Order, Name, Id
+    $index = 0
+    foreach ($category in $categories) {
+        $index++
+        $category | Add-Member -NotePropertyName ReferenceNumber -NotePropertyValue $index
+    }
+    $inventory = Get-ModpackInventory -Project $Project
+    return [pscustomobject]@{
+        Project = $Project
+        Categories = @($categories)
+        UnclassifiedCount = @($inventory.Mods | Where-Object Category -eq 'unclassified').Count
+    }
+}
+
+function Write-ModpackCategoryCache {
+    param([Parameter(Mandatory)]$View)
+    $cache = [pscustomobject]@{
+        SchemaVersion = 1
+        CreatedUtc = [datetime]::UtcNow.ToString('o')
+        ProjectId = [string]$View.Project.Id
+        Categories = @($View.Categories | ForEach-Object {
+            [pscustomobject]@{ Index = $_.ReferenceNumber; Id = $_.Id; Name = $_.Name }
+        })
+    }
+    Write-Utf8TextFileAtomic -Path (Get-ModpackCategoryCachePath) -Text ($cache | ConvertTo-Json -Depth 5)
+}
+
+function Read-ModpackCategoryCache {
+    $path = Get-ModpackCategoryCachePath
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { return $null }
+    try { return Get-Content -Raw -LiteralPath $path -Encoding UTF8 | ConvertFrom-Json }
+    catch {
+        Throw-MpError -Message "Category reference cache '$path' is invalid" -Hint 'modpack classify list' -ErrorId 'Metadata.InvalidCategoryCache' -Category InvalidData -TargetObject $path
+    }
+}
+
+function Resolve-ModpackCategoryId {
+    param(
+        [Parameter(Mandatory)]$Project,
+        [Parameter(Mandatory)][string]$Selector,
+        [switch]$AllowUnclassified
+    )
+    if ($AllowUnclassified -and $Selector.Equals('unclassified', [System.StringComparison]::OrdinalIgnoreCase)) { return 'unclassified' }
+    $metadata = Get-ModpackMetadata -Project $Project
+    if ($Selector -match '^[1-9][0-9]*$') {
+        $cache = Read-ModpackCategoryCache
+        if (-not $cache) { Throw-MpError -Message "Category number '$Selector' cannot be resolved because no category list has been saved" -Hint 'modpack classify list' -ErrorId 'Metadata.CategoryCacheNotFound' -Category ObjectNotFound -TargetObject $Selector }
+        if (-not (Test-MpCacheTimestamp -CreatedUtc $cache.CreatedUtc)) { Throw-MpError -Message 'The saved category list has expired' -Hint 'modpack classify list' -ErrorId 'Metadata.CategoryCacheExpired' -Category InvalidData }
+        if (-not ([string]$cache.ProjectId).Equals($Project.Id, [System.StringComparison]::OrdinalIgnoreCase)) {
+            Throw-MpError -Message "The saved category list belongs to project '$($cache.ProjectId)', not '$($Project.Id)'" -Hint "modpack classify list --project $($Project.Id)" -ErrorId 'Metadata.CategoryProjectMismatch' -Category InvalidData -TargetObject $Selector
+        }
+        $match = @($cache.Categories | Where-Object { [int]$_.Index -eq [int]$Selector })
+        if ($match.Count -ne 1) {
+            $maximum = @($cache.Categories).Count
+            if ($maximum -eq 0) {
+                Throw-MpError -Message "Category number '$Selector' cannot be resolved because the saved list contains no categories" -Hint 'modpack classify create <id>' -ErrorId 'Metadata.EmptyCategoryCache' -Category ObjectNotFound -TargetObject $Selector
+            }
+            Throw-MpError -Message "Category number '$Selector' does not exist; available range: 1-$maximum" -Hint 'modpack classify list' -ErrorId 'Metadata.CategoryReferenceOutOfRange' -Category InvalidArgument -TargetObject $Selector
+        }
+        $Selector = [string]$match[0].Id
+    }
+    $categoryId = $metadata.Categories.Keys | Where-Object { ([string]$_).Equals($Selector, [System.StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1
+    if (-not $categoryId) { Throw-MpError -Message "Category '$Selector' is not defined for project '$($Project.Id)'" -Hint 'modpack classify list' -ErrorId 'Metadata.UnknownCategory' -Category InvalidArgument -TargetObject $Selector }
+    return [string]$categoryId
+}
+
+function New-ModpackCategory {
+    param(
+        [Parameter(Mandatory)]$Project,
+        [Parameter(Mandatory)][string]$Id,
+        [string]$Name,
+        [Nullable[int]]$Order
+    )
+    if ($Id -notmatch '^[a-z][a-z0-9-]*$') { Throw-MpError -Message "Category ID '$Id' is invalid; allowed characters: lowercase letters, numbers, hyphens" -Hint 'choose an ID such as world-generation' -ErrorId 'Metadata.InvalidCategoryId' -Category InvalidArgument -TargetObject $Id }
+    if ($Id -eq 'unclassified') { Throw-MpError -Message "Category ID 'unclassified' is reserved" -Hint 'choose a different category ID' -ErrorId 'Metadata.ReservedCategoryId' -Category InvalidArgument -TargetObject $Id }
+    $metadata = Get-ModpackMetadata -Project $Project
+    $existing = $metadata.Categories.Keys | Where-Object { ([string]$_).Equals($Id, [System.StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1
+    if ($existing) { Throw-MpError -Message "Category '$Id' already exists in project '$($Project.Id)'" -Hint 'modpack classify list' -ErrorId 'Metadata.CategoryAlreadyExists' -Category ResourceExists -TargetObject $Id }
+    if ([string]::IsNullOrWhiteSpace($Name)) { $Name = $Id.ToUpperInvariant() }
+    if ($null -eq $Order) {
+        $orders = @($metadata.Categories.Values | ForEach-Object { if ($_.ContainsKey('Order')) { [int]$_.Order } })
+        $Order = if ($orders.Count) { ($orders | Measure-Object -Maximum).Maximum + 10 } else { 10 }
+    }
+    $metadata.Categories[$Id] = [ordered]@{ Name = $Name; Order = [int]$Order }
+    Write-PowerShellDataFileAtomic -Data $metadata -Path (Join-Path $Project.Root '.modpack/metadata.psd1')
+    return [pscustomobject]@{ Id = $Id; Name = $Name; Order = [int]$Order }
+}
+
+function Remove-ModpackCategory {
+    param(
+        [Parameter(Mandatory)]$Project,
+        [Parameter(Mandatory)][string]$Selector,
+        [switch]$Unclassify
+    )
+    $categoryId = Resolve-ModpackCategoryId -Project $Project -Selector $Selector
+    $metadata = Get-ModpackMetadata -Project $Project
+    $assigned = @($metadata.Mods.Keys | Where-Object {
+        $entry = $metadata.Mods[$_]
+        $entry.ContainsKey('Category') -and ([string]$entry.Category).Equals($categoryId, [System.StringComparison]::OrdinalIgnoreCase)
+    })
+    if ($assigned.Count -and -not $Unclassify) {
+        Throw-MpError -Message "Category '$categoryId' is assigned to $($assigned.Count) mod(s) and cannot be removed safely" -Details (@($assigned | Select-Object -First 8) -join ', ') -Hint "modpack classify remove $categoryId --unclassify" -ErrorId 'Metadata.CategoryInUse' -Category InvalidOperation -TargetObject $categoryId
+    }
+    foreach ($modId in $assigned) {
+        $entry = $metadata.Mods[$modId]
+        [void]$entry.Remove('Category')
+        if ($entry.Count -eq 0) { [void]$metadata.Mods.Remove($modId) }
+    }
+    [void]$metadata.Categories.Remove($categoryId)
+    Write-PowerShellDataFileAtomic -Data $metadata -Path (Join-Path $Project.Root '.modpack/metadata.psd1')
+    return [pscustomobject]@{ Id = $categoryId; UnclassifiedCount = $assigned.Count }
 }
 
 function Resolve-ModpackModForClassification {
@@ -162,10 +296,7 @@ function Set-ModpackModClassification {
         $normalizedCategory = 'unclassified'
     }
     else {
-        $categoryId = $metadata.Categories.Keys | Where-Object { ([string]$_).Equals($Category, [System.StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1
-        if (-not $categoryId) {
-            Throw-MpError -Message "Category '$Category' is not defined for project '$($Project.Id)'" -Hint 'choose a category shown by modpack inventory --type mod' -ErrorId 'Metadata.UnknownCategory' -Category InvalidArgument -TargetObject $Category
-        }
+        $categoryId = Resolve-ModpackCategoryId -Project $Project -Selector $Category
         if (-not $metadata.Mods.ContainsKey($item.Id)) { $metadata.Mods[$item.Id] = @{} }
         $metadata.Mods[$item.Id]['Category'] = [string]$categoryId
         $normalizedCategory = [string]$categoryId

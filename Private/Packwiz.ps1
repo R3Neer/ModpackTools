@@ -98,8 +98,10 @@ modpack search <query> --type mod
 modpack add <search-number>
 modpack add <slug>
 modpack add <slug> --category <category>
-modpack classify <name|id|filename> <category>
-modpack classify <name|id|filename> unclassified
+modpack classify list
+modpack classify create <id> --name <name>
+modpack classify set <name|id|filename> <category|number|unclassified>
+modpack classify remove <category|number> [--unclassify]
 modpack update <name|id|filename...>
 modpack update --all
 modpack update --all --type mod
@@ -115,7 +117,7 @@ modpack inventory --search <text>
 modpack update <inventory-number>
 ```
 
-Every displayed inventory item has one global reference number for that filtered view. Use it with `modpack resource`, `modpack classify`, or `modpack update`. References are bound to this project and expire after 24 hours.
+Every displayed inventory item has one global reference number for that filtered view. Use it with `modpack resource`, as the mod argument of `modpack classify set`, or with `modpack update`. References are bound to this project and expire after 24 hours.
 
 Enable or reposition a resource pack. Position `1` is the highest priority in the Minecraft GUI:
 
@@ -135,9 +137,9 @@ modpack build
 
 `modpack search` queries compatible Modrinth projects and saves the numbered results for 24 hours. `modpack add <number>` installs from that saved list; IDs and slugs remain valid directly. The cache is only a convenience reference and Packwiz remains the technical source of truth.
 
-Search and inventory numbers have separate contexts: `modpack add <number>` always uses the latest search, while `resource`, `classify`, and `update` always use the latest inventory. Running one command never replaces the other command's numbered results.
+Search, inventory, and category numbers have separate contexts. `modpack add <number>` uses the latest search; `resource`, `update`, and the mod argument of `classify set` use the latest inventory; the category argument of `classify set` and `classify remove` use the latest `classify list`. The argument position makes the intended list unambiguous.
 
-`modpack classify` changes only the editorial category stored for a mod's stable ID. Use `unclassified` to remove its category assignment. `modpack resource disable` removes a pack from the Default Options enabled order without uninstalling it.
+`modpack classify` defines, lists, removes, and assigns editorial categories. Removing a category that is in use requires `--unclassify`. Category definitions and assignments live only in `.modpack/metadata.psd1`; numbered lists are temporary references. `modpack resource disable` removes a pack from the Default Options enabled order without uninstalling it.
 
 `modpack update` updates mods, resource packs, and shaders managed by Packwiz. Multiple selectors form one transaction: if any update fails, every Packwiz metadata change in the group is rolled back. Use `--type mod|resourcepack|shaderpack` to narrow the operation. Local files are never updated. Review the result with `modpack diff` before building.
 

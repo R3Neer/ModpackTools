@@ -484,3 +484,21 @@ function Write-ModrinthSearchResults {
     Write-Host ''
     Write-MpInfo 'Install a result with modpack add <number>. You can also use its ID or slug.'
 }
+
+function Write-ModpackCategoryList {
+    param([Parameter(Mandatory)]$View)
+    Write-MpBanner "CATEGORIES · $($View.Project.Id)"
+    Write-MpSection 'DEFINED CATEGORIES' @($View.Categories).Count
+    if (-not @($View.Categories).Count) {
+        Write-Host "$($script:Palette.Secondary)  · None$($script:Palette.Reset)"
+    }
+    foreach ($category in $View.Categories) {
+        $mods = if ($category.ModCount -eq 1) { '1 mod' } else { "$($category.ModCount) mods" }
+        Write-Host "  $($script:Palette.Accent)[$($category.ReferenceNumber)]$($script:Palette.Reset) " -NoNewline
+        Write-Host "$($script:Palette.Value)$($PSStyle.Bold)$($category.Name)$($PSStyle.Reset) " -NoNewline
+        Write-Host "$($script:Palette.Secondary)$($category.Id) · $mods · order $($category.Order)$($script:Palette.Reset)"
+    }
+    Write-Host ''
+    Write-MpKeyValue 'Unclassified' $View.UnclassifiedCount
+    if (@($View.Categories).Count) { Write-MpInfo 'Use a category ID or number with classify set and classify remove.' }
+}

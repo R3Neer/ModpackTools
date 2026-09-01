@@ -129,8 +129,10 @@ modpack search sodium
 modpack search "fresh animations" --type resourcepack
 modpack add 2
 modpack add sodium --category performance
-modpack classify sodium performance
-modpack classify sodium unclassified
+modpack classify list
+modpack classify create world-generation --name "WORLD GENERATION"
+modpack classify set sodium performance
+modpack classify remove world-generation
 modpack add sodium --project vp26 --category performance
 modpack update sodium
 modpack update sodium lithium ferrite-core
@@ -167,11 +169,11 @@ Every item displayed by `inventory` receives one global `[number]` for that exac
 ```powershell
 modpack resource enable <inventory-number> --position <n>
 modpack resource disable <inventory-number>
-modpack classify <inventory-number> <category|unclassified>
+modpack classify set <inventory-number> <category|category-number|unclassified>
 modpack update <inventory-number>...
 ```
 
-Number contexts are deliberately separate. `modpack add <number>` always resolves against the latest `search` results; `resource`, `classify`, and `update` always resolve against the latest `inventory` view. Therefore running `search`, then `inventory`, does not make a later number ambiguous or overwrite the other list. The caches are convenience references only; project files remain the sources of truth.
+Number contexts are deliberately separate. `modpack add <number>` resolves against the latest `search` results; a mod number passed as the first argument of `classify set`, and numbers passed to `resource` or `update`, resolve against the latest `inventory` view. A category number passed as the second argument of `classify set` or to `classify remove` resolves against the latest `classify list`. The command position determines the context, so the lists never become ambiguous. The caches are convenience references only; project files remain the sources of truth.
 
 ### Enabling, disabling, and ordering resource packs
 
@@ -184,14 +186,20 @@ The selector accepts the name displayed by `inventory`, the Default Options ID, 
 
 The command modifies only `defaultResourcePacks` in `config/defaultoptions-common.toml`; it does not maintain a second activation list.
 
-### Classifying an existing mod
+### Managing mod categories
 
 ```powershell
-modpack classify <name|id|filename> <category> [--project <id>]
-modpack classify <name|id|filename> unclassified [--project <id>]
+modpack classify list [--project <id>]
+modpack classify create <id> [--name <name>] [--order <n>] [--project <id>]
+modpack classify remove <category|number> [--unclassify] [--project <id>]
+modpack classify set <mod|inventory-number> <category|number|unclassified> [--project <id>]
 ```
 
-The selector accepts the displayed name, stable ID, current filename, or `.pw.toml` stem. The category must already exist in `.modpack/metadata.psd1`. Reclassification replaces only the mod's editorial `Category` value; it does not move, reinstall, or modify the Packwiz metadata. `unclassified` removes the assignment while preserving other editorial fields such as a name override.
+`list` shows the category ID, display name, order, and assigned-mod count. Its numbers are saved for 24 hours and bound to the selected project. `create` appends a category by default; `--name` controls its display label and `--order` controls its inventory order.
+
+`remove` accepts an ID or number from the latest category list. It refuses to remove a category that is assigned to mods unless `--unclassify` is explicit. `set` accepts a displayed mod name, stable ID, current filename, `.pw.toml` stem, or number from the latest inventory. Its category accepts an ID, a number from `classify list`, or `unclassified`.
+
+These operations change only editorial metadata in `.modpack/metadata.psd1`; they never move, reinstall, or modify Packwiz content. Clearing a category preserves other editorial fields such as a name override. The former two-positional form, such as `modpack classify sodium performance`, is invalid; the `set` operation is required.
 
 ### Creating a project
 

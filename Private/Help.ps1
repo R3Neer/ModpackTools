@@ -70,12 +70,25 @@ function Get-MpCommandCatalog {
             ); Notes = @('Search numbers are separate from inventory numbers.', 'Categories apply only to mods.'); Examples = @('modpack add sodium', 'modpack add 2', 'modpack add sodium --category performance --project vp26')
         }
         classify = [pscustomobject]@{
-            Handler = 'Invoke-MpClassify'; Group = 'CONTENT'; Summary = 'Change a mod category'; Description = 'Classify or reclassify a mod using editorial metadata.'
-            Usage = @('modpack classify <selector> <category|unclassified> [options]'); Items = @(
-                New-MpHelpItem '<selector>' 'Mod name, ID, filename, or latest inventory number.'
-                New-MpHelpItem '<category>' 'Existing category ID, or unclassified to remove one.'
+            Handler = 'Invoke-MpClassify'; Group = 'CONTENT'; Summary = 'Manage mod categories'; Description = 'Define, inspect, remove, and assign editorial categories for mods.'
+            Usage = @(
+                'modpack classify list [--project <id>]'
+                'modpack classify create <id> [--name <name>] [--order <n>] [--project <id>]'
+                'modpack classify remove <category|number> [--unclassify] [--project <id>]'
+                'modpack classify set <mod|inventory-number> <category|number|unclassified> [--project <id>]'
+            ); Items = @(
+                New-MpHelpItem 'list' 'Show defined categories and save their numbered references.'
+                New-MpHelpItem 'create <id>' 'Create a category with a stable lowercase ID.'
+                New-MpHelpItem 'remove <category>' 'Remove an unused category by ID or latest category number.'
+                New-MpHelpItem 'set <mod> <category>' 'Assign, replace, or clear a mod category.'
+                New-MpHelpItem '--name <name>' 'Set the display name for a new category.'
+                New-MpHelpItem '--order <n>' 'Set its inventory display order; otherwise append it.'
+                New-MpHelpItem '--unclassify' 'When removing a used category, clear it from every assigned mod.'
                 New-MpHelpItem '--project <id>' 'Use this project instead of the active one.'
-            ); Notes = @('Classification does not move or reinstall the mod.'); Examples = @('modpack classify sodium performance', 'modpack classify 3 unclassified')
+            ); Notes = @(
+                'Category numbers come from classify list; mod numbers come from inventory.'
+                'Removing a category in use requires --unclassify. Classification never moves or reinstalls a mod.'
+            ); Examples = @('modpack classify list', 'modpack classify create world-generation --name "WORLD GENERATION"', 'modpack classify set 3 2')
         }
         resource = [pscustomobject]@{
             Handler = 'Invoke-MpResource'; Group = 'CONTENT'; Summary = 'Manage resource pack activation'; Description = 'Enable, position, reposition, or disable an installed resource pack.'
