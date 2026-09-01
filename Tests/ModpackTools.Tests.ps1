@@ -432,6 +432,8 @@ $Loader = "loader-version"
             $text | Should Match 'modpack inventory --help'
             $text | Should Match 'modpack --version'
             $text | Should Match 'modpack doctor'
+            $text | Should Match 'modpack new <id>.*fabric\|quilt\|forge\|neoforge'
+            $text | Should Match 'modpack init <id> --path'
             $text | Should Not Match 'modpack add mod'
         }
     }
@@ -479,7 +481,7 @@ $Loader = "loader-version"
         }
 
         It 'prints the module version through the global version option' {
-            (modpack --version 6>&1 | Out-String).Trim() | Should Be 'ModpackTools 1.2.0'
+            (modpack --version 6>&1 | Out-String).Trim() | Should Be 'ModpackTools 2.0.0'
             { modpack version } | Should Throw "Command 'version' is not recognized"
         }
 
@@ -742,7 +744,7 @@ mod-id = "abc123"
             Assert-MockCalled Invoke-RestMethod -Times 1 -ParameterFilter {
                 $Uri -match 'api\.modrinth\.com/v2/search' -and
                 [System.Uri]::UnescapeDataString($Uri) -match 'versions:1\.21\.1' -and
-                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/1.2.0'
+                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/2.0.0'
             }
         }
 

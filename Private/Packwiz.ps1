@@ -88,6 +88,17 @@ Run `modpack <command> --help` for concise command documentation. For example, `
 
 Run `modpack doctor` to check PowerShell, Packwiz, configuration, project discovery, Git, and the standard Minecraft Java installation. Git and Minecraft are optional; Packwiz and a valid project root are required for the complete workflow.
 
+## Creating or adopting projects
+
+`modpack new` creates Fabric, Quilt, Forge, or NeoForge Packwiz projects. `modpack init` adopts an existing Packwiz project without changing its technical metadata or installed content:
+
+```powershell
+modpack new <id> --name <name> --minecraft <version> --loader <fabric|quilt|forge|neoforge>
+modpack init <id> --path <existing-packwiz-directory>
+```
+
+An initialized project must be a direct child of the configured root. Existing README and `.gitignore` files are preserved.
+
 ## Managing content
 
 Search or add Modrinth content. Editorial categories apply only to mods:
