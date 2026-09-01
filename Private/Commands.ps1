@@ -39,6 +39,20 @@ function Assert-PositionalCount {
     if ($count -lt $Minimum -or $count -gt $Maximum) { throw "Usage: $Usage" }
 }
 
+function Resolve-MpCommandProject {
+    param(
+        [Parameter(Mandatory)][hashtable]$Options,
+        [AllowNull()][AllowEmptyString()][string]$PositionalId
+    )
+
+    $optionId = if ($Options.ContainsKey('project')) { [string]$Options.project } else { $null }
+    if ($optionId -and $PositionalId) {
+        throw "Specify the project either positionally or with '--project', not both."
+    }
+    $id = if ($optionId) { $optionId } else { $PositionalId }
+    return Resolve-ModpackProject -Id $id
+}
+
 function Invoke-MpHelp {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     $topic = if ($Arguments.Count) { [string]$Arguments[0] } else { '' }
@@ -48,27 +62,28 @@ function Invoke-MpHelp {
         Write-MpBanner "MODPACKTOOLS $script:ModuleVersion"
         Write-MpCommandLine 'modpack list' 'Registered projects'
         Write-MpCommandLine 'modpack use [id]' 'Active project for this session'
-        Write-MpCommandLine 'modpack status [id] [--full]' 'Project summary'
-        Write-MpCommandLine 'modpack inventory [id] [filters]' 'Contents and filters'
-        Write-MpCommandLine 'modpack resource enable <selector> --position <n>' 'Enable or reposition a resource pack'
-        Write-MpCommandLine 'modpack search <query> [options]' 'Search compatible Modrinth content'
-        Write-MpCommandLine 'modpack add <id|slug|number> [options]' 'Add content with Packwiz'
-        Write-MpCommandLine 'modpack classify <mod> <category>' 'Classify or reclassify a mod'
-        Write-MpCommandLine 'modpack update <selector...> | --all' 'Update Packwiz-managed content'
-        Write-MpCommandLine 'modpack build [id] [options]' 'Generate the .mrpack in dist/'
-        Write-MpCommandLine 'modpack diff [id]' 'Compare the current project with the latest build'
+        Write-MpCommandLine 'modpack status [id] [--project <id>] [--full]' 'Project summary'
+        Write-MpCommandLine 'modpack inventory [id] [--project <id>] [filters]' 'Contents and filters'
+        Write-MpCommandLine 'modpack resource enable <selector> --position <n> [--project <id>]' 'Enable or reposition a resource pack'
+        Write-MpCommandLine 'modpack search <query> [options] [--project <id>]' 'Search compatible Modrinth content'
+        Write-MpCommandLine 'modpack add <id|slug|number> [options] [--project <id>]' 'Add content with Packwiz'
+        Write-MpCommandLine 'modpack classify <mod> <category> [--project <id>]' 'Classify or reclassify a mod'
+        Write-MpCommandLine 'modpack update <selector...> | --all [--project <id>]' 'Update Packwiz-managed content'
+        Write-MpCommandLine 'modpack build [id] [options] [--project <id>]' 'Generate the .mrpack in dist/'
+        Write-MpCommandLine 'modpack diff [id] [--project <id>]' 'Compare the current project with the latest build'
         Write-MpCommandLine 'modpack new <id> [options]' 'Create a project'
         Write-MpCommandLine 'modpack config get|set root' 'Global configuration'
         Write-MpCommandLine 'modpack help [command]' 'Detailed help'
+        Write-MpInfo 'Project commands accept --project <id>; omit it after modpack use <id>.'
         return
     }
     Write-MpBanner "HELP · $($topic.ToUpperInvariant())"
     switch ($topic) {
-        'build' { Write-MpUsage 'modpack build [id] [--no-refresh] [--keep-old] [--open] [--raw-log]' }
-        'diff' { Write-MpUsage 'modpack diff [id]' }
-        'status' { Write-MpUsage 'modpack status [id] [--full]' }
+        'build' { Write-MpUsage 'modpack build [id] [--project <id>] [--no-refresh] [--keep-old] [--open] [--raw-log]' }
+        'diff' { Write-MpUsage 'modpack diff [id] [--project <id>]' }
+        'status' { Write-MpUsage 'modpack status [id] [--project <id>] [--full]' }
         'inventory' {
-            Write-MpUsage 'modpack inventory [id] [filters]'
+            Write-MpUsage 'modpack inventory [id] [--project <id>] [filters]'
             foreach ($option in @('--type <all|mod|resourcepack|shaderpack>', '--category <id|unclassified>', '--side <client|host|both|unknown>', '--source <packwiz|local|builtin|missing>', '--state <all|active|inactive>', '--search <text>', '--unclassified')) { Write-MpCommandLine $option }
         }
         'resource' {
@@ -128,8 +143,7 @@ function Invoke-MpResource {
     Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum 2 -Usage 'modpack resource enable|disable <name|id|filename> [options]'
     $operation = $parsed.Positionals[0].ToLowerInvariant()
     if ($operation -notin @('enable', 'disable')) { throw "Unknown resource pack operation '$($parsed.Positionals[0])'. Use 'enable' or 'disable'." }
-    $projectId = if ($parsed.Options.ContainsKey('project')) { $parsed.Options.project } else { $null }
-    $project = Resolve-ModpackProject -Id $projectId
+    $project = Resolve-MpCommandProject -Options $parsed.Options
     Assert-ModpackStructure -Project $project
     if ($operation -eq 'enable') {
         if (-not $parsed.Options.ContainsKey('position')) { throw "Required option '--position' is missing." }
@@ -155,8 +169,7 @@ function Invoke-MpClassify {
     if ($Arguments -contains '--help') { Invoke-MpHelp classify; return }
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project')
     Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum 2 -Usage 'modpack classify <name|id|filename> <category|unclassified> [--project <id>]'
-    $projectId = if ($parsed.Options.ContainsKey('project')) { $parsed.Options.project } else { $null }
-    $project = Resolve-ModpackProject -Id $projectId
+    $project = Resolve-MpCommandProject -Options $parsed.Options
     Write-MpStep "Classifying '$($parsed.Positionals[0])'..."
     $result = Set-ModpackModClassification -Project $project -Selector $parsed.Positionals[0] -Category $parsed.Positionals[1]
     Write-MpSuccess "$($result.Item.Name) is classified as '$($result.Category)'."
@@ -167,10 +180,10 @@ function Invoke-MpClassify {
 function Invoke-MpStatus {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Invoke-MpHelp status; return }
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -SwitchOptions @('full')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack status [id] [--full]'
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project') -SwitchOptions @('full')
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack status [id] [--project <id>] [--full]'
     $id = if ($parsed.Positionals.Count) { $parsed.Positionals[0] } else { $null }
-    $project = Resolve-ModpackProject -Id $id
+    $project = Resolve-MpCommandProject -Options $parsed.Options -PositionalId $id
     Assert-ModpackStructure -Project $project
     $inventory = Get-ModpackInventory -Project $project
     Write-ModpackHeader -Project $project -Inventory $inventory
@@ -184,15 +197,15 @@ function Invoke-MpInventory {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Invoke-MpHelp inventory; return }
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments `
-        -ValueOptions @('type', 'category', 'side', 'source', 'state', 'search') `
+        -ValueOptions @('project', 'type', 'category', 'side', 'source', 'state', 'search') `
         -SwitchOptions @('unclassified')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack inventory [id] [filters]'
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack inventory [id] [--project <id>] [filters]'
     if ($parsed.Options.ContainsKey('unclassified') -and $parsed.Options.ContainsKey('category')) {
         throw 'Use either --unclassified or --category, not both.'
     }
 
     $id = if ($parsed.Positionals.Count) { $parsed.Positionals[0] } else { $null }
-    $project = Resolve-ModpackProject -Id $id
+    $project = Resolve-MpCommandProject -Options $parsed.Options -PositionalId $id
     Assert-ModpackStructure -Project $project
     $inventory = Get-ModpackInventory -Project $project
     $parameters = @{ Inventory = $inventory }
@@ -209,10 +222,10 @@ function Invoke-MpInventory {
 function Invoke-MpBuild {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Invoke-MpHelp build; return }
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -SwitchOptions @('no-refresh', 'keep-old', 'open', 'raw-log')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack build [id] [options]'
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project') -SwitchOptions @('no-refresh', 'keep-old', 'open', 'raw-log')
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack build [id] [--project <id>] [options]'
     $id = if ($parsed.Positionals.Count) { $parsed.Positionals[0] } else { $null }
-    $project = Resolve-ModpackProject -Id $id
+    $project = Resolve-MpCommandProject -Options $parsed.Options -PositionalId $id
     Write-MpStep "Building $($project.DisplayName)..."
     $build = Build-ModpackProject -Project $project -NoRefresh:$parsed.Options.ContainsKey('no-refresh') -KeepOld:$parsed.Options.ContainsKey('keep-old') -RawLog:$parsed.Options.ContainsKey('raw-log')
     foreach ($line in $build.Log) { Write-Host "$($script:Palette.Secondary)$line$($script:Palette.Reset)" }
@@ -226,9 +239,10 @@ function Invoke-MpBuild {
 function Invoke-MpDiff {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Invoke-MpHelp diff; return }
-    Assert-PositionalCount -Values $Arguments -Minimum 0 -Maximum 1 -Usage 'modpack diff [id]'
-    $id = if ($Arguments.Count) { [string]$Arguments[0] } else { $null }
-    $project = Resolve-ModpackProject -Id $id
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project')
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack diff [id] [--project <id>]'
+    $id = if ($parsed.Positionals.Count) { [string]$parsed.Positionals[0] } else { $null }
+    $project = Resolve-MpCommandProject -Options $parsed.Options -PositionalId $id
     Assert-ModpackStructure -Project $project
     Write-MpStep "Comparing $($project.DisplayName) with its latest build..."
     $diff = Compare-ModpackBuild -Project $project
@@ -241,8 +255,7 @@ function Invoke-MpAdd {
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project', 'category')
     Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack add <id|slug|search-number> [--project <id>] [--category <id>]'
     if ($parsed.Positionals[0].ToLowerInvariant() -eq 'mod') { throw "Invalid syntax. Use: modpack add <id|slug|search-number> [--project <id>] [--category <id>]" }
-    $projectId = if ($parsed.Options.ContainsKey('project')) { $parsed.Options.project } else { $null }
-    $project = Resolve-ModpackProject -Id $projectId
+    $project = Resolve-MpCommandProject -Options $parsed.Options
     $category = if ($parsed.Options.ContainsKey('category')) { $parsed.Options.category } else { $null }
     $selector = [string]$parsed.Positionals[0]
     $cached = Resolve-ModrinthSearchNumber -Selector $selector -Project $project
@@ -265,8 +278,7 @@ function Invoke-MpSearch {
     if ($Arguments -contains '--help') { Invoke-MpHelp search; return }
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project', 'type', 'limit')
     Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 100 -Usage 'modpack search <query> [--type <type>] [--limit <1-50>] [--project <id>]'
-    $projectId = if ($parsed.Options.ContainsKey('project')) { $parsed.Options.project } else { $null }
-    $project = Resolve-ModpackProject -Id $projectId
+    $project = Resolve-MpCommandProject -Options $parsed.Options
     $type = if ($parsed.Options.ContainsKey('type')) { $parsed.Options.type } else { 'all' }
     $limit = 10
     if ($parsed.Options.ContainsKey('limit') -and (-not [int]::TryParse([string]$parsed.Options.limit, [ref]$limit) -or $limit -lt 1 -or $limit -gt 50)) {
@@ -289,8 +301,7 @@ function Invoke-MpUpdate {
     if (-not $parsed.Options.ContainsKey('all') -and $parsed.Positionals.Count -eq 0) {
         throw 'Usage: modpack update <name|id|filename...> [--type <type>] [--project <id>] | modpack update --all [--type <type>] [--project <id>]'
     }
-    $projectId = if ($parsed.Options.ContainsKey('project')) { $parsed.Options.project } else { $null }
-    $project = Resolve-ModpackProject -Id $projectId
+    $project = Resolve-MpCommandProject -Options $parsed.Options
     $type = if ($parsed.Options.ContainsKey('type')) { $parsed.Options.type } else { 'all' }
     $label = if ($parsed.Options.ContainsKey('all')) { 'all matching Packwiz-managed content' } else { "$($parsed.Positionals.Count) selected item(s)" }
     Write-MpStep "Updating $label in $($project.Id)..."

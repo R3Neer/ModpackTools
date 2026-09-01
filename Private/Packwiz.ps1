@@ -75,7 +75,7 @@ modpack diff
 modpack build
 ```
 
-`modpack use` selects this project only for the current PowerShell process. Every command that accepts a project ID can also be called explicitly, for example `modpack diff {2}`.
+`modpack use` selects this project only for the current PowerShell process. Every command that operates on an existing project also accepts `--project <id>`, for example `modpack diff --project {2}`. `status`, `inventory`, `build`, and `diff` retain their positional ID shorthand; specifying both forms at once is rejected.
 
 ## Managing content
 

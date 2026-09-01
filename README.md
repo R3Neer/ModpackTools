@@ -93,7 +93,9 @@ modpack use vp26
 modpack use
 modpack status
 modpack status vp26 --full
+modpack status --project vp26 --full
 modpack inventory
+modpack inventory --project vp26
 modpack inventory --category performance
 modpack inventory --side host --source local
 modpack inventory --type resourcepack --state active
@@ -115,15 +117,17 @@ modpack update --all --type resourcepack
 modpack update --all --project vp26
 modpack build
 modpack build vp26 --keep-old --raw-log
+modpack build --project vp26 --keep-old --raw-log
 modpack diff
 modpack diff vp26
+modpack diff --project vp26
 ```
 
-An explicit ID takes precedence over the session selection. `modpack use` affects only the current PowerShell process.
+Every command that operates on an existing project accepts `--project <id>`. After `modpack use <id>`, omit it to use the active project for the current PowerShell process. `status`, `inventory`, `build`, and `diff` also retain their positional ID shorthand; specifying both forms at once is rejected.
 
 ### Inspecting and filtering the inventory
 
-`modpack inventory [id]` displays mods, enabled and disabled resource packs, and shaders. Filters can be combined:
+`modpack inventory [id] [--project <id>]` displays mods, enabled and disabled resource packs, and shaders. Filters can be combined:
 
 - `--type all|mod|resourcepack|shaderpack`
 - `--category <id|unclassified>` or `--unclassified`
@@ -202,7 +206,7 @@ A `.mrpack` left in the root of a migrated project is a legacy artifact that Mod
 ### Comparing with the latest build
 
 ```powershell
-modpack diff [id]
+modpack diff [id] [--project <id>]
 ```
 
 `diff` selects the newest `.mrpack` in `dist/`, creates a temporary Packwiz export of the current project without running `packwiz refresh`, and compares both artifacts semantically. It reports added, changed, and removed dependencies, mods, resource packs, shaders, configurations, local files, metadata, and other overrides. ZIP compression and entry timestamps do not create false differences.

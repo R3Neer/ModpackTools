@@ -130,6 +130,8 @@ minecraft = "1.21.1"
             $text | Should Match 'resource packs, and shaders'
             $text | Should Match 'one transaction'
             $text | Should Match 'modpack diff'
+            $text | Should Match 'modpack diff --project readme'
+            $text | Should Match 'Every command that operates on an existing project'
             $text | Should Match 'modpack resource enable'
             $text | Should Match 'defaultoptions-common.toml'
             $text | Should Not Match 'modpack add mod'
@@ -168,6 +170,27 @@ minecraft = "1.21.1"
             $script:ActiveProjectId = 'one'
             (Resolve-ModpackProject).Id | Should Be 'one'
             (Resolve-ModpackProject -Id 'two').Id | Should Be 'two'
+        }
+
+        It 'resolves project commands from --project, a positional ID, or the active session' {
+            New-TestModpack $fixtureRoot 'Pack A' 'one' | Out-Null
+            New-TestModpack $fixtureRoot 'Pack B' 'two' | Out-Null
+            $script:ActiveProjectId = 'one'
+            (Resolve-MpCommandProject -Options @{}).Id | Should Be 'one'
+            (Resolve-MpCommandProject -Options @{ project = 'two' }).Id | Should Be 'two'
+            (Resolve-MpCommandProject -Options @{} -PositionalId 'two').Id | Should Be 'two'
+        }
+
+        It 'rejects simultaneous positional and --project IDs' {
+            New-TestModpack $fixtureRoot 'Pack A' 'one' | Out-Null
+            New-TestModpack $fixtureRoot 'Pack B' 'two' | Out-Null
+            { Resolve-MpCommandProject -Options @{ project = 'one' } -PositionalId 'two' } | Should Throw 'not both'
+        }
+
+        It 'accepts --project in read-only project commands' {
+            New-TestModpack $fixtureRoot 'Pack Public' 'public' | Out-Null
+            { Invoke-MpStatus @('--project', 'public') } | Should Not Throw
+            { Invoke-MpInventory @('--project', 'public', '--type', 'mod') } | Should Not Throw
         }
 
         It 'accepts public commands without additional arguments' {
@@ -263,7 +286,7 @@ mod-id = "abc123"
             Assert-MockCalled Invoke-RestMethod -Times 1 -ParameterFilter {
                 $Uri -match 'api\.modrinth\.com/v2/search' -and
                 [System.Uri]::UnescapeDataString($Uri) -match 'versions:1\.21\.1' -and
-                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/0.8.0'
+                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/0.9.0'
             }
         }
 
