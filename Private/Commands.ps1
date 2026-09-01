@@ -45,7 +45,7 @@ function Invoke-MpHelp {
     $topics = @('', 'build', 'status', 'inventory', 'resource', 'add', 'new', 'config', 'use', 'list')
     if ($topic -notin $topics) { throw "No help is available for '$topic'." }
     if (-not $topic) {
-        Write-MpBanner 'MODPACKTOOLS 0.3.1'
+        Write-MpBanner "MODPACKTOOLS $script:ModuleVersion"
         Write-MpCommandLine 'modpack list' 'Registered projects'
         Write-MpCommandLine 'modpack use [id]' 'Active project for this session'
         Write-MpCommandLine 'modpack status [id] [--full]' 'Project summary'

@@ -33,6 +33,26 @@ minecraft = "1.21.1"
         return $projectRoot
     }
 
+    Describe 'Theme configuration' {
+        It 'loads every color from the source theme file' {
+            $colors = Read-MpThemeColors
+            $colors.Count | Should Be 10
+            $colors.client | Should Be '#748FFC'
+            $colors.host | Should Be '#BE70FF'
+        }
+
+        It 'rejects missing and malformed colors' {
+            $missing = Join-Path $TestDrive 'missing-theme.toml'
+            [System.IO.File]::WriteAllText($missing, "[colors]`nclient = `"#748FFC`"")
+            { Read-MpThemeColors -Path $missing } | Should Throw "Required theme color 'host'"
+
+            $invalid = Join-Path $TestDrive 'invalid-theme.toml'
+            $theme = Get-Content -Raw -LiteralPath (Join-Path $script:ModuleRoot 'theme.toml')
+            [System.IO.File]::WriteAllText($invalid, $theme.Replace('#748FFC', 'blue'))
+            { Read-MpThemeColors -Path $invalid } | Should Throw '#RRGGBB'
+        }
+    }
+
     Describe 'Project discovery and resolution' {
         BeforeEach {
             $fixtureRoot = Join-Path $TestDrive 'root with spaces'

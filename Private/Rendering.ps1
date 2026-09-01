@@ -1,16 +1,46 @@
+function Read-MpThemeColors {
+    param([string]$Path = (Join-Path $script:ModuleRoot 'theme.toml'))
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "Theme file does not exist: $Path"
+    }
+    $text = Get-Content -Raw -LiteralPath $Path -Encoding UTF8
+    $colors = [ordered]@{}
+    foreach ($name in @('client', 'host', 'success', 'error', 'process', 'secondary', 'heading', 'local', 'accent', 'value')) {
+        $value = Get-TomlString -Text $text -Section colors -Key $name
+        if (-not $value) { throw "Required theme color '$name' is missing from '$Path'." }
+        if ($value -notmatch '^#[0-9A-Fa-f]{6}$') {
+            throw "Theme color '$name' must use the #RRGGBB format; found '$value'."
+        }
+        $colors[$name] = $value.ToUpperInvariant()
+    }
+    return $colors
+}
+
+function ConvertTo-MpAnsiColor {
+    param([Parameter(Mandatory)][string]$Hex)
+    return $PSStyle.Foreground.FromRgb(
+        [Convert]::ToInt32($Hex.Substring(1, 2), 16),
+        [Convert]::ToInt32($Hex.Substring(3, 2), 16),
+        [Convert]::ToInt32($Hex.Substring(5, 2), 16)
+    )
+}
+
+$themeColors = Read-MpThemeColors
 $script:Palette = @{
-    Client    = $PSStyle.Foreground.FromRgb(116, 143, 252)
-    Host      = $PSStyle.Foreground.FromRgb(190, 112, 255)
-    Success   = $PSStyle.Foreground.FromRgb(80, 200, 120)
-    Error     = $PSStyle.Foreground.FromRgb(245, 90, 90)
-    Process   = $PSStyle.Foreground.FromRgb(245, 200, 80)
-    Secondary = $PSStyle.Foreground.FromRgb(145, 150, 160)
-    Heading   = $PSStyle.Foreground.FromRgb(80, 205, 220)
-    Local     = $PSStyle.Foreground.FromRgb(255, 145, 205)
-    Accent    = $PSStyle.Foreground.FromRgb(255, 170, 70)
-    Value     = $PSStyle.Foreground.FromRgb(235, 238, 245)
+    Client    = ConvertTo-MpAnsiColor $themeColors.client
+    Host      = ConvertTo-MpAnsiColor $themeColors.host
+    Success   = ConvertTo-MpAnsiColor $themeColors.success
+    Error     = ConvertTo-MpAnsiColor $themeColors.error
+    Process   = ConvertTo-MpAnsiColor $themeColors.process
+    Secondary = ConvertTo-MpAnsiColor $themeColors.secondary
+    Heading   = ConvertTo-MpAnsiColor $themeColors.heading
+    Local     = ConvertTo-MpAnsiColor $themeColors.local
+    Accent    = ConvertTo-MpAnsiColor $themeColors.accent
+    Value     = ConvertTo-MpAnsiColor $themeColors.value
     Reset     = $PSStyle.Reset
 }
+Remove-Variable themeColors
 
 function Write-MpTitle {
     param([Parameter(Mandatory)][string]$Text)

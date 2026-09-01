@@ -23,7 +23,7 @@ $temporary = Join-Path $moduleBase ('.install-' + [guid]::NewGuid().ToString('N'
 $backup = Join-Path $moduleBase ('.backup-' + [guid]::NewGuid().ToString('N'))
 [System.IO.Directory]::CreateDirectory($temporary) | Out-Null
 try {
-    foreach ($name in @('Private', 'Public', 'ModpackTools.psd1', 'ModpackTools.psm1', 'README.md')) {
+    foreach ($name in @('Private', 'Public', 'ModpackTools.psd1', 'ModpackTools.psm1', 'README.md', 'theme.toml')) {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $temporary -Recurse -Force
     }
     if (Test-Path -LiteralPath $destination) { Move-Item -LiteralPath $destination -Destination $backup }

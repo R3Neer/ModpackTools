@@ -3,6 +3,7 @@ $ErrorActionPreference = 'Stop'
 
 $script:ActiveProjectId = $null
 $script:ModuleRoot = $PSScriptRoot
+$script:ModuleVersion = [string](Import-PowerShellDataFile -LiteralPath (Join-Path $PSScriptRoot 'ModpackTools.psd1')).ModuleVersion
 $script:ConfigHomeOverride = $null
 
 foreach ($file in @(

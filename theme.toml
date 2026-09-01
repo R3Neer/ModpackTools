@@ -1,0 +1,13 @@
+[colors]
+# Side colors are reserved for the [C] and [H] badges.
+client = "#748FFC"
+host = "#BE70FF"
+
+success = "#50C878"
+error = "#F55A5A"
+process = "#F5C850"
+secondary = "#9196A0"
+heading = "#50CDDC"
+local = "#FF91CD"
+accent = "#FFAA46"
+value = "#EBEEF5"

@@ -171,6 +171,26 @@ The UI says “Host”, although Packwiz's technical value is `server`.
 
 Menus, help pages, status views, confirmations, inventories, and build summaries share the same palette and visual hierarchy. The reserved `[C]` and `[H]` colors are used exclusively for client and host sides.
 
+### Theme configuration
+
+The complete CLI palette has a single source of truth in `theme.toml`, located at the root of the ModpackTools source code:
+
+```toml
+[colors]
+client = "#748FFC"
+host = "#BE70FF"
+success = "#50C878"
+error = "#F55A5A"
+process = "#F5C850"
+secondary = "#9196A0"
+heading = "#50CDDC"
+local = "#FF91CD"
+accent = "#FFAA46"
+value = "#EBEEF5"
+```
+
+Colors use the `#RRGGBB` format. Every key is required so an incomplete theme fails clearly instead of silently mixing configured colors with hidden defaults. After editing the source file, run `./Install-ModpackTools.ps1 -Force` and reload the module. The installer copies this same file into the installed version; there is no second palette definition in PowerShell code.
+
 ## Default Options
 
 When `config/defaultoptions-common.toml` exists, `defaultResourcePacks` is the source of truth for enabled ordering. Default Options stores packs from lowest to highest priority; ModpackTools reverses the list to display the actual GUI priority. The parser supports brackets, apostrophes, symbols, and escapes inside strings. Built-in IDs without an override are displayed literally. Physical ZIP files not included in the list appear as present but disabled.
