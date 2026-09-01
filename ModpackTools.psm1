@@ -15,6 +15,7 @@ foreach ($file in @(
     'Private/Inventory.ps1'
     'Private/ResourcePacks.ps1'
     'Private/Packwiz.ps1'
+    'Private/Diff.ps1'
     'Private/Rendering.ps1'
     'Private/Commands.ps1'
     'Public/modpack.ps1'

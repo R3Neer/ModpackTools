@@ -322,3 +322,36 @@ function Write-BuildSummary {
         Write-MpKeyValue -Key $row.Key -Value $row.Value -Width 20
     }
 }
+
+function Write-MpDiffItems {
+    param([Parameter(Mandatory)][array]$Items, [Parameter(Mandatory)][ValidateSet('Added', 'Changed', 'Removed')][string]$Status)
+    if ($Items.Count -eq 0) { return }
+    $settings = switch ($Status) {
+        'Added'   { @{ Symbol = '+'; Color = $script:Palette.Success } }
+        'Changed' { @{ Symbol = '~'; Color = $script:Palette.Process } }
+        'Removed' { @{ Symbol = '-'; Color = $script:Palette.Error } }
+    }
+    Write-MpSection ("DIFF · " + $Status.ToUpperInvariant()) $Items.Count
+    foreach ($item in $Items) {
+        Write-Host "  $($settings.Color)$($settings.Symbol)$($script:Palette.Reset) " -NoNewline
+        Write-Host "$($script:Palette.Accent)$('{0,-10}' -f "[$($item.Kind)]")$($script:Palette.Reset) " -NoNewline
+        Write-Host "$($script:Palette.Value)$($item.Path)$($script:Palette.Reset)"
+    }
+}
+
+function Write-ModpackDiff {
+    param([Parameter(Mandatory)]$Diff)
+    Write-MpBanner "DIFF · $($Diff.Project.DisplayName)"
+    Write-MpKeyValue 'Baseline' ([System.IO.Path]::GetFileName($Diff.BaselinePath))
+    Write-MpKeyValue 'Built' $Diff.BaselineTime
+    if ($Diff.Total -eq 0) {
+        Write-Host ''
+        Write-MpSuccess 'No differences from the latest build.'
+        return
+    }
+    Write-MpDiffItems -Items $Diff.Added -Status Added
+    Write-MpDiffItems -Items $Diff.Changed -Status Changed
+    Write-MpDiffItems -Items $Diff.Removed -Status Removed
+    Write-Host ''
+    Write-MpKeyValue 'Differences' $Diff.Total
+}

@@ -42,7 +42,7 @@ function Assert-PositionalCount {
 function Invoke-MpHelp {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     $topic = if ($Arguments.Count) { [string]$Arguments[0] } else { '' }
-    $topics = @('', 'build', 'status', 'inventory', 'resource', 'add', 'new', 'config', 'use', 'list')
+    $topics = @('', 'build', 'diff', 'status', 'inventory', 'resource', 'add', 'new', 'config', 'use', 'list')
     if ($topic -notin $topics) { throw "No help is available for '$topic'." }
     if (-not $topic) {
         Write-MpBanner "MODPACKTOOLS $script:ModuleVersion"
@@ -51,8 +51,9 @@ function Invoke-MpHelp {
         Write-MpCommandLine 'modpack status [id] [--full]' 'Project summary'
         Write-MpCommandLine 'modpack inventory [id] [filters]' 'Contents and filters'
         Write-MpCommandLine 'modpack resource enable <selector> --position <n>' 'Enable or reposition a resource pack'
-        Write-MpCommandLine 'modpack add mod <slug> [options]' 'Add a mod with Packwiz'
+        Write-MpCommandLine 'modpack add <slug> [options]' 'Add a mod with Packwiz'
         Write-MpCommandLine 'modpack build [id] [options]' 'Generate the .mrpack in dist/'
+        Write-MpCommandLine 'modpack diff [id]' 'Compare the current project with the latest build'
         Write-MpCommandLine 'modpack new <id> [options]' 'Create a project'
         Write-MpCommandLine 'modpack config get|set root' 'Global configuration'
         Write-MpCommandLine 'modpack help [command]' 'Detailed help'
@@ -61,6 +62,7 @@ function Invoke-MpHelp {
     Write-MpBanner "HELP · $($topic.ToUpperInvariant())"
     switch ($topic) {
         'build' { Write-MpUsage 'modpack build [id] [--no-refresh] [--keep-old] [--open] [--raw-log]' }
+        'diff' { Write-MpUsage 'modpack diff [id]' }
         'status' { Write-MpUsage 'modpack status [id] [--full]' }
         'inventory' {
             Write-MpUsage 'modpack inventory [id] [filters]'
@@ -71,7 +73,7 @@ function Invoke-MpHelp {
             Write-MpInfo 'Position 1 is the highest priority in the Minecraft GUI.'
             Write-MpInfo 'If the pack is already enabled, it is repositioned.'
         }
-        'add' { Write-MpUsage 'modpack add mod <slug> [--project <id>] [--category <id>]' }
+        'add' { Write-MpUsage 'modpack add <slug> [--project <id>] [--category <id>]' }
         'new' { Write-MpUsage 'modpack new <id> --name <name> --minecraft <version> --loader fabric [--path <directory>] [--loader-version <version>] [--pack-version <version>] [--display-version <version>]' }
         'config' { Write-MpUsage 'modpack config get root | modpack config set root <directory>' }
         'use' { Write-MpUsage 'modpack use [id]' }
@@ -180,17 +182,29 @@ function Invoke-MpBuild {
     if ($parsed.Options.ContainsKey('open')) { Start-Process explorer.exe -ArgumentList "/select,`"$($build.Path)`"" }
 }
 
+function Invoke-MpDiff {
+    param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
+    if ($Arguments -contains '--help') { Invoke-MpHelp diff; return }
+    Assert-PositionalCount -Values $Arguments -Minimum 0 -Maximum 1 -Usage 'modpack diff [id]'
+    $id = if ($Arguments.Count) { [string]$Arguments[0] } else { $null }
+    $project = Resolve-ModpackProject -Id $id
+    Assert-ModpackStructure -Project $project
+    Write-MpStep "Comparing $($project.DisplayName) with its latest build..."
+    $diff = Compare-ModpackBuild -Project $project
+    Write-ModpackDiff -Diff $diff
+}
+
 function Invoke-MpAdd {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Invoke-MpHelp add; return }
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project', 'category')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum 2 -Usage 'modpack add mod <slug> [--project <id>] [--category <id>]'
-    if ($parsed.Positionals[0] -ne 'mod') { throw "Only 'modpack add mod' is currently implemented." }
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack add <slug> [--project <id>] [--category <id>]'
+    if ($parsed.Positionals[0].ToLowerInvariant() -eq 'mod') { throw "Invalid syntax. Use: modpack add <slug> [--project <id>] [--category <id>]" }
     $projectId = if ($parsed.Options.ContainsKey('project')) { $parsed.Options.project } else { $null }
     $project = Resolve-ModpackProject -Id $projectId
     $category = if ($parsed.Options.ContainsKey('category')) { $parsed.Options.category } else { $null }
-    Write-MpStep "Adding '$($parsed.Positionals[1])' to $($project.Id)..."
-    $result = Add-ModpackMod -Project $project -Slug $parsed.Positionals[1] -Category $category
+    Write-MpStep "Adding '$($parsed.Positionals[0])' to $($project.Id)..."
+    $result = Add-ModpackMod -Project $project -Slug $parsed.Positionals[0] -Category $category
     Write-MpSuccess "$($result.Item.Name) added as '$($result.Item.Id)'."
     if ($category) { Write-MpKeyValue 'Category' $category }
     else { Write-MpKeyValue 'Category' 'UNCLASSIFIED' }

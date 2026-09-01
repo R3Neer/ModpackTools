@@ -100,10 +100,12 @@ modpack inventory --type resourcepack --state active
 modpack inventory --search sodium
 modpack resource enable "Fresh Animations" --position 1
 modpack resource enable "fresh-animations.zip" --position 3 --project vp26
-modpack add mod sodium --category performance
-modpack add mod sodium --project vp26 --category performance
+modpack add sodium --category performance
+modpack add sodium --project vp26 --category performance
 modpack build
 modpack build vp26 --keep-old --raw-log
+modpack diff
+modpack diff vp26
 ```
 
 An explicit ID takes precedence over the session selection. `modpack use` affects only the current PowerShell process.
@@ -141,7 +143,7 @@ By default, Packwiz selects the latest compatible Fabric Loader; the technical v
 
 ### Adding a mod
 
-`modpack add mod` delegates technical selection and writing to `packwiz modrinth add`, then reads the generated `.pw.toml`. When `--category` is provided, only that editorial decision is written to metadata; the category must already exist.
+`modpack add` delegates technical selection and writing to `packwiz modrinth add`, then reads the generated `.pw.toml`. When `--category` is provided, only that editorial decision is written to metadata; the category must already exist. The former `modpack add mod` form is invalid.
 
 ### Building
 
@@ -153,6 +155,16 @@ A `.mrpack` left in the root of a migrated project is a legacy artifact that Mod
 - `--keep-old`: generates the new artifact with a timestamp when the usual name exists.
 - `--raw-log`: also shows repetitive `added to manifest` lines.
 - `--open`: opens Explorer with the result selected.
+
+### Comparing with the latest build
+
+```powershell
+modpack diff [id]
+```
+
+`diff` selects the newest `.mrpack` in `dist/`, creates a temporary Packwiz export of the current project without running `packwiz refresh`, and compares both artifacts semantically. It reports added, changed, and removed dependencies, mods, resource packs, shaders, configurations, local files, metadata, and other overrides. ZIP compression and entry timestamps do not create false differences.
+
+The hidden temporary artifact is created in `dist/` so Packwiz can export on the same volume, and it is always removed. It is excluded from baseline selection. The project, Packwiz index, and previous builds are not modified. When `dist/` contains no previous build, the command fails with a clear error.
 
 ## Inventory and sides
 

@@ -82,7 +82,7 @@ Common commands:
 ```powershell
 modpack use $Id
 modpack status
-modpack add mod <slug> --category <category>
+modpack add <slug> --category <category>
 modpack build
 ```
 

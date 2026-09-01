@@ -33,6 +33,22 @@ minecraft = "1.21.1"
         return $projectRoot
     }
 
+    function New-TestMrpack {
+        param([string]$Path, [string]$ManifestJson, [hashtable]$Overrides = @{})
+        $archive = [System.IO.Compression.ZipFile]::Open($Path, [System.IO.Compression.ZipArchiveMode]::Create)
+        try {
+            $manifestEntry = $archive.CreateEntry('modrinth.index.json')
+            $writer = [System.IO.StreamWriter]::new($manifestEntry.Open(), [System.Text.UTF8Encoding]::new($false))
+            try { $writer.Write($ManifestJson) } finally { $writer.Dispose() }
+            foreach ($relative in $Overrides.Keys) {
+                $entry = $archive.CreateEntry("overrides/$relative")
+                $entryWriter = [System.IO.StreamWriter]::new($entry.Open(), [System.Text.UTF8Encoding]::new($false))
+                try { $entryWriter.Write([string]$Overrides[$relative]) } finally { $entryWriter.Dispose() }
+            }
+        }
+        finally { $archive.Dispose() }
+    }
+
     Describe 'Theme configuration' {
         It 'loads every color from the source theme file' {
             $colors = Read-MpThemeColors
@@ -50,6 +66,41 @@ minecraft = "1.21.1"
             $theme = Get-Content -Raw -LiteralPath (Join-Path $script:ModuleRoot 'theme.toml')
             [System.IO.File]::WriteAllText($invalid, $theme.Replace('#748FFC', 'blue'))
             { Read-MpThemeColors -Path $invalid } | Should Throw '#RRGGBB'
+        }
+    }
+
+    Describe 'MRPack diff' {
+        It 'reads manifest entries and uncompressed overrides semantically' {
+            $path = Join-Path $TestDrive 'sample.mrpack'
+            New-TestMrpack -Path $path -ManifestJson @'
+{"name":"Sample","versionId":"1.0","dependencies":{"minecraft":"1.21.1"},"files":[{"path":"mods/sample.jar","hashes":{"sha512":"abc"},"downloads":["https://example.invalid/sample.jar"],"fileSize":12,"env":{"client":"required","server":"required"}}]}
+'@ -Overrides @{ 'config/sample.json' = '{"enabled":true}' }
+
+            $snapshot = @(Get-MrpackSnapshot $path)
+            $snapshot.Count | Should Be 5
+            ($snapshot | Where-Object Path -eq 'mods/sample.jar').Kind | Should Be 'MOD'
+            ($snapshot | Where-Object Path -eq 'config/sample.json').Kind | Should Be 'CONFIG'
+        }
+
+        It 'classifies added changed and removed records' {
+            $baseline = @(
+                [pscustomobject]@{ Key='manifest:mods/old.jar'; Kind='MOD'; Path='mods/old.jar'; Fingerprint='old' }
+                [pscustomobject]@{ Key='override:config/shared.json'; Kind='CONFIG'; Path='config/shared.json'; Fingerprint='before' }
+            )
+            $current = @(
+                [pscustomobject]@{ Key='override:config/shared.json'; Kind='CONFIG'; Path='config/shared.json'; Fingerprint='after' }
+                [pscustomobject]@{ Key='manifest:mods/new.jar'; Kind='MOD'; Path='mods/new.jar'; Fingerprint='new' }
+            )
+            $diff = Compare-MrpackSnapshots -Baseline $baseline -Current $current
+            $diff.Total | Should Be 3
+            $diff.Added[0].Path | Should Be 'mods/new.jar'
+            $diff.Changed[0].Path | Should Be 'config/shared.json'
+            $diff.Removed[0].Path | Should Be 'mods/old.jar'
+        }
+
+        It 'rejects the old add mod syntax' {
+            { Invoke-MpAdd @('mod') } | Should Throw 'Invalid syntax'
+            { Invoke-MpAdd @('mod', 'sodium') } | Should Throw 'Usage: modpack add <slug>'
         }
     }
 
