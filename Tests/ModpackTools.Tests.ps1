@@ -717,6 +717,13 @@ version = "v1"
             (Get-ModpackInventory $project).Mods[0].Side | Should Be 'server'
         }
 
+        It 'replaces a TOML string without consuming CRLF line endings' {
+            $text = "name = `"Managed`"`r`nside = `"both`"`r`n[update.modrinth]`r`nmod-id = `"managed-id`"`r`n"
+            $updated = Set-TomlString -Text $text -Key side -Value client
+            (Get-TomlString -Text $updated -Key side) | Should Be 'client'
+            $updated | Should Match "side = `"client`"`r`n\[update\.modrinth\]"
+        }
+
         It 'stores an explicit side override for a local mod' {
             [System.IO.File]::WriteAllBytes((Join-Path $projectPath 'mods/local.jar'), [byte[]](1, 2, 3))
             $result = Set-ModpackModSide -Project $project -Selector local.jar -Side client

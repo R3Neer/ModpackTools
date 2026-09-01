@@ -50,7 +50,7 @@ function Set-TomlString {
     $encodedValue = ConvertTo-TomlBasicString -Value $Value
     if ([string]::IsNullOrEmpty($Section)) {
         $body = Get-TomlSectionText -Text $Text
-        $match = [regex]::Match($body, ('(?m)^[ \t]*{0}[ \t]*=[ \t]*"(?:\\.|[^"\\])*"[ \t]*(?:#.*)?$' -f $escapedKey))
+        $match = [regex]::Match($body, ('(?m)^[ \t]*{0}[ \t]*=[ \t]*"(?:\\.|[^"\\])*"[ \t]*(?:#.*)?(?=\r?$)' -f $escapedKey))
         if (-not $match.Success) {
             Throw-MpError -Message "TOML key '$Key' does not exist" -Hint 'repair the Packwiz metadata file' -ErrorId 'Content.MissingTomlKey' -Category InvalidData -TargetObject $Key
         }
@@ -61,7 +61,7 @@ function Set-TomlString {
     if ($null -eq $sectionBody) {
         Throw-MpError -Message "TOML section '$Section' does not exist" -Hint 'repair the Packwiz metadata file' -ErrorId 'Content.MissingTomlSection' -Category InvalidData -TargetObject $Section
     }
-    $match = [regex]::Match($sectionBody, ('(?m)^[ \t]*{0}[ \t]*=[ \t]*"(?:\\.|[^"\\])*"[ \t]*(?:#.*)?$' -f $escapedKey))
+    $match = [regex]::Match($sectionBody, ('(?m)^[ \t]*{0}[ \t]*=[ \t]*"(?:\\.|[^"\\])*"[ \t]*(?:#.*)?(?=\r?$)' -f $escapedKey))
     if (-not $match.Success) {
         Throw-MpError -Message "TOML key '$Key' does not exist in section '$Section'" -Hint 'repair the Packwiz metadata file' -ErrorId 'Content.MissingTomlKey' -Category InvalidData -TargetObject $Key
     }
