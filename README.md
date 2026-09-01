@@ -236,3 +236,7 @@ Colors use the `#RRGGBB` format. Every key is required so an incomplete theme fa
 ## Default Options
 
 When `config/defaultoptions-common.toml` exists, `defaultResourcePacks` is the source of truth for enabled ordering. Default Options stores packs from lowest to highest priority; ModpackTools reverses the list to display the actual GUI priority. The parser supports brackets, apostrophes, symbols, and escapes inside strings. Built-in IDs without an override are displayed literally. Physical ZIP files not included in the list appear as present but disabled.
+
+## License
+
+ModpackTools is released under the [MIT License](LICENSE).
