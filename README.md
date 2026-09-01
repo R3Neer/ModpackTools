@@ -22,7 +22,7 @@ From the source directory:
 ./Install-ModpackTools.ps1
 ```
 
-The installer copies the module version to the first user directory in `PSModulePath`. It does not modify `$PROFILE`; PowerShell autoloads `modpack` when it is used.
+The installer copies the module directly to `ModpackTools` under the first user directory in `PSModulePath`. It does not create numeric version subdirectories, modify `$PROFILE`, or keep older installed copies. PowerShell autoloads `modpack` when it is used.
 
 ## Initial configuration
 
@@ -217,7 +217,7 @@ accent = "#FFAA46"
 value = "#EBEEF5"
 ```
 
-Colors use the `#RRGGBB` format. Every key is required so an incomplete theme fails clearly instead of silently mixing configured colors with hidden defaults. After editing the source file, run `./Install-ModpackTools.ps1 -Force` and reload the module. The installer copies this same file into the installed version; there is no second palette definition in PowerShell code.
+Colors use the `#RRGGBB` format. Every key is required so an incomplete theme fails clearly instead of silently mixing configured colors with hidden defaults. After editing the source file, run `./Install-ModpackTools.ps1 -Force` and reload the module. The installer copies this same file into the installed module; there is no second palette definition in PowerShell code.
 
 ## Default Options
 

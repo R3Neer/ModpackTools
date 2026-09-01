@@ -15,12 +15,12 @@ if (-not $userModuleRoot) {
 if (-not $userModuleRoot) { throw 'No user module directory was found in PSModulePath.' }
 
 $moduleBase = Join-Path $userModuleRoot 'ModpackTools'
-$destination = Join-Path $moduleBase $version
+$destination = $moduleBase
 if ((Test-Path -LiteralPath $destination) -and -not $Force) {
-    throw "ModpackTools $version is already installed at '$destination'. Use -Force to update it."
+    throw "ModpackTools is already installed at '$destination'. Use -Force to update it."
 }
-$temporary = Join-Path $moduleBase ('.install-' + [guid]::NewGuid().ToString('N'))
-$backup = Join-Path $moduleBase ('.backup-' + [guid]::NewGuid().ToString('N'))
+$temporary = Join-Path $userModuleRoot ('.ModpackTools.install-' + [guid]::NewGuid().ToString('N'))
+$backup = Join-Path $userModuleRoot ('.ModpackTools.backup-' + [guid]::NewGuid().ToString('N'))
 [System.IO.Directory]::CreateDirectory($temporary) | Out-Null
 try {
     foreach ($name in @('Private', 'Public', 'ModpackTools.psd1', 'ModpackTools.psm1', 'README.md', 'theme.toml')) {
