@@ -1,7 +1,7 @@
 function ConvertFrom-TomlBasicString {
     param([Parameter(Mandatory)][string]$Value)
 
-    # Es suficiente para los strings básicos que emite Packwiz.
+    # This is sufficient for the basic strings emitted by Packwiz.
     return [regex]::Unescape($Value)
 }
 
@@ -42,7 +42,7 @@ function Get-PackTomlData {
     param([Parameter(Mandatory)][string]$Path)
 
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-        throw "No existe pack.toml: $Path"
+        throw "pack.toml does not exist: $Path"
     }
 
     $text = Get-Content -Raw -LiteralPath $Path -Encoding UTF8

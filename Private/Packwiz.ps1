@@ -20,7 +20,7 @@ function Invoke-NativeCommandChecked {
     $process = [System.Diagnostics.Process]::new()
     $process.StartInfo = $startInfo
     try {
-        if (-not $process.Start()) { throw "No se pudo iniciar '$FilePath'." }
+        if (-not $process.Start()) { throw "Could not start '$FilePath'." }
         $stdoutTask = $process.StandardOutput.ReadToEndAsync()
         $stderrTask = $process.StandardError.ReadToEndAsync()
         $process.WaitForExit()
@@ -32,7 +32,7 @@ function Invoke-NativeCommandChecked {
         )
         if ($process.ExitCode -ne 0) {
             $details = if ($lines.Count) { [Environment]::NewLine + ($lines -join [Environment]::NewLine) } else { '' }
-            throw "'$FilePath $($Arguments -join ' ')' terminó con código $($process.ExitCode).$details"
+            throw "'$FilePath $($Arguments -join ' ')' exited with code $($process.ExitCode).$details"
         }
         return $lines
     }
@@ -75,18 +75,18 @@ function New-ModpackProjectFiles {
     $readme = @"
 # $DisplayName
 
-Proyecto Packwiz gestionado mediante ModpackTools.
+Packwiz project managed with ModpackTools.
 
-Comandos habituales:
+Common commands:
 
 ```powershell
 modpack use $Id
 modpack status
-modpack add mod <slug> --category <categoria>
+modpack add mod <slug> --category <category>
 modpack build
 ```
 
-Los datos técnicos pertenecen a Packwiz. Las decisiones editoriales se guardan en `.modpack`.
+Technical data belongs to Packwiz. Editorial decisions are stored in `.modpack`.
 "@
     [System.IO.File]::WriteAllText((Join-Path $Root 'README.md'), $readme, [System.Text.UTF8Encoding]::new($false))
     [System.IO.File]::WriteAllText((Join-Path $Root '.gitignore'), "dist/`n", [System.Text.UTF8Encoding]::new($false))
@@ -104,10 +104,10 @@ function New-ModpackProject {
         [string]$DisplayVersion = $MinecraftVersion
     )
 
-    if ($Id -notmatch '^[a-z][a-z0-9-]*$') { throw "Id inválido '$Id'. Usa minúsculas, números y guiones." }
-    if ($Loader.ToLowerInvariant() -ne 'fabric') { throw "v0.1 solo automatiza 'fabric' en modpack new." }
+    if ($Id -notmatch '^[a-z][a-z0-9-]*$') { throw "Invalid Id '$Id'. Use lowercase letters, numbers, and hyphens." }
+    if ($Loader.ToLowerInvariant() -ne 'fabric') { throw "modpack new currently automates only the 'fabric' loader." }
     $root = Get-ModpackRoot
-    if ((Get-ModpackProjects | Where-Object Id -eq $Id)) { throw "Ya existe un proyecto con Id '$Id'." }
+    if ((Get-ModpackProjects | Where-Object Id -eq $Id)) { throw "A project with Id '$Id' already exists." }
     if (-not $DirectoryName) { $DirectoryName = (($Name -replace '[\\/:*?"<>|]', '-').Trim() + "-$MinecraftVersion") }
     if ([System.IO.Path]::IsPathRooted($DirectoryName)) {
         $target = [System.IO.Path]::GetFullPath($DirectoryName)
@@ -115,9 +115,9 @@ function New-ModpackProject {
         $target = [System.IO.Path]::GetFullPath((Join-Path $root $DirectoryName))
     }
     if ((Split-Path -Parent $target) -ne $root.TrimEnd('\')) {
-        throw "El proyecto debe ser un subdirectorio directo del root configurado: $root"
+        throw "The project must be a direct child of the configured root: $root"
     }
-    if (Test-Path -LiteralPath $target) { throw "El destino ya existe y no se sobrescribirá: $target" }
+    if (Test-Path -LiteralPath $target) { throw "The destination already exists and will not be overwritten: $target" }
 
     $temporary = Join-Path $root ('.modpacktools-new-' + [guid]::NewGuid().ToString('N'))
     [System.IO.Directory]::CreateDirectory($temporary) | Out-Null
@@ -146,7 +146,7 @@ function Add-ModpackMod {
     if ($Category) {
         $metadata = Get-ModpackMetadata -Project $Project
         if (-not $metadata.Categories.ContainsKey($Category)) {
-            throw "La categoría '$Category' no existe en '$($Project.Id)'."
+            throw "Category '$Category' does not exist in '$($Project.Id)'."
         }
     }
     $before = @{}
@@ -162,10 +162,10 @@ function Add-ModpackMod {
             Where-Object { -not $before.ContainsKey($_.FullName) -or $before[$_.FullName] -ne "$($_.Length):$($_.LastWriteTimeUtc.Ticks)" } |
             Sort-Object LastWriteTimeUtc -Descending
     )
-    if ($candidates.Count -eq 0) { throw "Packwiz terminó correctamente, pero no se pudo identificar el .pw.toml añadido o actualizado." }
+    if ($candidates.Count -eq 0) { throw "Packwiz completed successfully, but the added or updated .pw.toml file could not be identified." }
     $items = @(Get-PackwizItems -Project $Project -Directory mods -Kind mod)
     $item = $items | Where-Object MetadataPath -eq $candidates[0].FullName | Select-Object -First 1
-    if (-not $item) { throw "No se pudo normalizar '$($candidates[0].FullName)'." }
+    if (-not $item) { throw "Could not normalize '$($candidates[0].FullName)'." }
     if ($Category) { Set-ModMetadataCategory -Project $Project -ModId $item.Id -Category $Category }
     return [pscustomobject]@{ Item = $item; Log = $log }
 }
@@ -195,7 +195,7 @@ function Build-ModpackProject {
     $temporary = Join-Path $dist ('.modpacktools-' + [guid]::NewGuid().ToString('N') + '.mrpack')
     try {
         foreach ($line in @(Invoke-Packwiz -Arguments @('modrinth', 'export', '--output', $temporary) -WorkingDirectory $Project.Root)) { $allLog.Add($line) }
-        if (-not (Test-Path -LiteralPath $temporary -PathType Leaf)) { throw 'Packwiz no generó el artefacto esperado.' }
+        if (-not (Test-Path -LiteralPath $temporary -PathType Leaf)) { throw 'Packwiz did not generate the expected artifact.' }
         Move-Item -LiteralPath $temporary -Destination $finalPath -Force
     }
     finally { if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force } }

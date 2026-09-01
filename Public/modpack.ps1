@@ -20,7 +20,7 @@ function modpack {
 
     $key = $Command.ToLowerInvariant()
     if (-not $commands.ContainsKey($key)) {
-        throw "Comando desconocido '$Command'. Ejecuta 'modpack help'."
+        throw "Unknown command '$Command'. Run 'modpack help'."
     }
 
     $handler = $commands[$key]

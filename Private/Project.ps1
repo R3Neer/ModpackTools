@@ -4,26 +4,26 @@ function Read-ModpackProject {
     $root = [System.IO.Path]::GetFullPath($ProjectRoot)
     $projectPath = Join-Path $root '.modpack/project.psd1'
     if (-not (Test-Path -LiteralPath $projectPath -PathType Leaf)) {
-        throw "No existe el descriptor de proyecto: $projectPath"
+        throw "The project descriptor does not exist: $projectPath"
     }
 
     try {
         $descriptor = Import-PowerShellDataFile -LiteralPath $projectPath
     }
     catch {
-        throw "El descriptor '$projectPath' no es válido: $($_.Exception.Message)"
+        throw "Project descriptor '$projectPath' is invalid: $($_.Exception.Message)"
     }
 
     foreach ($required in @('SchemaVersion', 'Id')) {
         if (-not $descriptor.ContainsKey($required)) {
-            throw "Falta '$required' en $projectPath"
+            throw "'$required' is missing from $projectPath"
         }
     }
     if ([int]$descriptor.SchemaVersion -ne 1) {
-        throw "SchemaVersion no soportada en '$projectPath': $($descriptor.SchemaVersion)"
+        throw "Unsupported SchemaVersion in '$projectPath': $($descriptor.SchemaVersion)"
     }
     if ([string]$descriptor.Id -notmatch '^[a-z][a-z0-9-]*$') {
-        throw "Id inválido '$($descriptor.Id)' en '$projectPath'. Usa minúsculas, números y guiones."
+        throw "Invalid Id '$($descriptor.Id)' in '$projectPath'. Use lowercase letters, numbers, and hyphens."
     }
 
     $pack = Get-PackTomlData -Path (Join-Path $root 'pack.toml')
@@ -63,7 +63,7 @@ function Get-ModpackProjects {
         $details = foreach ($duplicate in $duplicates) {
             "'$($duplicate.Name)': " + (($duplicate.Group.Root) -join ', ')
         }
-        throw "Se han encontrado IDs de proyecto duplicados: $($details -join '; ')"
+        throw "Duplicate project IDs were found: $($details -join '; ')"
     }
 
     return @($projects | Sort-Object Id)
@@ -74,12 +74,12 @@ function Resolve-ModpackProject {
 
     $effectiveId = if (-not [string]::IsNullOrWhiteSpace($Id)) { $Id } else { $script:ActiveProjectId }
     if ([string]::IsNullOrWhiteSpace($effectiveId)) {
-        throw "No hay proyecto activo. Ejecuta 'modpack use <id>' o indica '--project <id>'."
+        throw "There is no active project. Run 'modpack use <id>' or provide '--project <id>'."
     }
 
     $matches = @(Get-ModpackProjects | Where-Object Id -eq $effectiveId)
     if ($matches.Count -eq 0) {
-        throw "No existe ningún modpack con Id '$effectiveId'. Ejecuta 'modpack list'."
+        throw "No modpack with Id '$effectiveId' exists. Run 'modpack list'."
     }
     return $matches[0]
 }
@@ -90,7 +90,7 @@ function Assert-ModpackStructure {
     foreach ($relative in @('pack.toml', 'index.toml', '.modpack/project.psd1', '.modpack/metadata.psd1')) {
         $path = Join-Path $Project.Root $relative
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-            throw "Estructura incompleta: falta '$relative' en '$($Project.Root)'."
+            throw "Incomplete project structure: '$relative' is missing from '$($Project.Root)'."
         }
     }
 }

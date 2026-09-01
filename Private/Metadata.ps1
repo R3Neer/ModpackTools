@@ -10,13 +10,13 @@ function Get-ModpackMetadata {
         $metadata = Import-PowerShellDataFile -LiteralPath $path
     }
     catch {
-        throw "Los metadatos '$path' no son válidos: $($_.Exception.Message)"
+        throw "Metadata file '$path' is invalid: $($_.Exception.Message)"
     }
 
     foreach ($section in @('Categories', 'Mods', 'ResourcePacks')) {
         if (-not $metadata.ContainsKey($section)) { $metadata[$section] = @{} }
         if ($metadata[$section] -isnot [System.Collections.IDictionary]) {
-            throw "La sección '$section' de '$path' debe ser una tabla."
+            throw "Section '$section' in '$path' must be a table."
         }
     }
     return $metadata
@@ -110,7 +110,7 @@ function Set-ModMetadataCategory {
 
     $metadata = Get-ModpackMetadata -Project $Project
     if (-not $metadata.Categories.ContainsKey($Category)) {
-        throw "La categoría '$Category' no existe en los metadatos de '$($Project.Id)'."
+        throw "Category '$Category' does not exist in the metadata for '$($Project.Id)'."
     }
     if (-not $metadata.Mods.ContainsKey($ModId)) { $metadata.Mods[$ModId] = @{} }
     $metadata.Mods[$ModId]['Category'] = $Category

@@ -74,18 +74,18 @@ function Write-MpCommandLine {
 
 function Write-MpUsage {
     param([Parameter(Mandatory)][string]$Text)
-    Write-Host "$($script:Palette.Secondary)Uso:$($script:Palette.Reset) $($script:Palette.Accent)$Text$($script:Palette.Reset)"
+    Write-Host "$($script:Palette.Secondary)Usage:$($script:Palette.Reset) $($script:Palette.Accent)$Text$($script:Palette.Reset)"
 }
 
 function Write-MpSideLegend {
     Write-Host ''
     Write-Host '  ' -NoNewline
     Write-Host "$($script:Palette.Client)[C]$($script:Palette.Reset)" -NoNewline
-    Write-Host "$($script:Palette.Secondary) Cliente    $($script:Palette.Reset)" -NoNewline
+    Write-Host "$($script:Palette.Secondary) Client    $($script:Palette.Reset)" -NoNewline
     Write-Host "$($script:Palette.Host)[H]$($script:Palette.Reset)" -NoNewline
     Write-Host "$($script:Palette.Secondary) Host    $($script:Palette.Reset)" -NoNewline
     Write-Host "$($script:Palette.Client)[C]$($script:Palette.Reset)$($script:Palette.Host)[H]$($script:Palette.Reset)" -NoNewline
-    Write-Host "$($script:Palette.Secondary) Ambos$($script:Palette.Reset)"
+    Write-Host "$($script:Palette.Secondary) Both$($script:Palette.Reset)"
 }
 
 function Write-MpSideEntry {
@@ -131,7 +131,7 @@ function Write-ModInventory {
 
     if ($Inventory.Mods.Count -eq 0) {
         Write-MpSection 'MODS' 0
-        Write-Host "$($script:Palette.Secondary)  · Ninguno$($script:Palette.Reset)"
+        Write-Host "$($script:Palette.Secondary)  · None$($script:Palette.Reset)"
         return
     }
     Write-MpSideLegend
@@ -144,10 +144,10 @@ function Write-ModInventory {
 
     $unclassified = @($Inventory.Mods | Where-Object Category -eq 'unclassified' | Sort-Object Name)
     if ($unclassified.Count -gt 0) {
-        Write-MpSection 'MODS · SIN CLASIFICAR' $unclassified.Count
+        Write-MpSection 'MODS · UNCLASSIFIED' $unclassified.Count
         foreach ($item in $unclassified) {
             if ($item.InvalidCategory) {
-                Write-MpWarning "'$($item.Name)' referencia la categoría inexistente '$($item.InvalidCategory)'; se muestra sin clasificar."
+                Write-MpWarning "'$($item.Name)' references the missing category '$($item.InvalidCategory)' and is shown as unclassified."
             }
             Write-MpSideEntry $item
         }
@@ -158,16 +158,16 @@ function Write-ResourcePackInventory {
     param([Parameter(Mandatory)]$Inventory, [switch]$HideEmptySections)
 
     if (-not $HideEmptySections -or $Inventory.ActiveResources.Count -gt 0 -or $Inventory.InactiveResources.Count -eq 0) {
-        Write-MpSection 'RESOURCE PACKS · PRIORIDAD REAL' $Inventory.ActiveResources.Count
+        Write-MpSection 'RESOURCE PACKS · ACTUAL PRIORITY' $Inventory.ActiveResources.Count
         if ($Inventory.ActiveResources.Count -eq 0) {
-            Write-Host "$($script:Palette.Secondary)  · Ninguno$($script:Palette.Reset)"
+            Write-Host "$($script:Palette.Secondary)  · None$($script:Palette.Reset)"
         }
     }
     foreach ($item in $Inventory.ActiveResources) {
         $source = switch ($item.Source) {
-            'builtin' { 'integrado' }
+            'builtin' { 'built-in' }
             'local'   { $item.Filename }
-            'missing' { 'archivo no encontrado' }
+            'missing' { 'file not found' }
             default   { $item.Filename }
         }
         Write-Host "$($script:Palette.Secondary)$('{0,3}. ' -f $item.Priority)$($script:Palette.Reset)" -NoNewline
@@ -178,7 +178,7 @@ function Write-ResourcePackInventory {
     }
 
     if ($Inventory.InactiveResources.Count -gt 0) {
-        Write-MpSection 'RESOURCE PACKS · PRESENTES PERO INACTIVOS' $Inventory.InactiveResources.Count
+        Write-MpSection 'RESOURCE PACKS · PRESENT BUT DISABLED' $Inventory.InactiveResources.Count
         foreach ($item in $Inventory.InactiveResources) {
             Write-Host "  $($script:Palette.Secondary)○$($script:Palette.Reset) $($PSStyle.Bold)$($item.Name)$($PSStyle.Reset)" -NoNewline
             if ($item.Source -eq 'local') { Write-Host "  $($script:Palette.Local)LOCAL$($script:Palette.Reset)" -NoNewline }
@@ -192,7 +192,7 @@ function Write-ShaderInventory {
     param([Parameter(Mandatory)]$Inventory)
     Write-MpSection 'SHADER PACKS' $Inventory.Shaders.Count
     if ($Inventory.Shaders.Count -eq 0) {
-        Write-Host "$($script:Palette.Secondary)  · Ninguno$($script:Palette.Reset)"
+        Write-Host "$($script:Palette.Secondary)  · None$($script:Palette.Reset)"
         return
     }
     foreach ($item in $Inventory.Shaders) {
@@ -204,14 +204,14 @@ function Write-ShaderInventory {
 function Write-InventoryView {
     param([Parameter(Mandatory)]$View, [switch]$ShowFilters)
     if ($ShowFilters) {
-        $description = if ($View.Filters.Count) { $View.Filters -join ' · ' } else { 'ninguno' }
+        $description = if ($View.Filters.Count) { $View.Filters -join ' · ' } else { 'none' }
         Write-Host ''
-        Write-Host "$($script:Palette.Accent)FILTROS$($script:Palette.Reset)  $($script:Palette.Secondary)$description$($script:Palette.Reset)"
-        Write-Host "$($script:Palette.Accent)COINCIDENCIAS$($script:Palette.Reset)  $($View.TotalMatches)"
+        Write-Host "$($script:Palette.Accent)FILTERS$($script:Palette.Reset)  $($script:Palette.Secondary)$description$($script:Palette.Reset)"
+        Write-Host "$($script:Palette.Accent)MATCHES$($script:Palette.Reset)  $($View.TotalMatches)"
     }
     if ($View.TotalMatches -eq 0) {
         Write-Host ''
-        Write-Host "$($script:Palette.Process)No hay elementos que coincidan con los filtros.$($script:Palette.Reset)"
+        Write-Host "$($script:Palette.Process)No items match the filters.$($script:Palette.Reset)"
         return
     }
     $hideEmpty = $View.Filters.Count -gt 0
@@ -237,7 +237,7 @@ function Write-ModpackHeader {
         Loader    = $(if ($Project.Loader) { (Get-Culture).TextInfo.ToTitleCase($Project.Loader) } else { '?' })
         Root      = $Project.Root
         Mods      = $Inventory.Mods.Count
-        Resources = "$($Inventory.ActiveResources.Count) activos"
+        Resources = "$($Inventory.ActiveResources.Count) enabled"
         Shaders   = $Inventory.Shaders.Count
     }
     foreach ($key in $rows.Keys) {
@@ -248,7 +248,7 @@ function Write-ModpackHeader {
 
 function Write-ModpackList {
     param([Parameter(Mandatory)][array]$Projects, [Parameter(Mandatory)][string]$Root)
-    Write-MpBanner 'MODPACKS REGISTRADOS'
+    Write-MpBanner 'REGISTERED MODPACKS'
     Write-Host "$($script:Palette.Secondary)Root: $Root$($script:Palette.Reset)"
     Write-Host ''
     Write-Host "$($script:Palette.Secondary)$('{0,-10} {1,-24} {2,-10} {3}' -f 'ID','NAME','MC','LOADER')$($script:Palette.Reset)"
@@ -260,7 +260,7 @@ function Write-ModpackList {
         Write-Host "$($script:Palette.Heading)$($project.Loader)$($script:Palette.Reset)"
     }
     Write-Host ''
-    Write-Host "$($script:Palette.Secondary)$($Projects.Count) proyecto(s)$($script:Palette.Reset)"
+    Write-Host "$($script:Palette.Secondary)$($Projects.Count) project(s)$($script:Palette.Reset)"
 }
 
 function Format-ByteSize {
@@ -274,20 +274,20 @@ function Format-ByteSize {
 function Write-BuildSummary {
     param([Parameter(Mandatory)]$Build)
     $mods = $Build.Inventory.Mods
-    Write-MpBanner 'BUILD COMPLETADO'
-    Write-MpSuccess 'Estado: correcto'
+    Write-MpBanner 'BUILD COMPLETE'
+    Write-MpSuccess 'Status: successful'
     foreach ($row in ([ordered]@{
-        Archivo          = [System.IO.Path]::GetFileName($Build.Path)
-        Tamaño           = Format-ByteSize $Build.Size
-        Duración         = ('{0:N2} s' -f $Build.Duration.TotalSeconds)
+        File             = [System.IO.Path]::GetFileName($Build.Path)
+        Size             = Format-ByteSize $Build.Size
+        Duration         = ('{0:N2} s' -f $Build.Duration.TotalSeconds)
         Mods             = $mods.Count
-        'Solo cliente'   = @($mods | Where-Object Side -eq client).Count
-        'Solo host'      = @($mods | Where-Object Side -eq server).Count
-        Ambos            = @($mods | Where-Object Side -eq both).Count
-        Desconocidos     = @($mods | Where-Object Side -notin @('client', 'server', 'both')).Count
-        'Resources activos' = $Build.Inventory.ActiveResources.Count
+        'Client only'    = @($mods | Where-Object Side -eq client).Count
+        'Host only'      = @($mods | Where-Object Side -eq server).Count
+        Both             = @($mods | Where-Object Side -eq both).Count
+        Unknown          = @($mods | Where-Object Side -notin @('client', 'server', 'both')).Count
+        'Enabled resources' = $Build.Inventory.ActiveResources.Count
         Shaders          = $Build.Inventory.Shaders.Count
-        Ruta             = $Build.Path
+        Path             = $Build.Path
     }).GetEnumerator()) {
         Write-MpKeyValue -Key $row.Key -Value $row.Value -Width 20
     }

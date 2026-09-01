@@ -28,11 +28,11 @@ function Resolve-ModpackResourcePack {
         return $false
     })
     if ($matches.Count -eq 0) {
-        throw "No se encontró el resource pack '$Selector'. Consulta: modpack inventory --type resourcepack"
+        throw "Resource pack '$Selector' was not found. Run: modpack inventory --type resourcepack"
     }
     if ($matches.Count -gt 1) {
         $names = @($matches | ForEach-Object { "'$($_.Name)' [$($_.DefaultId)]" }) -join ', '
-        throw "El selector '$Selector' es ambiguo: $names. Usa el ID o filename exacto."
+        throw "Selector '$Selector' is ambiguous: $names. Use the exact ID or filename."
     }
     return $matches[0]
 }
@@ -49,7 +49,7 @@ function Enable-ModpackResourcePack {
     $remaining = @($inventory.ActiveResources | Where-Object { -not $_.Id.Equals($target.DefaultId, [System.StringComparison]::OrdinalIgnoreCase) } | ForEach-Object Id)
     $maximum = $remaining.Count + 1
     if ($Position -lt 1 -or $Position -gt $maximum) {
-        throw "Posición inválida '$Position'. Usa un valor entre 1 y $maximum (1 = prioridad más alta)."
+        throw "Invalid position '$Position'. Use a value between 1 and $maximum (1 = highest priority)."
     }
     $ordered = [System.Collections.Generic.List[string]]::new()
     foreach ($id in $remaining) { $ordered.Add($id) }

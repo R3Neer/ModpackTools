@@ -72,7 +72,7 @@ function Get-LocalJarMetadata {
         }
     }
     catch {
-        Write-Verbose "No se pudo leer fabric.mod.json de '$Path': $($_.Exception.Message)"
+        Write-Verbose "Could not read fabric.mod.json from '$Path': $($_.Exception.Message)"
     }
     finally { if ($archive) { $archive.Dispose() } }
     return [pscustomobject]@{ Name = $name; Side = $side }
@@ -217,7 +217,7 @@ function Resolve-InventoryType {
         'shaders'       { 'shaderpack' }
         'shaderpack'    { 'shaderpack' }
         'shaderpacks'   { 'shaderpack' }
-        default { throw "Tipo de inventario desconocido '$Type'. Usa all, mod, resourcepack o shaderpack." }
+        default { throw "Unknown inventory type '$Type'. Use all, mod, resourcepack, or shaderpack." }
     }
 }
 
@@ -236,29 +236,29 @@ function Select-ModpackInventory {
     $normalizedSide = if ($Side) { $Side.ToLowerInvariant() } else { $null }
     if ($normalizedSide -eq 'host') { $normalizedSide = 'server' }
     if ($normalizedSide -and $normalizedSide -notin @('client', 'server', 'both', 'unknown')) {
-        throw "Side desconocido '$Side'. Usa client, host, server, both o unknown."
+        throw "Unknown side '$Side'. Use client, host, server, both, or unknown."
     }
     $normalizedSource = if ($Source) { $Source.ToLowerInvariant() } else { $null }
     if ($normalizedSource -and $normalizedSource -notin @('packwiz', 'local', 'builtin', 'missing')) {
-        throw "Fuente desconocida '$Source'. Usa packwiz, local, builtin o missing."
+        throw "Unknown source '$Source'. Use packwiz, local, builtin, or missing."
     }
     $normalizedState = ($State ?? 'all').ToLowerInvariant()
     if ($normalizedState -notin @('all', 'active', 'inactive')) {
-        throw "Estado desconocido '$State'. Usa all, active o inactive."
+        throw "Unknown state '$State'. Use all, active, or inactive."
     }
 
     if ($Category -or $normalizedSide) {
-        if ($effectiveType -notin @('all', 'mod')) { throw 'Los filtros --category y --side solo se pueden aplicar a mods.' }
-        if ($normalizedState -ne 'all') { throw 'No se pueden combinar filtros de mods con --state.' }
+        if ($effectiveType -notin @('all', 'mod')) { throw 'The --category and --side filters can only be applied to mods.' }
+        if ($normalizedState -ne 'all') { throw 'Mod filters cannot be combined with --state.' }
         $effectiveType = 'mod'
     }
     if ($normalizedState -ne 'all') {
-        if ($effectiveType -notin @('all', 'resourcepack')) { throw 'El filtro --state solo se puede aplicar a resource packs.' }
+        if ($effectiveType -notin @('all', 'resourcepack')) { throw 'The --state filter can only be applied to resource packs.' }
         $effectiveType = 'resourcepack'
     }
     if ($Category -and $Category -ne 'unclassified' -and -not $Inventory.Metadata.Categories.ContainsKey($Category)) {
         $available = @($Inventory.Metadata.Categories.Keys | Sort-Object) -join ', '
-        throw "La categoría '$Category' no existe. Disponibles: $available, unclassified."
+        throw "Category '$Category' does not exist. Available categories: $available, unclassified."
     }
 
     function Test-InventoryCommonFilter {

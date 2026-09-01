@@ -12,12 +12,12 @@ if (-not $userModuleRoot) {
         $_.StartsWith([System.IO.Path]::GetFullPath($HOME), [System.StringComparison]::OrdinalIgnoreCase)
     } | Select-Object -First 1
 }
-if (-not $userModuleRoot) { throw 'No se encontró una ubicación de módulos de usuario en PSModulePath.' }
+if (-not $userModuleRoot) { throw 'No user module directory was found in PSModulePath.' }
 
 $moduleBase = Join-Path $userModuleRoot 'ModpackTools'
 $destination = Join-Path $moduleBase $version
 if ((Test-Path -LiteralPath $destination) -and -not $Force) {
-    throw "ModpackTools $version ya está instalado en '$destination'. Usa -Force para actualizarlo."
+    throw "ModpackTools $version is already installed at '$destination'. Use -Force to update it."
 }
 $temporary = Join-Path $moduleBase ('.install-' + [guid]::NewGuid().ToString('N'))
 $backup = Join-Path $moduleBase ('.backup-' + [guid]::NewGuid().ToString('N'))
@@ -37,5 +37,5 @@ catch {
     }
     throw
 }
-Write-Host "ModpackTools $version instalado en $destination"
-Write-Host "Abre una sesión nueva o ejecuta: Import-Module ModpackTools -Force"
+Write-Host "ModpackTools $version installed at $destination"
+Write-Host "Open a new session or run: Import-Module ModpackTools -Force"

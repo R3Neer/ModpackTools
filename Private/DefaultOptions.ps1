@@ -27,7 +27,7 @@ function Get-TomlArraySpan {
         }
     }
 
-    if ($closeIndex -lt 0) { throw "El array TOML '$Key' no tiene cierre." }
+    if ($closeIndex -lt 0) { throw "TOML array '$Key' is not closed." }
     return [pscustomobject]@{ OpenIndex = $openIndex; CloseIndex = $closeIndex }
 }
 
@@ -59,7 +59,7 @@ function Set-TomlArrayStrings {
     )
 
     $span = Get-TomlArraySpan -Text $Text -Key $Key
-    if (-not $span) { throw "No existe el array TOML '$Key'." }
+    if (-not $span) { throw "TOML array '$Key' does not exist." }
     $newline = if ($Text.Contains("`r`n")) { "`r`n" } else { "`n" }
     $replacement = if ($Values.Count -eq 0) { '[]' } else {
         '[' + $newline + (($Values | ForEach-Object { '  "' + (ConvertTo-TomlBasicString $_) + '",' }) -join $newline) + $newline + ']'
@@ -99,7 +99,7 @@ function Set-DefaultResourcePackOrder {
 
     $path = Join-Path $Project.Root 'config/defaultoptions-common.toml'
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-        throw "No existe '$path'; no se puede activar un resource pack sin la configuración de Default Options."
+        throw "'$path' does not exist; a resource pack cannot be enabled without the Default Options configuration."
     }
     $storedIds = @($Ids)
     [array]::Reverse($storedIds)
@@ -109,6 +109,6 @@ function Set-DefaultResourcePackOrder {
 
     $verified = @(Get-DefaultResourcePackOrder -Project $Project)
     if (($verified -join "`0") -cne (@($Ids) -join "`0")) {
-        throw 'Default Options se escribió, pero la comprobación posterior no coincide con el orden solicitado.'
+        throw 'Default Options was written, but the subsequent verification does not match the requested order.'
     }
 }

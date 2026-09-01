@@ -1,11 +1,11 @@
 @{
     RootModule        = 'ModpackTools.psm1'
-    ModuleVersion     = '0.3.0'
+    ModuleVersion     = '0.3.1'
     GUID              = 'dc256dd6-6b3d-4bc5-aed0-14dad616642b'
     Author            = 'ModpackTools contributors'
     CompanyName       = 'Community'
     Copyright         = '(c) ModpackTools contributors'
-    Description       = 'CLI ligera para gestionar proyectos Packwiz y exportarlos a Modrinth.'
+    Description       = 'Lightweight CLI for managing Packwiz projects and exporting them to Modrinth.'
     PowerShellVersion = '7.0'
     FunctionsToExport = @('modpack')
     CmdletsToExport   = @()

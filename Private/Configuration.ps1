@@ -5,7 +5,7 @@ function Get-ModpackToolsConfigDirectory {
 
     $localApplicationData = [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
     if ([string]::IsNullOrWhiteSpace($localApplicationData)) {
-        throw 'No se puede determinar LOCALAPPDATA para guardar la configuración.'
+        throw 'LOCALAPPDATA could not be determined for storing the configuration.'
     }
 
     return (Join-Path $localApplicationData 'ModpackTools')
@@ -25,7 +25,7 @@ function Get-ModpackToolsConfig {
         $data = Import-PowerShellDataFile -LiteralPath $path
     }
     catch {
-        throw "La configuración '$path' no es un PSD1 válido: $($_.Exception.Message)"
+        throw "Configuration file '$path' is not a valid PSD1 file: $($_.Exception.Message)"
     }
 
     if ($null -eq $data) { return @{} }
@@ -39,12 +39,12 @@ function Set-ModpackToolsConfigValue {
     )
 
     if ($Name -ne 'root') {
-        throw "Configuración desconocida '$Name'. En v0.1 solo existe 'root'."
+        throw "Unknown setting '$Name'. Only 'root' is currently supported."
     }
 
     $resolved = [System.IO.Path]::GetFullPath($Value)
     if (-not (Test-Path -LiteralPath $resolved -PathType Container)) {
-        throw "El root de modpacks no existe o no es un directorio: $resolved"
+        throw "The modpack root does not exist or is not a directory: $resolved"
     }
 
     $config = Get-ModpackToolsConfig
@@ -56,12 +56,12 @@ function Set-ModpackToolsConfigValue {
 function Get-ModpackRoot {
     $config = Get-ModpackToolsConfig
     if (-not $config.ContainsKey('Root') -or [string]::IsNullOrWhiteSpace([string]$config.Root)) {
-        throw "ModpackTools no está configurado. Ejecuta: modpack config set root '<directorio>'."
+        throw "ModpackTools is not configured. Run: modpack config set root '<directory>'."
     }
 
     $root = [System.IO.Path]::GetFullPath([string]$config.Root)
     if (-not (Test-Path -LiteralPath $root -PathType Container)) {
-        throw "El root configurado no existe: $root"
+        throw "The configured root does not exist: $root"
     }
     return $root
 }

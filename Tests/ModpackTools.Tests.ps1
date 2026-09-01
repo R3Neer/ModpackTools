@@ -28,38 +28,38 @@ minecraft = "1.21.1"
             SchemaVersion = 1; Id = $Id; DisplayName = "Display $Id"; DisplayVersion = '1.0'; OutputName = "$Id.mrpack"
         }
         Write-PowerShellDataFileAtomic -Path (Join-Path $projectRoot '.modpack/metadata.psd1') -Data @{
-            Categories = @{ performance = @{ Name = 'RENDIMIENTO'; Order = 10 } }; Mods = @{}; ResourcePacks = @{}
+            Categories = @{ performance = @{ Name = 'PERFORMANCE'; Order = 10 } }; Mods = @{}; ResourcePacks = @{}
         }
         return $projectRoot
     }
 
-    Describe 'Descubrimiento y resolución de proyectos' {
+    Describe 'Project discovery and resolution' {
         BeforeEach {
-            $fixtureRoot = Join-Path $TestDrive 'root con espacios'
+            $fixtureRoot = Join-Path $TestDrive 'root with spaces'
             [System.IO.Directory]::CreateDirectory($fixtureRoot) | Out-Null
             $script:ConfigHomeOverride = Join-Path $TestDrive 'config'
             Write-PowerShellDataFileAtomic -Path (Get-ModpackToolsConfigPath) -Data @{ Root = $fixtureRoot }
             $script:ActiveProjectId = $null
         }
 
-        It 'descubre proyectos y lee project.psd1 y pack.toml' {
-            New-TestModpack $fixtureRoot 'Pack Uno' 'uno' | Out-Null
+        It 'discovers projects and reads project.psd1 and pack.toml' {
+            New-TestModpack $fixtureRoot 'Pack Sample' 'sample' | Out-Null
             $projects = @(Get-ModpackProjects)
             $projects.Count | Should Be 1
-            $projects[0].Id | Should Be 'uno'
-            $projects[0].DisplayName | Should Be 'Display uno'
+            $projects[0].Id | Should Be 'sample'
+            $projects[0].DisplayName | Should Be 'Display sample'
             $projects[0].MinecraftVersion | Should Be '1.21.1'
             $projects[0].Loader | Should Be 'fabric'
-            $projects[0].Root | Should Match 'root con espacios'
+            $projects[0].Root | Should Match 'root with spaces'
         }
 
-        It 'detecta IDs duplicados' {
+        It 'detects duplicate IDs' {
             New-TestModpack $fixtureRoot 'Pack A' 'same' | Out-Null
             New-TestModpack $fixtureRoot 'Pack B' 'same' | Out-Null
-            { Get-ModpackProjects } | Should Throw 'duplicados'
+            { Get-ModpackProjects } | Should Throw 'Duplicate project IDs'
         }
 
-        It 'da prioridad al ID explícito sobre la sesión activa' {
+        It 'gives an explicit ID priority over the active session' {
             New-TestModpack $fixtureRoot 'Pack A' 'one' | Out-Null
             New-TestModpack $fixtureRoot 'Pack B' 'two' | Out-Null
             $script:ActiveProjectId = 'one'
@@ -67,13 +67,13 @@ minecraft = "1.21.1"
             (Resolve-ModpackProject -Id 'two').Id | Should Be 'two'
         }
 
-        It 'acepta comandos públicos sin argumentos adicionales' {
-            New-TestModpack $fixtureRoot 'Pack Uno' 'uno' | Out-Null
+        It 'accepts public commands without additional arguments' {
+            New-TestModpack $fixtureRoot 'Pack Public' 'public' | Out-Null
             { modpack list } | Should Not Throw
         }
     }
 
-    Describe 'Metadata e inventario normalizado' {
+    Describe 'Metadata and normalized inventory' {
         BeforeEach {
             $fixtureRoot = Join-Path $TestDrive 'packs'
             [System.IO.Directory]::CreateDirectory($fixtureRoot) | Out-Null
@@ -81,13 +81,13 @@ minecraft = "1.21.1"
             $project = Read-ModpackProject $projectPath
         }
 
-        It 'lee categorías editoriales' {
+        It 'reads editorial categories' {
             $metadata = Get-ModpackMetadata $project
-            $metadata.Categories.performance.Name | Should Be 'RENDIMIENTO'
+            $metadata.Categories.performance.Name | Should Be 'PERFORMANCE'
             $metadata.Categories.performance.Order | Should Be 10
         }
 
-        It 'coloca un mod sin categoría en unclassified' {
+        It 'places a mod without a category in unclassified' {
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'mods/sample.pw.toml'), @'
 name = "Sample"
 filename = "sample.jar"
@@ -102,7 +102,7 @@ version = "version1"
             $inventory.Mods[0].Category | Should Be 'unclassified'
         }
 
-        It 'normaliza side client server y both' {
+        It 'normalizes client server and both sides' {
             foreach ($side in @('client', 'server', 'both')) {
                 [System.IO.File]::WriteAllText((Join-Path $projectPath "mods/$side.pw.toml"), @"
 name = "$side"
@@ -114,7 +114,7 @@ side = "$side"
             $sides | Should Be @('both', 'client', 'server')
         }
 
-        It 'aplica una categoría válida usando el ID estable' {
+        It 'applies a valid category using the stable ID' {
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'mods/sample.pw.toml'), @'
 name = "Sample"
 filename = "sample.jar"
@@ -133,7 +133,7 @@ mod-id = "abc123"
         }
     }
 
-    Describe 'Default Options y resource packs' {
+    Describe 'Default Options and resource packs' {
         BeforeEach {
             $fixtureRoot = Join-Path $TestDrive 'packs'
             [System.IO.Directory]::CreateDirectory($fixtureRoot) | Out-Null
@@ -141,7 +141,7 @@ mod-id = "abc123"
             $project = Read-ModpackProject $projectPath
         }
 
-        It 'lee corchetes dentro de strings sin cerrar el array' {
+        It 'reads brackets inside strings without closing the array' {
             $text = @'
 defaultResourcePacks = [
   "vanilla",
@@ -155,20 +155,20 @@ defaultResourcePacks = [
             $values[2] | Should Be "file/§2p1kl's 3D Items§r§0.zip"
         }
 
-        It 'invierte correctamente la prioridad de Default Options' {
+        It 'correctly reverses Default Options priority' {
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'config/defaultoptions-common.toml'), 'defaultResourcePacks = ["low", "middle", "high"]')
             $order = @(Get-DefaultResourcePackOrder $project)
             $order | Should Be @('high', 'middle', 'low')
         }
 
-        It 'muestra el ID de un pack integrado sin nombre bonito' {
+        It 'shows the ID of a built-in pack without a friendly name' {
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'config/defaultoptions-common.toml'), 'defaultResourcePacks = ["unknown:builtin"]')
             $resource = (Get-ModpackInventory $project).ActiveResources[0]
             $resource.Name | Should Be 'unknown:builtin'
             $resource.Source | Should Be 'builtin'
         }
 
-        It 'resuelve el nombre real de un resource pack físico' {
+        It 'resolves the actual name of a physical resource pack' {
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'resourcepacks/animated.pw.toml'), @'
 name = "Animated Wind"
 filename = "Animated 3D Wind Charge [1.1].zip"
@@ -178,7 +178,7 @@ side = "client"
             (Get-ModpackInventory $project).ActiveResources[0].Name | Should Be 'Animated Wind'
         }
 
-        It 'activa un pack físico en la prioridad visible solicitada' {
+        It 'enables a physical pack at the requested visible priority' {
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'resourcepacks/active.pw.toml'), "name = `"Active Pack`"`nfilename = `"active.zip`"")
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'resourcepacks/new.pw.toml'), "name = `"New Pack`"`nfilename = `"new.zip`"")
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'config/defaultoptions-common.toml'), 'defaultResourcePacks = ["vanilla", "file/active.zip"]')
@@ -190,7 +190,7 @@ side = "client"
             @(Get-DefaultResourcePackOrder $project) | Should Be @('file/active.zip', 'file/new.zip', 'vanilla')
         }
 
-        It 'recoloca un pack ya activo sin duplicarlo' {
+        It 'repositions an enabled pack without duplicating it' {
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'resourcepacks/active.pw.toml'), "name = `"Active Pack`"`nfilename = `"active.zip`"")
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'config/defaultoptions-common.toml'), 'defaultResourcePacks = ["vanilla", "file/active.zip"]')
 
@@ -200,21 +200,21 @@ side = "client"
             @(Get-DefaultResourcePackOrder $project) | Should Be @('vanilla', 'file/active.zip')
         }
 
-        It 'rechaza posiciones fuera del orden posible sin modificar el fichero' {
+        It 'rejects out-of-range positions without modifying the file' {
             $path = Join-Path $projectPath 'config/defaultoptions-common.toml'
             [System.IO.File]::WriteAllText($path, 'defaultResourcePacks = ["vanilla"]')
             $before = Get-Content -Raw -LiteralPath $path
 
-            { Enable-ModpackResourcePack -Project $project -Selector 'vanilla' -Position 3 } | Should Throw 'entre 1 y 1'
+            { Enable-ModpackResourcePack -Project $project -Selector 'vanilla' -Position 3 } | Should Throw 'between 1 and 1'
             (Get-Content -Raw -LiteralPath $path) | Should Be $before
         }
     }
 
-    Describe 'Filtros de inventario' {
+    Describe 'Inventory filters' {
         BeforeEach {
             $filterInventory = [pscustomobject]@{
                 Project = [pscustomobject]@{ Id = 'filter' }
-                Metadata = @{ Categories = @{ performance = @{ Name = 'RENDIMIENTO'; Order = 10 } } }
+                Metadata = @{ Categories = @{ performance = @{ Name = 'PERFORMANCE'; Order = 10 } } }
                 Mods = @(
                     [pscustomobject]@{ Id='modrinth:a'; Kind='mod'; Name='Sodium'; Filename='sodium.jar'; Side='client'; Source='packwiz'; Category='performance' }
                     [pscustomobject]@{ Id='local:mods/b.jar'; Kind='mod'; Name='Host Tool'; Filename='b.jar'; Side='server'; Source='local'; Category='unclassified' }
@@ -233,42 +233,42 @@ side = "client"
             }
         }
 
-        It 'filtra mods por categoría' {
+        It 'filters mods by category' {
             $view = Select-ModpackInventory -Inventory $filterInventory -Category performance
             $view.IncludedTypes | Should Be @('mod')
             $view.Mods.Count | Should Be 1
             $view.Mods[0].Name | Should Be 'Sodium'
         }
 
-        It 'acepta host como alias del side server y combina source' {
+        It 'accepts host as a server-side alias and combines source' {
             $view = Select-ModpackInventory -Inventory $filterInventory -Side host -Source local
             $view.Mods.Count | Should Be 1
             $view.Mods[0].Name | Should Be 'Host Tool'
         }
 
-        It 'filtra resource packs por estado y texto' {
+        It 'filters resource packs by state and text' {
             $view = Select-ModpackInventory -Inventory $filterInventory -Type resourcepack -State active -Search builtin
             $view.ActiveResources.Count | Should Be 1
             $view.ActiveResources[0].Source | Should Be 'builtin'
             $view.InactiveResources.Count | Should Be 0
         }
 
-        It 'filtra elementos locales de todos los tipos' {
+        It 'filters local items of every type' {
             $view = Select-ModpackInventory -Inventory $filterInventory -Source local
             $view.TotalMatches | Should Be 2
             $view.Mods.Count | Should Be 1
             $view.InactiveResources.Count | Should Be 1
         }
 
-        It 'rechaza combinaciones de filtros contradictorias' {
-            { Select-ModpackInventory -Inventory $filterInventory -Type shaderpack -Side client } | Should Throw 'solo se pueden aplicar a mods'
-            { Select-ModpackInventory -Inventory $filterInventory -Category performance -State active } | Should Throw 'No se pueden combinar'
+        It 'rejects contradictory filter combinations' {
+            { Select-ModpackInventory -Inventory $filterInventory -Type shaderpack -Side client } | Should Throw 'only be applied to mods'
+            { Select-ModpackInventory -Inventory $filterInventory -Category performance -State active } | Should Throw 'cannot be combined'
         }
     }
 
-    Describe 'Procesos nativos' {
-        It 'convierte un exit code no cero en error comprensible' {
-            { Invoke-NativeCommandChecked -FilePath 'pwsh' -Arguments @('-NoProfile', '-Command', 'exit 7') -WorkingDirectory $TestDrive } | Should Throw 'código 7'
+    Describe 'Native processes' {
+        It 'turns a nonzero exit code into a clear error' {
+            { Invoke-NativeCommandChecked -FilePath 'pwsh' -Arguments @('-NoProfile', '-Command', 'exit 7') -WorkingDirectory $TestDrive } | Should Throw 'code 7'
         }
     }
 }
