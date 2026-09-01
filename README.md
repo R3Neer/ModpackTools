@@ -208,9 +208,10 @@ These operations change only editorial metadata in `.modpack/metadata.psd1`; the
 
 ```powershell
 modpack new demo --name Demo --minecraft 1.21.1 --loader fabric
+modpack new neoforge-demo --name "NeoForge Demo" --minecraft 1.21.1 --loader neoforge
 ```
 
-By default, Packwiz selects the latest compatible Fabric Loader; the technical version is `0.1.0`, the display version matches Minecraft, and the directory is `<Name>-<Minecraft>`. These can be adjusted with `--loader-version`, `--pack-version`, `--display-version`, and `--path`. Creation uses a temporary directory and never overwrites the destination.
+Fabric and NeoForge are supported for project creation. By default, Packwiz selects the latest compatible loader version; the technical pack version is `0.1.0`, the display version matches Minecraft, and the directory is `<Name>-<Minecraft>`. These can be adjusted with `--loader-version`, `--pack-version`, `--display-version`, and `--path`. Packwiz validates the Minecraft/loader combination. Creation uses a temporary directory and never overwrites the destination.
 
 ### Adding content
 
@@ -261,7 +262,7 @@ The hidden temporary artifact is created in `dist/` so Packwiz can export on the
 
 ## Inventory and sides
 
-`.pw.toml` files provide `client`, `server`, or `both`. For local JAR files, ModpackTools reads `fabric.mod.json`; when the side cannot be determined, it uses `unknown`.
+`.pw.toml` files provide `client`, `server`, or `both` for every supported loader. For local JAR files, ModpackTools currently reads `fabric.mod.json`; NeoForge local JARs remain valid but use `unknown` when their side cannot be inferred.
 
 ```text
 [C]    client only

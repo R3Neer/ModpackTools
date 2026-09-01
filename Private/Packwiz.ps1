@@ -195,6 +195,25 @@ function New-ModpackProjectFiles {
     [System.IO.File]::WriteAllText((Join-Path $Root '.gitignore'), "dist/`n", [System.Text.UTF8Encoding]::new($false))
 }
 
+function Get-PackwizInitArguments {
+    param(
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$MinecraftVersion,
+        [Parameter(Mandatory)][string]$PackVersion,
+        [Parameter(Mandatory)][string]$Loader,
+        [string]$LoaderVersion
+    )
+
+    $normalizedLoader = $Loader.ToLowerInvariant()
+    if ($normalizedLoader -notin @('fabric', 'neoforge')) {
+        Throw-MpError -Message "Loader '$Loader' is not supported by project creation; allowed values: fabric, neoforge" -Hint '--loader <fabric|neoforge>' -ErrorId 'Project.UnsupportedLoader' -Category InvalidArgument -TargetObject $Loader
+    }
+    $arguments = @('init', '--yes', '--name', $Name, '--mc-version', $MinecraftVersion, '--version', $PackVersion, '--modloader', $normalizedLoader)
+    if ($LoaderVersion) { $arguments += @("--$normalizedLoader-version", $LoaderVersion) }
+    else { $arguments += "--$normalizedLoader-latest" }
+    return $arguments
+}
+
 function New-ModpackProject {
     param(
         [Parameter(Mandatory)][string]$Id,
@@ -208,7 +227,7 @@ function New-ModpackProject {
     )
 
     if ($Id -notmatch '^[a-z][a-z0-9-]*$') { Throw-MpError -Message "Project ID '$Id' is invalid; allowed characters: lowercase letters, numbers, hyphens" -Hint 'choose an ID such as my-pack' -ErrorId 'Project.InvalidId' -Category InvalidArgument -TargetObject $Id }
-    if ($Loader.ToLowerInvariant() -ne 'fabric') { Throw-MpError -Message "Loader '$Loader' is not supported by project creation; allowed value: fabric" -Hint '--loader fabric' -ErrorId 'Project.UnsupportedLoader' -Category InvalidArgument -TargetObject $Loader }
+    $initArguments = @(Get-PackwizInitArguments -Name $Name -MinecraftVersion $MinecraftVersion -PackVersion $PackVersion -Loader $Loader -LoaderVersion $LoaderVersion)
     $root = Get-ModpackRoot
     if ((Get-ModpackProjects | Where-Object Id -eq $Id)) { Throw-MpError -Message "Project ID '$Id' is already registered" -Hint 'choose a different project ID or run modpack use <id>' -ErrorId 'Project.AlreadyExists' -Category ResourceExists -TargetObject $Id }
     if (-not $DirectoryName) { $DirectoryName = (($Name -replace '[\\/:*?"<>|]', '-').Trim() + "-$MinecraftVersion") }
@@ -225,10 +244,7 @@ function New-ModpackProject {
     $temporary = Join-Path $root ('.modpacktools-new-' + [guid]::NewGuid().ToString('N'))
     [System.IO.Directory]::CreateDirectory($temporary) | Out-Null
     try {
-        $arguments = @('init', '--yes', '--name', $Name, '--mc-version', $MinecraftVersion, '--version', $PackVersion, '--modloader', 'fabric')
-        if ($LoaderVersion) { $arguments += @('--fabric-version', $LoaderVersion) }
-        else { $arguments += '--fabric-latest' }
-        [void](Invoke-Packwiz -Arguments $arguments -WorkingDirectory $temporary)
+        [void](Invoke-Packwiz -Arguments $initArguments -WorkingDirectory $temporary)
         New-ModpackProjectFiles -Root $temporary -Id $Id -DisplayName $Name -DisplayVersion $DisplayVersion
         Move-Item -LiteralPath $temporary -Destination $target
     }

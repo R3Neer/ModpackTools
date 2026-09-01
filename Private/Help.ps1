@@ -27,16 +27,16 @@ function Get-MpCommandCatalog {
         }
         new = [pscustomobject]@{
             Handler = 'Invoke-MpNew'; Group = 'PROJECTS'; Summary = 'Create a project'; Description = 'Create and register a new Packwiz project under the configured root.'
-            Usage = @('modpack new <id> --name <name> --minecraft <version> --loader fabric [options]'); Items = @(
+            Usage = @('modpack new <id> --name <name> --minecraft <version> --loader <fabric|neoforge> [options]'); Items = @(
                 New-MpHelpItem '<id>' 'Stable lowercase project ID.'
                 New-MpHelpItem '--name <name>' 'Display name for the modpack.'
                 New-MpHelpItem '--minecraft <version>' 'Minecraft version.'
-                New-MpHelpItem '--loader fabric' 'Mod loader. Fabric is currently supported.'
+                New-MpHelpItem '--loader <loader>' 'Mod loader: fabric or neoforge.'
                 New-MpHelpItem '--path <directory>' 'Directory name below the configured root.'
-                New-MpHelpItem '--loader-version <version>' 'Specific Fabric loader version.'
+                New-MpHelpItem '--loader-version <version>' 'Specific loader version; otherwise Packwiz selects the latest compatible one.'
                 New-MpHelpItem '--pack-version <version>' 'Initial technical Packwiz version.'
                 New-MpHelpItem '--display-version <version>' 'Initial user-facing version.'
-            ); Notes = @(); Examples = @('modpack new vanilla-plus --name "Vanilla Plus" --minecraft 1.21.1 --loader fabric')
+            ); Notes = @('Packwiz validates the Minecraft and loader version combination.'); Examples = @('modpack new vanilla-plus --name "Vanilla Plus" --minecraft 1.21.1 --loader fabric', 'modpack new neoforge-pack --name "NeoForge Pack" --minecraft 1.21.1 --loader neoforge')
         }
         inventory = [pscustomobject]@{
             Handler = 'Invoke-MpInventory'; Group = 'CONTENT'; Summary = 'Inspect installed content'; Description = 'Show and filter the mods, resource packs, and shaders in a project.'

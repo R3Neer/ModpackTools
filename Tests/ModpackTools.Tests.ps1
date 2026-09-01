@@ -128,6 +128,58 @@ minecraft = "1.21.1"
         }
     }
 
+    Describe 'Packwiz project creation' {
+        It 'builds Fabric and NeoForge init arguments using the compatible latest loader' {
+            $fabric = @(Get-PackwizInitArguments -Name 'Fabric Pack' -MinecraftVersion '1.21.1' -PackVersion '0.1.0' -Loader FABRIC)
+            $fabric | Should Be @('init', '--yes', '--name', 'Fabric Pack', '--mc-version', '1.21.1', '--version', '0.1.0', '--modloader', 'fabric', '--fabric-latest')
+
+            $neoForge = @(Get-PackwizInitArguments -Name 'NeoForge Pack' -MinecraftVersion '1.21.1' -PackVersion '0.1.0' -Loader NeoForge)
+            $neoForge | Should Be @('init', '--yes', '--name', 'NeoForge Pack', '--mc-version', '1.21.1', '--version', '0.1.0', '--modloader', 'neoforge', '--neoforge-latest')
+        }
+
+        It 'passes an explicit NeoForge version instead of requesting the latest one' {
+            $arguments = @(Get-PackwizInitArguments -Name 'NeoForge Pack' -MinecraftVersion '1.21.1' -PackVersion '0.1.0' -Loader neoforge -LoaderVersion '21.1.200')
+            ($arguments -contains '--neoforge-version') | Should Be $true
+            ($arguments -contains '21.1.200') | Should Be $true
+            ($arguments -contains '--neoforge-latest') | Should Be $false
+        }
+
+        It 'rejects loaders that project creation does not support' {
+            { Get-PackwizInitArguments -Name 'Unsupported' -MinecraftVersion '1.21.1' -PackVersion '0.1.0' -Loader forge } | Should Throw 'allowed values: fabric, neoforge'
+        }
+
+        It 'creates and discovers a NeoForge project through Packwiz' {
+            $root = Join-Path $TestDrive 'neoforge-root'
+            [System.IO.Directory]::CreateDirectory($root) | Out-Null
+            $script:ConfigHomeOverride = Join-Path $TestDrive 'neoforge-config'
+            Set-ModpackToolsConfigValue -Name root -Value $root | Out-Null
+            Mock Invoke-Packwiz {
+                param($Arguments, $WorkingDirectory)
+                $script:CapturedInitArguments = @($Arguments)
+                [System.IO.File]::WriteAllText((Join-Path $WorkingDirectory 'pack.toml'), @'
+name = "NeoForge Test"
+version = "0.1.0"
+pack-format = "packwiz:1.1.0"
+
+[versions]
+minecraft = "1.21.1"
+neoforge = "21.1.200"
+'@)
+                [System.IO.File]::WriteAllText((Join-Path $WorkingDirectory 'index.toml'), 'hash-format = "sha256"')
+            }
+
+            $project = New-ModpackProject -Id 'neo-test' -Name 'NeoForge Test' -MinecraftVersion '1.21.1' -Loader neoforge -LoaderVersion '21.1.200'
+
+            $project.Id | Should Be 'neo-test'
+            $project.Loader | Should Be 'neoforge'
+            $project.LoaderVersion | Should Be '21.1.200'
+            ($script:CapturedInitArguments -contains '--modloader') | Should Be $true
+            ($script:CapturedInitArguments -contains 'neoforge') | Should Be $true
+            ($script:CapturedInitArguments -contains '--neoforge-version') | Should Be $true
+            Test-Path -LiteralPath (Join-Path $project.Root '.modpack/project.psd1') | Should Be $true
+        }
+    }
+
     Describe 'MRPack diff' {
         It 'reads manifest entries and uncompressed overrides semantically' {
             $path = Join-Path $TestDrive 'sample.mrpack'
@@ -252,7 +304,7 @@ minecraft = "1.21.1"
         }
 
         It 'prints the module version through the global version option' {
-            (modpack --version 6>&1 | Out-String).Trim() | Should Be 'ModpackTools 1.1.0'
+            (modpack --version 6>&1 | Out-String).Trim() | Should Be 'ModpackTools 1.2.0'
             { modpack version } | Should Throw "Command 'version' is not recognized"
         }
 
@@ -515,7 +567,7 @@ mod-id = "abc123"
             Assert-MockCalled Invoke-RestMethod -Times 1 -ParameterFilter {
                 $Uri -match 'api\.modrinth\.com/v2/search' -and
                 [System.Uri]::UnescapeDataString($Uri) -match 'versions:1\.21\.1' -and
-                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/1.1.0'
+                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/1.2.0'
             }
         }
 
