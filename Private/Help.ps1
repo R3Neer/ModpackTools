@@ -27,16 +27,16 @@ function Get-MpCommandCatalog {
         }
         new = [pscustomobject]@{
             Handler = 'Invoke-MpNew'; Group = 'PROJECTS'; Summary = 'Create a project'; Description = 'Create and register a new Packwiz project under the configured root.'
-            Usage = @('modpack new <id> --name <name> --minecraft <version> --loader <fabric|neoforge> [options]'); Items = @(
+            Usage = @('modpack new <id> --name <name> --minecraft <version> --loader <fabric|quilt|forge|neoforge> [options]'); Items = @(
                 New-MpHelpItem '<id>' 'Stable lowercase project ID.'
                 New-MpHelpItem '--name <name>' 'Display name for the modpack.'
                 New-MpHelpItem '--minecraft <version>' 'Minecraft version.'
-                New-MpHelpItem '--loader <loader>' 'Mod loader: fabric or neoforge.'
+                New-MpHelpItem '--loader <loader>' 'Mod loader: fabric, quilt, forge, or neoforge.'
                 New-MpHelpItem '--path <directory>' 'Directory name below the configured root.'
                 New-MpHelpItem '--loader-version <version>' 'Specific loader version; otherwise Packwiz selects the latest compatible one.'
                 New-MpHelpItem '--pack-version <version>' 'Initial technical Packwiz version.'
                 New-MpHelpItem '--display-version <version>' 'Initial user-facing version.'
-            ); Notes = @('Packwiz validates the Minecraft and loader version combination.'); Examples = @('modpack new vanilla-plus --name "Vanilla Plus" --minecraft 1.21.1 --loader fabric', 'modpack new neoforge-pack --name "NeoForge Pack" --minecraft 1.21.1 --loader neoforge')
+            ); Notes = @('Packwiz validates the Minecraft and loader version combination.'); Examples = @('modpack new vanilla-plus --name "Vanilla Plus" --minecraft 1.21.1 --loader fabric', 'modpack new forge-pack --name "Forge Pack" --minecraft 1.20.1 --loader forge', 'modpack new quilt-pack --name "Quilt Pack" --minecraft 1.21.1 --loader quilt')
         }
         inventory = [pscustomobject]@{
             Handler = 'Invoke-MpInventory'; Group = 'CONTENT'; Summary = 'Inspect installed content'; Description = 'Show and filter the mods, resource packs, and shaders in a project.'

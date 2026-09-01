@@ -129,9 +129,15 @@ minecraft = "1.21.1"
     }
 
     Describe 'Packwiz project creation' {
-        It 'builds Fabric and NeoForge init arguments using the compatible latest loader' {
+        It 'builds init arguments for every supported loader using the compatible latest version' {
             $fabric = @(Get-PackwizInitArguments -Name 'Fabric Pack' -MinecraftVersion '1.21.1' -PackVersion '0.1.0' -Loader FABRIC)
             $fabric | Should Be @('init', '--yes', '--name', 'Fabric Pack', '--mc-version', '1.21.1', '--version', '0.1.0', '--modloader', 'fabric', '--fabric-latest')
+
+            $quilt = @(Get-PackwizInitArguments -Name 'Quilt Pack' -MinecraftVersion '1.21.1' -PackVersion '0.1.0' -Loader Quilt)
+            $quilt | Should Be @('init', '--yes', '--name', 'Quilt Pack', '--mc-version', '1.21.1', '--version', '0.1.0', '--modloader', 'quilt', '--quilt-latest')
+
+            $forge = @(Get-PackwizInitArguments -Name 'Forge Pack' -MinecraftVersion '1.20.1' -PackVersion '0.1.0' -Loader Forge)
+            $forge | Should Be @('init', '--yes', '--name', 'Forge Pack', '--mc-version', '1.20.1', '--version', '0.1.0', '--modloader', 'forge', '--forge-latest')
 
             $neoForge = @(Get-PackwizInitArguments -Name 'NeoForge Pack' -MinecraftVersion '1.21.1' -PackVersion '0.1.0' -Loader NeoForge)
             $neoForge | Should Be @('init', '--yes', '--name', 'NeoForge Pack', '--mc-version', '1.21.1', '--version', '0.1.0', '--modloader', 'neoforge', '--neoforge-latest')
@@ -145,7 +151,7 @@ minecraft = "1.21.1"
         }
 
         It 'rejects loaders that project creation does not support' {
-            { Get-PackwizInitArguments -Name 'Unsupported' -MinecraftVersion '1.21.1' -PackVersion '0.1.0' -Loader forge } | Should Throw 'allowed values: fabric, neoforge'
+            { Get-PackwizInitArguments -Name 'Unsupported' -MinecraftVersion '1.21.1' -PackVersion '0.1.0' -Loader liteloader } | Should Throw 'allowed values: fabric, quilt, forge, neoforge'
         }
 
         It 'creates and discovers a NeoForge project through Packwiz' {

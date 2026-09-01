@@ -344,7 +344,7 @@ function Invoke-MpNew {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Show-MpHelp new; return }
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('name', 'minecraft', 'loader', 'path', 'loader-version', 'pack-version', 'display-version')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack new <id> --name <name> --minecraft <version> --loader <fabric|neoforge>' -OptionNames @('name', 'minecraft', 'loader', 'path', 'loader-version', 'pack-version', 'display-version')
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack new <id> --name <name> --minecraft <version> --loader <fabric|quilt|forge|neoforge>' -OptionNames @('name', 'minecraft', 'loader', 'path', 'loader-version', 'pack-version', 'display-version')
     foreach ($required in @('name', 'minecraft', 'loader')) {
         if (-not $parsed.Options.ContainsKey($required)) { Throw-MpError -Message "Required option '--$required' is missing" -Hint 'modpack new --help' -ErrorId 'Option.Required' -Category InvalidArgument -TargetObject $required }
     }

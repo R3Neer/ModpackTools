@@ -211,9 +211,11 @@ These operations change only editorial metadata in `.modpack/metadata.psd1`; the
 ```powershell
 modpack new demo --name Demo --minecraft 1.21.1 --loader fabric
 modpack new neoforge-demo --name "NeoForge Demo" --minecraft 1.21.1 --loader neoforge
+modpack new forge-demo --name "Forge Demo" --minecraft 1.20.1 --loader forge
+modpack new quilt-demo --name "Quilt Demo" --minecraft 1.21.1 --loader quilt
 ```
 
-Fabric and NeoForge are supported for project creation. By default, Packwiz selects the latest compatible loader version; the technical pack version is `0.1.0`, the display version matches Minecraft, and the directory is `<Name>-<Minecraft>`. These can be adjusted with `--loader-version`, `--pack-version`, `--display-version`, and `--path`. Packwiz validates the Minecraft/loader combination. Creation uses a temporary directory and never overwrites the destination.
+Fabric, Quilt, Forge, and NeoForge are supported for project creation. By default, Packwiz selects the latest compatible loader version; the technical pack version is `0.1.0`, the display version matches Minecraft, and the directory is `<Name>-<Minecraft>`. These can be adjusted with `--loader-version`, `--pack-version`, `--display-version`, and `--path`. Packwiz validates the Minecraft/loader combination. Creation uses a temporary directory and never overwrites the destination.
 
 ### Adding content
 

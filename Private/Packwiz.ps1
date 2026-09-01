@@ -205,8 +205,8 @@ function Get-PackwizInitArguments {
     )
 
     $normalizedLoader = $Loader.ToLowerInvariant()
-    if ($normalizedLoader -notin @('fabric', 'neoforge')) {
-        Throw-MpError -Message "Loader '$Loader' is not supported by project creation; allowed values: fabric, neoforge" -Hint '--loader <fabric|neoforge>' -ErrorId 'Project.UnsupportedLoader' -Category InvalidArgument -TargetObject $Loader
+    if ($normalizedLoader -notin @('fabric', 'quilt', 'forge', 'neoforge')) {
+        Throw-MpError -Message "Loader '$Loader' is not supported by project creation; allowed values: fabric, quilt, forge, neoforge" -Hint '--loader <fabric|quilt|forge|neoforge>' -ErrorId 'Project.UnsupportedLoader' -Category InvalidArgument -TargetObject $Loader
     }
     $arguments = @('init', '--yes', '--name', $Name, '--mc-version', $MinecraftVersion, '--version', $PackVersion, '--modloader', $normalizedLoader)
     if ($LoaderVersion) { $arguments += @("--$normalizedLoader-version", $LoaderVersion) }
