@@ -98,6 +98,8 @@ modpack inventory --category performance
 modpack inventory --side host --source local
 modpack inventory --type resourcepack --state active
 modpack inventory --search sodium
+modpack resource enable "Fresh Animations" --position 1
+modpack resource enable "fresh-animations.zip" --position 3 --project vp26
 modpack add mod sodium --category performance
 modpack add mod sodium --project vp26 --category performance
 modpack build
@@ -118,6 +120,16 @@ Un ID explícito tiene prioridad sobre la selección de la sesión. `modpack use
 - `--search <texto>` busca en nombre, ID y filename.
 
 `host` corresponde al valor técnico `server`. Los filtros de categoría o side acotan automáticamente a mods; `--state` acota a resource packs.
+
+### Activar y ordenar resource packs
+
+```powershell
+modpack resource enable <nombre|id|filename> --position <n> [--project <id>]
+```
+
+El selector admite el nombre mostrado por `inventory`, el ID de Default Options o el filename exacto. La posición 1 es la prioridad más alta visible en la GUI de Minecraft. Si el pack ya estaba activo, el mismo comando lo recoloca; si estaba inactivo, lo activa. Los selectores ambiguos y las posiciones fuera del rango se rechazan sin escribir.
+
+El comando modifica únicamente `defaultResourcePacks` en `config/defaultoptions-common.toml`; no mantiene una segunda lista de activación.
 
 ### Crear un proyecto
 
@@ -154,6 +166,10 @@ Los `.pw.toml` suministran `client`, `server` o `both`. Para JAR locales se lee 
 ```
 
 La UI dice “Host”, aunque el valor técnico de Packwiz sea `server`.
+
+## Presentación del CLI
+
+Los menús, ayudas, estados, confirmaciones, inventarios y resúmenes de build comparten la misma paleta y jerarquía visual. Los colores reservados de `[C]` y `[H]` siguen usándose exclusivamente para los sides de cliente y host.
 
 ## Default Options
 

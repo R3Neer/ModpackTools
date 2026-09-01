@@ -54,6 +54,29 @@ function Write-MpWarning {
     Write-Warning $Text
 }
 
+function Write-MpInfo {
+    param([Parameter(Mandatory)][string]$Text)
+    Write-Host "$($script:Palette.Heading)•$($script:Palette.Reset) $($script:Palette.Value)$Text$($script:Palette.Reset)"
+}
+
+function Write-MpKeyValue {
+    param([Parameter(Mandatory)][string]$Key, [AllowNull()][object]$Value, [int]$Width = 16)
+    Write-Host "$($script:Palette.Secondary)$($Key.PadRight($Width))$($script:Palette.Reset) " -NoNewline
+    Write-Host "$($script:Palette.Value)$Value$($script:Palette.Reset)"
+}
+
+function Write-MpCommandLine {
+    param([Parameter(Mandatory)][string]$Command, [string]$Description)
+    Write-Host "  $($script:Palette.Accent)$Command$($script:Palette.Reset)" -NoNewline
+    if ($Description) { Write-Host "  $($script:Palette.Secondary)$Description$($script:Palette.Reset)" }
+    else { Write-Host '' }
+}
+
+function Write-MpUsage {
+    param([Parameter(Mandatory)][string]$Text)
+    Write-Host "$($script:Palette.Secondary)Uso:$($script:Palette.Reset) $($script:Palette.Accent)$Text$($script:Palette.Reset)"
+}
+
 function Write-MpSideLegend {
     Write-Host ''
     Write-Host '  ' -NoNewline
@@ -266,6 +289,6 @@ function Write-BuildSummary {
         Shaders          = $Build.Inventory.Shaders.Count
         Ruta             = $Build.Path
     }).GetEnumerator()) {
-        Write-Host ('{0,-20} {1}' -f $row.Key, $row.Value)
+        Write-MpKeyValue -Key $row.Key -Value $row.Value -Width 20
     }
 }

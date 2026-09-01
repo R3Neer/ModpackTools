@@ -177,6 +177,37 @@ side = "client"
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'config/defaultoptions-common.toml'), 'defaultResourcePacks = ["file/Animated 3D Wind Charge [1.1].zip"]')
             (Get-ModpackInventory $project).ActiveResources[0].Name | Should Be 'Animated Wind'
         }
+
+        It 'activa un pack físico en la prioridad visible solicitada' {
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'resourcepacks/active.pw.toml'), "name = `"Active Pack`"`nfilename = `"active.zip`"")
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'resourcepacks/new.pw.toml'), "name = `"New Pack`"`nfilename = `"new.zip`"")
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'config/defaultoptions-common.toml'), 'defaultResourcePacks = ["vanilla", "file/active.zip"]')
+
+            $result = Enable-ModpackResourcePack -Project $project -Selector 'New Pack' -Position 2
+
+            $result.WasActive | Should Be $false
+            $result.Item.Priority | Should Be 2
+            @(Get-DefaultResourcePackOrder $project) | Should Be @('file/active.zip', 'file/new.zip', 'vanilla')
+        }
+
+        It 'recoloca un pack ya activo sin duplicarlo' {
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'resourcepacks/active.pw.toml'), "name = `"Active Pack`"`nfilename = `"active.zip`"")
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'config/defaultoptions-common.toml'), 'defaultResourcePacks = ["vanilla", "file/active.zip"]')
+
+            $result = Enable-ModpackResourcePack -Project $project -Selector 'active.zip' -Position 2
+
+            $result.WasActive | Should Be $true
+            @(Get-DefaultResourcePackOrder $project) | Should Be @('vanilla', 'file/active.zip')
+        }
+
+        It 'rechaza posiciones fuera del orden posible sin modificar el fichero' {
+            $path = Join-Path $projectPath 'config/defaultoptions-common.toml'
+            [System.IO.File]::WriteAllText($path, 'defaultResourcePacks = ["vanilla"]')
+            $before = Get-Content -Raw -LiteralPath $path
+
+            { Enable-ModpackResourcePack -Project $project -Selector 'vanilla' -Position 3 } | Should Throw 'entre 1 y 1'
+            (Get-Content -Raw -LiteralPath $path) | Should Be $before
+        }
     }
 
     Describe 'Filtros de inventario' {

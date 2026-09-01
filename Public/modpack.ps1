@@ -11,6 +11,7 @@ function modpack {
         use    = 'Invoke-MpUse'
         status = 'Invoke-MpStatus'
         inventory = 'Invoke-MpInventory'
+        resource = 'Invoke-MpResource'
         build  = 'Invoke-MpBuild'
         new    = 'Invoke-MpNew'
         add    = 'Invoke-MpAdd'

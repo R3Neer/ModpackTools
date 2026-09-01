@@ -42,42 +42,41 @@ function Assert-PositionalCount {
 function Invoke-MpHelp {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     $topic = if ($Arguments.Count) { [string]$Arguments[0] } else { '' }
-    $help = @{
-        '' = @'
-ModpackTools 0.2
-
-  modpack list
-  modpack use [id]
-  modpack status [id] [--full]
-  modpack inventory [id] [filtros]
-  modpack build [id] [--no-refresh] [--keep-old] [--open] [--raw-log]
-  modpack add mod <slug> [--project <id>] [--category <id>]
-  modpack new <id> --name <nombre> --minecraft <versión> --loader fabric [opciones]
-  modpack config get root
-  modpack config set root <directorio>
-  modpack help [comando]
-'@
-        build = 'Uso: modpack build [id] [--no-refresh] [--keep-old] [--open] [--raw-log]'
-        status = 'Uso: modpack status [id] [--full]'
-        inventory = @'
-Uso: modpack inventory [id] [filtros]
-
-  --type <all|mod|resourcepack|shaderpack>
-  --category <id|unclassified>
-  --side <client|host|both|unknown>
-  --source <packwiz|local|builtin|missing>
-  --state <all|active|inactive>
-  --search <texto>
-  --unclassified
-'@
-        add = 'Uso: modpack add mod <slug> [--project <id>] [--category <id>]'
-        new = 'Uso: modpack new <id> --name <nombre> --minecraft <versión> --loader fabric [--path <carpeta>] [--loader-version <versión>] [--pack-version <versión>] [--display-version <versión>]'
-        config = 'Uso: modpack config get root | modpack config set root <directorio>'
-        use = 'Uso: modpack use [id]'
-        list = 'Uso: modpack list'
+    $topics = @('', 'build', 'status', 'inventory', 'resource', 'add', 'new', 'config', 'use', 'list')
+    if ($topic -notin $topics) { throw "No hay ayuda para '$topic'." }
+    if (-not $topic) {
+        Write-MpBanner 'MODPACKTOOLS 0.3'
+        Write-MpCommandLine 'modpack list' 'Proyectos registrados'
+        Write-MpCommandLine 'modpack use [id]' 'Proyecto activo de esta sesión'
+        Write-MpCommandLine 'modpack status [id] [--full]' 'Resumen del proyecto'
+        Write-MpCommandLine 'modpack inventory [id] [filtros]' 'Contenido y filtros'
+        Write-MpCommandLine 'modpack resource enable <selector> --position <n>' 'Activar o recolocar un resource pack'
+        Write-MpCommandLine 'modpack add mod <slug> [opciones]' 'Añadir un mod con Packwiz'
+        Write-MpCommandLine 'modpack build [id] [opciones]' 'Generar el .mrpack en dist/'
+        Write-MpCommandLine 'modpack new <id> [opciones]' 'Crear un proyecto'
+        Write-MpCommandLine 'modpack config get|set root' 'Configuración global'
+        Write-MpCommandLine 'modpack help [comando]' 'Ayuda detallada'
+        return
     }
-    if (-not $help.ContainsKey($topic)) { throw "No hay ayuda para '$topic'." }
-    Write-Host $help[$topic]
+    Write-MpBanner "AYUDA · $($topic.ToUpperInvariant())"
+    switch ($topic) {
+        'build' { Write-MpUsage 'modpack build [id] [--no-refresh] [--keep-old] [--open] [--raw-log]' }
+        'status' { Write-MpUsage 'modpack status [id] [--full]' }
+        'inventory' {
+            Write-MpUsage 'modpack inventory [id] [filtros]'
+            foreach ($option in @('--type <all|mod|resourcepack|shaderpack>', '--category <id|unclassified>', '--side <client|host|both|unknown>', '--source <packwiz|local|builtin|missing>', '--state <all|active|inactive>', '--search <texto>', '--unclassified')) { Write-MpCommandLine $option }
+        }
+        'resource' {
+            Write-MpUsage 'modpack resource enable <nombre|id|filename> --position <n> [--project <id>]'
+            Write-MpInfo 'La posición 1 es la prioridad más alta de la GUI de Minecraft.'
+            Write-MpInfo 'Si el pack ya está activo, se recoloca.'
+        }
+        'add' { Write-MpUsage 'modpack add mod <slug> [--project <id>] [--category <id>]' }
+        'new' { Write-MpUsage 'modpack new <id> --name <nombre> --minecraft <versión> --loader fabric [--path <carpeta>] [--loader-version <versión>] [--pack-version <versión>] [--display-version <versión>]' }
+        'config' { Write-MpUsage 'modpack config get root | modpack config set root <directorio>' }
+        'use' { Write-MpUsage 'modpack use [id]' }
+        'list' { Write-MpUsage 'modpack list' }
+    }
 }
 
 function Invoke-MpList {
@@ -94,12 +93,32 @@ function Invoke-MpUse {
     if ($Arguments.Count -and $Arguments[0] -eq '--help') { Invoke-MpHelp use; return }
     Assert-PositionalCount -Values $Arguments -Minimum 0 -Maximum 1 -Usage 'modpack use [id]'
     if ($Arguments.Count -eq 0) {
-        if ($script:ActiveProjectId) { Write-Host $script:ActiveProjectId }
-        else { Write-Host 'No hay proyecto activo.' }
+        Write-MpBanner 'PROYECTO ACTIVO'
+        if ($script:ActiveProjectId) { Write-MpKeyValue 'ID' $script:ActiveProjectId }
+        else { Write-MpInfo 'No hay proyecto activo en esta sesión.' }
         return
     }
     $project = Set-ActiveModpackProject -Id ([string]$Arguments[0])
     Write-MpSuccess "Proyecto activo: $($project.Id) ($($project.DisplayName))"
+}
+
+function Invoke-MpResource {
+    param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
+    if ($Arguments -contains '--help') { Invoke-MpHelp resource; return }
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project', 'position')
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum 2 -Usage 'modpack resource enable <nombre|id|filename> --position <n> [--project <id>]'
+    if ($parsed.Positionals[0].ToLowerInvariant() -ne 'enable') { throw "Operación de resource packs desconocida '$($parsed.Positionals[0])'. Usa 'enable'." }
+    if (-not $parsed.Options.ContainsKey('position')) { throw "Falta la opción obligatoria '--position'." }
+    $position = 0
+    if (-not [int]::TryParse([string]$parsed.Options.position, [ref]$position) -or $position -lt 1) { throw "La posición debe ser un entero mayor o igual que 1." }
+    $projectId = if ($parsed.Options.ContainsKey('project')) { $parsed.Options.project } else { $null }
+    $project = Resolve-ModpackProject -Id $projectId
+    Assert-ModpackStructure -Project $project
+    Write-MpStep "Activando o recolocando '$($parsed.Positionals[1])'..."
+    $result = Enable-ModpackResourcePack -Project $project -Selector $parsed.Positionals[1] -Position $position
+    $verb = if ($result.WasActive) { 'recolocado' } else { 'activado' }
+    Write-MpSuccess "$($result.Item.Name) $verb con prioridad $($result.Item.Priority)."
+    Write-ResourcePackInventory -Inventory $result.Inventory -HideEmptySections
 }
 
 function Invoke-MpStatus {
@@ -173,8 +192,8 @@ function Invoke-MpAdd {
     Write-MpStep "Añadiendo '$($parsed.Positionals[1])' a $($project.Id)..."
     $result = Add-ModpackMod -Project $project -Slug $parsed.Positionals[1] -Category $category
     Write-MpSuccess "$($result.Item.Name) añadido como '$($result.Item.Id)'."
-    if ($category) { Write-Host "Categoría: $category" }
-    else { Write-Host 'Categoría: SIN CLASIFICAR' }
+    if ($category) { Write-MpKeyValue 'Categoría' $category }
+    else { Write-MpKeyValue 'Categoría' 'SIN CLASIFICAR' }
 }
 
 function Invoke-MpNew {
@@ -207,7 +226,8 @@ function Invoke-MpConfig {
     switch ($verb.ToLowerInvariant()) {
         'get' {
             if ($Arguments.Count -ne 2) { throw 'Uso: modpack config get root' }
-            Write-Host (Get-ModpackRoot)
+            Write-MpBanner 'CONFIGURACIÓN'
+            Write-MpKeyValue 'root' (Get-ModpackRoot)
         }
         'set' {
             if ($Arguments.Count -ne 3) { throw 'Uso: modpack config set root <directorio>' }
