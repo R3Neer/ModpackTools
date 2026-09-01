@@ -306,21 +306,38 @@ function Invoke-MpNew {
 function Invoke-MpConfig {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Show-MpHelp config; return }
-    Assert-PositionalCount -Values $Arguments -Minimum 2 -Maximum 3 -Usage 'modpack config get root | modpack config set root <directory>'
+    Assert-PositionalCount -Values $Arguments -Minimum 2 -Maximum 3 -Usage 'modpack config get <root|packwiz> | modpack config set <root|packwiz> <value>'
     $verb = [string]$Arguments[0]
     $name = ([string]$Arguments[1]).ToLowerInvariant()
-    if ($name -ne 'root') { Throw-MpError -Message "Configuration setting '$name' is not recognized; allowed value: root" -Hint 'modpack config get root' -ErrorId 'Configuration.UnknownSetting' -Category InvalidArgument -TargetObject $name }
+    if ($name -notin @('root', 'packwiz')) { Throw-MpError -Message "Configuration setting '$name' is not recognized; allowed values: root, packwiz" -Hint 'modpack config --help' -ErrorId 'Configuration.UnknownSetting' -Category InvalidArgument -TargetObject $name }
     switch ($verb.ToLowerInvariant()) {
         'get' {
-            if ($Arguments.Count -ne 2) { Throw-MpError -Message "The arguments for 'config get' do not match the expected syntax" -Hint 'modpack config get root' -ErrorId 'Command.InvalidArguments' -Category InvalidArgument }
+            if ($Arguments.Count -ne 2) { Throw-MpError -Message "The arguments for 'config get' do not match the expected syntax" -Hint 'modpack config --help' -ErrorId 'Command.InvalidArguments' -Category InvalidArgument }
             Write-MpBanner 'CONFIGURATION'
-            Write-MpKeyValue 'root' (Get-ModpackRoot)
+            if ($name -eq 'root') { Write-MpKeyValue 'root' (Get-ModpackRoot) }
+            else {
+                $packwiz = Resolve-MpPackwiz
+                Write-MpKeyValue 'packwiz' $(if ($packwiz.Available) { $packwiz.Path } else { 'Not found' })
+                Write-MpKeyValue 'source' $packwiz.Source
+            }
         }
         'set' {
-            if ($Arguments.Count -ne 3) { Throw-MpError -Message "The arguments for 'config set' do not match the expected syntax" -Hint 'modpack config set root <directory>' -ErrorId 'Command.InvalidArguments' -Category InvalidArgument }
-            $value = Set-ModpackToolsConfigValue -Name root -Value ([string]$Arguments[2])
-            Write-MpSuccess "root = $value"
+            if ($Arguments.Count -ne 3) { Throw-MpError -Message "The arguments for 'config set' do not match the expected syntax" -Hint 'modpack config --help' -ErrorId 'Command.InvalidArguments' -Category InvalidArgument }
+            $value = Set-ModpackToolsConfigValue -Name $name -Value ([string]$Arguments[2])
+            Write-MpSuccess "$name = $value"
         }
         default { Throw-MpError -Message "Configuration operation '$verb' is not recognized; allowed values: get, set" -Hint 'modpack config --help' -ErrorId 'Configuration.UnknownOperation' -Category InvalidArgument -TargetObject $verb }
     }
+}
+
+function Invoke-MpDoctor {
+    param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
+    if ($Arguments -contains '--help') { Show-MpHelp doctor; return }
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -SwitchOptions @('fix', 'yes')
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 0 -Usage 'modpack doctor [--fix] [--yes]' -OptionNames @('fix', 'yes')
+    if ($parsed.Options.ContainsKey('yes') -and -not $parsed.Options.ContainsKey('fix')) {
+        Throw-MpError -Message "Option '--yes' requires '--fix'" -Hint 'modpack doctor --fix --yes' -ErrorId 'Option.RequiredCombination' -Category InvalidArgument -TargetObject 'yes'
+    }
+    if ($parsed.Options.ContainsKey('fix')) { Repair-MpDoctorEnvironment -Yes:$parsed.Options.ContainsKey('yes') }
+    Write-MpDoctorReport -Report (Get-MpDoctorReport)
 }

@@ -69,6 +69,65 @@ minecraft = "1.21.1"
         }
     }
 
+    Describe 'Packwiz dependency management' {
+        BeforeEach {
+            $script:ConfigHomeOverride = Join-Path $TestDrive 'dependency-config'
+            $script:DependencyManifestOverride = $null
+        }
+
+        AfterEach { $script:DependencyManifestOverride = $null }
+
+        It 'uses and clears an explicit Packwiz executable override' {
+            $executable = Join-Path $TestDrive 'custom-packwiz.exe'
+            [System.IO.File]::WriteAllText($executable, 'fixture')
+            Set-ModpackToolsConfigValue -Name packwiz -Value $executable | Should Be ([System.IO.Path]::GetFullPath($executable))
+            $resolved = Resolve-MpPackwiz
+            $resolved.Available | Should Be $true
+            $resolved.Source | Should Be 'configured'
+            $resolved.Path | Should Be ([System.IO.Path]::GetFullPath($executable))
+
+            Set-ModpackToolsConfigValue -Name packwiz -Value auto | Should Be 'auto'
+            (Get-ModpackToolsConfig).ContainsKey('PackwizPath') | Should Be $false
+        }
+
+        It 'installs a managed Packwiz archive only after verifying both hashes' {
+            $contents = Join-Path $TestDrive 'packwiz-contents'
+            [System.IO.Directory]::CreateDirectory($contents) | Out-Null
+            $executable = Join-Path $contents 'packwiz.exe'
+            [System.IO.File]::WriteAllText($executable, 'verified executable')
+            [System.IO.File]::WriteAllText((Join-Path $contents 'LICENSE.packwiz.txt'), 'MIT fixture')
+            $archive = Join-Path $TestDrive 'packwiz.zip'
+            [System.IO.Compression.ZipFile]::CreateFromDirectory($contents, $archive)
+            $script:DependencyManifestOverride = @{
+                Packwiz = @{ WindowsX64 = @{
+                    Commit = 'fixture'; DisplayVersion = 'fixture'; Uri = 'https://example.invalid/packwiz.zip'
+                    ArchiveSha256 = (Get-FileHash $archive -Algorithm SHA256).Hash
+                    Executable = 'packwiz.exe'; ExecutableSha256 = (Get-FileHash $executable -Algorithm SHA256).Hash
+                    License = 'LICENSE.packwiz.txt'
+                } }
+            }
+
+            $installed = Install-MpManagedPackwiz -ArchivePath $archive
+            $installed.Installed | Should Be $true
+            Test-Path -LiteralPath $installed.Path -PathType Leaf | Should Be $true
+            (Get-Content -Raw -LiteralPath $installed.Path) | Should Be 'verified executable'
+            Test-Path -LiteralPath (Join-Path (Split-Path -Parent $installed.Path) 'LICENSE.packwiz.txt') | Should Be $true
+        }
+
+        It 'rejects a managed archive whose declared hash does not match' {
+            $archive = Join-Path $TestDrive 'invalid-packwiz.zip'
+            [System.IO.File]::WriteAllText($archive, 'not a zip')
+            $script:DependencyManifestOverride = @{
+                Packwiz = @{ WindowsX64 = @{
+                    Commit = 'fixture'; DisplayVersion = 'fixture'; Uri = 'https://example.invalid/packwiz.zip'
+                    ArchiveSha256 = ('0' * 64); Executable = 'packwiz.exe'; ExecutableSha256 = ('0' * 64)
+                    License = 'LICENSE.packwiz.txt'
+                } }
+            }
+            { Install-MpManagedPackwiz -ArchivePath $archive } | Should Throw 'failed SHA-256 verification'
+        }
+    }
+
     Describe 'MRPack diff' {
         It 'reads manifest entries and uncompressed overrides semantically' {
             $path = Join-Path $TestDrive 'sample.mrpack'
@@ -138,6 +197,8 @@ minecraft = "1.21.1"
             $text | Should Match 'defaultoptions-common.toml'
             $text | Should Match 'modpack --help'
             $text | Should Match 'modpack inventory --help'
+            $text | Should Match 'modpack --version'
+            $text | Should Match 'modpack doctor'
             $text | Should Not Match 'modpack add mod'
         }
     }
@@ -145,8 +206,8 @@ minecraft = "1.21.1"
     Describe 'CLI help' {
         It 'uses one catalog for every executable command' {
             $catalog = Get-MpCommandCatalog
-            @($catalog.Keys).Count | Should Be 13
-            @($catalog.Keys) | Should Be @('list', 'use', 'status', 'new', 'inventory', 'search', 'add', 'classify', 'resource', 'update', 'build', 'diff', 'config')
+            @($catalog.Keys).Count | Should Be 14
+            @($catalog.Keys) | Should Be @('list', 'use', 'status', 'new', 'inventory', 'search', 'add', 'classify', 'resource', 'update', 'build', 'diff', 'doctor', 'config')
             foreach ($name in $catalog.Keys) {
                 $catalog[$name].Summary | Should Not BeNullOrEmpty
                 $catalog[$name].Description | Should Not BeNullOrEmpty
@@ -182,6 +243,44 @@ minecraft = "1.21.1"
             $record.FullyQualifiedErrorId | Should Match '^ModpackTools\.Command\.Unknown'
             $record.Exception.Message | Should Match "Command 'help' is not recognized"
             $record.Exception.Message | Should Match '(?m)^Try: modpack --help$'
+        }
+
+        It 'prints the module version through the global version option' {
+            (modpack --version 6>&1 | Out-String).Trim() | Should Be 'ModpackTools 0.13.0'
+            { modpack version } | Should Throw "Command 'version' is not recognized"
+        }
+    }
+
+    Describe 'Environment doctor' {
+        BeforeEach {
+            $fixtureRoot = Join-Path $TestDrive 'doctor-packs'
+            [System.IO.Directory]::CreateDirectory($fixtureRoot) | Out-Null
+            $script:ConfigHomeOverride = Join-Path $TestDrive 'doctor-config'
+            Write-PowerShellDataFileAtomic -Path (Get-ModpackToolsConfigPath) -Data @{ Root = $fixtureRoot }
+            New-TestModpack $fixtureRoot 'Doctor Pack' 'doctor' | Out-Null
+            Mock Resolve-MpPackwiz { [pscustomobject]@{ Available=$true; Path='C:\Tools\packwiz.exe'; Source='configured'; Version='fixture' } }
+            Mock Test-MpPackwizInvocation { $true }
+            Mock Get-MpMinecraftJavaCheck { New-MpDoctorCheck -Section OPTIONAL -Status warn -Label 'Minecraft Java' -Value 'Not detected' }
+        }
+
+        It 'separates required health from optional warnings' {
+            $report = Get-MpDoctorReport
+            $report.Failures | Should Be 0
+            $report.Warnings | Should BeGreaterThan 0
+            ($report.Checks | Where-Object { $_.Section -eq 'PACKWIZ' -and $_.Label -eq 'Invocation' }).Status | Should Be 'pass'
+            ($report.Checks | Where-Object { $_.Section -eq 'PROJECT ROOT' -and $_.Label -eq 'Discovery' }).Value | Should Be '1 project discovered'
+            ($report.Checks | Where-Object { $_.Label -eq 'Active' }).Status | Should Be 'info'
+        }
+
+        It 'requires --fix when --yes is used' {
+            { Invoke-MpDoctor @('--yes') } | Should Throw "Option '--yes' requires '--fix'"
+        }
+
+        It 'reports an empty configuration as a missing required root' {
+            $script:ConfigHomeOverride = Join-Path $TestDrive 'empty-doctor-config'
+            $report = Get-MpDoctorReport
+            $report.Failures | Should BeGreaterThan 0
+            ($report.Checks | Where-Object { $_.Section -eq 'PROJECT ROOT' -and $_.Label -eq 'Root' }).Value | Should Be 'Not configured'
         }
     }
 
@@ -385,7 +484,7 @@ mod-id = "abc123"
             Assert-MockCalled Invoke-RestMethod -Times 1 -ParameterFilter {
                 $Uri -match 'api\.modrinth\.com/v2/search' -and
                 [System.Uri]::UnescapeDataString($Uri) -match 'versions:1\.21\.1' -and
-                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/0.12.0'
+                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/0.13.0'
             }
         }
 

@@ -39,5 +39,6 @@ The audited errors belong to these namespaces:
 | `Build` | Missing Packwiz inputs or outputs, process startup/exit failures, and unsupported metadata paths |
 | `Diff` | Missing or malformed builds and failed temporary comparison exports |
 | `Theme` | Missing, incomplete, or malformed theme configuration |
+| `Dependency` | Missing, unsupported, unavailable, incomplete, or hash-invalid managed tools |
 
 The `ErrorId` passed at each `Throw-MpError` call is the source of truth for individual conditions. Tests enforce the shared format and prevent new ad-hoc `throw` statements in CLI implementation files.

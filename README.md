@@ -7,31 +7,50 @@ ModpackTools is a small CLI for managing multiple Minecraft Java modpacks based 
 - Packwiz owns technical data: technical name, filename, version, side, provider, IDs, URLs, and hashes.
 - `.modpack` stores only identity and editorial decisions: short ID, display name/version, artifact name, categories, notes, and name overrides.
 - `config/defaultoptions-common.toml` owns the enabled resource-pack order.
+- `dependencies.psd1` pins the verified Packwiz build, download, and SHA-256 hashes used by managed installation.
 - `dist/` contains generated results and is never a source of truth for the modpack.
 
 A mod without metadata remains valid and appears under `MODS · UNCLASSIFIED`. A reference to a missing category produces a warning and the mod is not discarded.
 
-## Requirements and installation
+## Installation
 
-- Windows and PowerShell 7.
-- Packwiz available in `PATH`.
-
-From the source directory:
+ModpackTools targets Windows. From the source directory:
 
 ```powershell
-./Install-ModpackTools.ps1
+.\Install-ModpackTools.ps1
 ```
 
-The installer copies the module directly to `ModpackTools` under the first user directory in `PSModulePath`. It does not create numeric version subdirectories, modify `$PROFILE`, or keep older installed copies. PowerShell autoloads `modpack` when it is used.
+The installer is the only setup entry point. It can start under Windows PowerShell 5.1: when PowerShell 7 is missing, it offers to install the latest stable version with WinGet and relaunches itself under `pwsh`. It then installs the module, runs `modpack doctor --fix`, and offers to configure missing requirements.
+
+If Packwiz is already configured or available in `PATH`, it is reused. Otherwise the installer offers the Windows x64 build pinned in `dependencies.psd1`, verifies the archive and executable SHA-256 hashes, and installs it under `LocalApplicationData\ModpackTools\tools`. Adding that directory to the user `PATH` is optional. When declined, ModpackTools saves the executable path and calls it directly.
+
+The module is copied directly to `ModpackTools` under the first user directory in `PSModulePath`. It does not create numeric version subdirectories, modify `$PROFILE`, or keep older installed copies. PowerShell autoloads `modpack` when it is used.
+
+For unattended installation, `-NonInteractive` skips repair prompts and only reports environment health. `-SkipDoctor` skips the final diagnostic entirely.
 
 ## Initial configuration
 
 ```powershell
 modpack config set root "D:\Minecraft"
 modpack config get root
+modpack config get packwiz
+modpack config set packwiz "C:\Tools\packwiz.exe"
+modpack config set packwiz auto
 ```
 
-Configuration is stored in the user's standard `LocalApplicationData\ModpackTools\config.psd1` directory.
+Configuration is stored in the user's standard `LocalApplicationData\ModpackTools\config.psd1` directory. Packwiz resolution uses an explicit configured path first, then `PATH`, then the managed copy. `auto` removes the explicit override and restores discovery.
+
+## Environment doctor
+
+```powershell
+modpack doctor
+modpack doctor --fix
+modpack doctor --fix --yes
+```
+
+`doctor` checks PowerShell, the loaded ModpackTools version, configuration writability, Packwiz resolution and invocation, the project root, project discovery, Git, and a standard Minecraft Java installation. It does not modify anything except a temporary configuration write probe that is immediately removed.
+
+Git and Minecraft Java are optional. A missing standard Minecraft installation produces a warning, not a failure; custom launchers may not be detected. `doctor --fix` offers safe repairs for required components. It never installs Minecraft. `--yes` accepts recommended defaults without adding Packwiz to `PATH` or inventing a project root.
 
 ## Project structure
 
@@ -87,6 +106,8 @@ Mod keys are stable, namespaced IDs: `modrinth:<id>`, `curseforge:<id>`, `packwi
 
 ```powershell
 modpack --help
+modpack --version
+modpack doctor
 modpack build --help
 modpack list
 modpack use vp26

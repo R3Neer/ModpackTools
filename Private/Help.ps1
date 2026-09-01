@@ -112,11 +112,19 @@ function Get-MpCommandCatalog {
                 New-MpHelpItem '--project <id>' 'Use this project instead of the active one.'
             ); Notes = @(); Examples = @('modpack diff', 'modpack diff --project vp26')
         }
+        doctor = [pscustomobject]@{
+            Handler = 'Invoke-MpDoctor'; Group = 'BUILD AND CONFIGURATION'; Summary = 'Check and repair the environment'; Description = 'Check required tools, configuration, projects, and optional local integrations.'
+            Usage = @('modpack doctor [options]'); Items = @(
+                New-MpHelpItem '--fix' 'Offer safe repairs for missing required components.'
+                New-MpHelpItem '--yes' 'Accept recommended repair defaults without prompts. Requires --fix.'
+            ); Notes = @('Minecraft Java and Git are optional. Their warnings do not prevent ModpackTools from working.', 'Doctor never installs Minecraft.'); Examples = @('modpack doctor', 'modpack doctor --fix', 'modpack doctor --fix --yes')
+        }
         config = [pscustomobject]@{
             Handler = 'Invoke-MpConfig'; Group = 'BUILD AND CONFIGURATION'; Summary = 'View or change global configuration'; Description = 'Read or change ModpackTools global configuration.'
-            Usage = @('modpack config get root', 'modpack config set root <directory>'); Items = @(
+            Usage = @('modpack config get <root|packwiz>', 'modpack config set root <directory>', 'modpack config set packwiz <executable|auto>'); Items = @(
                 New-MpHelpItem 'root' 'Directory whose direct children contain registered modpacks.'
-            ); Notes = @(); Examples = @('modpack config get root', 'modpack config set root "D:\Minecraft\Modpacks"')
+                New-MpHelpItem 'packwiz' 'Executable override. Use auto to restore automatic discovery.'
+            ); Notes = @('Automatic discovery checks PATH and then the managed ModpackTools copy.'); Examples = @('modpack config get packwiz', 'modpack config set packwiz "C:\Tools\packwiz.exe"', 'modpack config set packwiz auto')
         }
     }
     return $script:MpCommandCatalog
@@ -131,6 +139,7 @@ function Show-MpHelp {
         Write-MpHelpHeading 'USAGE'
         Write-MpCommandLine 'modpack <command> [arguments] [options]'
         Write-MpCommandLine 'modpack <command> --help'
+        Write-MpCommandLine 'modpack --version'
         foreach ($group in @('PROJECTS', 'CONTENT', 'BUILD AND CONFIGURATION')) {
             Write-MpHelpHeading $group
             foreach ($name in $catalog.Keys) {

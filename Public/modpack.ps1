@@ -6,6 +6,13 @@ function modpack {
     )
 
     try {
+        if ($Command -eq '--version') {
+            if ($Arguments.Count) {
+                Throw-MpError -Message 'The global version option does not accept additional arguments' -Hint 'modpack --version' -ErrorId 'Command.InvalidArguments' -Category InvalidArgument -TargetObject $Arguments
+            }
+            Write-Host "ModpackTools $script:ModuleVersion"
+            return
+        }
         if (-not $Command -or $Command -eq '--help') {
             if ($Arguments.Count) {
                 Throw-MpError -Message 'The global help option does not accept additional arguments' -Hint 'modpack --help' -ErrorId 'Command.InvalidArguments' -Category InvalidArgument -TargetObject $Arguments

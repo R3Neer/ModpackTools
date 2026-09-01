@@ -48,7 +48,7 @@ function Invoke-Packwiz {
         [Parameter(Mandatory)][string[]]$Arguments,
         [Parameter(Mandatory)][string]$WorkingDirectory
     )
-    return @(Invoke-NativeCommandChecked -FilePath 'packwiz' -Arguments $Arguments -WorkingDirectory $WorkingDirectory)
+    return @(Invoke-NativeCommandChecked -FilePath (Get-MpPackwizExecutable) -Arguments $Arguments -WorkingDirectory $WorkingDirectory)
 }
 
 function Get-ModpackProjectReadmeText {
@@ -73,6 +73,8 @@ Minecraft Java modpack managed with [Packwiz](https://packwiz.infra.link/) and M
 
 ```powershell
 modpack --help
+modpack --version
+modpack doctor
 modpack use {2}
 modpack status
 modpack inventory
@@ -83,6 +85,8 @@ modpack build
 `modpack use` selects this project only for the current PowerShell process. Every command that operates on an existing project also accepts `--project <id>`, for example `modpack diff --project {2}`. `status`, `inventory`, `build`, and `diff` retain their positional ID shorthand; specifying both forms at once is rejected.
 
 Run `modpack <command> --help` for concise command documentation. For example, `modpack inventory --help` explains every filter and the numbered-reference context.
+
+Run `modpack doctor` to check PowerShell, Packwiz, configuration, project discovery, Git, and the standard Minecraft Java installation. Git and Minecraft are optional; Packwiz and a valid project root are required for the complete workflow.
 
 ## Managing content
 

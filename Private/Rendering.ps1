@@ -128,6 +128,28 @@ function Write-MpHelpRow {
     Write-Host "$($script:Palette.Secondary)$Description$($script:Palette.Reset)"
 }
 
+function Write-MpDoctorLine {
+    param(
+        [Parameter(Mandatory)][ValidateSet('pass', 'warn', 'fail', 'info')][string]$Status,
+        [Parameter(Mandatory)][string]$Label,
+        [Parameter(Mandatory)][AllowEmptyString()][string]$Value,
+        [string]$Detail
+    )
+    $symbol = switch ($Status) { 'pass' { '✓' } 'warn' { '!' } 'fail' { '✗' } default { '•' } }
+    $color = switch ($Status) { 'pass' { $script:Palette.Success } 'warn' { $script:Palette.Process } 'fail' { $script:Palette.Error } default { $script:Palette.Heading } }
+    Write-Host "  $color$symbol$($script:Palette.Reset) " -NoNewline
+    Write-Host "$($script:Palette.Secondary)$($Label.PadRight(18))$($script:Palette.Reset)" -NoNewline
+    Write-Host "$($script:Palette.Value)$Value$($script:Palette.Reset)"
+    if ($Detail) { Write-Host "    $($script:Palette.Secondary)$Detail$($script:Palette.Reset)" }
+}
+
+function Write-MpDoctorSummary {
+    param([Parameter(Mandatory)][ValidateSet('pass', 'warn', 'fail')][string]$Status, [Parameter(Mandatory)][string]$Text)
+    $symbol = switch ($Status) { 'pass' { '✓' } 'warn' { '!' } default { '✗' } }
+    $color = switch ($Status) { 'pass' { $script:Palette.Success } 'warn' { $script:Palette.Process } default { $script:Palette.Error } }
+    Write-Host "$color$symbol$($script:Palette.Reset) $Text"
+}
+
 function Write-MpSideLegend {
     Write-Host ''
     Write-Host '  ' -NoNewline

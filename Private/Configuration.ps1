@@ -60,17 +60,32 @@ function Set-ModpackToolsConfigValue {
         [Parameter(Mandatory)][AllowEmptyString()][string]$Value
     )
 
-    if ($Name -ne 'root') {
-        Throw-MpError -Message "Configuration setting '$Name' is not recognized; allowed value: root" -Hint 'modpack config set root <directory>' -ErrorId 'Configuration.UnknownSetting' -Category InvalidArgument -TargetObject $Name
-    }
-
-    $resolved = [System.IO.Path]::GetFullPath($Value)
-    if (-not (Test-Path -LiteralPath $resolved -PathType Container)) {
-        Throw-MpError -Message "Modpack root '$resolved' does not exist or is not a directory" -Hint 'modpack config set root <existing-directory>' -ErrorId 'Configuration.InvalidRoot' -Category ObjectNotFound -TargetObject $resolved
-    }
-
     $config = Get-ModpackToolsConfig
-    $config['Root'] = $resolved
+    switch ($Name.ToLowerInvariant()) {
+        'root' {
+            $resolved = [System.IO.Path]::GetFullPath($Value)
+            if (-not (Test-Path -LiteralPath $resolved -PathType Container)) {
+                Throw-MpError -Message "Modpack root '$resolved' does not exist or is not a directory" -Hint 'modpack config set root <existing-directory>' -ErrorId 'Configuration.InvalidRoot' -Category ObjectNotFound -TargetObject $resolved
+            }
+            $config['Root'] = $resolved
+        }
+        'packwiz' {
+            if ($Value.ToLowerInvariant() -eq 'auto') {
+                [void]$config.Remove('PackwizPath')
+                $resolved = 'auto'
+            }
+            else {
+                $resolved = [System.IO.Path]::GetFullPath($Value)
+                if (-not (Test-Path -LiteralPath $resolved -PathType Leaf)) {
+                    Throw-MpError -Message "Packwiz executable '$resolved' does not exist" -Hint 'modpack config set packwiz <existing-executable>' -ErrorId 'Configuration.InvalidPackwizPath' -Category ObjectNotFound -TargetObject $resolved
+                }
+                $config['PackwizPath'] = $resolved
+            }
+        }
+        default {
+            Throw-MpError -Message "Configuration setting '$Name' is not recognized; allowed values: root, packwiz" -Hint 'modpack config --help' -ErrorId 'Configuration.UnknownSetting' -Category InvalidArgument -TargetObject $Name
+        }
+    }
     Write-PowerShellDataFileAtomic -Data $config -Path (Get-ModpackToolsConfigPath)
     return $resolved
 }
