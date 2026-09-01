@@ -364,6 +364,7 @@ function Write-ModUpdateSummary {
         $status = if ($item.Changed) { 'UPDATED' } else { 'CURRENT' }
         $color = if ($item.Changed) { $script:Palette.Success } else { $script:Palette.Secondary }
         Write-Host "  $color$('{0,-9}' -f $status)$($script:Palette.Reset) " -NoNewline
+        Write-Host "$($script:Palette.Accent)$('{0,-14}' -f "[$($item.Kind)]")$($script:Palette.Reset) " -NoNewline
         Write-Host "$($script:Palette.Value)$($item.Name)$($script:Palette.Reset)" -NoNewline
         if ($item.PreviousFile -ne $item.Filename) {
             Write-Host " $($script:Palette.Secondary)$($item.PreviousFile) -> $($item.Filename)$($script:Palette.Reset)"

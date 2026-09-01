@@ -105,6 +105,7 @@ modpack add sodium --project vp26 --category performance
 modpack update sodium
 modpack update sodium lithium ferrite-core
 modpack update --all
+modpack update --all --type resourcepack
 modpack update --all --project vp26
 modpack build
 modpack build vp26 --keep-old --raw-log
@@ -152,13 +153,13 @@ By default, Packwiz selects the latest compatible Fabric Loader; the technical v
 ### Updating mods
 
 ```powershell
-modpack update <name|id|filename...> [--project <id>]
-modpack update --all [--project <id>]
+modpack update <name|id|filename...> [--type <type>] [--project <id>]
+modpack update --all [--type <type>] [--project <id>]
 ```
 
-A selector can be the displayed name, stable ID, current filename, or `.pw.toml` stem. Several selectors are updated as one transaction: all are validated before Packwiz runs, and if any update fails, `pack.toml`, `index.toml`, and all `.pw.toml` files are restored to their original bytes.
+A selector can be the displayed name, stable ID, current filename, or `.pw.toml` stem. It can identify a mod, resource pack, or shader. Several selectors are updated as one transaction: all are validated before Packwiz runs, and if any update fails, `pack.toml`, `index.toml`, and all `.pw.toml` files are restored to their original bytes.
 
-`--all` means all Packwiz-managed mods. It deliberately excludes local JARs, resource packs, and shaders. Local mods are reported as non-updatable instead of being silently skipped when explicitly selected. Updating does not generate a build; use `modpack diff` to review the changes and `modpack build` when ready.
+`--all` means all Packwiz-managed external content: mods, resource packs, and shaders. `--type mod|resourcepack|shaderpack` narrows either a selector operation or `--all`. Local JAR and ZIP files are never updated and are reported as non-updatable when explicitly selected. Updating does not generate a build; use `modpack diff` to review the changes and `modpack build` when ready.
 
 ### Building
 

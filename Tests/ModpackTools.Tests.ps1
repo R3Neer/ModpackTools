@@ -125,6 +125,7 @@ minecraft = "1.21.1"
             $text = Get-ModpackProjectReadmeText -Project (Read-ModpackProject $projectPath)
             $text | Should Match 'modpack add <slug>'
             $text | Should Match 'modpack update --all'
+            $text | Should Match 'resource packs, and shaders'
             $text | Should Match 'one transaction'
             $text | Should Match 'modpack diff'
             $text | Should Match 'modpack resource enable'
@@ -233,7 +234,7 @@ mod-id = "abc123"
         }
     }
 
-    Describe 'Mod updates' {
+    Describe 'Content updates' {
         BeforeEach {
             $fixtureRoot = Join-Path $TestDrive 'update-packs'
             [System.IO.Directory]::CreateDirectory($fixtureRoot) | Out-Null
@@ -255,18 +256,34 @@ side = "both"
 mod-id = "gvQqBUqZ"
 version = "old"
 '@)
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'resourcepacks/fresh.pw.toml'), @'
+name = "Fresh Resources"
+filename = "fresh-old.zip"
+side = "client"
+[update.modrinth]
+mod-id = "fresh-id"
+version = "old"
+'@)
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'shaderpacks/vivid.pw.toml'), @'
+name = "Vivid Shader"
+filename = "vivid-old.zip"
+side = "client"
+[update.modrinth]
+mod-id = "vivid-id"
+version = "old"
+'@)
         }
 
-        It 'resolves managed mods by name ID filename and metadata stem' {
-            (Resolve-ModpackModSelectors -Project $project -Selectors @('Sodium'))[0].Id | Should Be 'modrinth:AANobbMI'
-            (Resolve-ModpackModSelectors -Project $project -Selectors @('modrinth:gvQqBUqZ'))[0].Name | Should Be 'Lithium'
-            (Resolve-ModpackModSelectors -Project $project -Selectors @('sodium-old.jar'))[0].Name | Should Be 'Sodium'
-            (Resolve-ModpackModSelectors -Project $project -Selectors @('lithium'))[0].Name | Should Be 'Lithium'
+        It 'resolves every managed content type by name ID filename and metadata stem' {
+            (Resolve-ModpackUpdateSelectors -Project $project -Selectors @('Sodium'))[0].Id | Should Be 'modrinth:AANobbMI'
+            (Resolve-ModpackUpdateSelectors -Project $project -Selectors @('modrinth:gvQqBUqZ'))[0].Name | Should Be 'Lithium'
+            (Resolve-ModpackUpdateSelectors -Project $project -Selectors @('fresh-old.zip'))[0].Kind | Should Be 'resourcepack'
+            (Resolve-ModpackUpdateSelectors -Project $project -Selectors @('vivid'))[0].Kind | Should Be 'shaderpack'
         }
 
         It 'rejects an explicitly selected local JAR' {
             [System.IO.File]::WriteAllBytes((Join-Path $projectPath 'mods/local.jar'), [byte[]](1, 2, 3))
-            { Resolve-ModpackModSelectors -Project $project -Selectors @('local.jar') } | Should Throw 'cannot be updated by Packwiz'
+            { Resolve-ModpackUpdateSelectors -Project $project -Selectors @('local.jar') } | Should Throw 'cannot be updated by Packwiz'
         }
 
         It 'restores the whole Packwiz state when a grouped update fails' {
@@ -288,19 +305,27 @@ version = "old"
                 throw 'simulated Packwiz failure'
             }
 
-            { Update-ModpackMods -Project $project -Selectors @('sodium', 'lithium') } | Should Throw 'state was restored'
+            { Update-ModpackContent -Project $project -Selectors @('sodium', 'lithium') } | Should Throw 'state was restored'
             [System.Linq.Enumerable]::SequenceEqual([byte[]]$beforeSodium, [byte[]][System.IO.File]::ReadAllBytes($sodiumPath)) | Should Be $true
             [System.Linq.Enumerable]::SequenceEqual([byte[]]$beforeLithium, [byte[]][System.IO.File]::ReadAllBytes($lithiumPath)) | Should Be $true
             [System.Linq.Enumerable]::SequenceEqual([byte[]]$beforeIndex, [byte[]][System.IO.File]::ReadAllBytes($indexPath)) | Should Be $true
             Assert-MockCalled Invoke-Packwiz -Times 2
         }
 
-        It 'updates every managed mod individually for --all' {
+        It 'delegates unrestricted --all to Packwiz for every managed content type' {
             Mock Invoke-Packwiz { return @('already current') }
-            $result = Update-ModpackMods -Project $project -All
-            $result.Items.Count | Should Be 2
-            $result.Items | ForEach-Object Changed | Should Be @($false, $false)
-            Assert-MockCalled Invoke-Packwiz -Times 2
+            $result = Update-ModpackContent -Project $project -All
+            $result.Items.Count | Should Be 4
+            @($result.Items | ForEach-Object Kind | Sort-Object -Unique) | Should Be @('mod', 'resourcepack', 'shaderpack')
+            Assert-MockCalled Invoke-Packwiz -Times 1 -ParameterFilter { $Arguments -contains '--all' }
+        }
+
+        It 'updates only the requested type when --all is narrowed' {
+            Mock Invoke-Packwiz { return @('already current') }
+            $result = Update-ModpackContent -Project $project -All -Type resourcepack
+            $result.Items.Count | Should Be 1
+            $result.Items[0].Kind | Should Be 'resourcepack'
+            Assert-MockCalled Invoke-Packwiz -Times 1 -ParameterFilter { $Arguments -contains 'fresh' -and $Arguments -notcontains '--all' }
         }
 
         It 'also rolls back when updated metadata cannot be normalized' {
@@ -311,7 +336,7 @@ version = "old"
                 return @('metadata removed')
             }
 
-            { Update-ModpackMods -Project $project -Selectors @('sodium') } | Should Throw 'state was restored'
+            { Update-ModpackContent -Project $project -Selectors @('sodium') } | Should Throw 'state was restored'
             Test-Path -LiteralPath $sodiumPath | Should Be $true
             [System.Linq.Enumerable]::SequenceEqual([byte[]]$before, [byte[]][System.IO.File]::ReadAllBytes($sodiumPath)) | Should Be $true
         }

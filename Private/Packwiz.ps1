@@ -86,6 +86,7 @@ modpack add <slug>
 modpack add <slug> --category <category>
 modpack update <name|id|filename...>
 modpack update --all
+modpack update --all --type mod
 ```
 
 Inspect or filter the current contents:
@@ -112,7 +113,7 @@ modpack build
 
 `modpack diff` compares the current project with the newest `.mrpack` in `dist/`. `modpack build` refreshes Packwiz metadata and writes the generated artifact to `dist/`.
 
-`modpack update` updates only Packwiz-managed mods. Multiple selectors form one transaction: if any update fails, every Packwiz metadata change in the group is rolled back. Local JARs, resource packs, and shaders are not included. Review the result with `modpack diff` before building.
+`modpack update` updates mods, resource packs, and shaders managed by Packwiz. Multiple selectors form one transaction: if any update fails, every Packwiz metadata change in the group is rolled back. Use `--type mod|resourcepack|shaderpack` to narrow the operation. Local files are never updated. Review the result with `modpack diff` before building.
 
 ## Sources of truth
 
@@ -243,17 +244,33 @@ function Add-ModpackMod {
     return [pscustomobject]@{ Item = $item; Log = $log }
 }
 
-function Resolve-ModpackModSelectors {
+function Get-ModpackUpdateItems {
+    param(
+        [Parameter(Mandatory)]$Inventory,
+        [string]$Type = 'all'
+    )
+
+    $normalizedType = Resolve-InventoryType -Type $Type
+    return @(
+        if ($normalizedType -in @('all', 'mod')) { $Inventory.Mods }
+        if ($normalizedType -in @('all', 'resourcepack')) { $Inventory.ResourcePacks }
+        if ($normalizedType -in @('all', 'shaderpack')) { $Inventory.Shaders }
+    )
+}
+
+function Resolve-ModpackUpdateSelectors {
     param(
         [Parameter(Mandatory)]$Project,
-        [Parameter(Mandatory)][string[]]$Selectors
+        [Parameter(Mandatory)][string[]]$Selectors,
+        [string]$Type = 'all'
     )
 
     $inventory = Get-ModpackInventory -Project $Project
+    $items = @(Get-ModpackUpdateItems -Inventory $inventory -Type $Type)
     $resolved = [System.Collections.Generic.List[object]]::new()
     foreach ($selector in $Selectors) {
         $matches = @(
-            $inventory.Mods | Where-Object {
+            $items | Where-Object {
                 $stem = if ($_.MetadataPath) { [System.IO.Path]::GetFileName($_.MetadataPath) -replace '\.pw\.toml$', '' } else { $null }
                 @($_.Name, $_.Id, $_.Filename, $stem) | Where-Object {
                     $_ -and ([string]$_).Equals($selector, [System.StringComparison]::OrdinalIgnoreCase)
@@ -261,15 +278,15 @@ function Resolve-ModpackModSelectors {
             }
         )
         if ($matches.Count -eq 0) {
-            throw "Mod '$selector' was not found. Run: modpack inventory --type mod"
+            throw "Content '$selector' was not found. Run: modpack inventory"
         }
         if ($matches.Count -gt 1) {
-            $ids = @($matches | ForEach-Object Id | Sort-Object -Unique) -join ', '
-            throw "Mod selector '$selector' is ambiguous. Matching IDs: $ids"
+            $ids = @($matches | ForEach-Object { "$($_.Kind):$($_.Id)" } | Sort-Object -Unique) -join ', '
+            throw "Content selector '$selector' is ambiguous. Matching entries: $ids. Use --type to narrow it."
         }
         $item = $matches[0]
         if ($item.Source -ne 'packwiz' -or -not $item.MetadataPath) {
-            throw "Mod '$selector' is local and cannot be updated by Packwiz."
+            throw "Content '$selector' is local and cannot be updated by Packwiz."
         }
         if (-not ($resolved | Where-Object MetadataPath -eq $item.MetadataPath)) { $resolved.Add($item) }
     }
@@ -312,38 +329,48 @@ function Restore-PackwizStateSnapshot {
     }
 }
 
-function Update-ModpackMods {
+function Update-ModpackContent {
     param(
         [Parameter(Mandatory)]$Project,
         [string[]]$Selectors = @(),
-        [switch]$All
+        [switch]$All,
+        [string]$Type = 'all'
     )
 
     Assert-ModpackStructure -Project $Project
-    if ($All -and $Selectors.Count) { throw "Use either mod selectors or '--all', not both." }
-    if (-not $All -and $Selectors.Count -eq 0) { throw 'At least one mod selector or --all is required.' }
+    if ($All -and $Selectors.Count) { throw "Use either content selectors or '--all', not both." }
+    if (-not $All -and $Selectors.Count -eq 0) { throw 'At least one content selector or --all is required.' }
+    $normalizedType = Resolve-InventoryType -Type $Type
 
     $beforeInventory = Get-ModpackInventory -Project $Project
     $targets = if ($All) {
-        @($beforeInventory.Mods | Where-Object { $_.Source -eq 'packwiz' -and $_.MetadataPath } | Sort-Object Name)
+        @(Get-ModpackUpdateItems -Inventory $beforeInventory -Type $normalizedType |
+            Where-Object { $_.Source -eq 'packwiz' -and $_.MetadataPath } |
+            Sort-Object Kind, Name)
     }
     else {
-        @(Resolve-ModpackModSelectors -Project $Project -Selectors $Selectors)
+        @(Resolve-ModpackUpdateSelectors -Project $Project -Selectors $Selectors -Type $normalizedType)
     }
-    if ($targets.Count -eq 0) { throw "Project '$($Project.Id)' has no Packwiz-managed mods to update." }
+    if ($targets.Count -eq 0) { throw "Project '$($Project.Id)' has no matching Packwiz-managed content to update." }
 
     $snapshot = Get-PackwizStateSnapshot -Project $Project
     $log = [System.Collections.Generic.List[string]]::new()
     try {
-        foreach ($target in $targets) {
-            $stem = [System.IO.Path]::GetFileName($target.MetadataPath) -replace '\.pw\.toml$', ''
-            foreach ($line in @(Invoke-Packwiz -Arguments @('update', $stem, '--yes') -WorkingDirectory $Project.Root)) { $log.Add($line) }
+        if ($All -and $normalizedType -eq 'all') {
+            foreach ($line in @(Invoke-Packwiz -Arguments @('update', '--all', '--yes') -WorkingDirectory $Project.Root)) { $log.Add($line) }
+        }
+        else {
+            foreach ($target in $targets) {
+                $stem = [System.IO.Path]::GetFileName($target.MetadataPath) -replace '\.pw\.toml$', ''
+                foreach ($line in @(Invoke-Packwiz -Arguments @('update', $stem, '--yes') -WorkingDirectory $Project.Root)) { $log.Add($line) }
+            }
         }
 
         $afterInventory = Get-ModpackInventory -Project $Project
+        $afterItems = @(Get-ModpackUpdateItems -Inventory $afterInventory)
         $results = @(
             foreach ($target in $targets) {
-                $updated = $afterInventory.Mods | Where-Object MetadataPath -eq $target.MetadataPath | Select-Object -First 1
+                $updated = $afterItems | Where-Object MetadataPath -eq $target.MetadataPath | Select-Object -First 1
                 if (-not $updated) { throw "Updated metadata '$($target.MetadataPath)' could not be normalized." }
                 $relative = [System.IO.Path]::GetRelativePath($Project.Root, $target.MetadataPath)
                 $beforeBytes = $snapshot[$relative]
@@ -351,6 +378,7 @@ function Update-ModpackMods {
                 $changed = -not [System.Linq.Enumerable]::SequenceEqual([byte[]]$beforeBytes, [byte[]]$afterBytes)
                 [pscustomobject]@{
                     Id             = $updated.Id
+                    Kind           = $updated.Kind
                     Name           = $updated.Name
                     PreviousFile   = $target.Filename
                     Filename       = $updated.Filename
@@ -363,7 +391,7 @@ function Update-ModpackMods {
     }
     catch {
         Restore-PackwizStateSnapshot -Project $Project -Snapshot $snapshot
-        throw "No mods were updated because the group failed and Packwiz state was restored. $($_.Exception.Message)"
+        throw "No content was updated because the operation failed and Packwiz state was restored. $($_.Exception.Message)"
     }
 }
 

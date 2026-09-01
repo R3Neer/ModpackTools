@@ -52,7 +52,7 @@ function Invoke-MpHelp {
         Write-MpCommandLine 'modpack inventory [id] [filters]' 'Contents and filters'
         Write-MpCommandLine 'modpack resource enable <selector> --position <n>' 'Enable or reposition a resource pack'
         Write-MpCommandLine 'modpack add <slug> [options]' 'Add a mod with Packwiz'
-        Write-MpCommandLine 'modpack update <selector...> | --all' 'Update one or more mods'
+        Write-MpCommandLine 'modpack update <selector...> | --all' 'Update Packwiz-managed content'
         Write-MpCommandLine 'modpack build [id] [options]' 'Generate the .mrpack in dist/'
         Write-MpCommandLine 'modpack diff [id]' 'Compare the current project with the latest build'
         Write-MpCommandLine 'modpack new <id> [options]' 'Create a project'
@@ -76,9 +76,9 @@ function Invoke-MpHelp {
         }
         'add' { Write-MpUsage 'modpack add <slug> [--project <id>] [--category <id>]' }
         'update' {
-            Write-MpUsage 'modpack update <name|id|filename...> [--project <id>]'
-            Write-MpUsage 'modpack update --all [--project <id>]'
-            Write-MpInfo 'Only Packwiz-managed mods are updated; local JARs, resources, and shaders are excluded.'
+            Write-MpUsage 'modpack update <name|id|filename...> [--type <type>] [--project <id>]'
+            Write-MpUsage 'modpack update --all [--type <type>] [--project <id>]'
+            Write-MpInfo 'Types: mod, resourcepack, shaderpack. Without --type, every Packwiz-managed content type is included.'
         }
         'new' { Write-MpUsage 'modpack new <id> --name <name> --minecraft <version> --loader fabric [--path <directory>] [--loader-version <version>] [--pack-version <version>] [--display-version <version>]' }
         'config' { Write-MpUsage 'modpack config get root | modpack config set root <directory>' }
@@ -219,18 +219,19 @@ function Invoke-MpAdd {
 function Invoke-MpUpdate {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Invoke-MpHelp update; return }
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project') -SwitchOptions @('all')
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project', 'type') -SwitchOptions @('all')
     if ($parsed.Options.ContainsKey('all') -and $parsed.Positionals.Count) {
-        throw "Use either mod selectors or '--all', not both."
+        throw "Use either content selectors or '--all', not both."
     }
     if (-not $parsed.Options.ContainsKey('all') -and $parsed.Positionals.Count -eq 0) {
-        throw 'Usage: modpack update <name|id|filename...> [--project <id>] | modpack update --all [--project <id>]'
+        throw 'Usage: modpack update <name|id|filename...> [--type <type>] [--project <id>] | modpack update --all [--type <type>] [--project <id>]'
     }
     $projectId = if ($parsed.Options.ContainsKey('project')) { $parsed.Options.project } else { $null }
     $project = Resolve-ModpackProject -Id $projectId
-    $label = if ($parsed.Options.ContainsKey('all')) { 'all Packwiz-managed mods' } else { "$($parsed.Positionals.Count) selected mod(s)" }
+    $type = if ($parsed.Options.ContainsKey('type')) { $parsed.Options.type } else { 'all' }
+    $label = if ($parsed.Options.ContainsKey('all')) { 'all matching Packwiz-managed content' } else { "$($parsed.Positionals.Count) selected item(s)" }
     Write-MpStep "Updating $label in $($project.Id)..."
-    $result = Update-ModpackMods -Project $project -Selectors $parsed.Positionals -All:$parsed.Options.ContainsKey('all')
+    $result = Update-ModpackContent -Project $project -Selectors $parsed.Positionals -All:$parsed.Options.ContainsKey('all') -Type $type
     Write-ModUpdateSummary -Update $result
 }
 
