@@ -10,13 +10,13 @@ function Get-ModpackMetadata {
         $metadata = Import-PowerShellDataFile -LiteralPath $path
     }
     catch {
-        throw "Metadata file '$path' is invalid: $($_.Exception.Message)"
+        Throw-MpError -Message "Metadata file '$path' is not a valid PSD1 file" -Details $_.Exception.Message -Hint 'repair .modpack/metadata.psd1' -ErrorId 'Metadata.InvalidFile' -Category InvalidData -TargetObject $path
     }
 
     foreach ($section in @('Categories', 'Mods', 'ResourcePacks')) {
         if (-not $metadata.ContainsKey($section)) { $metadata[$section] = @{} }
         if ($metadata[$section] -isnot [System.Collections.IDictionary]) {
-            throw "Section '$section' in '$path' must be a table."
+            Throw-MpError -Message "Section '$section' in metadata file '$path' must be a table" -Hint 'repair .modpack/metadata.psd1' -ErrorId 'Metadata.InvalidSection' -Category InvalidData -TargetObject $section
         }
     }
     return $metadata
@@ -111,7 +111,7 @@ function Set-ModMetadataCategory {
     $metadata = Get-ModpackMetadata -Project $Project
     $categoryId = $metadata.Categories.Keys | Where-Object { ([string]$_).Equals($Category, [System.StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1
     if (-not $categoryId) {
-        throw "Category '$Category' does not exist in the metadata for '$($Project.Id)'."
+        Throw-MpError -Message "Category '$Category' is not defined for project '$($Project.Id)'" -Hint 'choose a category shown by modpack inventory --type mod' -ErrorId 'Metadata.UnknownCategory' -Category InvalidArgument -TargetObject $Category
     }
     if (-not $metadata.Mods.ContainsKey($ModId)) { $metadata.Mods[$ModId] = @{} }
     $metadata.Mods[$ModId]['Category'] = [string]$categoryId
@@ -134,11 +134,11 @@ function Resolve-ModpackModForClassification {
         }
     )
     if ($matches.Count -eq 0) {
-        throw "Mod '$Selector' was not found. Run: modpack inventory --type mod"
+        Throw-MpError -Message "Mod '$Selector' was not found in project '$($Project.Id)'" -Hint 'modpack inventory --type mod' -ErrorId 'Metadata.ModNotFound' -Category ObjectNotFound -TargetObject $Selector
     }
     if ($matches.Count -gt 1) {
         $ids = @($matches | ForEach-Object Id | Sort-Object -Unique) -join ', '
-        throw "Mod selector '$Selector' is ambiguous. Matching IDs: $ids"
+        Throw-MpError -Message "Mod selector '$Selector' matches more than one mod" -Details "Matching IDs: $ids" -Hint 'use an exact ID or filename' -ErrorId 'Metadata.AmbiguousMod' -Category InvalidArgument -TargetObject $Selector
     }
     return $matches[0]
 }
@@ -164,7 +164,7 @@ function Set-ModpackModClassification {
     else {
         $categoryId = $metadata.Categories.Keys | Where-Object { ([string]$_).Equals($Category, [System.StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1
         if (-not $categoryId) {
-            throw "Category '$Category' does not exist in the metadata for '$($Project.Id)'."
+            Throw-MpError -Message "Category '$Category' is not defined for project '$($Project.Id)'" -Hint 'choose a category shown by modpack inventory --type mod' -ErrorId 'Metadata.UnknownCategory' -Category InvalidArgument -TargetObject $Category
         }
         if (-not $metadata.Mods.ContainsKey($item.Id)) { $metadata.Mods[$item.Id] = @{} }
         $metadata.Mods[$item.Id]['Category'] = [string]$categoryId

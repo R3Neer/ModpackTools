@@ -27,7 +27,7 @@ function Get-TomlArraySpan {
         }
     }
 
-    if ($closeIndex -lt 0) { throw "TOML array '$Key' is not closed." }
+    if ($closeIndex -lt 0) { Throw-MpError -Message "TOML array '$Key' is not closed" -Hint 'repair the Default Options configuration' -ErrorId 'ResourcePack.UnclosedTomlArray' -Category InvalidData -TargetObject $Key }
     return [pscustomobject]@{ OpenIndex = $openIndex; CloseIndex = $closeIndex }
 }
 
@@ -59,7 +59,7 @@ function Set-TomlArrayStrings {
     )
 
     $span = Get-TomlArraySpan -Text $Text -Key $Key
-    if (-not $span) { throw "TOML array '$Key' does not exist." }
+    if (-not $span) { Throw-MpError -Message "TOML array '$Key' does not exist" -Hint 'repair the Default Options configuration' -ErrorId 'ResourcePack.MissingTomlArray' -Category InvalidData -TargetObject $Key }
     $newline = if ($Text.Contains("`r`n")) { "`r`n" } else { "`n" }
     $replacement = if ($Values.Count -eq 0) { '[]' } else {
         '[' + $newline + (($Values | ForEach-Object { '  "' + (ConvertTo-TomlBasicString $_) + '",' }) -join $newline) + $newline + ']'
@@ -99,7 +99,7 @@ function Set-DefaultResourcePackOrder {
 
     $path = Join-Path $Project.Root 'config/defaultoptions-common.toml'
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-        throw "'$path' does not exist; a resource pack cannot be enabled without the Default Options configuration."
+        Throw-MpError -Message "Default Options configuration '$path' does not exist, so resource pack order cannot be changed" -Hint 'install or restore config/defaultoptions-common.toml' -ErrorId 'ResourcePack.DefaultOptionsNotFound' -Category ObjectNotFound -TargetObject $path
     }
     $storedIds = @($Ids)
     [array]::Reverse($storedIds)
@@ -109,6 +109,6 @@ function Set-DefaultResourcePackOrder {
 
     $verified = @(Get-DefaultResourcePackOrder -Project $Project)
     if (($verified -join "`0") -cne (@($Ids) -join "`0")) {
-        throw 'Default Options was written, but the subsequent verification does not match the requested order.'
+        Throw-MpError -Message 'Default Options verification did not match the requested resource pack order' -Hint 'inspect config/defaultoptions-common.toml before retrying' -ErrorId 'ResourcePack.VerificationFailed' -Category InvalidResult
     }
 }

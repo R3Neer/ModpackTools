@@ -112,8 +112,8 @@ minecraft = "1.21.1"
         }
 
         It 'rejects the old add mod syntax' {
-            { Invoke-MpAdd @('mod') } | Should Throw 'Invalid syntax'
-            { Invoke-MpAdd @('mod', 'sodium') } | Should Throw 'Usage: modpack add <id|slug|search-number>'
+            { Invoke-MpAdd @('mod') } | Should Throw "Argument 'mod' is not valid"
+            { Invoke-MpAdd @('mod', 'sodium') } | Should Throw 'The command arguments do not match'
         }
     }
 
@@ -161,7 +161,7 @@ minecraft = "1.21.1"
         It 'detects duplicate IDs' {
             New-TestModpack $fixtureRoot 'Pack A' 'same' | Out-Null
             New-TestModpack $fixtureRoot 'Pack B' 'same' | Out-Null
-            { Get-ModpackProjects } | Should Throw 'Duplicate project IDs'
+            { Get-ModpackProjects } | Should Throw 'Multiple registered projects use the same ID'
         }
 
         It 'gives an explicit ID priority over the active session' {
@@ -184,7 +184,7 @@ minecraft = "1.21.1"
         It 'rejects simultaneous positional and --project IDs' {
             New-TestModpack $fixtureRoot 'Pack A' 'one' | Out-Null
             New-TestModpack $fixtureRoot 'Pack B' 'two' | Out-Null
-            { Resolve-MpCommandProject -Options @{ project = 'one' } -PositionalId 'two' } | Should Throw 'not both'
+            { Resolve-MpCommandProject -Options @{ project = 'one' } -PositionalId 'two' } | Should Throw 'both positionally'
         }
 
         It 'accepts --project in read-only project commands' {
@@ -201,12 +201,52 @@ minecraft = "1.21.1"
 
     Describe 'CLI option diagnostics' {
         It 'suggests the prefixed inventory filter when -- is omitted' {
-            { Invoke-MpInventory @('search', 'Taverns') } | Should Throw "Use '--search'"
+            { Invoke-MpInventory @('search', 'Taverns') } | Should Throw 'Try: --search'
         }
 
         It 'uses the same diagnostic for options in other commands' {
-            { Invoke-MpResource @('enable', 'Pack', 'position', '1') } | Should Throw "Use '--position'"
-            { Invoke-MpAdd @('sodium', 'category', 'performance') } | Should Throw "Use '--category'"
+            { Invoke-MpResource @('enable', 'Pack', 'position', '1') } | Should Throw 'Try: --position'
+            { Invoke-MpAdd @('sodium', 'category', 'performance') } | Should Throw 'Try: --category'
+        }
+    }
+
+    Describe 'Error message contract' {
+        It 'formats expected errors with a stable ID and actionable hint' {
+            $record = $null
+            try { modpack definitely-not-a-command } catch { $record = $_ }
+            $record | Should Not BeNullOrEmpty
+            $record.FullyQualifiedErrorId | Should Match '^ModpackTools\.Command\.Unknown'
+            $record.Exception.Message | Should Match "^Command 'definitely-not-a-command' is not recognized\."
+            $record.Exception.Message | Should Match '(?m)^Try: modpack help$'
+            $record.ScriptStackTrace | Should Not Match '\\Private\\'
+        }
+
+        It 'keeps expected CLI implementation errors on the shared helper' {
+            $implementationFiles = @(
+                Get-ChildItem -LiteralPath (Join-Path $script:ModuleRoot 'Private') -Filter '*.ps1' -File
+                Get-ChildItem -LiteralPath (Join-Path $script:ModuleRoot 'Public') -Filter '*.ps1' -File
+            ) | Where-Object Name -ne 'Errors.ps1'
+            $adHocThrows = @(
+                foreach ($file in $implementationFiles) {
+                    Select-String -LiteralPath $file.FullName -Pattern '\bthrow\s+[''"]' -AllMatches
+                }
+            )
+            $adHocThrows.Count | Should Be 0
+        }
+
+        It 'uses namespaced error IDs at every expected error site' {
+            $implementationFiles = @(
+                Get-ChildItem -LiteralPath (Join-Path $script:ModuleRoot 'Private') -Filter '*.ps1' -File
+                Get-ChildItem -LiteralPath (Join-Path $script:ModuleRoot 'Public') -Filter '*.ps1' -File
+            )
+            $invalidIds = @()
+            foreach ($file in $implementationFiles) {
+                $text = Get-Content -Raw -LiteralPath $file.FullName
+                foreach ($match in [regex]::Matches($text, "-ErrorId\s+'([^']+)'")) {
+                    if ($match.Groups[1].Value -notmatch '^[A-Z][A-Za-z]+\.[A-Z][A-Za-z]+$') { $invalidIds += $match.Groups[1].Value }
+                }
+            }
+            $invalidIds.Count | Should Be 0
         }
     }
 
@@ -297,7 +337,7 @@ mod-id = "abc123"
             Assert-MockCalled Invoke-RestMethod -Times 1 -ParameterFilter {
                 $Uri -match 'api\.modrinth\.com/v2/search' -and
                 [System.Uri]::UnescapeDataString($Uri) -match 'versions:1\.21\.1' -and
-                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/0.9.1'
+                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/0.10.0'
             }
         }
 
@@ -374,7 +414,7 @@ mod-id = "AANobbMI"
         It 'rejects an unknown category without modifying metadata' {
             $path = Join-Path $projectPath '.modpack/metadata.psd1'
             $before = [System.IO.File]::ReadAllBytes($path)
-            { Set-ModpackModClassification -Project $project -Selector 'sodium.jar' -Category nonexistent } | Should Throw "Category 'nonexistent' does not exist"
+            { Set-ModpackModClassification -Project $project -Selector 'sodium.jar' -Category nonexistent } | Should Throw "Category 'nonexistent' is not defined"
             [System.Linq.Enumerable]::SequenceEqual([byte[]]$before, [byte[]][System.IO.File]::ReadAllBytes($path)) | Should Be $true
         }
     }
@@ -450,7 +490,7 @@ version = "old"
                 throw 'simulated Packwiz failure'
             }
 
-            { Update-ModpackContent -Project $project -Selectors @('sodium', 'lithium') } | Should Throw 'state was restored'
+            { Update-ModpackContent -Project $project -Selectors @('sodium', 'lithium') } | Should Throw 'changes were restored'
             [System.Linq.Enumerable]::SequenceEqual([byte[]]$beforeSodium, [byte[]][System.IO.File]::ReadAllBytes($sodiumPath)) | Should Be $true
             [System.Linq.Enumerable]::SequenceEqual([byte[]]$beforeLithium, [byte[]][System.IO.File]::ReadAllBytes($lithiumPath)) | Should Be $true
             [System.Linq.Enumerable]::SequenceEqual([byte[]]$beforeIndex, [byte[]][System.IO.File]::ReadAllBytes($indexPath)) | Should Be $true
@@ -481,7 +521,7 @@ version = "old"
                 return @('metadata removed')
             }
 
-            { Update-ModpackContent -Project $project -Selectors @('sodium') } | Should Throw 'state was restored'
+            { Update-ModpackContent -Project $project -Selectors @('sodium') } | Should Throw 'changes were restored'
             Test-Path -LiteralPath $sodiumPath | Should Be $true
             [System.Linq.Enumerable]::SequenceEqual([byte[]]$before, [byte[]][System.IO.File]::ReadAllBytes($sodiumPath)) | Should Be $true
         }
@@ -528,7 +568,7 @@ mod-id = "fresh-id"
                 [System.IO.File]::WriteAllText($indexPath, 'changed')
                 return @('installed')
             }
-            { Add-ModpackContent -Project $project -Selector 'fresh-animations' -Category performance } | Should Throw 'state was restored'
+            { Add-ModpackContent -Project $project -Selector 'fresh-animations' -Category performance } | Should Throw 'changes were restored'
             Test-Path -LiteralPath $resourcePath | Should Be $false
             [System.Linq.Enumerable]::SequenceEqual([byte[]]$beforeIndex, [byte[]][System.IO.File]::ReadAllBytes($indexPath)) | Should Be $true
         }
@@ -630,7 +670,7 @@ side = "client"
             [System.IO.File]::WriteAllText($path, 'defaultResourcePacks = ["vanilla"]')
             $before = Get-Content -Raw -LiteralPath $path
 
-            { Enable-ModpackResourcePack -Project $project -Selector 'vanilla' -Position 3 } | Should Throw 'between 1 and 1'
+            { Enable-ModpackResourcePack -Project $project -Selector 'vanilla' -Position 3 } | Should Throw 'allowed range 1-1'
             (Get-Content -Raw -LiteralPath $path) | Should Be $before
         }
     }
@@ -686,7 +726,7 @@ side = "client"
         }
 
         It 'rejects contradictory filter combinations' {
-            { Select-ModpackInventory -Inventory $filterInventory -Type shaderpack -Side client } | Should Throw 'only be applied to mods'
+            { Select-ModpackInventory -Inventory $filterInventory -Type shaderpack -Side client } | Should Throw 'apply only to mods'
             { Select-ModpackInventory -Inventory $filterInventory -Category performance -State active } | Should Throw 'cannot be combined'
         }
     }

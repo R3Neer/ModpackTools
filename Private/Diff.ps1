@@ -35,12 +35,12 @@ function Get-MrpackFileFingerprint {
 function Get-MrpackSnapshot {
     param([Parameter(Mandatory)][string]$Path)
 
-    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw "MRPack file does not exist: $Path" }
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { Throw-MpError -Message "MRPack file '$Path' does not exist" -Hint 'modpack build' -ErrorId 'Diff.ArtifactNotFound' -Category ObjectNotFound -TargetObject $Path }
     $records = [System.Collections.Generic.List[object]]::new()
     $archive = [System.IO.Compression.ZipFile]::OpenRead($Path)
     try {
         $manifestEntry = $archive.GetEntry('modrinth.index.json')
-        if (-not $manifestEntry) { throw "'$Path' does not contain modrinth.index.json." }
+        if (-not $manifestEntry) { Throw-MpError -Message "MRPack file '$Path' does not contain 'modrinth.index.json'" -Hint 'modpack build' -ErrorId 'Diff.ManifestMissing' -Category InvalidData -TargetObject $Path }
         $reader = [System.IO.StreamReader]::new($manifestEntry.Open(), [System.Text.Encoding]::UTF8)
         try { $manifest = $reader.ReadToEnd() | ConvertFrom-Json }
         finally { $reader.Dispose() }
@@ -112,12 +112,12 @@ function Compare-ModpackBuild {
         Where-Object { -not $_.Name.StartsWith('.modpacktools-') } |
         Sort-Object LastWriteTimeUtc -Descending |
         Select-Object -First 1
-    if (-not $baseline) { throw "No previous build was found in '$dist'." }
+    if (-not $baseline) { Throw-MpError -Message "No previous build exists in '$dist'" -Hint 'modpack build' -ErrorId 'Diff.BaselineNotFound' -Category ObjectNotFound -TargetObject $dist }
 
     $temporary = Join-Path $dist ('.modpacktools-diff-' + [guid]::NewGuid().ToString('N') + '.mrpack')
     try {
         [void](Invoke-Packwiz -Arguments @('modrinth', 'export', '--output', $temporary) -WorkingDirectory $Project.Root)
-        if (-not (Test-Path -LiteralPath $temporary -PathType Leaf)) { throw 'Packwiz did not generate the temporary comparison artifact.' }
+        if (-not (Test-Path -LiteralPath $temporary -PathType Leaf)) { Throw-MpError -Message 'Packwiz did not generate the temporary comparison artifact' -Hint 'modpack build --raw-log' -ErrorId 'Diff.TemporaryArtifactMissing' -Category InvalidResult }
         $comparison = Compare-MrpackSnapshots -Baseline (Get-MrpackSnapshot $baseline.FullName) -Current (Get-MrpackSnapshot $temporary)
         return [pscustomobject]@{
             Project = $Project; BaselinePath = $baseline.FullName; BaselineTime = $baseline.LastWriteTime; Added = $comparison.Added

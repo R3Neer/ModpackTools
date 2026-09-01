@@ -217,7 +217,7 @@ function Resolve-InventoryType {
         'shaders'       { 'shaderpack' }
         'shaderpack'    { 'shaderpack' }
         'shaderpacks'   { 'shaderpack' }
-        default { throw "Unknown inventory type '$Type'. Use all, mod, resourcepack, or shaderpack." }
+        default { Throw-MpError -Message "Inventory type '$Type' is not recognized; allowed values: all, mod, resourcepack, shaderpack" -Hint '--type <all|mod|resourcepack|shaderpack>' -ErrorId 'Inventory.InvalidType' -Category InvalidArgument -TargetObject $Type }
     }
 }
 
@@ -236,29 +236,29 @@ function Select-ModpackInventory {
     $normalizedSide = if ($Side) { $Side.ToLowerInvariant() } else { $null }
     if ($normalizedSide -eq 'host') { $normalizedSide = 'server' }
     if ($normalizedSide -and $normalizedSide -notin @('client', 'server', 'both', 'unknown')) {
-        throw "Unknown side '$Side'. Use client, host, server, both, or unknown."
+        Throw-MpError -Message "Side '$Side' is not recognized; allowed values: client, host, server, both, unknown" -Hint '--side <client|host|both|unknown>' -ErrorId 'Inventory.InvalidSide' -Category InvalidArgument -TargetObject $Side
     }
     $normalizedSource = if ($Source) { $Source.ToLowerInvariant() } else { $null }
     if ($normalizedSource -and $normalizedSource -notin @('packwiz', 'local', 'builtin', 'missing')) {
-        throw "Unknown source '$Source'. Use packwiz, local, builtin, or missing."
+        Throw-MpError -Message "Source '$Source' is not recognized; allowed values: packwiz, local, builtin, missing" -Hint '--source <packwiz|local|builtin|missing>' -ErrorId 'Inventory.InvalidSource' -Category InvalidArgument -TargetObject $Source
     }
     $normalizedState = ($State ?? 'all').ToLowerInvariant()
     if ($normalizedState -notin @('all', 'active', 'inactive')) {
-        throw "Unknown state '$State'. Use all, active, or inactive."
+        Throw-MpError -Message "State '$State' is not recognized; allowed values: all, active, inactive" -Hint '--state <all|active|inactive>' -ErrorId 'Inventory.InvalidState' -Category InvalidArgument -TargetObject $State
     }
 
     if ($Category -or $normalizedSide) {
-        if ($effectiveType -notin @('all', 'mod')) { throw 'The --category and --side filters can only be applied to mods.' }
-        if ($normalizedState -ne 'all') { throw 'Mod filters cannot be combined with --state.' }
+        if ($effectiveType -notin @('all', 'mod')) { Throw-MpError -Message "Options '--category' and '--side' apply only to mods" -Hint 'use --type mod or remove the mod-only filters' -ErrorId 'Inventory.ModFilterTypeConflict' -Category InvalidArgument }
+        if ($normalizedState -ne 'all') { Throw-MpError -Message "Mod filters cannot be combined with '--state'" -Hint 'remove --state or the mod-only filters' -ErrorId 'Inventory.FilterConflict' -Category InvalidArgument }
         $effectiveType = 'mod'
     }
     if ($normalizedState -ne 'all') {
-        if ($effectiveType -notin @('all', 'resourcepack')) { throw 'The --state filter can only be applied to resource packs.' }
+        if ($effectiveType -notin @('all', 'resourcepack')) { Throw-MpError -Message "Option '--state' applies only to resource packs" -Hint 'use --type resourcepack or remove --state' -ErrorId 'Inventory.StateFilterTypeConflict' -Category InvalidArgument }
         $effectiveType = 'resourcepack'
     }
     if ($Category -and $Category -ne 'unclassified' -and -not $Inventory.Metadata.Categories.ContainsKey($Category)) {
         $available = @($Inventory.Metadata.Categories.Keys | Sort-Object) -join ', '
-        throw "Category '$Category' does not exist. Available categories: $available, unclassified."
+        Throw-MpError -Message "Category '$Category' is not defined; available categories: $available, unclassified" -Hint 'modpack inventory --type mod' -ErrorId 'Inventory.UnknownCategory' -Category InvalidArgument -TargetObject $Category
     }
 
     function Test-InventoryCommonFilter {

@@ -4,26 +4,26 @@ function Read-ModpackProject {
     $root = [System.IO.Path]::GetFullPath($ProjectRoot)
     $projectPath = Join-Path $root '.modpack/project.psd1'
     if (-not (Test-Path -LiteralPath $projectPath -PathType Leaf)) {
-        throw "The project descriptor does not exist: $projectPath"
+        Throw-MpError -Message "Project descriptor '$projectPath' does not exist" -Hint "restore '.modpack/project.psd1' or register a valid project" -ErrorId 'Project.DescriptorNotFound' -Category ObjectNotFound -TargetObject $projectPath
     }
 
     try {
         $descriptor = Import-PowerShellDataFile -LiteralPath $projectPath
     }
     catch {
-        throw "Project descriptor '$projectPath' is invalid: $($_.Exception.Message)"
+        Throw-MpError -Message "Project descriptor '$projectPath' is not a valid PSD1 file" -Details $_.Exception.Message -Hint 'repair the project descriptor' -ErrorId 'Project.InvalidDescriptor' -Category InvalidData -TargetObject $projectPath
     }
 
     foreach ($required in @('SchemaVersion', 'Id')) {
         if (-not $descriptor.ContainsKey($required)) {
-            throw "'$required' is missing from $projectPath"
+            Throw-MpError -Message "Required field '$required' is missing from project descriptor '$projectPath'" -Hint 'repair the project descriptor' -ErrorId 'Project.MissingField' -Category InvalidData -TargetObject $required
         }
     }
     if ([int]$descriptor.SchemaVersion -ne 1) {
-        throw "Unsupported SchemaVersion in '$projectPath': $($descriptor.SchemaVersion)"
+        Throw-MpError -Message "Schema version '$($descriptor.SchemaVersion)' in project descriptor '$projectPath' is not supported" -Hint 'upgrade ModpackTools or migrate the project descriptor' -ErrorId 'Project.UnsupportedSchema' -Category InvalidData -TargetObject $descriptor.SchemaVersion
     }
     if ([string]$descriptor.Id -notmatch '^[a-z][a-z0-9-]*$') {
-        throw "Invalid Id '$($descriptor.Id)' in '$projectPath'. Use lowercase letters, numbers, and hyphens."
+        Throw-MpError -Message "Project ID '$($descriptor.Id)' in '$projectPath' is invalid; allowed characters: lowercase letters, numbers, hyphens" -Hint 'edit the Id field in .modpack/project.psd1' -ErrorId 'Project.InvalidId' -Category InvalidData -TargetObject $descriptor.Id
     }
 
     $pack = Get-PackTomlData -Path (Join-Path $root 'pack.toml')
@@ -63,7 +63,7 @@ function Get-ModpackProjects {
         $details = foreach ($duplicate in $duplicates) {
             "'$($duplicate.Name)': " + (($duplicate.Group.Root) -join ', ')
         }
-        throw "Duplicate project IDs were found: $($details -join '; ')"
+        Throw-MpError -Message 'Multiple registered projects use the same ID' -Details ($details -join '; ') -Hint 'assign a unique Id in each .modpack/project.psd1 file' -ErrorId 'Project.DuplicateId' -Category InvalidData -TargetObject $details
     }
 
     return @($projects | Sort-Object Id)
@@ -74,12 +74,12 @@ function Resolve-ModpackProject {
 
     $effectiveId = if (-not [string]::IsNullOrWhiteSpace($Id)) { $Id } else { $script:ActiveProjectId }
     if ([string]::IsNullOrWhiteSpace($effectiveId)) {
-        throw "There is no active project. Run 'modpack use <id>' or provide '--project <id>'."
+        Throw-MpError -Message 'No active project is selected' -Hint 'modpack use <id>, or add --project <id> to this command' -ErrorId 'Project.NotSelected' -Category ObjectNotFound
     }
 
     $matches = @(Get-ModpackProjects | Where-Object Id -eq $effectiveId)
     if ($matches.Count -eq 0) {
-        throw "No modpack with Id '$effectiveId' exists. Run 'modpack list'."
+        Throw-MpError -Message "Project '$effectiveId' is not registered" -Hint 'modpack list' -ErrorId 'Project.NotFound' -Category ObjectNotFound -TargetObject $effectiveId
     }
     return $matches[0]
 }
@@ -90,7 +90,7 @@ function Assert-ModpackStructure {
     foreach ($relative in @('pack.toml', 'index.toml', '.modpack/project.psd1', '.modpack/metadata.psd1')) {
         $path = Join-Path $Project.Root $relative
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-            throw "Incomplete project structure: '$relative' is missing from '$($Project.Root)'."
+            Throw-MpError -Message "Project '$($Project.Id)' is incomplete because '$relative' is missing" -Details "Project root: '$($Project.Root)'" -Hint 'restore the missing file or recreate the project' -ErrorId 'Project.Incomplete' -Category InvalidData -TargetObject (Join-Path $Project.Root $relative)
         }
     }
 }

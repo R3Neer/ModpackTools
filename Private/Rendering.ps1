@@ -2,15 +2,15 @@ function Read-MpThemeColors {
     param([string]$Path = (Join-Path $script:ModuleRoot 'theme.toml'))
 
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-        throw "Theme file does not exist: $Path"
+        Throw-MpError -Message "Theme file '$Path' does not exist" -Hint 'restore theme.toml and reinstall ModpackTools' -ErrorId 'Theme.NotFound' -Category ObjectNotFound -TargetObject $Path
     }
     $text = Get-Content -Raw -LiteralPath $Path -Encoding UTF8
     $colors = [ordered]@{}
     foreach ($name in @('client', 'host', 'success', 'error', 'process', 'secondary', 'heading', 'local', 'accent', 'value')) {
         $value = Get-TomlString -Text $text -Section colors -Key $name
-        if (-not $value) { throw "Required theme color '$name' is missing from '$Path'." }
+        if (-not $value) { Throw-MpError -Message "Required theme color '$name' is missing from '$Path'" -Hint 'restore the missing color and reinstall ModpackTools' -ErrorId 'Theme.MissingColor' -Category InvalidData -TargetObject $name }
         if ($value -notmatch '^#[0-9A-Fa-f]{6}$') {
-            throw "Theme color '$name' must use the #RRGGBB format; found '$value'."
+            Throw-MpError -Message "Theme color '$name' in '$Path' must use #RRGGBB; received '$value'" -Hint 'correct the color and reinstall ModpackTools' -ErrorId 'Theme.InvalidColor' -Category InvalidData -TargetObject $value
         }
         $colors[$name] = $value.ToUpperInvariant()
     }

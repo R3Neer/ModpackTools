@@ -5,7 +5,11 @@ function Invoke-NativeCommandChecked {
         [Parameter(Mandatory)][string]$WorkingDirectory
     )
 
-    $command = Get-Command $FilePath -ErrorAction Stop
+    try {
+        $command = Get-Command $FilePath -ErrorAction Stop
+    } catch {
+        Throw-MpError -Message "Required command '$FilePath' is not available" -Details $_.Exception.Message -Hint "install '$FilePath' and ensure it is available in PATH" -ErrorId 'Build.CommandNotFound' -Category ObjectNotFound -TargetObject $FilePath
+    }
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
     $startInfo.FileName = $command.Source
     $startInfo.WorkingDirectory = [System.IO.Path]::GetFullPath($WorkingDirectory)
@@ -20,7 +24,7 @@ function Invoke-NativeCommandChecked {
     $process = [System.Diagnostics.Process]::new()
     $process.StartInfo = $startInfo
     try {
-        if (-not $process.Start()) { throw "Could not start '$FilePath'." }
+        if (-not $process.Start()) { Throw-MpError -Message "Command '$FilePath' could not be started" -Hint 'verify the executable and working directory' -ErrorId 'Build.ProcessStartFailed' -Category ResourceUnavailable -TargetObject $FilePath }
         $stdoutTask = $process.StandardOutput.ReadToEndAsync()
         $stderrTask = $process.StandardError.ReadToEndAsync()
         $process.WaitForExit()
@@ -31,8 +35,8 @@ function Invoke-NativeCommandChecked {
             @($stderr -split "`r?`n" | Where-Object { $_ -ne '' })
         )
         if ($process.ExitCode -ne 0) {
-            $details = if ($lines.Count) { [Environment]::NewLine + ($lines -join [Environment]::NewLine) } else { '' }
-            throw "'$FilePath $($Arguments -join ' ')' exited with code $($process.ExitCode).$details"
+            $details = if ($lines.Count) { $lines -join [Environment]::NewLine } else { $null }
+            Throw-MpError -Message "Command '$FilePath $($Arguments -join ' ')' exited with code $($process.ExitCode)" -Details $details -Hint 'review the command output and retry' -ErrorId 'Build.ProcessFailed' -Category OperationStopped -TargetObject $FilePath
         }
         return $lines
     }
@@ -188,10 +192,10 @@ function New-ModpackProject {
         [string]$DisplayVersion = $MinecraftVersion
     )
 
-    if ($Id -notmatch '^[a-z][a-z0-9-]*$') { throw "Invalid Id '$Id'. Use lowercase letters, numbers, and hyphens." }
-    if ($Loader.ToLowerInvariant() -ne 'fabric') { throw "modpack new currently automates only the 'fabric' loader." }
+    if ($Id -notmatch '^[a-z][a-z0-9-]*$') { Throw-MpError -Message "Project ID '$Id' is invalid; allowed characters: lowercase letters, numbers, hyphens" -Hint 'choose an ID such as my-pack' -ErrorId 'Project.InvalidId' -Category InvalidArgument -TargetObject $Id }
+    if ($Loader.ToLowerInvariant() -ne 'fabric') { Throw-MpError -Message "Loader '$Loader' is not supported by project creation; allowed value: fabric" -Hint '--loader fabric' -ErrorId 'Project.UnsupportedLoader' -Category InvalidArgument -TargetObject $Loader }
     $root = Get-ModpackRoot
-    if ((Get-ModpackProjects | Where-Object Id -eq $Id)) { throw "A project with Id '$Id' already exists." }
+    if ((Get-ModpackProjects | Where-Object Id -eq $Id)) { Throw-MpError -Message "Project ID '$Id' is already registered" -Hint 'choose a different project ID or run modpack use <id>' -ErrorId 'Project.AlreadyExists' -Category ResourceExists -TargetObject $Id }
     if (-not $DirectoryName) { $DirectoryName = (($Name -replace '[\\/:*?"<>|]', '-').Trim() + "-$MinecraftVersion") }
     if ([System.IO.Path]::IsPathRooted($DirectoryName)) {
         $target = [System.IO.Path]::GetFullPath($DirectoryName)
@@ -199,9 +203,9 @@ function New-ModpackProject {
         $target = [System.IO.Path]::GetFullPath((Join-Path $root $DirectoryName))
     }
     if ((Split-Path -Parent $target) -ne $root.TrimEnd('\')) {
-        throw "The project must be a direct child of the configured root: $root"
+        Throw-MpError -Message "Project destination '$target' is not a direct child of configured root '$root'" -Hint 'choose a directory directly below the configured root' -ErrorId 'Project.DestinationOutsideRoot' -Category InvalidArgument -TargetObject $target
     }
-    if (Test-Path -LiteralPath $target) { throw "The destination already exists and will not be overwritten: $target" }
+    if (Test-Path -LiteralPath $target) { Throw-MpError -Message "Project destination '$target' already exists and will not be overwritten" -Hint 'choose a different --path or remove the existing directory deliberately' -ErrorId 'Project.DestinationExists' -Category ResourceExists -TargetObject $target }
 
     $temporary = Join-Path $root ('.modpacktools-new-' + [guid]::NewGuid().ToString('N'))
     [System.IO.Directory]::CreateDirectory($temporary) | Out-Null
@@ -231,7 +235,7 @@ function Get-PackwizContentItemByMetadataPath {
         '^mods/'          { @{ Directory = 'mods'; Kind = 'mod' }; break }
         '^resourcepacks/' { @{ Directory = 'resourcepacks'; Kind = 'resourcepack' }; break }
         '^shaderpacks/'   { @{ Directory = 'shaderpacks'; Kind = 'shaderpack' }; break }
-        default { throw "Unsupported Packwiz metadata location '$relative'." }
+        default { Throw-MpError -Message "Packwiz metadata location '$relative' is not supported" -Hint 'place metadata under mods, resourcepacks, or shaderpacks' -ErrorId 'Build.UnsupportedMetadataLocation' -Category InvalidData -TargetObject $relative }
     }
     return Get-PackwizItems -Project $Project -Directory $definition.Directory -Kind $definition.Kind |
         Where-Object MetadataPath -eq $MetadataPath |
@@ -249,7 +253,7 @@ function Add-ModpackContent {
     if ($Category) {
         $metadata = Get-ModpackMetadata -Project $Project
         if (-not $metadata.Categories.ContainsKey($Category)) {
-            throw "Category '$Category' does not exist in '$($Project.Id)'."
+            Throw-MpError -Message "Category '$Category' is not defined for project '$($Project.Id)'" -Hint 'choose a category shown by modpack inventory --type mod' -ErrorId 'Metadata.UnknownCategory' -Category InvalidArgument -TargetObject $Category
         }
     }
     $snapshot = Get-PackwizStateSnapshot -Project $Project
@@ -271,22 +275,23 @@ function Add-ModpackContent {
                 } |
                 Sort-Object LastWriteTimeUtc -Descending
         )
-        if ($candidates.Count -eq 0) { throw 'Packwiz completed successfully, but the added or updated .pw.toml file could not be identified.' }
+        if ($candidates.Count -eq 0) { Throw-MpError -Message 'Packwiz completed, but the added metadata file could not be identified' -Hint 'inspect the Packwiz metadata before retrying' -ErrorId 'Content.AddedMetadataNotFound' -Category InvalidResult }
         $items = @($candidates | ForEach-Object { Get-PackwizContentItemByMetadataPath -Project $Project -MetadataPath $_.FullName })
         $item = if ($ModrinthProjectId) {
             $items | Where-Object Id -eq "modrinth:$ModrinthProjectId" | Select-Object -First 1
         }
         else { $items | Select-Object -First 1 }
-        if (-not $item) { throw 'The installed Modrinth project could not be normalized.' }
+        if (-not $item) { Throw-MpError -Message 'The installed Modrinth project could not be normalized' -Hint 'inspect the generated .pw.toml file before retrying' -ErrorId 'Content.NormalizationFailed' -Category InvalidResult }
         if ($Category -and $item.Kind -ne 'mod') {
-            throw "Option '--category' can only be used with mods; '$($item.Name)' is a $($item.Kind)."
+            Throw-MpError -Message "Option '--category' applies only to mods; '$($item.Name)' is '$($item.Kind)'" -Hint 'remove --category' -ErrorId 'Option.CategoryRequiresMod' -Category InvalidArgument -TargetObject $item.Id
         }
         if ($Category) { Set-ModMetadataCategory -Project $Project -ModId $item.Id -Category $Category }
         return [pscustomobject]@{ Item = $item; Log = $log; RelatedItems = $items }
     }
     catch {
         Restore-PackwizStateSnapshot -Project $Project -Snapshot $snapshot
-        throw "No content was added because the operation failed and Packwiz state was restored. $($_.Exception.Message)"
+        $reason = ($_.Exception.Message -split "`r?`n")[0]
+        Throw-MpError -Message 'Content was not added; all Packwiz changes were restored' -Details $reason -Hint 'review the details and retry' -ErrorId 'Content.AddRolledBack' -Category OperationStopped -TargetObject $Selector
     }
 }
 
@@ -324,15 +329,15 @@ function Resolve-ModpackUpdateSelectors {
             }
         )
         if ($matches.Count -eq 0) {
-            throw "Content '$selector' was not found. Run: modpack inventory"
+            Throw-MpError -Message "Content '$selector' was not found in project '$($Project.Id)'" -Hint 'modpack inventory' -ErrorId 'Content.NotFound' -Category ObjectNotFound -TargetObject $selector
         }
         if ($matches.Count -gt 1) {
             $ids = @($matches | ForEach-Object { "$($_.Kind):$($_.Id)" } | Sort-Object -Unique) -join ', '
-            throw "Content selector '$selector' is ambiguous. Matching entries: $ids. Use --type to narrow it."
+            Throw-MpError -Message "Content selector '$selector' matches more than one item" -Details "Matching entries: $ids" -Hint 'add --type <mod|resourcepack|shaderpack>' -ErrorId 'Content.AmbiguousSelector' -Category InvalidArgument -TargetObject $selector
         }
         $item = $matches[0]
         if ($item.Source -ne 'packwiz' -or -not $item.MetadataPath) {
-            throw "Content '$selector' is local and cannot be updated by Packwiz."
+            Throw-MpError -Message "Content '$selector' is local and cannot be updated by Packwiz" -Hint 'replace the local file manually or select Packwiz-managed content' -ErrorId 'Content.LocalNotUpdatable' -Category InvalidOperation -TargetObject $selector
         }
         if (-not ($resolved | Where-Object MetadataPath -eq $item.MetadataPath)) { $resolved.Add($item) }
     }
@@ -384,8 +389,8 @@ function Update-ModpackContent {
     )
 
     Assert-ModpackStructure -Project $Project
-    if ($All -and $Selectors.Count) { throw "Use either content selectors or '--all', not both." }
-    if (-not $All -and $Selectors.Count -eq 0) { throw 'At least one content selector or --all is required.' }
+    if ($All -and $Selectors.Count) { Throw-MpError -Message "Content selectors and '--all' cannot be combined" -Hint 'remove the selectors or --all' -ErrorId 'Option.ForbiddenCombination' -Category InvalidArgument }
+    if (-not $All -and $Selectors.Count -eq 0) { Throw-MpError -Message "The update operation requires at least one selector or '--all'" -Hint 'modpack help update' -ErrorId 'Command.MissingUpdateTarget' -Category InvalidArgument }
     $normalizedType = Resolve-InventoryType -Type $Type
 
     $beforeInventory = Get-ModpackInventory -Project $Project
@@ -397,7 +402,7 @@ function Update-ModpackContent {
     else {
         @(Resolve-ModpackUpdateSelectors -Project $Project -Selectors $Selectors -Type $normalizedType)
     }
-    if ($targets.Count -eq 0) { throw "Project '$($Project.Id)' has no matching Packwiz-managed content to update." }
+    if ($targets.Count -eq 0) { Throw-MpError -Message "Project '$($Project.Id)' has no matching Packwiz-managed content to update" -Hint 'modpack inventory' -ErrorId 'Content.NoUpdateTargets' -Category ObjectNotFound -TargetObject $Project.Id }
 
     $snapshot = Get-PackwizStateSnapshot -Project $Project
     $log = [System.Collections.Generic.List[string]]::new()
@@ -417,7 +422,7 @@ function Update-ModpackContent {
         $results = @(
             foreach ($target in $targets) {
                 $updated = $afterItems | Where-Object MetadataPath -eq $target.MetadataPath | Select-Object -First 1
-                if (-not $updated) { throw "Updated metadata '$($target.MetadataPath)' could not be normalized." }
+                if (-not $updated) { Throw-MpError -Message "Updated metadata '$($target.MetadataPath)' could not be normalized" -Hint 'inspect the .pw.toml file before retrying' -ErrorId 'Content.NormalizationFailed' -Category InvalidResult -TargetObject $target.MetadataPath }
                 $relative = [System.IO.Path]::GetRelativePath($Project.Root, $target.MetadataPath)
                 $beforeBytes = $snapshot[$relative]
                 $afterBytes = [System.IO.File]::ReadAllBytes($target.MetadataPath)
@@ -437,7 +442,8 @@ function Update-ModpackContent {
     }
     catch {
         Restore-PackwizStateSnapshot -Project $Project -Snapshot $snapshot
-        throw "No content was updated because the operation failed and Packwiz state was restored. $($_.Exception.Message)"
+        $reason = ($_.Exception.Message -split "`r?`n")[0]
+        Throw-MpError -Message 'Content was not updated; all Packwiz changes were restored' -Details $reason -Hint 'review the details and retry' -ErrorId 'Content.UpdateRolledBack' -Category OperationStopped -TargetObject $Project.Id
     }
 }
 
@@ -466,7 +472,7 @@ function Build-ModpackProject {
     $temporary = Join-Path $dist ('.modpacktools-' + [guid]::NewGuid().ToString('N') + '.mrpack')
     try {
         foreach ($line in @(Invoke-Packwiz -Arguments @('modrinth', 'export', '--output', $temporary) -WorkingDirectory $Project.Root)) { $allLog.Add($line) }
-        if (-not (Test-Path -LiteralPath $temporary -PathType Leaf)) { throw 'Packwiz did not generate the expected artifact.' }
+        if (-not (Test-Path -LiteralPath $temporary -PathType Leaf)) { Throw-MpError -Message 'Packwiz did not generate the expected build artifact' -Hint 'modpack build --raw-log' -ErrorId 'Build.ArtifactMissing' -Category InvalidResult -TargetObject $temporary }
         Move-Item -LiteralPath $temporary -Destination $finalPath -Force
     }
     finally { if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force } }

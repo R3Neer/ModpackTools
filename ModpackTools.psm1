@@ -7,6 +7,7 @@ $script:ModuleVersion = [string](Import-PowerShellDataFile -LiteralPath (Join-Pa
 $script:ConfigHomeOverride = $null
 
 foreach ($file in @(
+    'Private/Errors.ps1'
     'Private/Configuration.ps1'
     'Private/Toml.ps1'
     'Private/Project.ps1'

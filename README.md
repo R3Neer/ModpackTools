@@ -250,6 +250,10 @@ value = "#EBEEF5"
 
 Colors use the `#RRGGBB` format. Every key is required so an incomplete theme fails clearly instead of silently mixing configured colors with hidden defaults. After editing the source file, run `./Install-ModpackTools.ps1 -Force` and reload the module. The installer copies this same file into the installed module; there is no second palette definition in PowerShell code.
 
+### Error messages
+
+Expected CLI errors use a shared structure: a precise cause, optional upstream details, and one actionable `Try:` line. They also expose stable `ModpackTools.<area>.<condition>` error IDs and no longer report private module source lines as the apparent failure location. Unexpected programming errors remain ordinary PowerShell exceptions so diagnostic context is preserved. The complete contract and audited error namespaces are documented in [`docs/error-design.md`](docs/error-design.md).
+
 ## Default Options
 
 When `config/defaultoptions-common.toml` exists, `defaultResourcePacks` is the source of truth for enabled ordering. Default Options stores packs from lowest to highest priority; ModpackTools reverses the list to display the actual GUI priority. The parser supports brackets, apostrophes, symbols, and escapes inside strings. Built-in IDs without an override are displayed literally. Physical ZIP files not included in the list appear as present but disabled.

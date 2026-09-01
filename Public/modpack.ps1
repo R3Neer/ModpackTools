@@ -22,11 +22,19 @@ function modpack {
         config = 'Invoke-MpConfig'
     }
 
-    $key = $Command.ToLowerInvariant()
-    if (-not $commands.ContainsKey($key)) {
-        throw "Unknown command '$Command'. Run 'modpack help'."
+    try {
+        $key = $Command.ToLowerInvariant()
+        if (-not $commands.ContainsKey($key)) {
+            Throw-MpError -Message "Command '$Command' is not recognized" -Hint 'modpack help' -ErrorId 'Command.Unknown' -Category InvalidArgument -TargetObject $Command
+        }
+        $handler = $commands[$key]
+        & $handler @Arguments
+    } catch {
+        if (-not (Test-MpExpectedError -Exception $_.Exception)) { throw }
+        $errorId = [string]$_.Exception.Data['ModpackTools.ErrorId']
+        $category = [System.Management.Automation.ErrorCategory][int]$_.Exception.Data['ModpackTools.ErrorCategory']
+        $target = $_.Exception.Data['ModpackTools.TargetObject']
+        $record = [System.Management.Automation.ErrorRecord]::new($_.Exception, $errorId, $category, $target)
+        $PSCmdlet.ThrowTerminatingError($record)
     }
-
-    $handler = $commands[$key]
-    & $handler @Arguments
 }

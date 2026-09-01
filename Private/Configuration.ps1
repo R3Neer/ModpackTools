@@ -5,7 +5,7 @@ function Get-ModpackToolsConfigDirectory {
 
     $localApplicationData = [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
     if ([string]::IsNullOrWhiteSpace($localApplicationData)) {
-        throw 'LOCALAPPDATA could not be determined for storing the configuration.'
+        Throw-MpError -Message "Environment variable 'LOCALAPPDATA' is unavailable, so the configuration location cannot be determined" -Hint 'set LOCALAPPDATA and start a new PowerShell session' -ErrorId 'Configuration.LocalAppDataUnavailable' -Category ResourceUnavailable
     }
 
     return (Join-Path $localApplicationData 'ModpackTools')
@@ -25,7 +25,7 @@ function Get-ModpackToolsConfig {
         $data = Import-PowerShellDataFile -LiteralPath $path
     }
     catch {
-        throw "Configuration file '$path' is not a valid PSD1 file: $($_.Exception.Message)"
+        Throw-MpError -Message "Configuration file '$path' is not a valid PSD1 file" -Details $_.Exception.Message -Hint "repair or remove '$path', then run modpack config set root <directory>" -ErrorId 'Configuration.InvalidFile' -Category InvalidData -TargetObject $path
     }
 
     if ($null -eq $data) { return @{} }
@@ -39,12 +39,12 @@ function Set-ModpackToolsConfigValue {
     )
 
     if ($Name -ne 'root') {
-        throw "Unknown setting '$Name'. Only 'root' is currently supported."
+        Throw-MpError -Message "Configuration setting '$Name' is not recognized; allowed value: root" -Hint 'modpack config set root <directory>' -ErrorId 'Configuration.UnknownSetting' -Category InvalidArgument -TargetObject $Name
     }
 
     $resolved = [System.IO.Path]::GetFullPath($Value)
     if (-not (Test-Path -LiteralPath $resolved -PathType Container)) {
-        throw "The modpack root does not exist or is not a directory: $resolved"
+        Throw-MpError -Message "Modpack root '$resolved' does not exist or is not a directory" -Hint 'modpack config set root <existing-directory>' -ErrorId 'Configuration.InvalidRoot' -Category ObjectNotFound -TargetObject $resolved
     }
 
     $config = Get-ModpackToolsConfig
@@ -56,12 +56,12 @@ function Set-ModpackToolsConfigValue {
 function Get-ModpackRoot {
     $config = Get-ModpackToolsConfig
     if (-not $config.ContainsKey('Root') -or [string]::IsNullOrWhiteSpace([string]$config.Root)) {
-        throw "ModpackTools is not configured. Run: modpack config set root '<directory>'."
+        Throw-MpError -Message 'No modpack root is configured' -Hint 'modpack config set root <directory>' -ErrorId 'Configuration.MissingRoot' -Category ObjectNotFound
     }
 
     $root = [System.IO.Path]::GetFullPath([string]$config.Root)
     if (-not (Test-Path -LiteralPath $root -PathType Container)) {
-        throw "The configured root does not exist: $root"
+        Throw-MpError -Message "Configured modpack root '$root' does not exist" -Hint 'modpack config set root <existing-directory>' -ErrorId 'Configuration.RootNotFound' -Category ObjectNotFound -TargetObject $root
     }
     return $root
 }

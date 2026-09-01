@@ -41,7 +41,7 @@ function Invoke-ModrinthSearchRequest {
         return Invoke-RestMethod -Method Get -Uri $uri -Headers $headers -ErrorAction Stop
     }
     catch {
-        throw "Modrinth search failed: $($_.Exception.Message)"
+        Throw-MpError -Message 'Modrinth search could not be completed' -Details $_.Exception.Message -Hint 'check the network connection and retry' -ErrorId 'Search.RequestFailed' -Category ConnectionError
     }
 }
 
@@ -61,7 +61,7 @@ function Read-ModrinthSearchCache {
         return Get-Content -Raw -LiteralPath $path -Encoding UTF8 | ConvertFrom-Json
     }
     catch {
-        throw "Search cache '$path' is invalid. Run modpack search again."
+        Throw-MpError -Message "Search cache '$path' is invalid" -Hint 'modpack search <query>' -ErrorId 'Search.InvalidCache' -Category InvalidData -TargetObject $path
     }
 }
 
@@ -115,7 +115,7 @@ function Resolve-ModrinthSearchNumber {
 
     if ($Selector -notmatch '^[1-9][0-9]*$') { return $null }
     $cache = Read-ModrinthSearchCache
-    if (-not $cache) { throw "There is no saved search. Run modpack search before using result number $Selector." }
+    if (-not $cache) { Throw-MpError -Message "Search result number '$Selector' cannot be resolved because there is no saved search" -Hint 'modpack search <query>' -ErrorId 'Search.CacheNotFound' -Category ObjectNotFound -TargetObject $Selector }
     $created = [datetimeoffset]::MinValue
     $validDate = if ($cache.CreatedUtc -is [datetime]) {
         $created = [datetimeoffset]$cache.CreatedUtc
@@ -130,19 +130,19 @@ function Resolve-ModrinthSearchNumber {
         )
     }
     if (-not $validDate -or ([datetimeoffset]::UtcNow - $created.ToUniversalTime()).TotalHours -gt 24) {
-        throw 'The saved search has expired. Run modpack search again.'
+        Throw-MpError -Message 'The saved search has expired' -Hint 'modpack search <query>' -ErrorId 'Search.CacheExpired' -Category InvalidData
     }
     if (-not ([string]$cache.ProjectId).Equals($Project.Id, [System.StringComparison]::OrdinalIgnoreCase)) {
-        throw "The saved search belongs to project '$($cache.ProjectId)', not '$($Project.Id)'. Run modpack search for this project."
+        Throw-MpError -Message "The saved search belongs to project '$($cache.ProjectId)', not '$($Project.Id)'" -Hint "modpack search <query> --project $($Project.Id)" -ErrorId 'Search.ProjectMismatch' -Category InvalidData -TargetObject $Selector
     }
     if (-not ([string]$cache.MinecraftVersion).Equals([string]$Project.MinecraftVersion, [System.StringComparison]::OrdinalIgnoreCase) -or
         -not ([string]$cache.Loader).Equals([string]$Project.Loader, [System.StringComparison]::OrdinalIgnoreCase)) {
-        throw 'The project compatibility settings changed after the saved search. Run modpack search again.'
+        Throw-MpError -Message 'The project compatibility settings changed after the saved search' -Hint 'modpack search <query>' -ErrorId 'Search.CompatibilityChanged' -Category InvalidData
     }
     $result = @($cache.Results | Where-Object { [int]$_.Index -eq [int]$Selector })
     if ($result.Count -ne 1) {
         $maximum = @($cache.Results).Count
-        throw "Search result number $Selector does not exist. The saved search contains $maximum result(s)."
+        Throw-MpError -Message "Search result number '$Selector' does not exist; available range: 1-$maximum" -Hint 'choose a number shown by the latest modpack search' -ErrorId 'Search.ResultOutOfRange' -Category InvalidArgument -TargetObject $Selector
     }
     return $result[0]
 }

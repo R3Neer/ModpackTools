@@ -28,11 +28,11 @@ function Resolve-ModpackResourcePack {
         return $false
     })
     if ($matches.Count -eq 0) {
-        throw "Resource pack '$Selector' was not found. Run: modpack inventory --type resourcepack"
+        Throw-MpError -Message "Resource pack '$Selector' was not found" -Hint 'modpack inventory --type resourcepack' -ErrorId 'ResourcePack.NotFound' -Category ObjectNotFound -TargetObject $Selector
     }
     if ($matches.Count -gt 1) {
         $names = @($matches | ForEach-Object { "'$($_.Name)' [$($_.DefaultId)]" }) -join ', '
-        throw "Selector '$Selector' is ambiguous: $names. Use the exact ID or filename."
+        Throw-MpError -Message "Resource pack selector '$Selector' matches more than one pack" -Details "Matches: $names" -Hint 'use an exact ID or filename' -ErrorId 'ResourcePack.AmbiguousSelector' -Category InvalidArgument -TargetObject $Selector
     }
     return $matches[0]
 }
@@ -49,7 +49,7 @@ function Enable-ModpackResourcePack {
     $remaining = @($inventory.ActiveResources | Where-Object { -not $_.Id.Equals($target.DefaultId, [System.StringComparison]::OrdinalIgnoreCase) } | ForEach-Object Id)
     $maximum = $remaining.Count + 1
     if ($Position -lt 1 -or $Position -gt $maximum) {
-        throw "Invalid position '$Position'. Use a value between 1 and $maximum (1 = highest priority)."
+        Throw-MpError -Message "Resource pack position '$Position' is outside the allowed range 1-$maximum" -Hint "--position <1-$maximum>" -ErrorId 'ResourcePack.InvalidPosition' -Category InvalidArgument -TargetObject $Position
     }
     $ordered = [System.Collections.Generic.List[string]]::new()
     foreach ($id in $remaining) { $ordered.Add($id) }

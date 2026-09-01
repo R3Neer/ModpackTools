@@ -42,7 +42,7 @@ function Get-PackTomlData {
     param([Parameter(Mandatory)][string]$Path)
 
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-        throw "pack.toml does not exist: $Path"
+        Throw-MpError -Message "Packwiz manifest '$Path' does not exist" -Hint 'restore pack.toml or recreate the project' -ErrorId 'Project.ManifestNotFound' -Category ObjectNotFound -TargetObject $Path
     }
 
     $text = Get-Content -Raw -LiteralPath $Path -Encoding UTF8
