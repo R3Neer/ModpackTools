@@ -34,9 +34,21 @@ function ConvertFrom-MpOptions {
 }
 
 function Assert-PositionalCount {
-    param([array]$Values = @(), [int]$Minimum, [int]$Maximum, [string]$Usage)
+    param(
+        [array]$Values = @(),
+        [int]$Minimum,
+        [int]$Maximum,
+        [string]$Usage,
+        [string[]]$OptionNames = @()
+    )
     $count = @($Values).Count
-    if ($count -lt $Minimum -or $count -gt $Maximum) { throw "Usage: $Usage" }
+    if ($count -lt $Minimum -or $count -gt $Maximum) {
+        $bareOption = @($Values | Where-Object { $OptionNames -contains [string]$_ } | Select-Object -First 1)
+        if ($bareOption.Count) {
+            throw "Option '$($bareOption[0])' must start with '--'. Use '--$($bareOption[0])'."
+        }
+        throw "Usage: $Usage"
+    }
 }
 
 function Resolve-MpCommandProject {
@@ -140,7 +152,7 @@ function Invoke-MpResource {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Invoke-MpHelp resource; return }
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project', 'position')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum 2 -Usage 'modpack resource enable|disable <name|id|filename> [options]'
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum 2 -Usage 'modpack resource enable|disable <name|id|filename> [options]' -OptionNames @('project', 'position')
     $operation = $parsed.Positionals[0].ToLowerInvariant()
     if ($operation -notin @('enable', 'disable')) { throw "Unknown resource pack operation '$($parsed.Positionals[0])'. Use 'enable' or 'disable'." }
     $project = Resolve-MpCommandProject -Options $parsed.Options
@@ -168,7 +180,7 @@ function Invoke-MpClassify {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Invoke-MpHelp classify; return }
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum 2 -Usage 'modpack classify <name|id|filename> <category|unclassified> [--project <id>]'
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum 2 -Usage 'modpack classify <name|id|filename> <category|unclassified> [--project <id>]' -OptionNames @('project')
     $project = Resolve-MpCommandProject -Options $parsed.Options
     Write-MpStep "Classifying '$($parsed.Positionals[0])'..."
     $result = Set-ModpackModClassification -Project $project -Selector $parsed.Positionals[0] -Category $parsed.Positionals[1]
@@ -181,7 +193,7 @@ function Invoke-MpStatus {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Invoke-MpHelp status; return }
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project') -SwitchOptions @('full')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack status [id] [--project <id>] [--full]'
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack status [id] [--project <id>] [--full]' -OptionNames @('project', 'full')
     $id = if ($parsed.Positionals.Count) { $parsed.Positionals[0] } else { $null }
     $project = Resolve-MpCommandProject -Options $parsed.Options -PositionalId $id
     Assert-ModpackStructure -Project $project
@@ -199,7 +211,7 @@ function Invoke-MpInventory {
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments `
         -ValueOptions @('project', 'type', 'category', 'side', 'source', 'state', 'search') `
         -SwitchOptions @('unclassified')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack inventory [id] [--project <id>] [filters]'
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack inventory [id] [--project <id>] [filters]' -OptionNames @('project', 'type', 'category', 'side', 'source', 'state', 'search', 'unclassified')
     if ($parsed.Options.ContainsKey('unclassified') -and $parsed.Options.ContainsKey('category')) {
         throw 'Use either --unclassified or --category, not both.'
     }
@@ -223,7 +235,7 @@ function Invoke-MpBuild {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Invoke-MpHelp build; return }
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project') -SwitchOptions @('no-refresh', 'keep-old', 'open', 'raw-log')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack build [id] [--project <id>] [options]'
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack build [id] [--project <id>] [options]' -OptionNames @('project', 'no-refresh', 'keep-old', 'open', 'raw-log')
     $id = if ($parsed.Positionals.Count) { $parsed.Positionals[0] } else { $null }
     $project = Resolve-MpCommandProject -Options $parsed.Options -PositionalId $id
     Write-MpStep "Building $($project.DisplayName)..."
@@ -240,7 +252,7 @@ function Invoke-MpDiff {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Invoke-MpHelp diff; return }
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack diff [id] [--project <id>]'
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack diff [id] [--project <id>]' -OptionNames @('project')
     $id = if ($parsed.Positionals.Count) { [string]$parsed.Positionals[0] } else { $null }
     $project = Resolve-MpCommandProject -Options $parsed.Options -PositionalId $id
     Assert-ModpackStructure -Project $project
@@ -253,7 +265,7 @@ function Invoke-MpAdd {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Invoke-MpHelp add; return }
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project', 'category')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack add <id|slug|search-number> [--project <id>] [--category <id>]'
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack add <id|slug|search-number> [--project <id>] [--category <id>]' -OptionNames @('project', 'category')
     if ($parsed.Positionals[0].ToLowerInvariant() -eq 'mod') { throw "Invalid syntax. Use: modpack add <id|slug|search-number> [--project <id>] [--category <id>]" }
     $project = Resolve-MpCommandProject -Options $parsed.Options
     $category = if ($parsed.Options.ContainsKey('category')) { $parsed.Options.category } else { $null }
@@ -313,7 +325,7 @@ function Invoke-MpNew {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Invoke-MpHelp new; return }
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('name', 'minecraft', 'loader', 'path', 'loader-version', 'pack-version', 'display-version')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack new <id> --name <name> --minecraft <version> --loader fabric'
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack new <id> --name <name> --minecraft <version> --loader fabric' -OptionNames @('name', 'minecraft', 'loader', 'path', 'loader-version', 'pack-version', 'display-version')
     foreach ($required in @('name', 'minecraft', 'loader')) {
         if (-not $parsed.Options.ContainsKey($required)) { throw "Required option '--$required' is missing." }
     }

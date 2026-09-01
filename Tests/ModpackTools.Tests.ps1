@@ -199,6 +199,17 @@ minecraft = "1.21.1"
         }
     }
 
+    Describe 'CLI option diagnostics' {
+        It 'suggests the prefixed inventory filter when -- is omitted' {
+            { Invoke-MpInventory @('search', 'Taverns') } | Should Throw "Use '--search'"
+        }
+
+        It 'uses the same diagnostic for options in other commands' {
+            { Invoke-MpResource @('enable', 'Pack', 'position', '1') } | Should Throw "Use '--position'"
+            { Invoke-MpAdd @('sodium', 'category', 'performance') } | Should Throw "Use '--category'"
+        }
+    }
+
     Describe 'Metadata and normalized inventory' {
         BeforeEach {
             $fixtureRoot = Join-Path $TestDrive 'packs'
@@ -286,7 +297,7 @@ mod-id = "abc123"
             Assert-MockCalled Invoke-RestMethod -Times 1 -ParameterFilter {
                 $Uri -match 'api\.modrinth\.com/v2/search' -and
                 [System.Uri]::UnescapeDataString($Uri) -match 'versions:1\.21\.1' -and
-                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/0.9.0'
+                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/0.9.1'
             }
         }
 
