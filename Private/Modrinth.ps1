@@ -16,6 +16,25 @@ function Invoke-ModrinthApiRequest {
     }
 }
 
+function ConvertTo-MpFlatArray {
+    param([AllowNull()]$InputObject)
+    return @(
+        foreach ($group in @($InputObject)) {
+            if ($group -is [System.Array]) { foreach ($entry in $group) { $entry } }
+            elseif ($null -ne $group) { $group }
+        }
+    )
+}
+
+function Get-ModrinthVersionsByIds {
+    param([Parameter(Mandatory)][string[]]$VersionIds)
+    $unique = @($VersionIds | Where-Object { $_ } | Sort-Object -Unique)
+    if (-not $unique.Count) { return @() }
+    $json = ConvertTo-Json -Compress -InputObject $unique
+    $raw = Invoke-ModrinthApiRequest -PathAndQuery ('versions?ids=' + [System.Uri]::EscapeDataString($json)) -FailureLabel 'dependency lookup'
+    return @(ConvertTo-MpFlatArray -InputObject $raw)
+}
+
 function Get-ModrinthProjectIdFromItem {
     param([Parameter(Mandatory)]$Item)
     if (-not ([string]$Item.Id).StartsWith('modrinth:', [System.StringComparison]::OrdinalIgnoreCase)) {
@@ -40,7 +59,11 @@ function Get-ModrinthCompatibleVersions {
         $query.Add('loaders=' + [System.Uri]::EscapeDataString($loaders))
     }
     $query.Add('include_changelog=false')
-    $response = @(Invoke-ModrinthApiRequest -PathAndQuery ("project/$projectId/version?" + ($query -join '&')) -FailureLabel 'version lookup' | Sort-Object { [datetime](Get-MpPropertyValue -InputObject $_ -Name date_published) } -Descending)
+    $rawResponse = Invoke-ModrinthApiRequest -PathAndQuery ("project/$projectId/version?" + ($query -join '&')) -FailureLabel 'version lookup'
+    $response = @(ConvertTo-MpFlatArray -InputObject $rawResponse) | Sort-Object {
+        $published = Get-MpPropertyValue -InputObject $_ -Name date_published
+        if ($published) { [datetime]$published } else { [datetime]::MinValue }
+    } -Descending
     $versions = @(
         $index = 0
         foreach ($version in $response) {
