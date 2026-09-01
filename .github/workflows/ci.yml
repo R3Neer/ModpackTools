@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: PowerShell 7 and Pester
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install the test dependency
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -RequiredVersion 4.10.1 -Scope CurrentUser -Force -SkipPublisherCheck
+
+      - name: Validate the module manifest
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Test-ModuleManifest -Path ./ModpackTools.psd1 | Out-Null
+
+      - name: Run the test suite
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Import-Module Pester -RequiredVersion 4.10.1 -Force
+          $result = Invoke-Pester -Script ./Tests/ModpackTools.Tests.ps1 -PassThru
+          if ($result.FailedCount -gt 0) {
+              throw "$($result.FailedCount) test(s) failed."
+          }
+
+      - name: Verify repository installation
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          ./Install-ModpackTools.ps1 -Force -NonInteractive -SkipDoctor
+          Import-Module ModpackTools -Force
+          $expected = [version](Import-PowerShellDataFile ./ModpackTools.psd1).ModuleVersion
+          $installed = (Get-Module ModpackTools).Version
+          if ($installed -ne $expected) {
+              throw "Installed version $installed does not match manifest version $expected."
+          }
+          modpack --version

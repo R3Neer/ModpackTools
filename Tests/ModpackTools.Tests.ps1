@@ -481,7 +481,7 @@ mod-id = "WEg59z5b"
 
     Describe 'Metadata and normalized inventory' {
         BeforeEach {
-            $fixtureRoot = Join-Path $TestDrive 'packs'
+            $fixtureRoot = Join-Path $TestDrive ('packs-' + [guid]::NewGuid().ToString('N'))
             [System.IO.Directory]::CreateDirectory($fixtureRoot) | Out-Null
             $projectPath = New-TestModpack $fixtureRoot 'Pack' 'pack'
             $project = Read-ModpackProject $projectPath

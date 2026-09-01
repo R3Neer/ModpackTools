@@ -1,5 +1,7 @@
 # ModpackTools
 
+[![CI](https://github.com/R3Neer/ModpackTools/actions/workflows/ci.yml/badge.svg)](https://github.com/R3Neer/ModpackTools/actions/workflows/ci.yml)
+
 ModpackTools is a small CLI for managing multiple Minecraft Java modpacks based on Packwiz and exporting them to Modrinth. Its only public command is `modpack`.
 
 ## Design and sources of truth
