@@ -113,6 +113,9 @@ modpack classify list
 modpack classify create <id> --name <name>
 modpack classify set <name|id|filename> <category|number|unclassified>
 modpack classify remove <category|number> [--unclassify]
+modpack side set <mod|inventory-number> <client|host|both>
+modpack versions <name|id|filename>
+modpack update <name|id|filename> --to <version|number>
 modpack update <name|id|filename...>
 modpack update --all
 modpack update --all --type mod
@@ -128,7 +131,7 @@ modpack inventory --search <text>
 modpack update <inventory-number>
 ```
 
-Every displayed inventory item has one global reference number for that filtered view. Use it with `modpack resource`, as the mod argument of `modpack classify set`, or with `modpack update`. References are bound to this project and expire after 24 hours.
+Every displayed inventory item has one global reference number for that filtered view. Use it with `modpack resource`, `modpack side`, `modpack versions`, as the mod argument of `modpack classify set`, or with `modpack update`. References are bound to this project and expire after 24 hours.
 
 Enable or reposition a resource pack. Position `1` is the highest priority in the Minecraft GUI:
 
@@ -149,17 +152,17 @@ modpack build
 
 `modpack search` queries compatible Modrinth projects and saves the numbered results for 24 hours. `modpack add <number>` installs from that saved list; IDs and slugs remain valid directly. The cache is only a convenience reference and Packwiz remains the technical source of truth.
 
-Search, inventory, and category numbers have separate contexts. `modpack add <number>` uses the latest search; `resource`, `update`, and the mod argument of `classify set` use the latest inventory; the category argument of `classify set` and `classify remove` use the latest `classify list`. The argument position makes the intended list unambiguous.
+Search, inventory, version, and category numbers have separate contexts. `modpack add <number>` uses the latest search; `resource`, `side`, `versions`, update selectors, and the mod argument of `classify set` use the latest inventory; `update --to <number>` uses the latest compatible-version list; the category argument of `classify set` and `classify remove` use the latest `classify list`. The argument position makes the intended list unambiguous.
 
 `modpack classify` defines, lists, removes, and assigns editorial categories. Its final `unclassified` list row can be assigned but never removed. Removing a defined category that is in use requires `--unclassify`. Category definitions and assignments live only in `.modpack/metadata.psd1`; numbered lists are temporary references. Resource pack activation and ordering require Default Options; `modpack resource move` reorders an enabled pack and `disable` removes it from the enabled order without uninstalling it.
 
-`modpack update` updates mods, resource packs, and shaders managed by Packwiz. Multiple selectors form one transaction: if any update fails, every Packwiz metadata change in the group is rolled back. Use `--type mod|resourcepack|shaderpack` to narrow the operation. Local files are never updated. Review the result with `modpack diff` before building.
+`modpack versions` lists compatible Modrinth releases and saves numbered choices. `modpack update` updates Packwiz-managed mods, resource packs, and shaders; `--to` selects an exact release, including an older one. Every update checks the declared dependency graph first: newly introduced known conflicts block the operation, while `--strict` also requires complete metadata and a clean resulting graph. Multiple selectors form one transaction, and every Packwiz metadata change is rolled back if one fails. Use `--type mod|resourcepack|shaderpack` to narrow the operation. Local files are never updated. Review the result with `modpack diff` before building.
 
 ## Sources of truth
 
 - `pack.toml`, its configured index, and `.pw.toml` files own technical Packwiz data.
 - `.modpack/project.psd1` owns the short ID and display/build identity.
-- `.modpack/metadata.psd1` owns editorial categories and display-name overrides.
+- `.modpack/metadata.psd1` owns editorial categories, display-name overrides, and explicit side overrides for local JARs.
 - `config/defaultoptions-common.toml` owns enabled resource packs and their order.
 - `dist/` contains generated artifacts and is not a source of truth.
 '@

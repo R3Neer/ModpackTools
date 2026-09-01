@@ -6,7 +6,7 @@ ModpackTools is a small CLI for managing multiple Minecraft Java modpacks based 
 
 ## Design and sources of truth
 
-- Packwiz owns technical data: technical name, filename, version, side, provider, IDs, URLs, and hashes.
+- Packwiz owns technical data: technical name, filename, version, side, provider, IDs, URLs, and hashes. Only local JARs without Packwiz metadata can have an explicit project-side override.
 - `.modpack` stores only identity and editorial decisions: short ID, display name/version, artifact name, categories, notes, and name overrides.
 - `config/defaultoptions-common.toml` owns the enabled resource-pack order.
 - `dependencies.psd1` pins the verified Packwiz build, download, and SHA-256 hashes used by managed installation.
@@ -123,6 +123,10 @@ modpack inventory --category performance
 modpack inventory --side host --source local
 modpack inventory --type resourcepack --state active
 modpack inventory --search sodium
+modpack side set sodium client
+modpack versions sodium
+modpack update sodium --to 2
+modpack update sodium --strict
 modpack update 3
 modpack resource enable "Fresh Animations" --position 1
 modpack resource move "Fresh Animations" --position 3
@@ -174,10 +178,12 @@ modpack resource enable <inventory-number> --position <n>
 modpack resource move <inventory-number> --position <n>
 modpack resource disable <inventory-number>
 modpack classify set <inventory-number> <category|category-number|unclassified>
+modpack side set <inventory-number> <client|host|both>
+modpack versions <inventory-number>
 modpack update <inventory-number>...
 ```
 
-Number contexts are deliberately separate. `modpack add <number>` resolves against the latest `search` results; a mod number passed as the first argument of `classify set`, and numbers passed to `resource` or `update`, resolve against the latest `inventory` view. A category number passed as the second argument of `classify set` or to `classify remove` resolves against the latest `classify list`. The command position determines the context, so the lists never become ambiguous. The caches are convenience references only; project files remain the sources of truth.
+Number contexts are deliberately separate. `modpack add <number>` resolves against the latest `search` results; a mod number passed to `side`, `versions`, or as the first argument of `classify set`, and numbers passed to `resource` or as update selectors, resolve against the latest `inventory` view. `modpack update <content> --to <number>` uses the latest `versions` list. A category number passed as the second argument of `classify set` or to `classify remove` resolves against the latest `classify list`. The argument position determines the context, so the lists never become ambiguous. The caches are convenience references only; project files remain the sources of truth.
 
 ### Enabling, disabling, and ordering resource packs
 
@@ -205,6 +211,14 @@ modpack classify set <mod|inventory-number> <category|number|unclassified> [--pr
 `remove` accepts an ID or number from the latest category list. It refuses to remove a category that is assigned to mods unless `--unclassify` is explicit. `set` accepts a displayed mod name, stable ID, current filename, `.pw.toml` stem, or number from the latest inventory. Its category accepts an ID, a number from `classify list`, or `unclassified`.
 
 These operations change only editorial metadata in `.modpack/metadata.psd1`; they never move, reinstall, or modify Packwiz content. Clearing a category preserves other editorial fields such as a name override. The former two-positional form, such as `modpack classify sodium performance`, is invalid; the `set` operation is required.
+
+### Correcting a mod side
+
+```powershell
+modpack side set <mod|inventory-number> <client|host|both> [--project <id>]
+```
+
+For Packwiz-managed mods this replaces the top-level `side` value in the existing `.pw.toml`, which remains the technical source of truth. For a local JAR, the command writes an explicit `Side` override to `.modpack/metadata.psd1` because there is no Packwiz metadata file to change. `host` is stored as Packwiz's `server` value. The command changes distribution metadata only; it cannot make an intrinsically client-only mod work on a dedicated server.
 
 ### Creating a project
 
@@ -247,14 +261,22 @@ Search results are filtered by the selected project's Minecraft version. Mod-onl
 
 The numbered list is stored in `LocalApplicationData\ModpackTools\last-search.json`, expires after 24 hours, and is tied to the project used for the search. It exists only for command-line convenience: Packwiz remains the source of truth and installation uses the stable project ID. Running another search replaces the list. A number that is missing, expired, or belongs to another project is rejected without installing anything.
 
-### Updating mods
+### Selecting versions and updating content
 
 ```powershell
-modpack update <name|id|filename...> [--type <type>] [--project <id>]
-modpack update --all [--type <type>] [--project <id>]
+modpack versions <name|id|filename|inventory-number> [--project <id>]
+modpack update <selector> --to <version-id|version-number|versions-number> [--project <id>]
+modpack update <selector...> [--type <type>] [--strict] [--project <id>]
+modpack update --all [--type <type>] [--strict] [--project <id>]
 ```
 
-A selector can be the displayed name, stable ID, current filename, or `.pw.toml` stem. It can identify a mod, resource pack, or shader. Several selectors are updated as one transaction: all are validated before Packwiz runs, and if any update fails, `pack.toml`, its configured index, and all `.pw.toml` files are restored to their original bytes.
+`versions` queries Modrinth versions compatible with the project's Minecraft version and, for mods, its loader. Resource-pack versions use Modrinth's `minecraft` loader; shader versions are filtered by Minecraft version. The result marks the installed and latest compatible versions, saves numbered references for 24 hours, and binds them to the selected project and content item. Running `versions` again replaces that context.
+
+`update --to` moves one Modrinth-managed mod, resource pack, or shader to an exact compatible version, including an older release. It preserves an explicitly selected side, refreshes the Packwiz index, and rejects version numbers that identify more than one release. Local files and providers without Modrinth version metadata cannot use `--to`.
+
+Before changing files, every update builds a best-effort dependency graph for the resulting pack. New declared `required` version mismatches, missing required projects, and declared `incompatible` relationships block the update. Existing unrelated issues and unavailable provider metadata are warnings by default; `--strict` requires the complete resulting graph to be both verifiable and free of known conflicts. This is stronger than Packwiz's normal update behavior, but it cannot prove runtime compatibility when publishers omit metadata or incompatibilities arise only during Minecraft startup.
+
+A selector can be the displayed name, stable ID, current filename, `.pw.toml` stem, or current inventory number. It can identify a mod, resource pack, or shader. Several selectors are updated as one transaction: all are validated before Packwiz runs, and if any update fails, `pack.toml`, its configured index, and all `.pw.toml` files are restored to their original bytes.
 
 `--all` means all Packwiz-managed external content: mods, resource packs, and shaders. `--type mod|resourcepack|shaderpack` narrows either a selector operation or `--all`. Local JAR and ZIP files are never updated and are reported as non-updatable when explicitly selected. Updating does not generate a build; use `modpack diff` to review the changes and `modpack build` when ready.
 
@@ -281,7 +303,7 @@ The hidden temporary artifact is created in `dist/` so Packwiz can export on the
 
 ## Inventory and sides
 
-`.pw.toml` files provide `client`, `server`, or `both` for every supported loader. For local JAR files, ModpackTools currently reads `fabric.mod.json`; NeoForge local JARs remain valid but use `unknown` when their side cannot be inferred.
+`.pw.toml` files provide `client`, `server`, or `both` for every supported loader. For local JAR files, ModpackTools currently reads `fabric.mod.json`; NeoForge local JARs remain valid but use `unknown` when their side cannot be inferred. Use `modpack side set` for an explicit correction.
 
 ```text
 [C]    client only
