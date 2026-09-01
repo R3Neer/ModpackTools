@@ -111,7 +111,7 @@ Inspect or filter the current contents:
 
 ```powershell
 modpack inventory --type mod
-modpack inventory --category <category>
+modpack inventory --category <category|number>
 modpack inventory --type resourcepack --state inactive
 modpack inventory --search <text>
 modpack update <inventory-number>
@@ -139,7 +139,7 @@ modpack build
 
 Search, inventory, and category numbers have separate contexts. `modpack add <number>` uses the latest search; `resource`, `update`, and the mod argument of `classify set` use the latest inventory; the category argument of `classify set` and `classify remove` use the latest `classify list`. The argument position makes the intended list unambiguous.
 
-`modpack classify` defines, lists, removes, and assigns editorial categories. Removing a category that is in use requires `--unclassify`. Category definitions and assignments live only in `.modpack/metadata.psd1`; numbered lists are temporary references. `modpack resource disable` removes a pack from the Default Options enabled order without uninstalling it.
+`modpack classify` defines, lists, removes, and assigns editorial categories. Its final `unclassified` list row can be assigned but never removed. Removing a defined category that is in use requires `--unclassify`. Category definitions and assignments live only in `.modpack/metadata.psd1`; numbered lists are temporary references. `modpack resource disable` removes a pack from the Default Options enabled order without uninstalling it.
 
 `modpack update` updates mods, resource packs, and shaders managed by Packwiz. Multiple selectors form one transaction: if any update fails, every Packwiz metadata change in the group is rolled back. Use `--type mod|resourcepack|shaderpack` to narrow the operation. Local files are never updated. Review the result with `modpack diff` before building.
 

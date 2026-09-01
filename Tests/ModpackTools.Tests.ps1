@@ -250,8 +250,18 @@ minecraft = "1.21.1"
         }
 
         It 'prints the module version through the global version option' {
-            (modpack --version 6>&1 | Out-String).Trim() | Should Be 'ModpackTools 0.13.0'
+            (modpack --version 6>&1 | Out-String).Trim() | Should Be 'ModpackTools 1.0.0'
             { modpack version } | Should Throw "Command 'version' is not recognized"
+        }
+
+        It 'terminates every successful public command output with a blank line' {
+            Mock Write-MpOutputEnd {}
+
+            modpack --version
+            Assert-MockCalled Write-MpOutputEnd -Times 1 -Exactly
+
+            modpack --help
+            Assert-MockCalled Write-MpOutputEnd -Times 2 -Exactly
         }
     }
 
@@ -488,7 +498,7 @@ mod-id = "abc123"
             Assert-MockCalled Invoke-RestMethod -Times 1 -ParameterFilter {
                 $Uri -match 'api\.modrinth\.com/v2/search' -and
                 [System.Uri]::UnescapeDataString($Uri) -match 'versions:1\.21\.1' -and
-                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/0.13.0'
+                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/1.0.0'
             }
         }
 
@@ -631,6 +641,35 @@ mod-id = "AANobbMI"
             Invoke-MpClassify @('set', '1', '1', '--project', $project.Id)
 
             (Get-ModpackMetadata -Project $project).Mods['modrinth:AANobbMI'].Category | Should Be 'visuals'
+        }
+
+        It 'uses category-list numbers in the inventory category filter' {
+            [void](New-ModpackCategory -Project $project -Id 'visuals' -Name 'VISUALS' -Order 5)
+            [void](Set-ModpackModClassification -Project $project -Selector 'Sodium' -Category 'visuals')
+            Invoke-MpClassify @('list', '--project', $project.Id)
+
+            { Invoke-MpInventory @('--category', '1', '--project', $project.Id) } | Should Not Throw
+            $references = Read-ModpackInventoryReferenceCache
+            @($references.Results).Count | Should Be 1
+            $references.Results[0].Selector | Should Be 'modrinth:AANobbMI'
+        }
+
+        It 'lists categories through the public command with only the operation argument' {
+            Set-ActiveModpackProject -Id $project.Id | Out-Null
+
+            { modpack classify list } | Should Not Throw
+            $cache = Read-ModpackCategoryCache
+            $cache.ProjectId | Should Be $project.Id
+            @($cache.Categories).Count | Should Be 2
+            @($cache.Categories | Where-Object Id -eq 'unclassified')[0].Index | Should Be 2
+        }
+
+        It 'resolves the numbered unclassified row for set but never for remove' {
+            Set-ActiveModpackProject -Id $project.Id | Out-Null
+            modpack classify list
+
+            (Resolve-ModpackCategoryId -Project $project -Selector '2' -AllowUnclassified) | Should Be 'unclassified'
+            { Invoke-MpClassify @('remove', '2', '--project', $project.Id) } | Should Throw "The 'unclassified' classification cannot be removed"
         }
 
         It 'removes an unused category by its latest category number' {
@@ -1018,6 +1057,15 @@ side = "client"
             $items.Count | Should Be 1
             $items[0].ReferenceNumber | Should Be 1
             $items[0].Name | Should Be 'Old Pack'
+        }
+
+        It 'pads numbered references to the shared list width' {
+            (Format-MpReferenceLabel -Reference 9 -Width 2) | Should Be '[ 9]'
+            (Format-MpReferenceLabel -Reference 10 -Width 2) | Should Be '[10]'
+            (Get-MpReferenceWidth -Items @(
+                [pscustomobject]@{ ReferenceNumber = 9 }
+                [pscustomobject]@{ ReferenceNumber = 10 }
+            )) | Should Be 2
         }
     }
 

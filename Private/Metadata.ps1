@@ -140,16 +140,25 @@ function Get-ModpackCategoryView {
             }
         }
     ) | Sort-Object Order, Name, Id
+    $categories = @($categories)
+    $definedCategoryCount = $categories.Count
+    $inventory = Get-ModpackInventory -Project $Project
+    $categories += [pscustomobject]@{
+        Id = 'unclassified'
+        Name = 'UNCLASSIFIED'
+        Order = $null
+        ModCount = @($inventory.Mods | Where-Object Category -eq 'unclassified').Count
+        IsUnclassified = $true
+    }
     $index = 0
     foreach ($category in $categories) {
         $index++
         $category | Add-Member -NotePropertyName ReferenceNumber -NotePropertyValue $index
     }
-    $inventory = Get-ModpackInventory -Project $Project
     return [pscustomobject]@{
         Project = $Project
         Categories = @($categories)
-        UnclassifiedCount = @($inventory.Mods | Where-Object Category -eq 'unclassified').Count
+        DefinedCategoryCount = $definedCategoryCount
     }
 }
 
@@ -181,7 +190,10 @@ function Resolve-ModpackCategoryId {
         [Parameter(Mandatory)][string]$Selector,
         [switch]$AllowUnclassified
     )
-    if ($AllowUnclassified -and $Selector.Equals('unclassified', [System.StringComparison]::OrdinalIgnoreCase)) { return 'unclassified' }
+    if ($Selector.Equals('unclassified', [System.StringComparison]::OrdinalIgnoreCase)) {
+        if ($AllowUnclassified) { return 'unclassified' }
+        Throw-MpError -Message "The 'unclassified' classification cannot be removed" -Hint 'assign affected mods to a category with modpack classify set' -ErrorId 'Metadata.ReservedClassification' -Category InvalidOperation -TargetObject $Selector
+    }
     $metadata = Get-ModpackMetadata -Project $Project
     if ($Selector -match '^[1-9][0-9]*$') {
         $cache = Read-ModpackCategoryCache
@@ -199,6 +211,10 @@ function Resolve-ModpackCategoryId {
             Throw-MpError -Message "Category number '$Selector' does not exist; available range: 1-$maximum" -Hint 'modpack classify list' -ErrorId 'Metadata.CategoryReferenceOutOfRange' -Category InvalidArgument -TargetObject $Selector
         }
         $Selector = [string]$match[0].Id
+        if ($Selector.Equals('unclassified', [System.StringComparison]::OrdinalIgnoreCase)) {
+            if ($AllowUnclassified) { return 'unclassified' }
+            Throw-MpError -Message "The 'unclassified' classification cannot be removed" -Hint 'assign affected mods to a category with modpack classify set' -ErrorId 'Metadata.ReservedClassification' -Category InvalidOperation -TargetObject $Selector
+        }
     }
     $categoryId = $metadata.Categories.Keys | Where-Object { ([string]$_).Equals($Selector, [System.StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1
     if (-not $categoryId) { Throw-MpError -Message "Category '$Selector' is not defined for project '$($Project.Id)'" -Hint 'modpack classify list' -ErrorId 'Metadata.UnknownCategory' -Category InvalidArgument -TargetObject $Selector }

@@ -131,7 +131,7 @@ function Invoke-MpClassify {
         Throw-MpError -Message 'The classify command requires an operation; allowed values: list, create, remove, set' -Hint 'modpack classify --help' -ErrorId 'Command.MissingOperation' -Category InvalidArgument
     }
     $operation = ([string]$Arguments[0]).ToLowerInvariant()
-    $remaining = if ($Arguments.Count -gt 1) { @($Arguments | Select-Object -Skip 1) } else { @() }
+    $remaining = @($Arguments | Select-Object -Skip 1)
     switch ($operation) {
         'list' {
             $parsed = ConvertFrom-MpOptions -Arguments $remaining -ValueOptions @('project')
@@ -225,6 +225,9 @@ function Invoke-MpInventory {
     $parameters = @{ Inventory = $inventory }
     foreach ($name in @('type', 'category', 'side', 'source', 'state', 'search')) {
         if ($parsed.Options.ContainsKey($name)) { $parameters[$name.Substring(0,1).ToUpperInvariant() + $name.Substring(1)] = $parsed.Options[$name] }
+    }
+    if ($parsed.Options.ContainsKey('category')) {
+        $parameters.Category = Resolve-ModpackCategoryId -Project $project -Selector ([string]$parsed.Options.category) -AllowUnclassified
     }
     if ($parsed.Options.ContainsKey('unclassified')) { $parameters.Category = 'unclassified' }
     $view = Select-ModpackInventory @parameters

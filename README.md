@@ -14,7 +14,7 @@ A mod without metadata remains valid and appears under `MODS · UNCLASSIFIED`. A
 
 ## Installation
 
-ModpackTools targets Windows. From the source directory:
+ModpackTools targets Windows. Download and extract the [latest release](https://github.com/R3Neer/ModpackTools/releases/latest), or clone the repository. Then run this from the extracted or cloned directory:
 
 ```powershell
 .\Install-ModpackTools.ps1
@@ -156,7 +156,7 @@ Every command that operates on an existing project accepts `--project <id>`. Aft
 `modpack inventory [id] [--project <id>]` displays mods, enabled and disabled resource packs, and shaders. Filters can be combined:
 
 - `--type all|mod|resourcepack|shaderpack`
-- `--category <id|unclassified>` or `--unclassified`
+- `--category <id|number|unclassified>` or `--unclassified`; numbers come from `modpack classify list`
 - `--side client|host|both|unknown`
 - `--source packwiz|local|builtin|missing`
 - `--state all|active|inactive`
@@ -195,7 +195,7 @@ modpack classify remove <category|number> [--unclassify] [--project <id>]
 modpack classify set <mod|inventory-number> <category|number|unclassified> [--project <id>]
 ```
 
-`list` shows the category ID, display name, order, and assigned-mod count. Its numbers are saved for 24 hours and bound to the selected project. `create` appends a category by default; `--name` controls its display label and `--order` controls its inventory order.
+`list` shows every classification, including `unclassified`, with its ID, display name, order where applicable, and assigned-mod count. Its numbers are saved for 24 hours and bound to the selected project. The final `unclassified` row can be used with `set`, but cannot be removed. `create` appends a category by default; `--name` controls its display label and `--order` controls its inventory order.
 
 `remove` accepts an ID or number from the latest category list. It refuses to remove a category that is assigned to mods unless `--unclassify` is explicit. `set` accepts a displayed mod name, stable ID, current filename, `.pw.toml` stem, or number from the latest inventory. Its category accepts an ID, a number from `classify list`, or `unclassified`.
 

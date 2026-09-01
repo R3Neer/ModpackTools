@@ -11,6 +11,7 @@ function modpack {
                 Throw-MpError -Message 'The global version option does not accept additional arguments' -Hint 'modpack --version' -ErrorId 'Command.InvalidArguments' -Category InvalidArgument -TargetObject $Arguments
             }
             Write-Host "ModpackTools $script:ModuleVersion"
+            Write-MpOutputEnd
             return
         }
         if (-not $Command -or $Command -eq '--help') {
@@ -18,6 +19,7 @@ function modpack {
                 Throw-MpError -Message 'The global help option does not accept additional arguments' -Hint 'modpack --help' -ErrorId 'Command.InvalidArguments' -Category InvalidArgument -TargetObject $Arguments
             }
             Show-MpHelp
+            Write-MpOutputEnd
             return
         }
         $key = $Command.ToLowerInvariant()
@@ -27,6 +29,7 @@ function modpack {
         }
         $handler = $commands[$key].Handler
         & $handler @Arguments
+        Write-MpOutputEnd
     } catch {
         if (-not (Test-MpExpectedError -Exception $_.Exception)) { throw }
         $errorId = [string]$_.Exception.Data['ModpackTools.ErrorId']

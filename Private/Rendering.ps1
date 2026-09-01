@@ -89,6 +89,10 @@ function Write-MpInfo {
     Write-Host "$($script:Palette.Heading)•$($script:Palette.Reset) $($script:Palette.Value)$Text$($script:Palette.Reset)"
 }
 
+function Write-MpOutputEnd {
+    Write-Host ''
+}
+
 function Write-MpKeyValue {
     param([Parameter(Mandatory)][string]$Key, [AllowNull()][object]$Value, [int]$Width = 16)
     Write-Host "$($script:Palette.Secondary)$($Key.PadRight($Width))$($script:Palette.Reset) " -NoNewline
@@ -161,11 +165,25 @@ function Write-MpSideLegend {
     Write-Host "$($script:Palette.Secondary) Both$($script:Palette.Reset)"
 }
 
+function Get-MpReferenceWidth {
+    param([Parameter(Mandatory)][AllowEmptyCollection()][array]$Items, [string]$PropertyName = 'ReferenceNumber')
+    $references = @($Items | Where-Object { $_.PSObject.Properties[$PropertyName] } | ForEach-Object { [string]$_.PSObject.Properties[$PropertyName].Value })
+    if (-not $references.Count) { return 0 }
+    return @($references | ForEach-Object Length | Measure-Object -Maximum).Maximum
+}
+
+function Format-MpReferenceLabel {
+    param([Parameter(Mandatory)][int]$Reference, [Parameter(Mandatory)][int]$Width)
+    $format = '{0,' + $Width + '}'
+    return '[' + ($format -f $Reference) + ']'
+}
+
 function Write-MpSideEntry {
-    param([Parameter(Mandatory)]$Item)
+    param([Parameter(Mandatory)]$Item, [int]$ReferenceWidth = 0)
 
     if ($Item.PSObject.Properties['ReferenceNumber']) {
-        Write-Host "  $($script:Palette.Accent)[$($Item.ReferenceNumber)]$($script:Palette.Reset) " -NoNewline
+        $label = Format-MpReferenceLabel -Reference $Item.ReferenceNumber -Width $ReferenceWidth
+        Write-Host "  $($script:Palette.Accent)$label$($script:Palette.Reset) " -NoNewline
     }
     else { Write-Host '  ' -NoNewline }
     switch ($Item.Side) {
@@ -191,7 +209,7 @@ function Write-MpSideEntry {
 }
 
 function Write-ModInventory {
-    param([Parameter(Mandatory)]$Inventory)
+    param([Parameter(Mandatory)]$Inventory, [int]$ReferenceWidth = 0)
 
     $metadata = $Inventory.Metadata
     $orderedCategories = @(
@@ -215,7 +233,7 @@ function Write-ModInventory {
         $items = @($Inventory.Mods | Where-Object Category -eq $category.Key | Sort-Object Name)
         if ($items.Count -eq 0) { continue }
         Write-MpSection "MODS · $($category.Name)" $items.Count
-        foreach ($item in $items) { Write-MpSideEntry $item }
+        foreach ($item in $items) { Write-MpSideEntry -Item $item -ReferenceWidth $ReferenceWidth }
     }
 
     $unclassified = @($Inventory.Mods | Where-Object Category -eq 'unclassified' | Sort-Object Name)
@@ -225,13 +243,13 @@ function Write-ModInventory {
             if ($item.InvalidCategory) {
                 Write-MpWarning "'$($item.Name)' references the missing category '$($item.InvalidCategory)' and is shown as unclassified."
             }
-            Write-MpSideEntry $item
+            Write-MpSideEntry -Item $item -ReferenceWidth $ReferenceWidth
         }
     }
 }
 
 function Write-ResourcePackInventory {
-    param([Parameter(Mandatory)]$Inventory, [switch]$HideEmptySections)
+    param([Parameter(Mandatory)]$Inventory, [switch]$HideEmptySections, [int]$ReferenceWidth = 0)
 
     if (-not $HideEmptySections -or $Inventory.ActiveResources.Count -gt 0 -or $Inventory.InactiveResources.Count -eq 0) {
         Write-MpSection 'RESOURCE PACKS · ACTUAL PRIORITY' $Inventory.ActiveResources.Count
@@ -247,7 +265,8 @@ function Write-ResourcePackInventory {
             default   { $item.Filename }
         }
         if ($item.PSObject.Properties['ReferenceNumber']) {
-            Write-Host "  $($script:Palette.Accent)[$($item.ReferenceNumber)]$($script:Palette.Reset) " -NoNewline
+            $label = Format-MpReferenceLabel -Reference $item.ReferenceNumber -Width $ReferenceWidth
+            Write-Host "  $($script:Palette.Accent)$label$($script:Palette.Reset) " -NoNewline
         }
         else {
             Write-Host "$($script:Palette.Secondary)$('{0,3}. ' -f $item.Priority)$($script:Palette.Reset)" -NoNewline
@@ -263,7 +282,8 @@ function Write-ResourcePackInventory {
         Write-MpSection 'RESOURCE PACKS · PRESENT BUT DISABLED' $Inventory.InactiveResources.Count
         foreach ($item in $Inventory.InactiveResources) {
             if ($item.PSObject.Properties['ReferenceNumber']) {
-                Write-Host "  $($script:Palette.Accent)[$($item.ReferenceNumber)]$($script:Palette.Reset) " -NoNewline
+                $label = Format-MpReferenceLabel -Reference $item.ReferenceNumber -Width $ReferenceWidth
+                Write-Host "  $($script:Palette.Accent)$label$($script:Palette.Reset) " -NoNewline
             }
             else { Write-Host '  ' -NoNewline }
             Write-Host "$($script:Palette.Secondary)○$($script:Palette.Reset) $($PSStyle.Bold)$($item.Name)$($PSStyle.Reset)" -NoNewline
@@ -275,7 +295,7 @@ function Write-ResourcePackInventory {
 }
 
 function Write-ShaderInventory {
-    param([Parameter(Mandatory)]$Inventory)
+    param([Parameter(Mandatory)]$Inventory, [int]$ReferenceWidth = 0)
     Write-MpSection 'SHADER PACKS' $Inventory.Shaders.Count
     if ($Inventory.Shaders.Count -eq 0) {
         Write-Host "$($script:Palette.Secondary)  · None$($script:Palette.Reset)"
@@ -286,7 +306,7 @@ function Write-ShaderInventory {
         if ($item.PSObject.Properties['ReferenceNumber']) {
             $shaderEntry | Add-Member -NotePropertyName ReferenceNumber -NotePropertyValue $item.ReferenceNumber
         }
-        Write-MpSideEntry $shaderEntry
+        Write-MpSideEntry -Item $shaderEntry -ReferenceWidth $ReferenceWidth
     }
 }
 
@@ -304,15 +324,16 @@ function Write-InventoryView {
         return
     }
     $hideEmpty = $View.Filters.Count -gt 0
+    $referenceWidth = Get-MpReferenceWidth -Items @(Get-ModpackInventoryReferenceItems -View $View)
     if (($View.IncludedTypes -contains 'mod') -and (-not $hideEmpty -or $View.Mods.Count -gt 0)) {
-        Write-ModInventory $View
+        Write-ModInventory -Inventory $View -ReferenceWidth $referenceWidth
     }
     $resourceCount = $View.ActiveResources.Count + $View.InactiveResources.Count
     if (($View.IncludedTypes -contains 'resourcepack') -and (-not $hideEmpty -or $resourceCount -gt 0)) {
-        Write-ResourcePackInventory $View -HideEmptySections:$hideEmpty
+        Write-ResourcePackInventory -Inventory $View -HideEmptySections:$hideEmpty -ReferenceWidth $referenceWidth
     }
     if (($View.IncludedTypes -contains 'shaderpack') -and (-not $hideEmpty -or $View.Shaders.Count -gt 0)) {
-        Write-ShaderInventory $View
+        Write-ShaderInventory -Inventory $View -ReferenceWidth $referenceWidth
     }
     $hasReferences = @(Get-ModpackInventoryReferenceItems -View $View | Where-Object { $_.PSObject.Properties['ReferenceNumber'] }).Count -gt 0
     if ($hasReferences) {
@@ -465,6 +486,7 @@ function Write-ModrinthSearchResults {
     }
 
     Write-MpSection 'RESULTS' @($Search.Results).Count
+    $referenceWidth = Get-MpReferenceWidth -Items @($Search.Results) -PropertyName Index
     foreach ($item in $Search.Results) {
         $typeLabel = switch ($item.Type) {
             'mod'          { 'MOD' }
@@ -472,7 +494,8 @@ function Write-ModrinthSearchResults {
             'shaderpack'   { 'SHADER' }
             default        { ([string]$item.Type).ToUpperInvariant() }
         }
-        Write-Host "  $($script:Palette.Process)$('[{0}]' -f $item.Index)$($script:Palette.Reset) " -NoNewline
+        $label = Format-MpReferenceLabel -Reference $item.Index -Width $referenceWidth
+        Write-Host "  $($script:Palette.Process)$label$($script:Palette.Reset) " -NoNewline
         Write-Host "$($script:Palette.Accent)$('{0,-10}' -f "[$typeLabel]")$($script:Palette.Reset) " -NoNewline
         Write-Host "$($script:Palette.Value)$($item.Title)$($script:Palette.Reset)"
         Write-Host "      $($script:Palette.Secondary)ID$($script:Palette.Reset) $($script:Palette.Value)$($item.ProjectId)$($script:Palette.Reset)  " -NoNewline
@@ -488,17 +511,16 @@ function Write-ModrinthSearchResults {
 function Write-ModpackCategoryList {
     param([Parameter(Mandatory)]$View)
     Write-MpBanner "CATEGORIES · $($View.Project.Id)"
-    Write-MpSection 'DEFINED CATEGORIES' @($View.Categories).Count
-    if (-not @($View.Categories).Count) {
-        Write-Host "$($script:Palette.Secondary)  · None$($script:Palette.Reset)"
-    }
+    Write-MpSection 'CLASSIFICATIONS' @($View.Categories).Count
+    $referenceWidth = Get-MpReferenceWidth -Items @($View.Categories)
     foreach ($category in $View.Categories) {
         $mods = if ($category.ModCount -eq 1) { '1 mod' } else { "$($category.ModCount) mods" }
-        Write-Host "  $($script:Palette.Accent)[$($category.ReferenceNumber)]$($script:Palette.Reset) " -NoNewline
+        $order = if ($category.PSObject.Properties['IsUnclassified'] -and $category.IsUnclassified) { 'not assigned' } else { "order $($category.Order)" }
+        $label = Format-MpReferenceLabel -Reference $category.ReferenceNumber -Width $referenceWidth
+        Write-Host "  $($script:Palette.Accent)$label$($script:Palette.Reset) " -NoNewline
         Write-Host "$($script:Palette.Value)$($PSStyle.Bold)$($category.Name)$($PSStyle.Reset) " -NoNewline
-        Write-Host "$($script:Palette.Secondary)$($category.Id) · $mods · order $($category.Order)$($script:Palette.Reset)"
+        Write-Host "$($script:Palette.Secondary)$($category.Id) · $mods · $order$($script:Palette.Reset)"
     }
     Write-Host ''
-    Write-MpKeyValue 'Unclassified' $View.UnclassifiedCount
-    if (@($View.Categories).Count) { Write-MpInfo 'Use a category ID or number with classify set and classify remove.' }
+    Write-MpInfo 'Use a classification ID or number with classify set. Only defined categories can be removed.'
 }

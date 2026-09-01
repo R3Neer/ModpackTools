@@ -44,7 +44,7 @@ function Get-MpCommandCatalog {
                 New-MpHelpItem '<id>' 'Project ID using the positional shorthand.'
                 New-MpHelpItem '--project <id>' 'Use this project instead of the active one.'
                 New-MpHelpItem '--type <type>' 'Filter by all, mod, resourcepack, or shaderpack.'
-                New-MpHelpItem '--category <id>' 'Show mods in one category or unclassified.'
+                New-MpHelpItem '--category <id|number>' 'Show mods in a category from classify list.'
                 New-MpHelpItem '--side <side>' 'Filter by client, host, both, or unknown.'
                 New-MpHelpItem '--source <source>' 'Filter by packwiz, local, builtin, or missing.'
                 New-MpHelpItem '--state <state>' 'Filter resource packs by all, active, or inactive.'
@@ -86,8 +86,9 @@ function Get-MpCommandCatalog {
                 New-MpHelpItem '--unclassify' 'When removing a used category, clear it from every assigned mod.'
                 New-MpHelpItem '--project <id>' 'Use this project instead of the active one.'
             ); Notes = @(
-                'Category numbers come from classify list; mod numbers come from inventory.'
-                'Removing a category in use requires --unclassify. Classification never moves or reinstalls a mod.'
+                'Classification numbers come from classify list; mod numbers come from inventory.'
+                'Unclassified is the final list row and can be assigned, but not removed. Removing a category in use requires --unclassify.'
+                'Classification never moves or reinstalls a mod.'
             ); Examples = @('modpack classify list', 'modpack classify create world-generation --name "WORLD GENERATION"', 'modpack classify set 3 2')
         }
         resource = [pscustomobject]@{
