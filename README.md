@@ -102,6 +102,10 @@ modpack resource enable "Fresh Animations" --position 1
 modpack resource enable "fresh-animations.zip" --position 3 --project vp26
 modpack add sodium --category performance
 modpack add sodium --project vp26 --category performance
+modpack update sodium
+modpack update sodium lithium ferrite-core
+modpack update --all
+modpack update --all --project vp26
 modpack build
 modpack build vp26 --keep-old --raw-log
 modpack diff
@@ -144,6 +148,17 @@ By default, Packwiz selects the latest compatible Fabric Loader; the technical v
 ### Adding a mod
 
 `modpack add` delegates technical selection and writing to `packwiz modrinth add`, then reads the generated `.pw.toml`. When `--category` is provided, only that editorial decision is written to metadata; the category must already exist. The former `modpack add mod` form is invalid.
+
+### Updating mods
+
+```powershell
+modpack update <name|id|filename...> [--project <id>]
+modpack update --all [--project <id>]
+```
+
+A selector can be the displayed name, stable ID, current filename, or `.pw.toml` stem. Several selectors are updated as one transaction: all are validated before Packwiz runs, and if any update fails, `pack.toml`, `index.toml`, and all `.pw.toml` files are restored to their original bytes.
+
+`--all` means all Packwiz-managed mods. It deliberately excludes local JARs, resource packs, and shaders. Local mods are reported as non-updatable instead of being silently skipped when explicitly selected. Updating does not generate a build; use `modpack diff` to review the changes and `modpack build` when ready.
 
 ### Building
 

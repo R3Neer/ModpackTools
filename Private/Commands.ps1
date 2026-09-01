@@ -42,7 +42,7 @@ function Assert-PositionalCount {
 function Invoke-MpHelp {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     $topic = if ($Arguments.Count) { [string]$Arguments[0] } else { '' }
-    $topics = @('', 'build', 'diff', 'status', 'inventory', 'resource', 'add', 'new', 'config', 'use', 'list')
+    $topics = @('', 'build', 'diff', 'status', 'inventory', 'resource', 'add', 'update', 'new', 'config', 'use', 'list')
     if ($topic -notin $topics) { throw "No help is available for '$topic'." }
     if (-not $topic) {
         Write-MpBanner "MODPACKTOOLS $script:ModuleVersion"
@@ -52,6 +52,7 @@ function Invoke-MpHelp {
         Write-MpCommandLine 'modpack inventory [id] [filters]' 'Contents and filters'
         Write-MpCommandLine 'modpack resource enable <selector> --position <n>' 'Enable or reposition a resource pack'
         Write-MpCommandLine 'modpack add <slug> [options]' 'Add a mod with Packwiz'
+        Write-MpCommandLine 'modpack update <selector...> | --all' 'Update one or more mods'
         Write-MpCommandLine 'modpack build [id] [options]' 'Generate the .mrpack in dist/'
         Write-MpCommandLine 'modpack diff [id]' 'Compare the current project with the latest build'
         Write-MpCommandLine 'modpack new <id> [options]' 'Create a project'
@@ -74,6 +75,11 @@ function Invoke-MpHelp {
             Write-MpInfo 'If the pack is already enabled, it is repositioned.'
         }
         'add' { Write-MpUsage 'modpack add <slug> [--project <id>] [--category <id>]' }
+        'update' {
+            Write-MpUsage 'modpack update <name|id|filename...> [--project <id>]'
+            Write-MpUsage 'modpack update --all [--project <id>]'
+            Write-MpInfo 'Only Packwiz-managed mods are updated; local JARs, resources, and shaders are excluded.'
+        }
         'new' { Write-MpUsage 'modpack new <id> --name <name> --minecraft <version> --loader fabric [--path <directory>] [--loader-version <version>] [--pack-version <version>] [--display-version <version>]' }
         'config' { Write-MpUsage 'modpack config get root | modpack config set root <directory>' }
         'use' { Write-MpUsage 'modpack use [id]' }
@@ -208,6 +214,24 @@ function Invoke-MpAdd {
     Write-MpSuccess "$($result.Item.Name) added as '$($result.Item.Id)'."
     if ($category) { Write-MpKeyValue 'Category' $category }
     else { Write-MpKeyValue 'Category' 'UNCLASSIFIED' }
+}
+
+function Invoke-MpUpdate {
+    param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
+    if ($Arguments -contains '--help') { Invoke-MpHelp update; return }
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project') -SwitchOptions @('all')
+    if ($parsed.Options.ContainsKey('all') -and $parsed.Positionals.Count) {
+        throw "Use either mod selectors or '--all', not both."
+    }
+    if (-not $parsed.Options.ContainsKey('all') -and $parsed.Positionals.Count -eq 0) {
+        throw 'Usage: modpack update <name|id|filename...> [--project <id>] | modpack update --all [--project <id>]'
+    }
+    $projectId = if ($parsed.Options.ContainsKey('project')) { $parsed.Options.project } else { $null }
+    $project = Resolve-ModpackProject -Id $projectId
+    $label = if ($parsed.Options.ContainsKey('all')) { 'all Packwiz-managed mods' } else { "$($parsed.Positionals.Count) selected mod(s)" }
+    Write-MpStep "Updating $label in $($project.Id)..."
+    $result = Update-ModpackMods -Project $project -Selectors $parsed.Positionals -All:$parsed.Options.ContainsKey('all')
+    Write-ModUpdateSummary -Update $result
 }
 
 function Invoke-MpNew {

@@ -355,3 +355,23 @@ function Write-ModpackDiff {
     Write-Host ''
     Write-MpKeyValue 'Differences' $Diff.Total
 }
+
+function Write-ModUpdateSummary {
+    param([Parameter(Mandatory)]$Update)
+
+    Write-MpBanner "UPDATE · $($Update.Project.DisplayName)"
+    foreach ($item in $Update.Items) {
+        $status = if ($item.Changed) { 'UPDATED' } else { 'CURRENT' }
+        $color = if ($item.Changed) { $script:Palette.Success } else { $script:Palette.Secondary }
+        Write-Host "  $color$('{0,-9}' -f $status)$($script:Palette.Reset) " -NoNewline
+        Write-Host "$($script:Palette.Value)$($item.Name)$($script:Palette.Reset)" -NoNewline
+        if ($item.PreviousFile -ne $item.Filename) {
+            Write-Host " $($script:Palette.Secondary)$($item.PreviousFile) -> $($item.Filename)$($script:Palette.Reset)"
+        }
+        else { Write-Host '' }
+    }
+    Write-Host ''
+    Write-MpKeyValue 'Checked' $Update.Items.Count
+    Write-MpKeyValue 'Updated' @($Update.Items | Where-Object Changed).Count
+    Write-MpInfo 'No build was generated. Run modpack diff, then modpack build when ready.'
+}

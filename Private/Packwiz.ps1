@@ -84,6 +84,8 @@ Add a Modrinth mod and optionally assign an existing editorial category:
 ```powershell
 modpack add <slug>
 modpack add <slug> --category <category>
+modpack update <name|id|filename...>
+modpack update --all
 ```
 
 Inspect or filter the current contents:
@@ -109,6 +111,8 @@ modpack build
 ```
 
 `modpack diff` compares the current project with the newest `.mrpack` in `dist/`. `modpack build` refreshes Packwiz metadata and writes the generated artifact to `dist/`.
+
+`modpack update` updates only Packwiz-managed mods. Multiple selectors form one transaction: if any update fails, every Packwiz metadata change in the group is rolled back. Local JARs, resource packs, and shaders are not included. Review the result with `modpack diff` before building.
 
 ## Sources of truth
 
@@ -237,6 +241,130 @@ function Add-ModpackMod {
     if (-not $item) { throw "Could not normalize '$($candidates[0].FullName)'." }
     if ($Category) { Set-ModMetadataCategory -Project $Project -ModId $item.Id -Category $Category }
     return [pscustomobject]@{ Item = $item; Log = $log }
+}
+
+function Resolve-ModpackModSelectors {
+    param(
+        [Parameter(Mandatory)]$Project,
+        [Parameter(Mandatory)][string[]]$Selectors
+    )
+
+    $inventory = Get-ModpackInventory -Project $Project
+    $resolved = [System.Collections.Generic.List[object]]::new()
+    foreach ($selector in $Selectors) {
+        $matches = @(
+            $inventory.Mods | Where-Object {
+                $stem = if ($_.MetadataPath) { [System.IO.Path]::GetFileName($_.MetadataPath) -replace '\.pw\.toml$', '' } else { $null }
+                @($_.Name, $_.Id, $_.Filename, $stem) | Where-Object {
+                    $_ -and ([string]$_).Equals($selector, [System.StringComparison]::OrdinalIgnoreCase)
+                }
+            }
+        )
+        if ($matches.Count -eq 0) {
+            throw "Mod '$selector' was not found. Run: modpack inventory --type mod"
+        }
+        if ($matches.Count -gt 1) {
+            $ids = @($matches | ForEach-Object Id | Sort-Object -Unique) -join ', '
+            throw "Mod selector '$selector' is ambiguous. Matching IDs: $ids"
+        }
+        $item = $matches[0]
+        if ($item.Source -ne 'packwiz' -or -not $item.MetadataPath) {
+            throw "Mod '$selector' is local and cannot be updated by Packwiz."
+        }
+        if (-not ($resolved | Where-Object MetadataPath -eq $item.MetadataPath)) { $resolved.Add($item) }
+    }
+    return @($resolved)
+}
+
+function Get-PackwizStateSnapshot {
+    param([Parameter(Mandatory)]$Project)
+
+    $paths = [System.Collections.Generic.List[string]]::new()
+    foreach ($name in @('pack.toml', 'index.toml')) {
+        $path = Join-Path $Project.Root $name
+        if (Test-Path -LiteralPath $path -PathType Leaf) { $paths.Add($path) }
+    }
+    Get-ChildItem -LiteralPath $Project.Root -Filter '*.pw.toml' -File -Recurse -ErrorAction SilentlyContinue |
+        ForEach-Object { $paths.Add($_.FullName) }
+
+    $files = @{}
+    foreach ($path in $paths) {
+        $relative = [System.IO.Path]::GetRelativePath($Project.Root, $path)
+        $files[$relative] = [System.IO.File]::ReadAllBytes($path)
+    }
+    return $files
+}
+
+function Restore-PackwizStateSnapshot {
+    param(
+        [Parameter(Mandatory)]$Project,
+        [Parameter(Mandatory)][hashtable]$Snapshot
+    )
+
+    foreach ($file in Get-ChildItem -LiteralPath $Project.Root -Filter '*.pw.toml' -File -Recurse -ErrorAction SilentlyContinue) {
+        $relative = [System.IO.Path]::GetRelativePath($Project.Root, $file.FullName)
+        if (-not $Snapshot.ContainsKey($relative)) { Remove-Item -LiteralPath $file.FullName -Force }
+    }
+    foreach ($relative in $Snapshot.Keys) {
+        $path = Join-Path $Project.Root $relative
+        [System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($path)) | Out-Null
+        [System.IO.File]::WriteAllBytes($path, $Snapshot[$relative])
+    }
+}
+
+function Update-ModpackMods {
+    param(
+        [Parameter(Mandatory)]$Project,
+        [string[]]$Selectors = @(),
+        [switch]$All
+    )
+
+    Assert-ModpackStructure -Project $Project
+    if ($All -and $Selectors.Count) { throw "Use either mod selectors or '--all', not both." }
+    if (-not $All -and $Selectors.Count -eq 0) { throw 'At least one mod selector or --all is required.' }
+
+    $beforeInventory = Get-ModpackInventory -Project $Project
+    $targets = if ($All) {
+        @($beforeInventory.Mods | Where-Object { $_.Source -eq 'packwiz' -and $_.MetadataPath } | Sort-Object Name)
+    }
+    else {
+        @(Resolve-ModpackModSelectors -Project $Project -Selectors $Selectors)
+    }
+    if ($targets.Count -eq 0) { throw "Project '$($Project.Id)' has no Packwiz-managed mods to update." }
+
+    $snapshot = Get-PackwizStateSnapshot -Project $Project
+    $log = [System.Collections.Generic.List[string]]::new()
+    try {
+        foreach ($target in $targets) {
+            $stem = [System.IO.Path]::GetFileName($target.MetadataPath) -replace '\.pw\.toml$', ''
+            foreach ($line in @(Invoke-Packwiz -Arguments @('update', $stem, '--yes') -WorkingDirectory $Project.Root)) { $log.Add($line) }
+        }
+
+        $afterInventory = Get-ModpackInventory -Project $Project
+        $results = @(
+            foreach ($target in $targets) {
+                $updated = $afterInventory.Mods | Where-Object MetadataPath -eq $target.MetadataPath | Select-Object -First 1
+                if (-not $updated) { throw "Updated metadata '$($target.MetadataPath)' could not be normalized." }
+                $relative = [System.IO.Path]::GetRelativePath($Project.Root, $target.MetadataPath)
+                $beforeBytes = $snapshot[$relative]
+                $afterBytes = [System.IO.File]::ReadAllBytes($target.MetadataPath)
+                $changed = -not [System.Linq.Enumerable]::SequenceEqual([byte[]]$beforeBytes, [byte[]]$afterBytes)
+                [pscustomobject]@{
+                    Id             = $updated.Id
+                    Name           = $updated.Name
+                    PreviousFile   = $target.Filename
+                    Filename       = $updated.Filename
+                    Changed        = $changed
+                    MetadataPath   = $updated.MetadataPath
+                }
+            }
+        )
+        return [pscustomobject]@{ Project = $Project; Items = $results; Log = @($log) }
+    }
+    catch {
+        Restore-PackwizStateSnapshot -Project $Project -Snapshot $snapshot
+        throw "No mods were updated because the group failed and Packwiz state was restored. $($_.Exception.Message)"
+    }
 }
 
 function Build-ModpackProject {

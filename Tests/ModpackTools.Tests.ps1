@@ -124,6 +124,8 @@ minecraft = "1.21.1"
             $projectPath = New-TestModpack $fixtureRoot 'Readme Pack' 'readme'
             $text = Get-ModpackProjectReadmeText -Project (Read-ModpackProject $projectPath)
             $text | Should Match 'modpack add <slug>'
+            $text | Should Match 'modpack update --all'
+            $text | Should Match 'one transaction'
             $text | Should Match 'modpack diff'
             $text | Should Match 'modpack resource enable'
             $text | Should Match 'defaultoptions-common.toml'
@@ -228,6 +230,90 @@ mod-id = "abc123"
             $categorized = $categorizedInventory.Mods | Where-Object Id -eq 'modrinth:abc123' | Select-Object -First 1
             $categorized.Id | Should Be 'modrinth:abc123'
             $categorized.Category | Should Be 'performance'
+        }
+    }
+
+    Describe 'Mod updates' {
+        BeforeEach {
+            $fixtureRoot = Join-Path $TestDrive 'update-packs'
+            [System.IO.Directory]::CreateDirectory($fixtureRoot) | Out-Null
+            $projectPath = New-TestModpack $fixtureRoot 'Pack' 'pack'
+            $project = Read-ModpackProject $projectPath
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'mods/sodium.pw.toml'), @'
+name = "Sodium"
+filename = "sodium-old.jar"
+side = "client"
+[update.modrinth]
+mod-id = "AANobbMI"
+version = "old"
+'@)
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'mods/lithium.pw.toml'), @'
+name = "Lithium"
+filename = "lithium-old.jar"
+side = "both"
+[update.modrinth]
+mod-id = "gvQqBUqZ"
+version = "old"
+'@)
+        }
+
+        It 'resolves managed mods by name ID filename and metadata stem' {
+            (Resolve-ModpackModSelectors -Project $project -Selectors @('Sodium'))[0].Id | Should Be 'modrinth:AANobbMI'
+            (Resolve-ModpackModSelectors -Project $project -Selectors @('modrinth:gvQqBUqZ'))[0].Name | Should Be 'Lithium'
+            (Resolve-ModpackModSelectors -Project $project -Selectors @('sodium-old.jar'))[0].Name | Should Be 'Sodium'
+            (Resolve-ModpackModSelectors -Project $project -Selectors @('lithium'))[0].Name | Should Be 'Lithium'
+        }
+
+        It 'rejects an explicitly selected local JAR' {
+            [System.IO.File]::WriteAllBytes((Join-Path $projectPath 'mods/local.jar'), [byte[]](1, 2, 3))
+            { Resolve-ModpackModSelectors -Project $project -Selectors @('local.jar') } | Should Throw 'cannot be updated by Packwiz'
+        }
+
+        It 'restores the whole Packwiz state when a grouped update fails' {
+            $sodiumPath = Join-Path $projectPath 'mods/sodium.pw.toml'
+            $lithiumPath = Join-Path $projectPath 'mods/lithium.pw.toml'
+            $indexPath = Join-Path $projectPath 'index.toml'
+            $beforeSodium = [System.IO.File]::ReadAllBytes($sodiumPath)
+            $beforeLithium = [System.IO.File]::ReadAllBytes($lithiumPath)
+            $beforeIndex = [System.IO.File]::ReadAllBytes($indexPath)
+            $script:updateCalls = 0
+            Mock Invoke-Packwiz {
+                $script:updateCalls++
+                if ($script:updateCalls -eq 1) {
+                    [System.IO.File]::WriteAllText($sodiumPath, 'changed')
+                    return @('updated sodium')
+                }
+                [System.IO.File]::WriteAllText($lithiumPath, 'changed')
+                [System.IO.File]::WriteAllText($indexPath, 'changed')
+                throw 'simulated Packwiz failure'
+            }
+
+            { Update-ModpackMods -Project $project -Selectors @('sodium', 'lithium') } | Should Throw 'state was restored'
+            [System.Linq.Enumerable]::SequenceEqual([byte[]]$beforeSodium, [byte[]][System.IO.File]::ReadAllBytes($sodiumPath)) | Should Be $true
+            [System.Linq.Enumerable]::SequenceEqual([byte[]]$beforeLithium, [byte[]][System.IO.File]::ReadAllBytes($lithiumPath)) | Should Be $true
+            [System.Linq.Enumerable]::SequenceEqual([byte[]]$beforeIndex, [byte[]][System.IO.File]::ReadAllBytes($indexPath)) | Should Be $true
+            Assert-MockCalled Invoke-Packwiz -Times 2
+        }
+
+        It 'updates every managed mod individually for --all' {
+            Mock Invoke-Packwiz { return @('already current') }
+            $result = Update-ModpackMods -Project $project -All
+            $result.Items.Count | Should Be 2
+            $result.Items | ForEach-Object Changed | Should Be @($false, $false)
+            Assert-MockCalled Invoke-Packwiz -Times 2
+        }
+
+        It 'also rolls back when updated metadata cannot be normalized' {
+            $sodiumPath = Join-Path $projectPath 'mods/sodium.pw.toml'
+            $before = [System.IO.File]::ReadAllBytes($sodiumPath)
+            Mock Invoke-Packwiz {
+                Remove-Item -LiteralPath $sodiumPath -Force
+                return @('metadata removed')
+            }
+
+            { Update-ModpackMods -Project $project -Selectors @('sodium') } | Should Throw 'state was restored'
+            Test-Path -LiteralPath $sodiumPath | Should Be $true
+            [System.Linq.Enumerable]::SequenceEqual([byte[]]$before, [byte[]][System.IO.File]::ReadAllBytes($sodiumPath)) | Should Be $true
         }
     }
 
