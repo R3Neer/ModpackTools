@@ -109,10 +109,68 @@ function Set-ModMetadataCategory {
     )
 
     $metadata = Get-ModpackMetadata -Project $Project
-    if (-not $metadata.Categories.ContainsKey($Category)) {
+    $categoryId = $metadata.Categories.Keys | Where-Object { ([string]$_).Equals($Category, [System.StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1
+    if (-not $categoryId) {
         throw "Category '$Category' does not exist in the metadata for '$($Project.Id)'."
     }
     if (-not $metadata.Mods.ContainsKey($ModId)) { $metadata.Mods[$ModId] = @{} }
-    $metadata.Mods[$ModId]['Category'] = $Category
+    $metadata.Mods[$ModId]['Category'] = [string]$categoryId
     Write-PowerShellDataFileAtomic -Data $metadata -Path (Join-Path $Project.Root '.modpack/metadata.psd1')
+}
+
+function Resolve-ModpackModForClassification {
+    param(
+        [Parameter(Mandatory)]$Project,
+        [Parameter(Mandatory)][string]$Selector
+    )
+
+    $inventory = Get-ModpackInventory -Project $Project
+    $matches = @(
+        $inventory.Mods | Where-Object {
+            $stem = if ($_.MetadataPath) { [System.IO.Path]::GetFileName($_.MetadataPath) -replace '\.pw\.toml$', '' } else { $null }
+            @($_.Name, $_.Id, $_.Filename, $stem) | Where-Object {
+                $_ -and ([string]$_).Equals($Selector, [System.StringComparison]::OrdinalIgnoreCase)
+            }
+        }
+    )
+    if ($matches.Count -eq 0) {
+        throw "Mod '$Selector' was not found. Run: modpack inventory --type mod"
+    }
+    if ($matches.Count -gt 1) {
+        $ids = @($matches | ForEach-Object Id | Sort-Object -Unique) -join ', '
+        throw "Mod selector '$Selector' is ambiguous. Matching IDs: $ids"
+    }
+    return $matches[0]
+}
+
+function Set-ModpackModClassification {
+    param(
+        [Parameter(Mandatory)]$Project,
+        [Parameter(Mandatory)][string]$Selector,
+        [Parameter(Mandatory)][string]$Category
+    )
+
+    $item = Resolve-ModpackModForClassification -Project $Project -Selector $Selector
+    $metadata = Get-ModpackMetadata -Project $Project
+    $previous = $item.Category
+    if ($Category.Equals('unclassified', [System.StringComparison]::OrdinalIgnoreCase)) {
+        if ($metadata.Mods.ContainsKey($item.Id)) {
+            $entry = $metadata.Mods[$item.Id]
+            [void]$entry.Remove('Category')
+            if ($entry.Count -eq 0) { [void]$metadata.Mods.Remove($item.Id) }
+        }
+        $normalizedCategory = 'unclassified'
+    }
+    else {
+        $categoryId = $metadata.Categories.Keys | Where-Object { ([string]$_).Equals($Category, [System.StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1
+        if (-not $categoryId) {
+            throw "Category '$Category' does not exist in the metadata for '$($Project.Id)'."
+        }
+        if (-not $metadata.Mods.ContainsKey($item.Id)) { $metadata.Mods[$item.Id] = @{} }
+        $metadata.Mods[$item.Id]['Category'] = [string]$categoryId
+        $normalizedCategory = [string]$categoryId
+    }
+    Write-PowerShellDataFileAtomic -Data $metadata -Path (Join-Path $Project.Root '.modpack/metadata.psd1')
+    $updated = (Get-ModpackInventory -Project $Project).Mods | Where-Object Id -eq $item.Id | Select-Object -First 1
+    return [pscustomobject]@{ Item = $updated; PreviousCategory = $previous; Category = $normalizedCategory }
 }

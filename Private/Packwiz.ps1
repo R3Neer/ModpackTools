@@ -87,6 +87,8 @@ modpack search <query> --type mod
 modpack add <search-number>
 modpack add <slug>
 modpack add <slug> --category <category>
+modpack classify <name|id|filename> <category>
+modpack classify <name|id|filename> unclassified
 modpack update <name|id|filename...>
 modpack update --all
 modpack update --all --type mod
@@ -105,6 +107,7 @@ Enable or reposition a resource pack. Position `1` is the highest priority in th
 
 ```powershell
 modpack resource enable <name|id|filename> --position <n>
+modpack resource disable <name|id|filename>
 ```
 
 ## Build workflow
@@ -117,6 +120,8 @@ modpack build
 `modpack diff` compares the current project with the newest `.mrpack` in `dist/`. `modpack build` refreshes Packwiz metadata and writes the generated artifact to `dist/`.
 
 `modpack search` queries compatible Modrinth projects and saves the numbered results for 24 hours. `modpack add <number>` installs from that saved list; IDs and slugs remain valid directly. The cache is only a convenience reference and Packwiz remains the technical source of truth.
+
+`modpack classify` changes only the editorial category stored for a mod's stable ID. Use `unclassified` to remove its category assignment. `modpack resource disable` removes a pack from the Default Options enabled order without uninstalling it.
 
 `modpack update` updates mods, resource packs, and shaders managed by Packwiz. Multiple selectors form one transaction: if any update fails, every Packwiz metadata change in the group is rolled back. Use `--type mod|resourcepack|shaderpack` to narrow the operation. Local files are never updated. Review the result with `modpack diff` before building.
 

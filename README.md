@@ -100,10 +100,13 @@ modpack inventory --type resourcepack --state active
 modpack inventory --search sodium
 modpack resource enable "Fresh Animations" --position 1
 modpack resource enable "fresh-animations.zip" --position 3 --project vp26
+modpack resource disable "Fresh Animations"
 modpack search sodium
 modpack search "fresh animations" --type resourcepack
 modpack add 2
 modpack add sodium --category performance
+modpack classify sodium performance
+modpack classify sodium unclassified
 modpack add sodium --project vp26 --category performance
 modpack update sodium
 modpack update sodium lithium ferrite-core
@@ -131,15 +134,25 @@ An explicit ID takes precedence over the session selection. `modpack use` affect
 
 `host` corresponds to Packwiz's technical `server` value. Category and side filters automatically narrow the view to mods; `--state` narrows it to resource packs.
 
-### Enabling and ordering resource packs
+### Enabling, disabling, and ordering resource packs
 
 ```powershell
 modpack resource enable <name|id|filename> --position <n> [--project <id>]
+modpack resource disable <name|id|filename> [--project <id>]
 ```
 
-The selector accepts the name displayed by `inventory`, the Default Options ID, or the exact filename. Position 1 is the highest priority visible in the Minecraft GUI. If the pack is already enabled, the same command repositions it; if it is disabled, the command enables it. Ambiguous selectors and out-of-range positions are rejected without writing.
+The selector accepts the name displayed by `inventory`, the Default Options ID, or the exact filename. Position 1 is the highest priority visible in the Minecraft GUI. If the pack is already enabled, `enable` repositions it; if it is disabled, the command enables it. `disable` removes it from the enabled order without deleting its ZIP or `.pw.toml`. Repeated disable operations are safe. Ambiguous selectors and out-of-range positions are rejected without writing.
 
 The command modifies only `defaultResourcePacks` in `config/defaultoptions-common.toml`; it does not maintain a second activation list.
+
+### Classifying an existing mod
+
+```powershell
+modpack classify <name|id|filename> <category> [--project <id>]
+modpack classify <name|id|filename> unclassified [--project <id>]
+```
+
+The selector accepts the displayed name, stable ID, current filename, or `.pw.toml` stem. The category must already exist in `.modpack/metadata.psd1`. Reclassification replaces only the mod's editorial `Category` value; it does not move, reinstall, or modify the Packwiz metadata. `unclassified` removes the assignment while preserving other editorial fields such as a name override.
 
 ### Creating a project
 

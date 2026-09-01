@@ -60,3 +60,27 @@ function Enable-ModpackResourcePack {
     $item = $updated.ActiveResources | Where-Object { $_.Id.Equals($target.DefaultId, [System.StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1
     return [pscustomobject]@{ Item = $item; Inventory = $updated; WasActive = $target.Active }
 }
+
+function Disable-ModpackResourcePack {
+    param(
+        [Parameter(Mandatory)]$Project,
+        [Parameter(Mandatory)][string]$Selector
+    )
+
+    $inventory = Get-ModpackInventory -Project $Project
+    $target = Resolve-ModpackResourcePack -Inventory $inventory -Selector $Selector
+    if (-not $target.Active) {
+        return [pscustomobject]@{ Item = $target; Inventory = $inventory; WasActive = $false }
+    }
+    $remaining = @(
+        $inventory.ActiveResources |
+            Where-Object { -not $_.Id.Equals($target.DefaultId, [System.StringComparison]::OrdinalIgnoreCase) } |
+            ForEach-Object Id
+    )
+    Set-DefaultResourcePackOrder -Project $Project -Ids $remaining
+    return [pscustomobject]@{
+        Item      = $target
+        Inventory = Get-ModpackInventory -Project $Project
+        WasActive = $true
+    }
+}

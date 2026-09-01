@@ -263,7 +263,7 @@ mod-id = "abc123"
             Assert-MockCalled Invoke-RestMethod -Times 1 -ParameterFilter {
                 $Uri -match 'api\.modrinth\.com/v2/search' -and
                 [System.Uri]::UnescapeDataString($Uri) -match 'versions:1\.21\.1' -and
-                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/0.7.0'
+                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/0.8.0'
             }
         }
 
@@ -297,6 +297,51 @@ mod-id = "abc123"
         It 'renders IDs and numbered choices' {
             $search = Search-ModrinthContent -Project $project -Query 'sodium'
             { Write-ModrinthSearchResults -Search $search -Project $project } | Should Not Throw
+        }
+    }
+
+    Describe 'Mod classification' {
+        BeforeEach {
+            $fixtureRoot = Join-Path $TestDrive 'classification-packs'
+            [System.IO.Directory]::CreateDirectory($fixtureRoot) | Out-Null
+            $projectPath = New-TestModpack $fixtureRoot ('Pack-' + [guid]::NewGuid().ToString('N')) 'pack'
+            $project = Read-ModpackProject $projectPath
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'mods/sodium.pw.toml'), @'
+name = "Sodium"
+filename = "sodium.jar"
+side = "client"
+[update.modrinth]
+mod-id = "AANobbMI"
+'@)
+        }
+
+        It 'classifies and reclassifies an existing mod by stable selectors' {
+            $classified = Set-ModpackModClassification -Project $project -Selector 'Sodium' -Category PERFORMANCE
+            $classified.Category | Should Be 'performance'
+            $classified.Item.Category | Should Be 'performance'
+
+            $unclassified = Set-ModpackModClassification -Project $project -Selector 'modrinth:AANobbMI' -Category unclassified
+            $unclassified.PreviousCategory | Should Be 'performance'
+            $unclassified.Item.Category | Should Be 'unclassified'
+            (Get-ModpackMetadata $project).Mods.ContainsKey('modrinth:AANobbMI') | Should Be $false
+        }
+
+        It 'preserves other editorial metadata when removing a category' {
+            $metadata = Get-ModpackMetadata $project
+            $metadata.Mods['modrinth:AANobbMI'] = @{ Name = 'Fast Renderer'; Category = 'performance' }
+            Write-PowerShellDataFileAtomic -Path (Join-Path $projectPath '.modpack/metadata.psd1') -Data $metadata
+
+            [void](Set-ModpackModClassification -Project $project -Selector 'Fast Renderer' -Category unclassified)
+            $updated = Get-ModpackMetadata $project
+            $updated.Mods['modrinth:AANobbMI'].Name | Should Be 'Fast Renderer'
+            $updated.Mods['modrinth:AANobbMI'].ContainsKey('Category') | Should Be $false
+        }
+
+        It 'rejects an unknown category without modifying metadata' {
+            $path = Join-Path $projectPath '.modpack/metadata.psd1'
+            $before = [System.IO.File]::ReadAllBytes($path)
+            { Set-ModpackModClassification -Project $project -Selector 'sodium.jar' -Category nonexistent } | Should Throw "Category 'nonexistent' does not exist"
+            [System.Linq.Enumerable]::SequenceEqual([byte[]]$before, [byte[]][System.IO.File]::ReadAllBytes($path)) | Should Be $true
         }
     }
 
@@ -520,6 +565,30 @@ side = "client"
 
             $result.WasActive | Should Be $true
             @(Get-DefaultResourcePackOrder $project) | Should Be @('vanilla', 'file/active.zip')
+        }
+
+        It 'disables an enabled pack without deleting it and preserves remaining order' {
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'resourcepacks/active.pw.toml'), "name = `"Active Pack`"`nfilename = `"active.zip`"")
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'config/defaultoptions-common.toml'), 'defaultResourcePacks = ["vanilla", "file/active.zip"]')
+
+            $result = Disable-ModpackResourcePack -Project $project -Selector 'Active Pack'
+
+            $result.WasActive | Should Be $true
+            @(Get-DefaultResourcePackOrder $project) | Should Be @('vanilla')
+            Test-Path -LiteralPath (Join-Path $projectPath 'resourcepacks/active.pw.toml') | Should Be $true
+            $result.Inventory.InactiveResources[0].Name | Should Be 'Active Pack'
+        }
+
+        It 'does not rewrite Default Options when the pack is already disabled' {
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'resourcepacks/inactive.pw.toml'), "name = `"Inactive Pack`"`nfilename = `"inactive.zip`"")
+            $path = Join-Path $projectPath 'config/defaultoptions-common.toml'
+            [System.IO.File]::WriteAllText($path, 'defaultResourcePacks = ["vanilla"]')
+            $before = [System.IO.File]::ReadAllBytes($path)
+
+            $result = Disable-ModpackResourcePack -Project $project -Selector 'inactive.zip'
+
+            $result.WasActive | Should Be $false
+            [System.Linq.Enumerable]::SequenceEqual([byte[]]$before, [byte[]][System.IO.File]::ReadAllBytes($path)) | Should Be $true
         }
 
         It 'rejects out-of-range positions without modifying the file' {

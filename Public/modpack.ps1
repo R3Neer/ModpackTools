@@ -17,6 +17,7 @@ function modpack {
         diff   = 'Invoke-MpDiff'
         new    = 'Invoke-MpNew'
         add    = 'Invoke-MpAdd'
+        classify = 'Invoke-MpClassify'
         update = 'Invoke-MpUpdate'
         config = 'Invoke-MpConfig'
     }

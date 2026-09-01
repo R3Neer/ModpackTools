@@ -42,7 +42,7 @@ function Assert-PositionalCount {
 function Invoke-MpHelp {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     $topic = if ($Arguments.Count) { [string]$Arguments[0] } else { '' }
-    $topics = @('', 'build', 'diff', 'status', 'inventory', 'resource', 'search', 'add', 'update', 'new', 'config', 'use', 'list')
+    $topics = @('', 'build', 'diff', 'status', 'inventory', 'resource', 'search', 'add', 'classify', 'update', 'new', 'config', 'use', 'list')
     if ($topic -notin $topics) { throw "No help is available for '$topic'." }
     if (-not $topic) {
         Write-MpBanner "MODPACKTOOLS $script:ModuleVersion"
@@ -53,6 +53,7 @@ function Invoke-MpHelp {
         Write-MpCommandLine 'modpack resource enable <selector> --position <n>' 'Enable or reposition a resource pack'
         Write-MpCommandLine 'modpack search <query> [options]' 'Search compatible Modrinth content'
         Write-MpCommandLine 'modpack add <id|slug|number> [options]' 'Add content with Packwiz'
+        Write-MpCommandLine 'modpack classify <mod> <category>' 'Classify or reclassify a mod'
         Write-MpCommandLine 'modpack update <selector...> | --all' 'Update Packwiz-managed content'
         Write-MpCommandLine 'modpack build [id] [options]' 'Generate the .mrpack in dist/'
         Write-MpCommandLine 'modpack diff [id]' 'Compare the current project with the latest build'
@@ -72,6 +73,7 @@ function Invoke-MpHelp {
         }
         'resource' {
             Write-MpUsage 'modpack resource enable <name|id|filename> --position <n> [--project <id>]'
+            Write-MpUsage 'modpack resource disable <name|id|filename> [--project <id>]'
             Write-MpInfo 'Position 1 is the highest priority in the Minecraft GUI.'
             Write-MpInfo 'If the pack is already enabled, it is repositioned.'
         }
@@ -80,6 +82,10 @@ function Invoke-MpHelp {
             Write-MpInfo 'Results are numbered and saved for 24 hours. Install one with modpack add <number>.'
         }
         'add' { Write-MpUsage 'modpack add <id|slug|search-number> [--project <id>] [--category <id>]' }
+        'classify' {
+            Write-MpUsage 'modpack classify <name|id|filename> <category|unclassified> [--project <id>]'
+            Write-MpInfo 'This changes editorial metadata only; it does not move or reinstall the mod.'
+        }
         'update' {
             Write-MpUsage 'modpack update <name|id|filename...> [--type <type>] [--project <id>]'
             Write-MpUsage 'modpack update --all [--type <type>] [--project <id>]'
@@ -119,19 +125,43 @@ function Invoke-MpResource {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Invoke-MpHelp resource; return }
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project', 'position')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum 2 -Usage 'modpack resource enable <name|id|filename> --position <n> [--project <id>]'
-    if ($parsed.Positionals[0].ToLowerInvariant() -ne 'enable') { throw "Unknown resource pack operation '$($parsed.Positionals[0])'. Use 'enable'." }
-    if (-not $parsed.Options.ContainsKey('position')) { throw "Required option '--position' is missing." }
-    $position = 0
-    if (-not [int]::TryParse([string]$parsed.Options.position, [ref]$position) -or $position -lt 1) { throw "Position must be an integer greater than or equal to 1." }
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum 2 -Usage 'modpack resource enable|disable <name|id|filename> [options]'
+    $operation = $parsed.Positionals[0].ToLowerInvariant()
+    if ($operation -notin @('enable', 'disable')) { throw "Unknown resource pack operation '$($parsed.Positionals[0])'. Use 'enable' or 'disable'." }
     $projectId = if ($parsed.Options.ContainsKey('project')) { $parsed.Options.project } else { $null }
     $project = Resolve-ModpackProject -Id $projectId
     Assert-ModpackStructure -Project $project
-    Write-MpStep "Enabling or repositioning '$($parsed.Positionals[1])'..."
-    $result = Enable-ModpackResourcePack -Project $project -Selector $parsed.Positionals[1] -Position $position
-    $verb = if ($result.WasActive) { 'repositioned' } else { 'enabled' }
-    Write-MpSuccess "$($result.Item.Name) was $verb at priority $($result.Item.Priority)."
+    if ($operation -eq 'enable') {
+        if (-not $parsed.Options.ContainsKey('position')) { throw "Required option '--position' is missing." }
+        $position = 0
+        if (-not [int]::TryParse([string]$parsed.Options.position, [ref]$position) -or $position -lt 1) { throw "Position must be an integer greater than or equal to 1." }
+        Write-MpStep "Enabling or repositioning '$($parsed.Positionals[1])'..."
+        $result = Enable-ModpackResourcePack -Project $project -Selector $parsed.Positionals[1] -Position $position
+        $verb = if ($result.WasActive) { 'repositioned' } else { 'enabled' }
+        Write-MpSuccess "$($result.Item.Name) was $verb at priority $($result.Item.Priority)."
+    }
+    else {
+        if ($parsed.Options.ContainsKey('position')) { throw "Option '--position' cannot be used with resource disable." }
+        Write-MpStep "Disabling '$($parsed.Positionals[1])'..."
+        $result = Disable-ModpackResourcePack -Project $project -Selector $parsed.Positionals[1]
+        if ($result.WasActive) { Write-MpSuccess "$($result.Item.Name) was disabled." }
+        else { Write-MpInfo "$($result.Item.Name) is already disabled." }
+    }
     Write-ResourcePackInventory -Inventory $result.Inventory -HideEmptySections
+}
+
+function Invoke-MpClassify {
+    param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
+    if ($Arguments -contains '--help') { Invoke-MpHelp classify; return }
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project')
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum 2 -Usage 'modpack classify <name|id|filename> <category|unclassified> [--project <id>]'
+    $projectId = if ($parsed.Options.ContainsKey('project')) { $parsed.Options.project } else { $null }
+    $project = Resolve-ModpackProject -Id $projectId
+    Write-MpStep "Classifying '$($parsed.Positionals[0])'..."
+    $result = Set-ModpackModClassification -Project $project -Selector $parsed.Positionals[0] -Category $parsed.Positionals[1]
+    Write-MpSuccess "$($result.Item.Name) is classified as '$($result.Category)'."
+    Write-MpKeyValue 'Previous' $result.PreviousCategory
+    Write-MpKeyValue 'ID' $result.Item.Id
 }
 
 function Invoke-MpStatus {
