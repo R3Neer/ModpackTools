@@ -136,7 +136,52 @@ minecraft = "1.21.1"
             $text | Should Match 'modpack update <inventory-number>'
             $text | Should Match 'Search and inventory numbers have separate contexts'
             $text | Should Match 'defaultoptions-common.toml'
+            $text | Should Match 'modpack --help'
+            $text | Should Match 'modpack inventory --help'
             $text | Should Not Match 'modpack add mod'
+        }
+    }
+
+    Describe 'CLI help' {
+        It 'uses one catalog for every executable command' {
+            $catalog = Get-MpCommandCatalog
+            @($catalog.Keys).Count | Should Be 13
+            @($catalog.Keys) | Should Be @('list', 'use', 'status', 'new', 'inventory', 'search', 'add', 'classify', 'resource', 'update', 'build', 'diff', 'config')
+            foreach ($name in $catalog.Keys) {
+                $catalog[$name].Summary | Should Not BeNullOrEmpty
+                $catalog[$name].Description | Should Not BeNullOrEmpty
+                $catalog[$name].Handler | Should Match '^Invoke-Mp[A-Z]'
+                (Get-Command $catalog[$name].Handler -ErrorAction Stop).CommandType | Should Be 'Function'
+                @($catalog[$name].Usage).Count | Should BeGreaterThan 0
+            }
+        }
+
+        It 'shows the same overview for no arguments and global --help' {
+            $bare = (modpack 6>&1 | Out-String)
+            $explicit = (modpack --help 6>&1 | Out-String)
+            $bare | Should Be $explicit
+            $explicit | Should Match 'PROJECTS'
+            $explicit | Should Match 'CONTENT'
+            $explicit | Should Match 'BUILD AND CONFIGURATION'
+            $explicit | Should Match 'modpack <command> --help'
+            $explicit | Should Not Match 'modpack help'
+        }
+
+        It 'renders detailed help for every command without resolving a project' {
+            foreach ($name in (Get-MpCommandCatalog).Keys) {
+                $output = (& modpack $name '--help' 6>&1 | Out-String)
+                $output | Should Match '(?m)^USAGE\r?$'
+                $output | Should Match ([regex]::Escape("modpack $name"))
+            }
+        }
+
+        It 'rejects help as a command and points to global --help' {
+            $record = $null
+            try { modpack help } catch { $record = $_ }
+            $record | Should Not BeNullOrEmpty
+            $record.FullyQualifiedErrorId | Should Match '^ModpackTools\.Command\.Unknown'
+            $record.Exception.Message | Should Match "Command 'help' is not recognized"
+            $record.Exception.Message | Should Match '(?m)^Try: modpack --help$'
         }
     }
 
@@ -219,7 +264,7 @@ minecraft = "1.21.1"
             $record | Should Not BeNullOrEmpty
             $record.FullyQualifiedErrorId | Should Match '^ModpackTools\.Command\.Unknown'
             $record.Exception.Message | Should Match "^Command 'definitely-not-a-command' is not recognized\."
-            $record.Exception.Message | Should Match '(?m)^Try: modpack help$'
+            $record.Exception.Message | Should Match '(?m)^Try: modpack --help$'
             $record.ScriptStackTrace | Should Not Match '\\Private\\'
         }
 
@@ -340,7 +385,7 @@ mod-id = "abc123"
             Assert-MockCalled Invoke-RestMethod -Times 1 -ParameterFilter {
                 $Uri -match 'api\.modrinth\.com/v2/search' -and
                 [System.Uri]::UnescapeDataString($Uri) -match 'versions:1\.21\.1' -and
-                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/0.11.0'
+                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/0.12.0'
             }
         }
 

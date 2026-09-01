@@ -86,8 +86,8 @@ Mod keys are stable, namespaced IDs: `modrinth:<id>`, `curseforge:<id>`, `packwi
 ## Commands
 
 ```powershell
-modpack help
-modpack help build
+modpack --help
+modpack build --help
 modpack list
 modpack use vp26
 modpack use
@@ -123,6 +123,8 @@ modpack diff
 modpack diff vp26
 modpack diff --project vp26
 ```
+
+Run `modpack --help` for the command overview or `modpack <command> --help` for a command's syntax, options, important behavior, and focused examples. Help is generated from one catalog so the overview and detailed pages stay consistent; `help` is not a command.
 
 Every command that operates on an existing project accepts `--project <id>`. After `modpack use <id>`, omit it to use the active project for the current PowerShell process. `status`, `inventory`, `build`, and `diff` also retain their positional ID shorthand; specifying both forms at once is rejected.
 

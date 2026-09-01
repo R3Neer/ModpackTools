@@ -72,6 +72,7 @@ Minecraft Java modpack managed with [Packwiz](https://packwiz.infra.link/) and M
 ## Quick start
 
 ```powershell
+modpack --help
 modpack use {2}
 modpack status
 modpack inventory
@@ -80,6 +81,8 @@ modpack build
 ```
 
 `modpack use` selects this project only for the current PowerShell process. Every command that operates on an existing project also accepts `--project <id>`, for example `modpack diff --project {2}`. `status`, `inventory`, `build`, and `diff` retain their positional ID shorthand; specifying both forms at once is rejected.
+
+Run `modpack <command> --help` for concise command documentation. For example, `modpack inventory --help` explains every filter and the numbered-reference context.
 
 ## Managing content
 
@@ -395,7 +398,7 @@ function Update-ModpackContent {
 
     Assert-ModpackStructure -Project $Project
     if ($All -and $Selectors.Count) { Throw-MpError -Message "Content selectors and '--all' cannot be combined" -Hint 'remove the selectors or --all' -ErrorId 'Option.ForbiddenCombination' -Category InvalidArgument }
-    if (-not $All -and $Selectors.Count -eq 0) { Throw-MpError -Message "The update operation requires at least one selector or '--all'" -Hint 'modpack help update' -ErrorId 'Command.MissingUpdateTarget' -Category InvalidArgument }
+    if (-not $All -and $Selectors.Count -eq 0) { Throw-MpError -Message "The update operation requires at least one selector or '--all'" -Hint 'modpack update --help' -ErrorId 'Command.MissingUpdateTarget' -Category InvalidArgument }
     $normalizedType = Resolve-InventoryType -Type $Type
 
     $beforeInventory = Get-ModpackInventory -Project $Project

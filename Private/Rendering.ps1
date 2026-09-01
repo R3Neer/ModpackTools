@@ -107,6 +107,27 @@ function Write-MpUsage {
     Write-Host "$($script:Palette.Secondary)Usage:$($script:Palette.Reset) $($script:Palette.Accent)$Text$($script:Palette.Reset)"
 }
 
+function Write-MpHelpText {
+    param([Parameter(Mandatory)][string]$Text)
+    Write-Host "$($script:Palette.Value)$Text$($script:Palette.Reset)"
+}
+
+function Write-MpHelpHeading {
+    param([Parameter(Mandatory)][string]$Text)
+    Write-Host ''
+    Write-Host "$($script:Palette.Heading)$($PSStyle.Bold)$Text$($PSStyle.Reset)"
+}
+
+function Write-MpHelpRow {
+    param(
+        [Parameter(Mandatory)][string]$Label,
+        [Parameter(Mandatory)][string]$Description,
+        [int]$Width = 24
+    )
+    Write-Host "  $($script:Palette.Accent)$($Label.PadRight($Width))$($script:Palette.Reset)" -NoNewline
+    Write-Host "$($script:Palette.Secondary)$Description$($script:Palette.Reset)"
+}
+
 function Write-MpSideLegend {
     Write-Host ''
     Write-Host '  ' -NoNewline

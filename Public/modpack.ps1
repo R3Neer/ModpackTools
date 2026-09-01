@@ -1,33 +1,24 @@
 function modpack {
     [CmdletBinding(PositionalBinding = $false)]
     param(
-        [Parameter(Position = 0)][string]$Command = 'help',
+        [Parameter(Position = 0)][AllowEmptyString()][string]$Command = '',
         [Parameter(Position = 1, ValueFromRemainingArguments)][object[]]$Arguments = @()
     )
 
-    $commands = @{
-        help   = 'Invoke-MpHelp'
-        list   = 'Invoke-MpList'
-        use    = 'Invoke-MpUse'
-        status = 'Invoke-MpStatus'
-        inventory = 'Invoke-MpInventory'
-        resource = 'Invoke-MpResource'
-        search = 'Invoke-MpSearch'
-        build  = 'Invoke-MpBuild'
-        diff   = 'Invoke-MpDiff'
-        new    = 'Invoke-MpNew'
-        add    = 'Invoke-MpAdd'
-        classify = 'Invoke-MpClassify'
-        update = 'Invoke-MpUpdate'
-        config = 'Invoke-MpConfig'
-    }
-
     try {
-        $key = $Command.ToLowerInvariant()
-        if (-not $commands.ContainsKey($key)) {
-            Throw-MpError -Message "Command '$Command' is not recognized" -Hint 'modpack help' -ErrorId 'Command.Unknown' -Category InvalidArgument -TargetObject $Command
+        if (-not $Command -or $Command -eq '--help') {
+            if ($Arguments.Count) {
+                Throw-MpError -Message 'The global help option does not accept additional arguments' -Hint 'modpack --help' -ErrorId 'Command.InvalidArguments' -Category InvalidArgument -TargetObject $Arguments
+            }
+            Show-MpHelp
+            return
         }
-        $handler = $commands[$key]
+        $key = $Command.ToLowerInvariant()
+        $commands = Get-MpCommandCatalog
+        if (-not $commands.Contains($key)) {
+            Throw-MpError -Message "Command '$Command' is not recognized" -Hint 'modpack --help' -ErrorId 'Command.Unknown' -Category InvalidArgument -TargetObject $Command
+        }
+        $handler = $commands[$key].Handler
         & $handler @Arguments
     } catch {
         if (-not (Test-MpExpectedError -Exception $_.Exception)) { throw }

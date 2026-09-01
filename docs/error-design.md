@@ -27,7 +27,7 @@ The audited errors belong to these namespaces:
 
 | Namespace | Covered conditions |
 | --- | --- |
-| `Command` | Unknown commands or help topics; wrong positional argument counts |
+| `Command` | Unknown commands or wrong positional argument counts |
 | `Option` | Unknown options, missing values, forbidden combinations, invalid values, or omitted `--` prefixes |
 | `Configuration` | Missing or invalid global configuration and unavailable roots |
 | `Project` | Missing, malformed, duplicate, unsupported, incomplete, or unresolved projects |

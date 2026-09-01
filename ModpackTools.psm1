@@ -5,6 +5,7 @@ $script:ActiveProjectId = $null
 $script:ModuleRoot = $PSScriptRoot
 $script:ModuleVersion = [string](Import-PowerShellDataFile -LiteralPath (Join-Path $PSScriptRoot 'ModpackTools.psd1')).ModuleVersion
 $script:ConfigHomeOverride = $null
+$script:MpCommandCatalog = $null
 
 foreach ($file in @(
     'Private/Errors.ps1'
@@ -19,6 +20,7 @@ foreach ($file in @(
     'Private/Packwiz.ps1'
     'Private/Diff.ps1'
     'Private/Rendering.ps1'
+    'Private/Help.ps1'
     'Private/Commands.ps1'
     'Public/modpack.ps1'
 )) {
