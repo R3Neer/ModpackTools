@@ -121,7 +121,10 @@ function Write-MpSideLegend {
 function Write-MpSideEntry {
     param([Parameter(Mandatory)]$Item)
 
-    Write-Host '  ' -NoNewline
+    if ($Item.PSObject.Properties['ReferenceNumber']) {
+        Write-Host "  $($script:Palette.Accent)[$($Item.ReferenceNumber)]$($script:Palette.Reset) " -NoNewline
+    }
+    else { Write-Host '  ' -NoNewline }
     switch ($Item.Side) {
         'client' {
             Write-Host "$($script:Palette.Client)[C]$($script:Palette.Reset)    " -NoNewline
@@ -200,8 +203,14 @@ function Write-ResourcePackInventory {
             'missing' { 'file not found' }
             default   { $item.Filename }
         }
-        Write-Host "$($script:Palette.Secondary)$('{0,3}. ' -f $item.Priority)$($script:Palette.Reset)" -NoNewline
+        if ($item.PSObject.Properties['ReferenceNumber']) {
+            Write-Host "  $($script:Palette.Accent)[$($item.ReferenceNumber)]$($script:Palette.Reset) " -NoNewline
+        }
+        else {
+            Write-Host "$($script:Palette.Secondary)$('{0,3}. ' -f $item.Priority)$($script:Palette.Reset)" -NoNewline
+        }
         Write-Host "$($script:Palette.Success)✓$($script:Palette.Reset) $($PSStyle.Bold)$($item.Name)$($PSStyle.Reset)" -NoNewline
+        if ($item.PSObject.Properties['ReferenceNumber']) { Write-Host "  $($script:Palette.Accent)priority $($item.Priority)$($script:Palette.Reset)" -NoNewline }
         if ($item.Source -eq 'local') { Write-Host "  $($script:Palette.Local)LOCAL$($script:Palette.Reset)" -NoNewline }
         if ($source) { Write-Host "  $($script:Palette.Secondary)$source$($script:Palette.Reset)" }
         else { Write-Host '' }
@@ -210,7 +219,11 @@ function Write-ResourcePackInventory {
     if ($Inventory.InactiveResources.Count -gt 0) {
         Write-MpSection 'RESOURCE PACKS · PRESENT BUT DISABLED' $Inventory.InactiveResources.Count
         foreach ($item in $Inventory.InactiveResources) {
-            Write-Host "  $($script:Palette.Secondary)○$($script:Palette.Reset) $($PSStyle.Bold)$($item.Name)$($PSStyle.Reset)" -NoNewline
+            if ($item.PSObject.Properties['ReferenceNumber']) {
+                Write-Host "  $($script:Palette.Accent)[$($item.ReferenceNumber)]$($script:Palette.Reset) " -NoNewline
+            }
+            else { Write-Host '  ' -NoNewline }
+            Write-Host "$($script:Palette.Secondary)○$($script:Palette.Reset) $($PSStyle.Bold)$($item.Name)$($PSStyle.Reset)" -NoNewline
             if ($item.Source -eq 'local') { Write-Host "  $($script:Palette.Local)LOCAL$($script:Palette.Reset)" -NoNewline }
             if ($item.Filename) { Write-Host "  $($script:Palette.Secondary)$($item.Filename)$($script:Palette.Reset)" }
             else { Write-Host '' }
@@ -227,6 +240,9 @@ function Write-ShaderInventory {
     }
     foreach ($item in $Inventory.Shaders) {
         $shaderEntry = [pscustomobject]@{ Side = 'client'; Name = $item.Name; Source = $item.Source; Filename = $item.Filename }
+        if ($item.PSObject.Properties['ReferenceNumber']) {
+            $shaderEntry | Add-Member -NotePropertyName ReferenceNumber -NotePropertyValue $item.ReferenceNumber
+        }
         Write-MpSideEntry $shaderEntry
     }
 }
@@ -254,6 +270,10 @@ function Write-InventoryView {
     }
     if (($View.IncludedTypes -contains 'shaderpack') -and (-not $hideEmpty -or $View.Shaders.Count -gt 0)) {
         Write-ShaderInventory $View
+    }
+    $hasReferences = @(Get-ModpackInventoryReferenceItems -View $View | Where-Object { $_.PSObject.Properties['ReferenceNumber'] }).Count -gt 0
+    if ($hasReferences) {
+        Write-MpInfo 'Use these numbers with resource, classify, or update. The add command uses search result numbers.'
     }
 }
 

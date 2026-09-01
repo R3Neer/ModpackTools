@@ -116,20 +116,7 @@ function Resolve-ModrinthSearchNumber {
     if ($Selector -notmatch '^[1-9][0-9]*$') { return $null }
     $cache = Read-ModrinthSearchCache
     if (-not $cache) { Throw-MpError -Message "Search result number '$Selector' cannot be resolved because there is no saved search" -Hint 'modpack search <query>' -ErrorId 'Search.CacheNotFound' -Category ObjectNotFound -TargetObject $Selector }
-    $created = [datetimeoffset]::MinValue
-    $validDate = if ($cache.CreatedUtc -is [datetime]) {
-        $created = [datetimeoffset]$cache.CreatedUtc
-        $true
-    }
-    else {
-        [datetimeoffset]::TryParse(
-            [string]$cache.CreatedUtc,
-            [System.Globalization.CultureInfo]::InvariantCulture,
-            [System.Globalization.DateTimeStyles]::RoundtripKind,
-            [ref]$created
-        )
-    }
-    if (-not $validDate -or ([datetimeoffset]::UtcNow - $created.ToUniversalTime()).TotalHours -gt 24) {
+    if (-not (Test-MpCacheTimestamp -CreatedUtc $cache.CreatedUtc)) {
         Throw-MpError -Message 'The saved search has expired' -Hint 'modpack search <query>' -ErrorId 'Search.CacheExpired' -Category InvalidData
     }
     if (-not ([string]$cache.ProjectId).Equals($Project.Id, [System.StringComparison]::OrdinalIgnoreCase)) {

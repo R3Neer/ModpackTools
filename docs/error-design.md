@@ -31,7 +31,7 @@ The audited errors belong to these namespaces:
 | `Option` | Unknown options, missing values, forbidden combinations, invalid values, or omitted `--` prefixes |
 | `Configuration` | Missing or invalid global configuration and unavailable roots |
 | `Project` | Missing, malformed, duplicate, unsupported, incomplete, or unresolved projects |
-| `Inventory` | Invalid filters, categories, filter combinations, and normalized content types |
+| `Inventory` | Invalid filters, categories, filter combinations, content types, and numbered reference caches |
 | `Metadata` | Invalid metadata tables, unknown categories, missing or ambiguous mods |
 | `ResourcePack` | Missing or ambiguous packs, invalid priority, and Default Options failures |
 | `Search` | Modrinth request failures and missing, invalid, stale, incompatible, or out-of-range cached results |

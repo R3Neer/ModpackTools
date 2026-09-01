@@ -315,3 +315,115 @@ function Select-ModpackInventory {
         TotalMatches      = $mods.Count + $activeResources.Count + $inactiveResources.Count + $shaders.Count
     }
 }
+
+function Get-ModpackInventoryReferenceItems {
+    param([Parameter(Mandatory)]$View)
+
+    $items = [System.Collections.Generic.List[object]]::new()
+    $orderedCategories = @(
+        foreach ($key in $View.Metadata.Categories.Keys) {
+            $value = $View.Metadata.Categories[$key]
+            [pscustomobject]@{
+                Key   = [string]$key
+                Name  = $(if ($value.ContainsKey('Name')) { [string]$value.Name } else { ([string]$key).ToUpperInvariant() })
+                Order = $(if ($value.ContainsKey('Order')) { [int]$value.Order } else { 1000 })
+            }
+        }
+    ) | Sort-Object Order, Name
+
+    foreach ($category in $orderedCategories) {
+        foreach ($item in @($View.Mods | Where-Object Category -eq $category.Key | Sort-Object Name)) { $items.Add($item) }
+    }
+    foreach ($item in @($View.Mods | Where-Object Category -eq 'unclassified' | Sort-Object Name)) { $items.Add($item) }
+    foreach ($item in @($View.ActiveResources)) { $items.Add($item) }
+    foreach ($item in @($View.InactiveResources | Sort-Object Name)) { $items.Add($item) }
+    foreach ($item in @($View.Shaders | Sort-Object Name)) { $items.Add($item) }
+    return $items.ToArray()
+}
+
+function Get-ModpackInventoryCachePath {
+    Join-Path (Get-ModpackToolsConfigDirectory) 'last-inventory.json'
+}
+
+function Set-ModpackInventoryReferences {
+    param([Parameter(Mandatory)]$View)
+
+    $results = @(
+        $index = 0
+        foreach ($item in @(Get-ModpackInventoryReferenceItems -View $View)) {
+            $index++
+            $item | Add-Member -NotePropertyName ReferenceNumber -NotePropertyValue $index -Force
+            $selector = if ($item.Kind -eq 'resourcepack' -and $item.Filename) { [string]$item.Filename } else { [string]$item.Id }
+            [pscustomobject]@{
+                Index    = $index
+                Id       = [string]$item.Id
+                Kind     = [string]$item.Kind
+                Name     = [string]$item.Name
+                Filename = [string]$item.Filename
+                Source   = [string]$item.Source
+                Selector = $selector
+            }
+        }
+    )
+    $cache = [pscustomobject]@{
+        SchemaVersion = 1
+        CreatedUtc    = [datetime]::UtcNow.ToString('o')
+        ProjectId     = [string]$View.Project.Id
+        Results       = @($results)
+    }
+    $path = Get-ModpackInventoryCachePath
+    [System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($path)) | Out-Null
+    Write-Utf8TextFileAtomic -Path $path -Text ($cache | ConvertTo-Json -Depth 5)
+    return $View
+}
+
+function Read-ModpackInventoryReferenceCache {
+    $path = Get-ModpackInventoryCachePath
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { return $null }
+    try {
+        return Get-Content -Raw -LiteralPath $path -Encoding UTF8 | ConvertFrom-Json
+    }
+    catch {
+        Throw-MpError -Message "Inventory reference cache '$path' is invalid" -Hint 'modpack inventory' -ErrorId 'Inventory.InvalidReferenceCache' -Category InvalidData -TargetObject $path
+    }
+}
+
+function Resolve-ModpackInventoryNumber {
+    param(
+        [Parameter(Mandatory)][string]$Selector,
+        [Parameter(Mandatory)]$Project,
+        [string[]]$AllowedKinds = @('mod', 'resourcepack', 'shaderpack'),
+        [switch]$RequirePackwiz
+    )
+
+    if ($Selector -notmatch '^[1-9][0-9]*$') { return $null }
+    $cache = Read-ModpackInventoryReferenceCache
+    if (-not $cache) {
+        Throw-MpError -Message "Inventory reference number '$Selector' cannot be resolved because no inventory has been saved" -Hint 'modpack inventory' -ErrorId 'Inventory.ReferenceCacheNotFound' -Category ObjectNotFound -TargetObject $Selector
+    }
+    if ([int]$cache.SchemaVersion -ne 1 -or $null -eq $cache.Results -or [string]::IsNullOrWhiteSpace([string]$cache.ProjectId)) {
+        Throw-MpError -Message 'The saved inventory reference cache has an unsupported or incomplete structure' -Hint 'modpack inventory' -ErrorId 'Inventory.InvalidReferenceCache' -Category InvalidData
+    }
+    if (-not (Test-MpCacheTimestamp -CreatedUtc $cache.CreatedUtc)) {
+        Throw-MpError -Message 'The saved inventory references have expired' -Hint 'modpack inventory' -ErrorId 'Inventory.ReferenceCacheExpired' -Category InvalidData
+    }
+    if (-not ([string]$cache.ProjectId).Equals($Project.Id, [System.StringComparison]::OrdinalIgnoreCase)) {
+        Throw-MpError -Message "The saved inventory belongs to project '$($cache.ProjectId)', not '$($Project.Id)'" -Hint "modpack inventory --project $($Project.Id)" -ErrorId 'Inventory.ReferenceProjectMismatch' -Category InvalidData -TargetObject $Selector
+    }
+    $result = @($cache.Results | Where-Object { [int]$_.Index -eq [int]$Selector })
+    if ($result.Count -ne 1) {
+        $maximum = @($cache.Results).Count
+        if ($maximum -eq 0) {
+            Throw-MpError -Message 'The saved inventory view contains no numbered items' -Hint 'modpack inventory without filters, or use broader filters' -ErrorId 'Inventory.ReferenceOutOfRange' -Category InvalidArgument -TargetObject $Selector
+        }
+        Throw-MpError -Message "Inventory reference number '$Selector' does not exist; available range: 1-$maximum" -Hint 'choose a number shown by the latest modpack inventory' -ErrorId 'Inventory.ReferenceOutOfRange' -Category InvalidArgument -TargetObject $Selector
+    }
+    $item = $result[0]
+    if ([string]$item.Kind -notin $AllowedKinds) {
+        Throw-MpError -Message "Inventory reference '$Selector' points to '$($item.Kind)', which is not accepted by this command" -Hint 'choose a compatible number from modpack inventory' -ErrorId 'Inventory.ReferenceKindMismatch' -Category InvalidArgument -TargetObject $Selector
+    }
+    if ($RequirePackwiz -and [string]$item.Source -ne 'packwiz') {
+        Throw-MpError -Message "Inventory reference '$Selector' points to '$($item.Source)' content, which Packwiz cannot update" -Hint 'choose Packwiz-managed content from modpack inventory --source packwiz' -ErrorId 'Inventory.ReferenceNotUpdatable' -Category InvalidOperation -TargetObject $Selector
+    }
+    return $item
+}

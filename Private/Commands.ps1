@@ -76,11 +76,11 @@ function Invoke-MpHelp {
         Write-MpCommandLine 'modpack use [id]' 'Active project for this session'
         Write-MpCommandLine 'modpack status [id] [--project <id>] [--full]' 'Project summary'
         Write-MpCommandLine 'modpack inventory [id] [--project <id>] [filters]' 'Contents and filters'
-        Write-MpCommandLine 'modpack resource enable <selector> --position <n> [--project <id>]' 'Enable or reposition a resource pack'
+        Write-MpCommandLine 'modpack resource enable <selector|number> --position <n> [--project <id>]' 'Enable or reposition a resource pack'
         Write-MpCommandLine 'modpack search <query> [options] [--project <id>]' 'Search compatible Modrinth content'
         Write-MpCommandLine 'modpack add <id|slug|number> [options] [--project <id>]' 'Add content with Packwiz'
-        Write-MpCommandLine 'modpack classify <mod> <category> [--project <id>]' 'Classify or reclassify a mod'
-        Write-MpCommandLine 'modpack update <selector...> | --all [--project <id>]' 'Update Packwiz-managed content'
+        Write-MpCommandLine 'modpack classify <mod|number> <category> [--project <id>]' 'Classify or reclassify a mod'
+        Write-MpCommandLine 'modpack update <selector|number...> | --all [--project <id>]' 'Update Packwiz-managed content'
         Write-MpCommandLine 'modpack build [id] [options] [--project <id>]' 'Generate the .mrpack in dist/'
         Write-MpCommandLine 'modpack diff [id] [--project <id>]' 'Compare the current project with the latest build'
         Write-MpCommandLine 'modpack new <id> [options]' 'Create a project'
@@ -97,10 +97,11 @@ function Invoke-MpHelp {
         'inventory' {
             Write-MpUsage 'modpack inventory [id] [--project <id>] [filters]'
             foreach ($option in @('--type <all|mod|resourcepack|shaderpack>', '--category <id|unclassified>', '--side <client|host|both|unknown>', '--source <packwiz|local|builtin|missing>', '--state <all|active|inactive>', '--search <text>', '--unclassified')) { Write-MpCommandLine $option }
+            Write-MpInfo 'Displayed items are numbered for resource, classify, and update commands.'
         }
         'resource' {
-            Write-MpUsage 'modpack resource enable <name|id|filename> --position <n> [--project <id>]'
-            Write-MpUsage 'modpack resource disable <name|id|filename> [--project <id>]'
+            Write-MpUsage 'modpack resource enable <name|id|filename|inventory-number> --position <n> [--project <id>]'
+            Write-MpUsage 'modpack resource disable <name|id|filename|inventory-number> [--project <id>]'
             Write-MpInfo 'Position 1 is the highest priority in the Minecraft GUI.'
             Write-MpInfo 'If the pack is already enabled, it is repositioned.'
         }
@@ -110,11 +111,11 @@ function Invoke-MpHelp {
         }
         'add' { Write-MpUsage 'modpack add <id|slug|search-number> [--project <id>] [--category <id>]' }
         'classify' {
-            Write-MpUsage 'modpack classify <name|id|filename> <category|unclassified> [--project <id>]'
+            Write-MpUsage 'modpack classify <name|id|filename|inventory-number> <category|unclassified> [--project <id>]'
             Write-MpInfo 'This changes editorial metadata only; it does not move or reinstall the mod.'
         }
         'update' {
-            Write-MpUsage 'modpack update <name|id|filename...> [--type <type>] [--project <id>]'
+            Write-MpUsage 'modpack update <name|id|filename|inventory-number>... [--type <type>] [--project <id>]'
             Write-MpUsage 'modpack update --all [--type <type>] [--project <id>]'
             Write-MpInfo 'Types: mod, resourcepack, shaderpack. Without --type, every Packwiz-managed content type is included.'
         }
@@ -155,21 +156,29 @@ function Invoke-MpResource {
     Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum 2 -Usage 'modpack resource enable|disable <name|id|filename> [options]' -OptionNames @('project', 'position')
     $operation = $parsed.Positionals[0].ToLowerInvariant()
     if ($operation -notin @('enable', 'disable')) { Throw-MpError -Message "Resource pack operation '$($parsed.Positionals[0])' is not recognized; allowed values: enable, disable" -Hint 'modpack help resource' -ErrorId 'ResourcePack.UnknownOperation' -Category InvalidArgument -TargetObject $parsed.Positionals[0] }
-    $project = Resolve-MpCommandProject -Options $parsed.Options
-    Assert-ModpackStructure -Project $project
+    $position = 0
     if ($operation -eq 'enable') {
         if (-not $parsed.Options.ContainsKey('position')) { Throw-MpError -Message "Required option '--position' is missing" -Hint 'modpack resource enable <selector> --position <n>' -ErrorId 'Option.Required' -Category InvalidArgument -TargetObject 'position' }
-        $position = 0
         if (-not [int]::TryParse([string]$parsed.Options.position, [ref]$position) -or $position -lt 1) { Throw-MpError -Message "Position '$($parsed.Options.position)' is not a positive integer" -Hint '--position <integer greater than or equal to 1>' -ErrorId 'Option.InvalidPosition' -Category InvalidArgument -TargetObject $parsed.Options.position }
-        Write-MpStep "Enabling or repositioning '$($parsed.Positionals[1])'..."
-        $result = Enable-ModpackResourcePack -Project $project -Selector $parsed.Positionals[1] -Position $position
+    }
+    elseif ($parsed.Options.ContainsKey('position')) {
+        Throw-MpError -Message "Option '--position' cannot be used with 'resource disable'" -Hint 'remove --position' -ErrorId 'Option.ForbiddenCombination' -Category InvalidArgument -TargetObject 'position'
+    }
+    $project = Resolve-MpCommandProject -Options $parsed.Options
+    Assert-ModpackStructure -Project $project
+    $rawSelector = [string]$parsed.Positionals[1]
+    $reference = Resolve-ModpackInventoryNumber -Selector $rawSelector -Project $project -AllowedKinds @('resourcepack')
+    $selector = if ($reference) { [string]$reference.Selector } else { $rawSelector }
+    $label = if ($reference) { "#$rawSelector $($reference.Name)" } else { $rawSelector }
+    if ($operation -eq 'enable') {
+        Write-MpStep "Enabling or repositioning '$label'..."
+        $result = Enable-ModpackResourcePack -Project $project -Selector $selector -Position $position
         $verb = if ($result.WasActive) { 'repositioned' } else { 'enabled' }
         Write-MpSuccess "$($result.Item.Name) was $verb at priority $($result.Item.Priority)."
     }
     else {
-        if ($parsed.Options.ContainsKey('position')) { Throw-MpError -Message "Option '--position' cannot be used with 'resource disable'" -Hint 'remove --position' -ErrorId 'Option.ForbiddenCombination' -Category InvalidArgument -TargetObject 'position' }
-        Write-MpStep "Disabling '$($parsed.Positionals[1])'..."
-        $result = Disable-ModpackResourcePack -Project $project -Selector $parsed.Positionals[1]
+        Write-MpStep "Disabling '$label'..."
+        $result = Disable-ModpackResourcePack -Project $project -Selector $selector
         if ($result.WasActive) { Write-MpSuccess "$($result.Item.Name) was disabled." }
         else { Write-MpInfo "$($result.Item.Name) is already disabled." }
     }
@@ -182,8 +191,12 @@ function Invoke-MpClassify {
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project')
     Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum 2 -Usage 'modpack classify <name|id|filename> <category|unclassified> [--project <id>]' -OptionNames @('project')
     $project = Resolve-MpCommandProject -Options $parsed.Options
-    Write-MpStep "Classifying '$($parsed.Positionals[0])'..."
-    $result = Set-ModpackModClassification -Project $project -Selector $parsed.Positionals[0] -Category $parsed.Positionals[1]
+    $rawSelector = [string]$parsed.Positionals[0]
+    $reference = Resolve-ModpackInventoryNumber -Selector $rawSelector -Project $project -AllowedKinds @('mod')
+    $selector = if ($reference) { [string]$reference.Selector } else { $rawSelector }
+    $label = if ($reference) { "#$rawSelector $($reference.Name)" } else { $rawSelector }
+    Write-MpStep "Classifying '$label'..."
+    $result = Set-ModpackModClassification -Project $project -Selector $selector -Category $parsed.Positionals[1]
     Write-MpSuccess "$($result.Item.Name) is classified as '$($result.Category)'."
     Write-MpKeyValue 'Previous' $result.PreviousCategory
     Write-MpKeyValue 'ID' $result.Item.Id
@@ -201,6 +214,7 @@ function Invoke-MpStatus {
     Write-ModpackHeader -Project $project -Inventory $inventory
     if ($parsed.Options.ContainsKey('full')) {
         $view = Select-ModpackInventory -Inventory $inventory
+        [void](Set-ModpackInventoryReferences -View $view)
         Write-InventoryView -View $view
     }
 }
@@ -226,6 +240,7 @@ function Invoke-MpInventory {
     }
     if ($parsed.Options.ContainsKey('unclassified')) { $parameters.Category = 'unclassified' }
     $view = Select-ModpackInventory @parameters
+    [void](Set-ModpackInventoryReferences -View $view)
 
     Write-ModpackHeader -Project $project -Inventory $inventory
     Write-InventoryView -View $view -ShowFilters
@@ -315,9 +330,17 @@ function Invoke-MpUpdate {
     }
     $project = Resolve-MpCommandProject -Options $parsed.Options
     $type = if ($parsed.Options.ContainsKey('type')) { $parsed.Options.type } else { 'all' }
+    $normalizedType = Resolve-InventoryType -Type $type
+    $allowedKinds = if ($normalizedType -eq 'all') { @('mod', 'resourcepack', 'shaderpack') } else { @($normalizedType) }
     $label = if ($parsed.Options.ContainsKey('all')) { 'all matching Packwiz-managed content' } else { "$($parsed.Positionals.Count) selected item(s)" }
+    $selectors = @(
+        foreach ($rawSelector in $parsed.Positionals) {
+            $reference = Resolve-ModpackInventoryNumber -Selector ([string]$rawSelector) -Project $project -AllowedKinds $allowedKinds -RequirePackwiz
+            if ($reference) { [string]$reference.Selector } else { [string]$rawSelector }
+        }
+    )
     Write-MpStep "Updating $label in $($project.Id)..."
-    $result = Update-ModpackContent -Project $project -Selectors $parsed.Positionals -All:$parsed.Options.ContainsKey('all') -Type $type
+    $result = Update-ModpackContent -Project $project -Selectors $selectors -All:$parsed.Options.ContainsKey('all') -Type $type
     Write-ModUpdateSummary -Update $result
 }
 

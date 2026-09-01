@@ -133,6 +133,8 @@ minecraft = "1.21.1"
             $text | Should Match 'modpack diff --project readme'
             $text | Should Match 'Every command that operates on an existing project'
             $text | Should Match 'modpack resource enable'
+            $text | Should Match 'modpack update <inventory-number>'
+            $text | Should Match 'Search and inventory numbers have separate contexts'
             $text | Should Match 'defaultoptions-common.toml'
             $text | Should Not Match 'modpack add mod'
         }
@@ -317,6 +319,7 @@ mod-id = "abc123"
             $projectPath = New-TestModpack $fixtureRoot 'Search Pack' 'search'
             $project = Read-ModpackProject $projectPath
             $script:ConfigHomeOverride = Join-Path $TestDrive 'search-config'
+            Write-PowerShellDataFileAtomic -Path (Get-ModpackToolsConfigPath) -Data @{ Root = $fixtureRoot }
             Mock Invoke-RestMethod {
                 [pscustomobject]@{
                     total_hits = 2
@@ -337,7 +340,7 @@ mod-id = "abc123"
             Assert-MockCalled Invoke-RestMethod -Times 1 -ParameterFilter {
                 $Uri -match 'api\.modrinth\.com/v2/search' -and
                 [System.Uri]::UnescapeDataString($Uri) -match 'versions:1\.21\.1' -and
-                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/0.10.0'
+                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/0.11.0'
             }
         }
 
@@ -372,14 +375,45 @@ mod-id = "abc123"
             $search = Search-ModrinthContent -Project $project -Query 'sodium'
             { Write-ModrinthSearchResults -Search $search -Project $project } | Should Not Throw
         }
+
+        It 'keeps search and inventory number scopes isolated by consuming command' {
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'mods/inventory-only.pw.toml'), @'
+name = "Inventory Only"
+filename = "inventory-only.jar"
+side = "both"
+[update.modrinth]
+mod-id = "inventory-id"
+'@)
+            [void](Search-ModrinthContent -Project $project -Query 'sodium')
+            $view = Select-ModpackInventory -Inventory (Get-ModpackInventory -Project $project)
+            [void](Set-ModpackInventoryReferences -View $view)
+
+            (Resolve-ModrinthSearchNumber -Selector '1' -Project $project).ProjectId | Should Be 'AANobbMI'
+            (Resolve-ModpackInventoryNumber -Selector '1' -Project $project).Id | Should Be 'modrinth:inventory-id'
+
+            Mock Add-ModpackContent {
+                [pscustomobject]@{ Item = [pscustomobject]@{ Name='Sodium'; Id='modrinth:AANobbMI'; Kind='mod' }; Log=@(); RelatedItems=@() }
+            }
+            Mock Update-ModpackContent {
+                [pscustomobject]@{ Project=$project; Items=@(); Log=@() }
+            }
+
+            Invoke-MpAdd @('1', '--project', 'search')
+            Assert-MockCalled Add-ModpackContent -Times 1 -ParameterFilter { $ModrinthProjectId -eq 'AANobbMI' }
+            Invoke-MpUpdate @('1', '--project', 'search')
+            Assert-MockCalled Update-ModpackContent -Times 1 -ParameterFilter { @($Selectors).Count -eq 1 -and $Selectors[0] -eq 'modrinth:inventory-id' }
+        }
     }
 
     Describe 'Mod classification' {
         BeforeEach {
             $fixtureRoot = Join-Path $TestDrive 'classification-packs'
             [System.IO.Directory]::CreateDirectory($fixtureRoot) | Out-Null
-            $projectPath = New-TestModpack $fixtureRoot ('Pack-' + [guid]::NewGuid().ToString('N')) 'pack'
+            $projectId = 'pack-' + [guid]::NewGuid().ToString('N')
+            $projectPath = New-TestModpack $fixtureRoot ('Pack-' + [guid]::NewGuid().ToString('N')) $projectId
             $project = Read-ModpackProject $projectPath
+            $script:ConfigHomeOverride = Join-Path $TestDrive 'classification-config'
+            Write-PowerShellDataFileAtomic -Path (Get-ModpackToolsConfigPath) -Data @{ Root = $fixtureRoot }
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'mods/sodium.pw.toml'), @'
 name = "Sodium"
 filename = "sodium.jar"
@@ -409,6 +443,15 @@ mod-id = "AANobbMI"
             $updated = Get-ModpackMetadata $project
             $updated.Mods['modrinth:AANobbMI'].Name | Should Be 'Fast Renderer'
             $updated.Mods['modrinth:AANobbMI'].ContainsKey('Category') | Should Be $false
+        }
+
+        It 'classifies a mod by its latest inventory number' {
+            $view = Select-ModpackInventory -Inventory (Get-ModpackInventory -Project $project)
+            [void](Set-ModpackInventoryReferences -View $view)
+
+            Invoke-MpClassify @('1', 'performance', '--project', $project.Id)
+
+            (Get-ModpackMetadata -Project $project).Mods['modrinth:AANobbMI'].Category | Should Be 'performance'
         }
 
         It 'rejects an unknown category without modifying metadata' {
@@ -578,8 +621,11 @@ mod-id = "fresh-id"
         BeforeEach {
             $fixtureRoot = Join-Path $TestDrive 'packs'
             [System.IO.Directory]::CreateDirectory($fixtureRoot) | Out-Null
-            $projectPath = New-TestModpack $fixtureRoot 'Pack' 'pack'
+            $projectId = 'pack-' + [guid]::NewGuid().ToString('N')
+            $projectPath = New-TestModpack $fixtureRoot ('Pack-' + [guid]::NewGuid().ToString('N')) $projectId
             $project = Read-ModpackProject $projectPath
+            $script:ConfigHomeOverride = Join-Path $TestDrive 'resource-config'
+            Write-PowerShellDataFileAtomic -Path (Get-ModpackToolsConfigPath) -Data @{ Root = $fixtureRoot }
         }
 
         It 'reads brackets inside strings without closing the array' {
@@ -641,6 +687,18 @@ side = "client"
             @(Get-DefaultResourcePackOrder $project) | Should Be @('vanilla', 'file/active.zip')
         }
 
+        It 'enables a resource pack by its latest inventory number' {
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'resourcepacks/active.pw.toml'), "name = `"Active Pack`"`nfilename = `"active.zip`"")
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'resourcepacks/new.pw.toml'), "name = `"New Pack`"`nfilename = `"new.zip`"")
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'config/defaultoptions-common.toml'), 'defaultResourcePacks = ["file/active.zip"]')
+            $view = Select-ModpackInventory -Inventory (Get-ModpackInventory -Project $project)
+            [void](Set-ModpackInventoryReferences -View $view)
+
+            Invoke-MpResource @('enable', '2', '--position', '1', '--project', $project.Id)
+
+            @(Get-DefaultResourcePackOrder -Project $project) | Should Be @('file/new.zip', 'file/active.zip')
+        }
+
         It 'disables an enabled pack without deleting it and preserves remaining order' {
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'resourcepacks/active.pw.toml'), "name = `"Active Pack`"`nfilename = `"active.zip`"")
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'config/defaultoptions-common.toml'), 'defaultResourcePacks = ["vanilla", "file/active.zip"]')
@@ -677,6 +735,7 @@ side = "client"
 
     Describe 'Inventory filters' {
         BeforeEach {
+            $script:ConfigHomeOverride = Join-Path $TestDrive 'inventory-config'
             $filterInventory = [pscustomobject]@{
                 Project = [pscustomobject]@{ Id = 'filter' }
                 Metadata = @{ Categories = @{ performance = @{ Name = 'PERFORMANCE'; Order = 10 } } }
@@ -728,6 +787,30 @@ side = "client"
         It 'rejects contradictory filter combinations' {
             { Select-ModpackInventory -Inventory $filterInventory -Type shaderpack -Side client } | Should Throw 'apply only to mods'
             { Select-ModpackInventory -Inventory $filterInventory -Category performance -State active } | Should Throw 'cannot be combined'
+        }
+
+        It 'numbers every displayed item globally in rendering order' {
+            $view = Select-ModpackInventory -Inventory $filterInventory
+            [void](Set-ModpackInventoryReferences -View $view)
+            $items = @(Get-ModpackInventoryReferenceItems -View $view)
+
+            $items.Count | Should Be 7
+            @($items | ForEach-Object ReferenceNumber) | Should Be @(1, 2, 3, 4, 5, 6, 7)
+            @($items | ForEach-Object Name) | Should Be @('Sodium', 'Host Tool', 'Shared Mod', 'Active Pack', 'Builtin Pack', 'Old Pack', 'Vivid')
+            (Resolve-ModpackInventoryNumber -Selector '1' -Project $filterInventory.Project).Id | Should Be 'modrinth:a'
+            (Resolve-ModpackInventoryNumber -Selector '4' -Project $filterInventory.Project -AllowedKinds resourcepack).Selector | Should Be 'active.zip'
+            { Resolve-ModpackInventoryNumber -Selector '4' -Project $filterInventory.Project -AllowedKinds mod } | Should Throw 'not accepted by this command'
+            { Resolve-ModpackInventoryNumber -Selector '2' -Project $filterInventory.Project -RequirePackwiz } | Should Throw 'Packwiz cannot update'
+        }
+
+        It 'numbers only the filtered view and restarts at one' {
+            $view = Select-ModpackInventory -Inventory $filterInventory -Type resourcepack -State inactive
+            [void](Set-ModpackInventoryReferences -View $view)
+            $items = @(Get-ModpackInventoryReferenceItems -View $view)
+
+            $items.Count | Should Be 1
+            $items[0].ReferenceNumber | Should Be 1
+            $items[0].Name | Should Be 'Old Pack'
         }
     }
 

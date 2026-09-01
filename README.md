@@ -100,6 +100,7 @@ modpack inventory --category performance
 modpack inventory --side host --source local
 modpack inventory --type resourcepack --state active
 modpack inventory --search sodium
+modpack update 3
 modpack resource enable "Fresh Animations" --position 1
 modpack resource enable "fresh-animations.zip" --position 3 --project vp26
 modpack resource disable "Fresh Animations"
@@ -137,6 +138,17 @@ Every command that operates on an existing project accepts `--project <id>`. Aft
 - `--search <text>` searches the name, ID, and filename.
 
 `host` corresponds to Packwiz's technical `server` value. Category and side filters automatically narrow the view to mods; `--state` narrows it to resource packs.
+
+Every item displayed by `inventory` receives one global `[number]` for that exact filtered view. The numbering continues across mod categories, enabled and disabled resource packs, and shaders. It is saved for 24 hours and bound to the selected project. These references can be used by:
+
+```powershell
+modpack resource enable <inventory-number> --position <n>
+modpack resource disable <inventory-number>
+modpack classify <inventory-number> <category|unclassified>
+modpack update <inventory-number>...
+```
+
+Number contexts are deliberately separate. `modpack add <number>` always resolves against the latest `search` results; `resource`, `classify`, and `update` always resolve against the latest `inventory` view. Therefore running `search`, then `inventory`, does not make a later number ambiguous or overwrite the other list. The caches are convenience references only; project files remain the sources of truth.
 
 ### Enabling, disabling, and ordering resource packs
 

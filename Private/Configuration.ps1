@@ -15,6 +15,28 @@ function Get-ModpackToolsConfigPath {
     Join-Path (Get-ModpackToolsConfigDirectory) 'config.psd1'
 }
 
+function Test-MpCacheTimestamp {
+    param(
+        [AllowNull()]$CreatedUtc,
+        [ValidateRange(1, 8760)][int]$MaximumAgeHours = 24
+    )
+
+    $created = [datetimeoffset]::MinValue
+    $validDate = if ($CreatedUtc -is [datetime]) {
+        $created = [datetimeoffset]$CreatedUtc
+        $true
+    }
+    else {
+        [datetimeoffset]::TryParse(
+            [string]$CreatedUtc,
+            [System.Globalization.CultureInfo]::InvariantCulture,
+            [System.Globalization.DateTimeStyles]::RoundtripKind,
+            [ref]$created
+        )
+    }
+    return $validDate -and ([datetimeoffset]::UtcNow - $created.ToUniversalTime()).TotalHours -le $MaximumAgeHours
+}
+
 function Get-ModpackToolsConfig {
     $path = Get-ModpackToolsConfigPath
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
