@@ -441,8 +441,8 @@ $Loader = "loader-version"
     Describe 'CLI help' {
         It 'uses one catalog for every executable command' {
             $catalog = Get-MpCommandCatalog
-            @($catalog.Keys).Count | Should Be 15
-            @($catalog.Keys) | Should Be @('list', 'use', 'status', 'new', 'init', 'inventory', 'search', 'add', 'classify', 'resource', 'update', 'build', 'diff', 'doctor', 'config')
+            @($catalog.Keys).Count | Should Be 16
+            @($catalog.Keys) | Should Be @('list', 'use', 'status', 'new', 'init', 'inventory', 'search', 'add', 'classify', 'resource', 'side', 'update', 'build', 'diff', 'doctor', 'config')
             foreach ($name in $catalog.Keys) {
                 $catalog[$name].Summary | Should Not BeNullOrEmpty
                 $catalog[$name].Description | Should Not BeNullOrEmpty
@@ -695,6 +695,39 @@ side = "$side"
             }
             $sides = @((Get-ModpackInventory $project).Mods | Sort-Object Side | ForEach-Object Side)
             $sides | Should Be @('both', 'client', 'server')
+        }
+
+        It 'sets a Packwiz side in its technical metadata' {
+            $path = Join-Path $projectPath 'mods/managed.pw.toml'
+            [System.IO.File]::WriteAllText($path, @'
+name = "Managed"
+filename = "managed.jar"
+side = "both"
+[update.modrinth]
+mod-id = "managed-id"
+version = "v1"
+'@)
+            $result = Set-ModpackModSide -Project $project -Selector managed -Side host
+            $result.PreviousSide | Should Be 'both'
+            $result.Side | Should Be 'server'
+            (Get-TomlString -Text (Get-Content -Raw -LiteralPath $path) -Key side) | Should Be 'server'
+            (Get-ModpackInventory $project).Mods[0].Side | Should Be 'server'
+        }
+
+        It 'stores an explicit side override for a local mod' {
+            [System.IO.File]::WriteAllBytes((Join-Path $projectPath 'mods/local.jar'), [byte[]](1, 2, 3))
+            $result = Set-ModpackModSide -Project $project -Selector local.jar -Side client
+            $result.Side | Should Be 'client'
+            (Get-ModpackMetadata $project).Mods[$result.Item.Id].Side | Should Be 'client'
+            (Get-ModpackInventory $project).Mods[0].Side | Should Be 'client'
+        }
+
+        It 'rejects invalid sides without changing a managed file' {
+            $path = Join-Path $projectPath 'mods/managed.pw.toml'
+            [System.IO.File]::WriteAllText($path, "name = `"Managed`"`nfilename = `"managed.jar`"`nside = `"both`"")
+            $before = [System.IO.File]::ReadAllBytes($path)
+            { Set-ModpackModSide -Project $project -Selector managed -Side unknown } | Should Throw 'allowed values: client, host, both'
+            [System.Linq.Enumerable]::SequenceEqual([byte[]]$before, [byte[]][System.IO.File]::ReadAllBytes($path)) | Should Be $true
         }
 
         It 'applies a valid category using the stable ID' {

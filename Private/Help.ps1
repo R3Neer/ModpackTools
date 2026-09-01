@@ -109,6 +109,15 @@ function Get-MpCommandCatalog {
                 New-MpHelpItem '--project <id>' 'Use this project instead of the active one.'
             ); Notes = @('Default Options must be installed in the selected project.', 'Enable also repositions an active pack; move requires it to be active. Disable never uninstalls it.'); Examples = @('modpack resource enable "Fresh Animations" --position 1', 'modpack resource move 4 --position 2 --project vp26', 'modpack resource disable 4')
         }
+        side = [pscustomobject]@{
+            Handler = 'Invoke-MpSide'; Group = 'CONTENT'; Summary = 'Set a mod distribution side'; Description = 'Correct whether an installed mod is distributed to clients, hosts, or both.'
+            Usage = @('modpack side set <mod|inventory-number> <client|host|both> [options]'); Items = @(
+                New-MpHelpItem 'set' 'Replace the selected mod side.'
+                New-MpHelpItem '<mod>' 'Name, ID, filename, or latest inventory number.'
+                New-MpHelpItem '<side>' 'client, host, or both.'
+                New-MpHelpItem '--project <id>' 'Use this project instead of the active one.'
+            ); Notes = @('For Packwiz content this changes side in the .pw.toml source of truth.', 'For local JARs it stores an explicit project override. This does not change the mod executable itself.'); Examples = @('modpack side set sodium client', 'modpack side set 3 both --project vp26')
+        }
         update = [pscustomobject]@{
             Handler = 'Invoke-MpUpdate'; Group = 'CONTENT'; Summary = 'Update Packwiz-managed content'; Description = 'Update Packwiz-managed mods, resource packs, and shaders.'
             Usage = @('modpack update <selector...> [options]', 'modpack update --all [options]'); Items = @(

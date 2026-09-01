@@ -38,6 +38,38 @@ function Get-TomlString {
     return (ConvertFrom-TomlBasicString $match.Groups['value'].Value)
 }
 
+function Set-TomlString {
+    param(
+        [Parameter(Mandatory)][string]$Text,
+        [Parameter(Mandatory)][string]$Key,
+        [Parameter(Mandatory)][AllowEmptyString()][string]$Value,
+        [AllowEmptyString()][string]$Section = ''
+    )
+
+    $escapedKey = [regex]::Escape($Key)
+    $encodedValue = ConvertTo-TomlBasicString -Value $Value
+    if ([string]::IsNullOrEmpty($Section)) {
+        $body = Get-TomlSectionText -Text $Text
+        $match = [regex]::Match($body, ('(?m)^[ \t]*{0}[ \t]*=[ \t]*"(?:\\.|[^"\\])*"[ \t]*(?:#.*)?$' -f $escapedKey))
+        if (-not $match.Success) {
+            Throw-MpError -Message "TOML key '$Key' does not exist" -Hint 'repair the Packwiz metadata file' -ErrorId 'Content.MissingTomlKey' -Category InvalidData -TargetObject $Key
+        }
+        return $Text.Substring(0, $match.Index) + "$Key = `"$encodedValue`"" + $Text.Substring($match.Index + $match.Length)
+    }
+
+    $sectionBody = Get-TomlSectionText -Text $Text -Section $Section
+    if ($null -eq $sectionBody) {
+        Throw-MpError -Message "TOML section '$Section' does not exist" -Hint 'repair the Packwiz metadata file' -ErrorId 'Content.MissingTomlSection' -Category InvalidData -TargetObject $Section
+    }
+    $match = [regex]::Match($sectionBody, ('(?m)^[ \t]*{0}[ \t]*=[ \t]*"(?:\\.|[^"\\])*"[ \t]*(?:#.*)?$' -f $escapedKey))
+    if (-not $match.Success) {
+        Throw-MpError -Message "TOML key '$Key' does not exist in section '$Section'" -Hint 'repair the Packwiz metadata file' -ErrorId 'Content.MissingTomlKey' -Category InvalidData -TargetObject $Key
+    }
+    $sectionStart = $Text.IndexOf($sectionBody, [System.StringComparison]::Ordinal)
+    $absoluteIndex = $sectionStart + $match.Index
+    return $Text.Substring(0, $absoluteIndex) + "$Key = `"$encodedValue`"" + $Text.Substring($absoluteIndex + $match.Length)
+}
+
 function Get-PackTomlData {
     param([Parameter(Mandatory)][string]$Path)
 

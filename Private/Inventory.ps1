@@ -136,6 +136,7 @@ function Apply-ModMetadata {
     foreach ($mod in $Mods) {
         $entry = if ($Metadata.Mods.ContainsKey($mod.Id)) { $Metadata.Mods[$mod.Id] } else { $null }
         if ($entry -and $entry.ContainsKey('Name')) { $mod.Name = [string]$entry.Name }
+        if ($entry -and $entry.ContainsKey('Side')) { $mod.Side = [string]$entry.Side }
         if ($entry -and $entry.ContainsKey('Category')) {
             $requested = [string]$entry.Category
             if ($Metadata.Categories.ContainsKey($requested)) {
@@ -153,6 +154,36 @@ function Apply-ModMetadata {
         }
     }
     return $Mods
+}
+
+function Set-ModpackModSide {
+    param(
+        [Parameter(Mandatory)]$Project,
+        [Parameter(Mandatory)][string]$Selector,
+        [Parameter(Mandatory)][string]$Side
+    )
+
+    $normalizedSide = $Side.ToLowerInvariant()
+    if ($normalizedSide -eq 'host') { $normalizedSide = 'server' }
+    if ($normalizedSide -notin @('client', 'server', 'both')) {
+        Throw-MpError -Message "Side '$Side' is not recognized; allowed values: client, host, both" -Hint 'modpack side set <mod> <client|host|both>' -ErrorId 'Content.InvalidSide' -Category InvalidArgument -TargetObject $Side
+    }
+
+    $item = Resolve-ModpackModForClassification -Project $Project -Selector $Selector
+    $previous = $item.Side
+    if ($item.Source -eq 'packwiz' -and $item.MetadataPath) {
+        $text = Get-Content -Raw -LiteralPath $item.MetadataPath -Encoding UTF8
+        $updated = Set-TomlString -Text $text -Key side -Value $normalizedSide
+        Write-Utf8TextFileAtomic -Path $item.MetadataPath -Text $updated
+    }
+    else {
+        $metadata = Get-ModpackMetadata -Project $Project
+        if (-not $metadata.Mods.ContainsKey($item.Id)) { $metadata.Mods[$item.Id] = @{} }
+        $metadata.Mods[$item.Id]['Side'] = $normalizedSide
+        Write-PowerShellDataFileAtomic -Data $metadata -Path (Join-Path $Project.Root '.modpack/metadata.psd1')
+    }
+    $current = (Get-ModpackInventory -Project $Project).Mods | Where-Object Id -eq $item.Id | Select-Object -First 1
+    return [pscustomobject]@{ Item = $current; PreviousSide = $previous; Side = $normalizedSide }
 }
 
 function Get-ModpackInventory {

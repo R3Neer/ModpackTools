@@ -129,6 +129,27 @@ function Invoke-MpResource {
     Write-ResourcePackInventory -Inventory $result.Inventory -HideEmptySections
 }
 
+function Invoke-MpSide {
+    param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
+    if ($Arguments -contains '--help') { Show-MpHelp side; return }
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project')
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 3 -Maximum 3 -Usage 'modpack side set <mod|inventory-number> <client|host|both> [--project <id>]' -OptionNames @('project')
+    if (-not ([string]$parsed.Positionals[0]).Equals('set', [System.StringComparison]::OrdinalIgnoreCase)) {
+        Throw-MpError -Message "Side operation '$($parsed.Positionals[0])' is not recognized; allowed value: set" -Hint 'modpack side --help' -ErrorId 'Content.UnknownSideOperation' -Category InvalidArgument -TargetObject $parsed.Positionals[0]
+    }
+    $project = Resolve-MpCommandProject -Options $parsed.Options
+    $rawSelector = [string]$parsed.Positionals[1]
+    $reference = Resolve-ModpackInventoryNumber -Selector $rawSelector -Project $project -AllowedKinds @('mod')
+    $selector = if ($reference) { [string]$reference.Selector } else { $rawSelector }
+    $label = if ($reference) { "#$rawSelector $($reference.Name)" } else { $rawSelector }
+    Write-MpStep "Setting the side for '$label'..."
+    $result = Set-ModpackModSide -Project $project -Selector $selector -Side ([string]$parsed.Positionals[2])
+    $displaySide = if ($result.Side -eq 'server') { 'host' } else { $result.Side }
+    Write-MpSuccess "$($result.Item.Name) now uses side '$displaySide'."
+    Write-MpKeyValue 'Previous' $(if ($result.PreviousSide -eq 'server') { 'host' } else { $result.PreviousSide })
+    Write-MpKeyValue 'Source' $(if ($result.Item.Source -eq 'packwiz') { 'Packwiz metadata' } else { 'local override' })
+}
+
 function Invoke-MpClassify {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Show-MpHelp classify; return }
