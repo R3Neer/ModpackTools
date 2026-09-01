@@ -192,6 +192,8 @@ minecraft = "1.21.1"
             $text | Should Match 'modpack diff --project readme'
             $text | Should Match 'Every command that operates on an existing project'
             $text | Should Match 'modpack resource enable'
+            $text | Should Match 'modpack resource move'
+            $text | Should Match 'Resource pack activation and ordering require Default Options'
             $text | Should Match 'modpack update <inventory-number>'
             $text | Should Match 'modpack classify list'
             $text | Should Match 'modpack classify create <id>'
@@ -250,7 +252,7 @@ minecraft = "1.21.1"
         }
 
         It 'prints the module version through the global version option' {
-            (modpack --version 6>&1 | Out-String).Trim() | Should Be 'ModpackTools 1.0.0'
+            (modpack --version 6>&1 | Out-String).Trim() | Should Be 'ModpackTools 1.1.0'
             { modpack version } | Should Throw "Command 'version' is not recognized"
         }
 
@@ -271,7 +273,7 @@ minecraft = "1.21.1"
             [System.IO.Directory]::CreateDirectory($fixtureRoot) | Out-Null
             $script:ConfigHomeOverride = Join-Path $TestDrive 'doctor-config'
             Write-PowerShellDataFileAtomic -Path (Get-ModpackToolsConfigPath) -Data @{ Root = $fixtureRoot }
-            New-TestModpack $fixtureRoot 'Doctor Pack' 'doctor' | Out-Null
+            $doctorProjectPath = New-TestModpack $fixtureRoot 'Doctor Pack' 'doctor'
             Mock Resolve-MpPackwiz { [pscustomobject]@{ Available=$true; Path='C:\Tools\packwiz.exe'; Source='configured'; Version='fixture' } }
             Mock Test-MpPackwizInvocation { $true }
             Mock Get-MpMinecraftJavaCheck { New-MpDoctorCheck -Section OPTIONAL -Status warn -Label 'Minecraft Java' -Value 'Not detected' }
@@ -284,6 +286,21 @@ minecraft = "1.21.1"
             ($report.Checks | Where-Object { $_.Section -eq 'PACKWIZ' -and $_.Label -eq 'Invocation' }).Status | Should Be 'pass'
             ($report.Checks | Where-Object { $_.Section -eq 'PROJECT ROOT' -and $_.Label -eq 'Discovery' }).Value | Should Be '1 project discovered'
             ($report.Checks | Where-Object { $_.Label -eq 'Active' }).Status | Should Be 'info'
+            ($report.Checks | Where-Object { $_.Label -eq 'Default Options' }).Status | Should Be 'warn'
+        }
+
+        It 'reports Default Options as an optional ready project integration' {
+            [System.IO.File]::WriteAllText((Join-Path $doctorProjectPath 'mods/default-options.pw.toml'), @'
+name = "Default Options"
+filename = "defaultoptions-fabric.jar"
+[update.modrinth]
+mod-id = "WEg59z5b"
+'@)
+            [System.IO.File]::WriteAllText((Join-Path $doctorProjectPath 'config/defaultoptions-common.toml'), 'defaultResourcePacks = []')
+
+            $check = (Get-MpDoctorReport).Checks | Where-Object { $_.Label -eq 'Default Options' }
+            $check.Status | Should Be 'pass'
+            $check.Value | Should Be '1/1 projects ready'
         }
 
         It 'requires --fix when --yes is used' {
@@ -498,7 +515,7 @@ mod-id = "abc123"
             Assert-MockCalled Invoke-RestMethod -Times 1 -ParameterFilter {
                 $Uri -match 'api\.modrinth\.com/v2/search' -and
                 [System.Uri]::UnescapeDataString($Uri) -match 'versions:1\.21\.1' -and
-                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/1.0.0'
+                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/1.1.0'
             }
         }
 
@@ -872,6 +889,12 @@ mod-id = "fresh-id"
             $project = Read-ModpackProject $projectPath
             $script:ConfigHomeOverride = Join-Path $TestDrive 'resource-config'
             Write-PowerShellDataFileAtomic -Path (Get-ModpackToolsConfigPath) -Data @{ Root = $fixtureRoot }
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'mods/default-options.pw.toml'), @'
+name = "Default Options"
+filename = "defaultoptions-fabric.jar"
+[update.modrinth]
+mod-id = "WEg59z5b"
+'@)
         }
 
         It 'reads brackets inside strings without closing the array' {
@@ -933,16 +956,46 @@ side = "client"
             @(Get-DefaultResourcePackOrder $project) | Should Be @('vanilla', 'file/active.zip')
         }
 
+        It 'moves an enabled pack with the explicit move operation' {
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'resourcepacks/active.pw.toml'), "name = `"Active Pack`"`nfilename = `"active.zip`"")
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'config/defaultoptions-common.toml'), 'defaultResourcePacks = ["vanilla", "file/active.zip"]')
+
+            Invoke-MpResource @('move', 'Active Pack', '--position', '2', '--project', $project.Id)
+
+            @(Get-DefaultResourcePackOrder $project) | Should Be @('vanilla', 'file/active.zip')
+        }
+
+        It 'rejects moving a disabled pack' {
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'resourcepacks/inactive.pw.toml'), "name = `"Inactive Pack`"`nfilename = `"inactive.zip`"")
+            $path = Join-Path $projectPath 'config/defaultoptions-common.toml'
+            [System.IO.File]::WriteAllText($path, 'defaultResourcePacks = ["vanilla"]')
+            $before = Get-Content -Raw -LiteralPath $path
+
+            { Move-ModpackResourcePack -Project $project -Selector 'Inactive Pack' -Position 1 } | Should Throw 'is disabled and cannot be moved'
+            (Get-Content -Raw -LiteralPath $path) | Should Be $before
+        }
+
         It 'enables a resource pack by its latest inventory number' {
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'resourcepacks/active.pw.toml'), "name = `"Active Pack`"`nfilename = `"active.zip`"")
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'resourcepacks/new.pw.toml'), "name = `"New Pack`"`nfilename = `"new.zip`"")
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'config/defaultoptions-common.toml'), 'defaultResourcePacks = ["file/active.zip"]')
-            $view = Select-ModpackInventory -Inventory (Get-ModpackInventory -Project $project)
+            $view = Select-ModpackInventory -Inventory (Get-ModpackInventory -Project $project) -Type resourcepack
             [void](Set-ModpackInventoryReferences -View $view)
 
             Invoke-MpResource @('enable', '2', '--position', '1', '--project', $project.Id)
 
             @(Get-DefaultResourcePackOrder -Project $project) | Should Be @('file/new.zip', 'file/active.zip')
+        }
+
+        It 'requires Default Options before changing resource pack state or order' {
+            [System.IO.File]::Delete((Join-Path $projectPath 'mods/default-options.pw.toml'))
+            [System.IO.File]::WriteAllText((Join-Path $projectPath 'resourcepacks/new.pw.toml'), "name = `"New Pack`"`nfilename = `"new.zip`"")
+            $path = Join-Path $projectPath 'config/defaultoptions-common.toml'
+            [System.IO.File]::WriteAllText($path, 'defaultResourcePacks = ["vanilla"]')
+            $before = Get-Content -Raw -LiteralPath $path
+
+            { Enable-ModpackResourcePack -Project $project -Selector 'New Pack' -Position 1 } | Should Throw "Default Options is not installed"
+            (Get-Content -Raw -LiteralPath $path) | Should Be $before
         }
 
         It 'disables an enabled pack without deleting it and preserves remaining order' {

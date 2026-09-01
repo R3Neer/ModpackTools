@@ -123,6 +123,7 @@ modpack inventory --type resourcepack --state active
 modpack inventory --search sodium
 modpack update 3
 modpack resource enable "Fresh Animations" --position 1
+modpack resource move "Fresh Animations" --position 3
 modpack resource enable "fresh-animations.zip" --position 3 --project vp26
 modpack resource disable "Fresh Animations"
 modpack search sodium
@@ -168,6 +169,7 @@ Every item displayed by `inventory` receives one global `[number]` for that exac
 
 ```powershell
 modpack resource enable <inventory-number> --position <n>
+modpack resource move <inventory-number> --position <n>
 modpack resource disable <inventory-number>
 modpack classify set <inventory-number> <category|category-number|unclassified>
 modpack update <inventory-number>...
@@ -179,12 +181,13 @@ Number contexts are deliberately separate. `modpack add <number>` resolves again
 
 ```powershell
 modpack resource enable <name|id|filename> --position <n> [--project <id>]
+modpack resource move <name|id|filename> --position <n> [--project <id>]
 modpack resource disable <name|id|filename> [--project <id>]
 ```
 
-The selector accepts the name displayed by `inventory`, the Default Options ID, or the exact filename. Position 1 is the highest priority visible in the Minecraft GUI. If the pack is already enabled, `enable` repositions it; if it is disabled, the command enables it. `disable` removes it from the enabled order without deleting its ZIP or `.pw.toml`. Repeated disable operations are safe. Ambiguous selectors and out-of-range positions are rejected without writing.
+The selector accepts the name displayed by `inventory`, the Default Options ID, or the exact filename. Position 1 is the highest priority visible in the Minecraft GUI. If the pack is already enabled, `enable` repositions it; if it is disabled, the command enables it. `move` requires an enabled pack and changes only its priority. `disable` removes it from the enabled order without deleting its ZIP or `.pw.toml`. Repeated disable operations are safe. Ambiguous selectors and out-of-range positions are rejected without writing.
 
-The command modifies only `defaultResourcePacks` in `config/defaultoptions-common.toml`; it does not maintain a second activation list.
+These commands require the Default Options mod in the selected project and modify only `defaultResourcePacks` in `config/defaultoptions-common.toml`; they do not maintain a second activation list. If the mod is absent, the error suggests `modpack add WEg59z5b`, allowing Packwiz to select a release compatible with that project's Minecraft version and loader.
 
 ### Managing mod categories
 
@@ -299,7 +302,7 @@ Expected CLI errors use a shared structure: a precise cause, optional upstream d
 
 ## Default Options
 
-When `config/defaultoptions-common.toml` exists, `defaultResourcePacks` is the source of truth for enabled ordering. Default Options stores packs from lowest to highest priority; ModpackTools reverses the list to display the actual GUI priority. The parser supports brackets, apostrophes, symbols, and escapes inside strings. Built-in IDs without an override are displayed literally. Physical ZIP files not included in the list appear as present but disabled.
+Default Options is an optional per-project integration reported by `modpack doctor`. It is required only by `modpack resource enable`, `move`, and `disable`. When the mod and `config/defaultoptions-common.toml` exist, `defaultResourcePacks` is the source of truth for enabled ordering. Default Options stores packs from lowest to highest priority; ModpackTools reverses the list to display the actual GUI priority. The parser supports brackets, apostrophes, symbols, and escapes inside strings. Built-in IDs without an override are displayed literally. Physical ZIP files not included in the list appear as present but disabled.
 
 ## License
 

@@ -92,12 +92,12 @@ function Get-MpCommandCatalog {
             ); Examples = @('modpack classify list', 'modpack classify create world-generation --name "WORLD GENERATION"', 'modpack classify set 3 2')
         }
         resource = [pscustomobject]@{
-            Handler = 'Invoke-MpResource'; Group = 'CONTENT'; Summary = 'Manage resource pack activation'; Description = 'Enable, position, reposition, or disable an installed resource pack.'
-            Usage = @('modpack resource enable <selector> --position <n> [options]', 'modpack resource disable <selector> [options]'); Items = @(
+            Handler = 'Invoke-MpResource'; Group = 'CONTENT'; Summary = 'Manage resource pack activation'; Description = 'Enable, move, or disable an installed resource pack through Default Options.'
+            Usage = @('modpack resource enable <selector> --position <n> [options]', 'modpack resource move <selector> --position <n> [options]', 'modpack resource disable <selector> [options]'); Items = @(
                 New-MpHelpItem '<selector>' 'Name, ID, filename, or latest inventory number.'
-                New-MpHelpItem '--position <n>' 'Minecraft priority for enable. Position 1 is highest.'
+                New-MpHelpItem '--position <n>' 'Minecraft priority for enable or move. Position 1 is highest.'
                 New-MpHelpItem '--project <id>' 'Use this project instead of the active one.'
-            ); Notes = @('Enabling an active pack repositions it. Disabling a pack does not uninstall it.'); Examples = @('modpack resource enable "Fresh Animations" --position 1', 'modpack resource enable 4 --position 2 --project vp26', 'modpack resource disable 4')
+            ); Notes = @('Default Options must be installed in the selected project.', 'Enable also repositions an active pack; move requires it to be active. Disable never uninstalls it.'); Examples = @('modpack resource enable "Fresh Animations" --position 1', 'modpack resource move 4 --position 2 --project vp26', 'modpack resource disable 4')
         }
         update = [pscustomobject]@{
             Handler = 'Invoke-MpUpdate'; Group = 'CONTENT'; Summary = 'Update Packwiz-managed content'; Description = 'Update Packwiz-managed mods, resource packs, and shaders.'

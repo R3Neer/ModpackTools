@@ -53,6 +53,34 @@ function Get-MpMinecraftJavaCheck {
     return New-MpDoctorCheck -Section 'OPTIONAL' -Status warn -Label 'Minecraft Java' -Value 'No standard installation detected' -Detail 'Custom launcher installations may not be discovered automatically.'
 }
 
+function Get-MpDefaultOptionsDoctorCheck {
+    param([AllowEmptyCollection()][array]$Projects = @())
+
+    if (-not $Projects.Count) {
+        return New-MpDoctorCheck -Section 'OPTIONAL' -Status info -Label 'Default Options' -Value 'No projects checked' -Detail 'Required only for resource pack activation and ordering.'
+    }
+    $ready = [System.Collections.Generic.List[string]]::new()
+    $missingMod = [System.Collections.Generic.List[string]]::new()
+    $missingConfig = [System.Collections.Generic.List[string]]::new()
+    $unreadable = [System.Collections.Generic.List[string]]::new()
+    foreach ($project in $Projects) {
+        try {
+            $status = Get-ModpackDefaultOptionsStatus -Project $project
+            if ($status.Ready) { $ready.Add($project.Id) }
+            elseif (-not $status.Installed) { $missingMod.Add($project.Id) }
+            else { $missingConfig.Add($project.Id) }
+        }
+        catch { $unreadable.Add($project.Id) }
+    }
+    $detailParts = [System.Collections.Generic.List[string]]::new()
+    if ($missingMod.Count) { $detailParts.Add('Missing mod: ' + ($missingMod -join ', ') + '.') }
+    if ($missingConfig.Count) { $detailParts.Add('Missing config: ' + ($missingConfig -join ', ') + '.') }
+    if ($unreadable.Count) { $detailParts.Add('Could not inspect: ' + ($unreadable -join ', ') + '.') }
+    $detailParts.Add('Required only for modpack resource enable, move, and disable.')
+    $statusName = if ($ready.Count -eq $Projects.Count) { 'pass' } else { 'warn' }
+    return New-MpDoctorCheck -Section 'OPTIONAL' -Status $statusName -Label 'Default Options' -Value "$($ready.Count)/$($Projects.Count) projects ready" -Detail ($detailParts -join ' ')
+}
+
 function Get-MpDoctorReport {
     $checks = [System.Collections.Generic.List[object]]::new()
     $checks.Add((New-MpDoctorCheck -Section 'SYSTEM' -Status pass -Label 'PowerShell' -Value $PSVersionTable.PSVersion.ToString()))
@@ -79,6 +107,7 @@ function Get-MpDoctorReport {
     }
 
     $configReadable = $true
+    $projects = @()
     try { $config = Get-ModpackToolsConfig }
     catch {
         $checks.Add((New-MpDoctorCheck -Section 'PROJECT ROOT' -Status fail -Label 'Root' -Value 'Configuration is invalid' -Detail $_.Exception.Message))
@@ -113,6 +142,7 @@ function Get-MpDoctorReport {
         $checks.Add((New-MpDoctorCheck -Section 'OPTIONAL' -Status pass -Label 'Git' -Value ([string]$gitVersion) -Detail $git.Source))
     }
     else { $checks.Add((New-MpDoctorCheck -Section 'OPTIONAL' -Status warn -Label 'Git' -Value 'Not found')) }
+    $checks.Add((Get-MpDefaultOptionsDoctorCheck -Projects $projects))
     $checks.Add((Get-MpMinecraftJavaCheck))
 
     $failures = @($checks | Where-Object Status -eq 'fail').Count

@@ -1,3 +1,32 @@
+function Get-ModpackDefaultOptionsStatus {
+    param([Parameter(Mandatory)]$Project, $Inventory)
+
+    if (-not $Inventory) { $Inventory = Get-ModpackInventory -Project $Project }
+    $mod = $Inventory.Mods | Where-Object {
+        ([string]$_.Id).Equals('modrinth:WEg59z5b', [System.StringComparison]::OrdinalIgnoreCase) -or
+        ([string]$_.Name).Equals('Default Options', [System.StringComparison]::OrdinalIgnoreCase) -or
+        ([string]$_.Filename) -match '^defaultoptions(?:-|\.|_).*\.jar$'
+    } | Select-Object -First 1
+    $configPath = Join-Path $Project.Root 'config/defaultoptions-common.toml'
+    return [pscustomobject]@{
+        Installed = $null -ne $mod
+        ConfigPresent = Test-Path -LiteralPath $configPath -PathType Leaf
+        Ready = ($null -ne $mod) -and (Test-Path -LiteralPath $configPath -PathType Leaf)
+        Mod = $mod
+        ConfigPath = $configPath
+    }
+}
+
+function Assert-ModpackDefaultOptionsInstalled {
+    param([Parameter(Mandatory)]$Project, $Inventory)
+
+    $status = Get-ModpackDefaultOptionsStatus -Project $Project -Inventory $Inventory
+    if (-not $status.Installed) {
+        Throw-MpError -Message "Default Options is not installed in project '$($Project.Id)', so resource pack activation and order cannot be managed" -Hint "modpack add WEg59z5b --project $($Project.Id)" -ErrorId 'ResourcePack.DefaultOptionsRequired' -Category NotInstalled -TargetObject $Project.Id
+    }
+    return $status
+}
+
 function Resolve-ModpackResourcePack {
     param([Parameter(Mandatory)]$Inventory, [Parameter(Mandatory)][string]$Selector)
 
@@ -45,6 +74,7 @@ function Enable-ModpackResourcePack {
     )
 
     $inventory = Get-ModpackInventory -Project $Project
+    [void](Assert-ModpackDefaultOptionsInstalled -Project $Project -Inventory $inventory)
     $target = Resolve-ModpackResourcePack -Inventory $inventory -Selector $Selector
     $remaining = @($inventory.ActiveResources | Where-Object { -not $_.Id.Equals($target.DefaultId, [System.StringComparison]::OrdinalIgnoreCase) } | ForEach-Object Id)
     $maximum = $remaining.Count + 1
@@ -61,6 +91,22 @@ function Enable-ModpackResourcePack {
     return [pscustomobject]@{ Item = $item; Inventory = $updated; WasActive = $target.Active }
 }
 
+function Move-ModpackResourcePack {
+    param(
+        [Parameter(Mandatory)]$Project,
+        [Parameter(Mandatory)][string]$Selector,
+        [Parameter(Mandatory)][int]$Position
+    )
+
+    $inventory = Get-ModpackInventory -Project $Project
+    [void](Assert-ModpackDefaultOptionsInstalled -Project $Project -Inventory $inventory)
+    $target = Resolve-ModpackResourcePack -Inventory $inventory -Selector $Selector
+    if (-not $target.Active) {
+        Throw-MpError -Message "Resource pack '$($target.Name)' is disabled and cannot be moved" -Hint "modpack resource enable '$Selector' --position $Position --project $($Project.Id)" -ErrorId 'ResourcePack.NotEnabled' -Category InvalidOperation -TargetObject $Selector
+    }
+    return Enable-ModpackResourcePack -Project $Project -Selector $Selector -Position $Position
+}
+
 function Disable-ModpackResourcePack {
     param(
         [Parameter(Mandatory)]$Project,
@@ -68,6 +114,7 @@ function Disable-ModpackResourcePack {
     )
 
     $inventory = Get-ModpackInventory -Project $Project
+    [void](Assert-ModpackDefaultOptionsInstalled -Project $Project -Inventory $inventory)
     $target = Resolve-ModpackResourcePack -Inventory $inventory -Selector $Selector
     if (-not $target.Active) {
         return [pscustomobject]@{ Item = $target; Inventory = $inventory; WasActive = $false }

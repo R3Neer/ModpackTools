@@ -92,12 +92,12 @@ function Invoke-MpResource {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Show-MpHelp resource; return }
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project', 'position')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum 2 -Usage 'modpack resource enable|disable <name|id|filename> [options]' -OptionNames @('project', 'position')
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum 2 -Usage 'modpack resource enable|move|disable <name|id|filename> [options]' -OptionNames @('project', 'position')
     $operation = $parsed.Positionals[0].ToLowerInvariant()
-    if ($operation -notin @('enable', 'disable')) { Throw-MpError -Message "Resource pack operation '$($parsed.Positionals[0])' is not recognized; allowed values: enable, disable" -Hint 'modpack resource --help' -ErrorId 'ResourcePack.UnknownOperation' -Category InvalidArgument -TargetObject $parsed.Positionals[0] }
+    if ($operation -notin @('enable', 'move', 'disable')) { Throw-MpError -Message "Resource pack operation '$($parsed.Positionals[0])' is not recognized; allowed values: enable, move, disable" -Hint 'modpack resource --help' -ErrorId 'ResourcePack.UnknownOperation' -Category InvalidArgument -TargetObject $parsed.Positionals[0] }
     $position = 0
-    if ($operation -eq 'enable') {
-        if (-not $parsed.Options.ContainsKey('position')) { Throw-MpError -Message "Required option '--position' is missing" -Hint 'modpack resource enable <selector> --position <n>' -ErrorId 'Option.Required' -Category InvalidArgument -TargetObject 'position' }
+    if ($operation -in @('enable', 'move')) {
+        if (-not $parsed.Options.ContainsKey('position')) { Throw-MpError -Message "Required option '--position' is missing" -Hint "modpack resource $operation <selector> --position <n>" -ErrorId 'Option.Required' -Category InvalidArgument -TargetObject 'position' }
         if (-not [int]::TryParse([string]$parsed.Options.position, [ref]$position) -or $position -lt 1) { Throw-MpError -Message "Position '$($parsed.Options.position)' is not a positive integer" -Hint '--position <integer greater than or equal to 1>' -ErrorId 'Option.InvalidPosition' -Category InvalidArgument -TargetObject $parsed.Options.position }
     }
     elseif ($parsed.Options.ContainsKey('position')) {
@@ -114,6 +114,11 @@ function Invoke-MpResource {
         $result = Enable-ModpackResourcePack -Project $project -Selector $selector -Position $position
         $verb = if ($result.WasActive) { 'repositioned' } else { 'enabled' }
         Write-MpSuccess "$($result.Item.Name) was $verb at priority $($result.Item.Priority)."
+    }
+    elseif ($operation -eq 'move') {
+        Write-MpStep "Moving '$label'..."
+        $result = Move-ModpackResourcePack -Project $project -Selector $selector -Position $position
+        Write-MpSuccess "$($result.Item.Name) was moved to priority $($result.Item.Priority)."
     }
     else {
         Write-MpStep "Disabling '$label'..."
