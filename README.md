@@ -31,7 +31,7 @@ modpack config set root "D:\Minecraft"
 modpack config get root
 ```
 
-La configuración se guarda en `%LOCALAPPDATA%\ModpackTools\config.psd1`. Para tests se puede redirigir con `MODPACKTOOLS_CONFIG_HOME`.
+La configuración se guarda en la carpeta estándar `LocalApplicationData\ModpackTools\config.psd1` del usuario.
 
 ## Estructura de proyecto
 
@@ -93,6 +93,11 @@ modpack use vp26
 modpack use
 modpack status
 modpack status vp26 --full
+modpack inventory
+modpack inventory --category performance
+modpack inventory --side host --source local
+modpack inventory --type resourcepack --state active
+modpack inventory --search sodium
 modpack add mod sodium --category performance
 modpack add mod sodium --project vp26 --category performance
 modpack build
@@ -100,6 +105,19 @@ modpack build vp26 --keep-old --raw-log
 ```
 
 Un ID explícito tiene prioridad sobre la selección de la sesión. `modpack use` solo afecta al proceso actual de PowerShell.
+
+### Consultar y filtrar el inventario
+
+`modpack inventory [id]` muestra mods, resource packs activos e inactivos y shaders. Los filtros se pueden combinar:
+
+- `--type all|mod|resourcepack|shaderpack`
+- `--category <id|unclassified>` o `--unclassified`
+- `--side client|host|both|unknown`
+- `--source packwiz|local|builtin|missing`
+- `--state all|active|inactive`
+- `--search <texto>` busca en nombre, ID y filename.
+
+`host` corresponde al valor técnico `server`. Los filtros de categoría o side acotan automáticamente a mods; `--state` acota a resource packs.
 
 ### Crear un proyecto
 
@@ -116,6 +134,8 @@ Por defecto usa el Fabric Loader más reciente compatible que seleccione Packwiz
 ### Construir
 
 `modpack build` valida el proyecto, ejecuta `packwiz refresh` y `packwiz modrinth export`, y publica el resultado en `dist/`. Exporta primero a un fichero temporal para no destruir un artefacto correcto si Packwiz falla.
+
+Un `.mrpack` que permanezca en la raíz de un proyecto migrado es un artefacto legado que ModpackTools conserva para no borrar datos. Los builds nuevos y sus reemplazos viven exclusivamente en `dist/`; el fichero legado puede eliminarse manualmente cuando ya no se necesite.
 
 - `--no-refresh`: omite `packwiz refresh`.
 - `--keep-old`: si existe el nombre habitual, genera el nuevo con timestamp.

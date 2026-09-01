@@ -1,13 +1,14 @@
 function Get-ModpackToolsConfigDirectory {
-    if ($env:MODPACKTOOLS_CONFIG_HOME) {
-        return [System.IO.Path]::GetFullPath($env:MODPACKTOOLS_CONFIG_HOME)
+    if ($script:ConfigHomeOverride) {
+        return [System.IO.Path]::GetFullPath($script:ConfigHomeOverride)
     }
 
-    if (-not $env:LOCALAPPDATA) {
+    $localApplicationData = [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
+    if ([string]::IsNullOrWhiteSpace($localApplicationData)) {
         throw 'No se puede determinar LOCALAPPDATA para guardar la configuración.'
     }
 
-    return (Join-Path $env:LOCALAPPDATA 'ModpackTools')
+    return (Join-Path $localApplicationData 'ModpackTools')
 }
 
 function Get-ModpackToolsConfigPath {

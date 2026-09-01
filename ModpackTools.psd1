@@ -1,6 +1,6 @@
 @{
     RootModule        = 'ModpackTools.psm1'
-    ModuleVersion     = '0.1.0'
+    ModuleVersion     = '0.2.0'
     GUID              = 'dc256dd6-6b3d-4bc5-aed0-14dad616642b'
     Author            = 'ModpackTools contributors'
     CompanyName       = 'Community'

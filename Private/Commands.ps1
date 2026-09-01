@@ -44,11 +44,12 @@ function Invoke-MpHelp {
     $topic = if ($Arguments.Count) { [string]$Arguments[0] } else { '' }
     $help = @{
         '' = @'
-ModpackTools 0.1
+ModpackTools 0.2
 
   modpack list
   modpack use [id]
   modpack status [id] [--full]
+  modpack inventory [id] [filtros]
   modpack build [id] [--no-refresh] [--keep-old] [--open] [--raw-log]
   modpack add mod <slug> [--project <id>] [--category <id>]
   modpack new <id> --name <nombre> --minecraft <versión> --loader fabric [opciones]
@@ -58,6 +59,17 @@ ModpackTools 0.1
 '@
         build = 'Uso: modpack build [id] [--no-refresh] [--keep-old] [--open] [--raw-log]'
         status = 'Uso: modpack status [id] [--full]'
+        inventory = @'
+Uso: modpack inventory [id] [filtros]
+
+  --type <all|mod|resourcepack|shaderpack>
+  --category <id|unclassified>
+  --side <client|host|both|unknown>
+  --source <packwiz|local|builtin|missing>
+  --state <all|active|inactive>
+  --search <texto>
+  --unclassified
+'@
         add = 'Uso: modpack add mod <slug> [--project <id>] [--category <id>]'
         new = 'Uso: modpack new <id> --name <nombre> --minecraft <versión> --loader fabric [--path <carpeta>] [--loader-version <versión>] [--pack-version <versión>] [--display-version <versión>]'
         config = 'Uso: modpack config get root | modpack config set root <directorio>'
@@ -72,12 +84,9 @@ function Invoke-MpList {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments.Count -and $Arguments[0] -eq '--help') { Invoke-MpHelp list; return }
     Assert-PositionalCount -Values $Arguments -Minimum 0 -Maximum 0 -Usage 'modpack list'
+    $root = Get-ModpackRoot
     $projects = @(Get-ModpackProjects)
-    Write-Host ('{0,-10} {1,-24} {2,-10} {3}' -f 'ID', 'NAME', 'MC', 'LOADER')
-    Write-Host ('-' * 60)
-    foreach ($project in $projects) {
-        Write-Host ('{0,-10} {1,-24} {2,-10} {3}' -f $project.Id, $project.DisplayName, $project.MinecraftVersion, $project.Loader)
-    }
+    Write-ModpackList -Projects $projects -Root $root
 }
 
 function Invoke-MpUse {
@@ -104,10 +113,35 @@ function Invoke-MpStatus {
     $inventory = Get-ModpackInventory -Project $project
     Write-ModpackHeader -Project $project -Inventory $inventory
     if ($parsed.Options.ContainsKey('full')) {
-        Write-ModInventory $inventory
-        Write-ResourcePackInventory $inventory
-        Write-ShaderInventory $inventory
+        $view = Select-ModpackInventory -Inventory $inventory
+        Write-InventoryView -View $view
     }
+}
+
+function Invoke-MpInventory {
+    param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
+    if ($Arguments -contains '--help') { Invoke-MpHelp inventory; return }
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments `
+        -ValueOptions @('type', 'category', 'side', 'source', 'state', 'search') `
+        -SwitchOptions @('unclassified')
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack inventory [id] [filtros]'
+    if ($parsed.Options.ContainsKey('unclassified') -and $parsed.Options.ContainsKey('category')) {
+        throw 'Usa --unclassified o --category, no ambos.'
+    }
+
+    $id = if ($parsed.Positionals.Count) { $parsed.Positionals[0] } else { $null }
+    $project = Resolve-ModpackProject -Id $id
+    Assert-ModpackStructure -Project $project
+    $inventory = Get-ModpackInventory -Project $project
+    $parameters = @{ Inventory = $inventory }
+    foreach ($name in @('type', 'category', 'side', 'source', 'state', 'search')) {
+        if ($parsed.Options.ContainsKey($name)) { $parameters[$name.Substring(0,1).ToUpperInvariant() + $name.Substring(1)] = $parsed.Options[$name] }
+    }
+    if ($parsed.Options.ContainsKey('unclassified')) { $parameters.Category = 'unclassified' }
+    $view = Select-ModpackInventory @parameters
+
+    Write-ModpackHeader -Project $project -Inventory $inventory
+    Write-InventoryView -View $view -ShowFilters
 }
 
 function Invoke-MpBuild {

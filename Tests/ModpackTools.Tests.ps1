@@ -37,7 +37,7 @@ minecraft = "1.21.1"
         BeforeEach {
             $fixtureRoot = Join-Path $TestDrive 'root con espacios'
             [System.IO.Directory]::CreateDirectory($fixtureRoot) | Out-Null
-            $env:MODPACKTOOLS_CONFIG_HOME = Join-Path $TestDrive 'config'
+            $script:ConfigHomeOverride = Join-Path $TestDrive 'config'
             Write-PowerShellDataFileAtomic -Path (Get-ModpackToolsConfigPath) -Data @{ Root = $fixtureRoot }
             $script:ActiveProjectId = $null
         }
@@ -176,6 +176,62 @@ side = "client"
 '@)
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'config/defaultoptions-common.toml'), 'defaultResourcePacks = ["file/Animated 3D Wind Charge [1.1].zip"]')
             (Get-ModpackInventory $project).ActiveResources[0].Name | Should Be 'Animated Wind'
+        }
+    }
+
+    Describe 'Filtros de inventario' {
+        BeforeEach {
+            $filterInventory = [pscustomobject]@{
+                Project = [pscustomobject]@{ Id = 'filter' }
+                Metadata = @{ Categories = @{ performance = @{ Name = 'RENDIMIENTO'; Order = 10 } } }
+                Mods = @(
+                    [pscustomobject]@{ Id='modrinth:a'; Kind='mod'; Name='Sodium'; Filename='sodium.jar'; Side='client'; Source='packwiz'; Category='performance' }
+                    [pscustomobject]@{ Id='local:mods/b.jar'; Kind='mod'; Name='Host Tool'; Filename='b.jar'; Side='server'; Source='local'; Category='unclassified' }
+                    [pscustomobject]@{ Id='modrinth:c'; Kind='mod'; Name='Shared Mod'; Filename='c.jar'; Side='both'; Source='packwiz'; Category='unclassified' }
+                )
+                ActiveResources = @(
+                    [pscustomobject]@{ Id='file/active.zip'; Kind='resourcepack'; Name='Active Pack'; Filename='active.zip'; Source='packwiz'; Enabled=$true; Priority=1 }
+                    [pscustomobject]@{ Id='builtin:test'; Kind='resourcepack'; Name='Builtin Pack'; Filename=$null; Source='builtin'; Enabled=$true; Priority=2 }
+                )
+                InactiveResources = @(
+                    [pscustomobject]@{ Id='local:resourcepacks/old.zip'; Kind='resourcepack'; Name='Old Pack'; Filename='old.zip'; Source='local' }
+                )
+                Shaders = @(
+                    [pscustomobject]@{ Id='modrinth:shader'; Kind='shaderpack'; Name='Vivid'; Filename='vivid.zip'; Source='packwiz' }
+                )
+            }
+        }
+
+        It 'filtra mods por categoría' {
+            $view = Select-ModpackInventory -Inventory $filterInventory -Category performance
+            $view.IncludedTypes | Should Be @('mod')
+            $view.Mods.Count | Should Be 1
+            $view.Mods[0].Name | Should Be 'Sodium'
+        }
+
+        It 'acepta host como alias del side server y combina source' {
+            $view = Select-ModpackInventory -Inventory $filterInventory -Side host -Source local
+            $view.Mods.Count | Should Be 1
+            $view.Mods[0].Name | Should Be 'Host Tool'
+        }
+
+        It 'filtra resource packs por estado y texto' {
+            $view = Select-ModpackInventory -Inventory $filterInventory -Type resourcepack -State active -Search builtin
+            $view.ActiveResources.Count | Should Be 1
+            $view.ActiveResources[0].Source | Should Be 'builtin'
+            $view.InactiveResources.Count | Should Be 0
+        }
+
+        It 'filtra elementos locales de todos los tipos' {
+            $view = Select-ModpackInventory -Inventory $filterInventory -Source local
+            $view.TotalMatches | Should Be 2
+            $view.Mods.Count | Should Be 1
+            $view.InactiveResources.Count | Should Be 1
+        }
+
+        It 'rechaza combinaciones de filtros contradictorias' {
+            { Select-ModpackInventory -Inventory $filterInventory -Type shaderpack -Side client } | Should Throw 'solo se pueden aplicar a mods'
+            { Select-ModpackInventory -Inventory $filterInventory -Category performance -State active } | Should Throw 'No se pueden combinar'
         }
     }
 

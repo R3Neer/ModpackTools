@@ -202,3 +202,116 @@ function Get-ModpackInventory {
         Shaders           = @($shaders | Sort-Object Name)
     }
 }
+
+function Resolve-InventoryType {
+    param([AllowNull()][AllowEmptyString()][string]$Type)
+    switch (($Type ?? 'all').ToLowerInvariant()) {
+        'all'           { 'all' }
+        'mod'           { 'mod' }
+        'mods'          { 'mod' }
+        'resource'      { 'resourcepack' }
+        'resources'     { 'resourcepack' }
+        'resourcepack'  { 'resourcepack' }
+        'resourcepacks' { 'resourcepack' }
+        'shader'        { 'shaderpack' }
+        'shaders'       { 'shaderpack' }
+        'shaderpack'    { 'shaderpack' }
+        'shaderpacks'   { 'shaderpack' }
+        default { throw "Tipo de inventario desconocido '$Type'. Usa all, mod, resourcepack o shaderpack." }
+    }
+}
+
+function Select-ModpackInventory {
+    param(
+        [Parameter(Mandatory)]$Inventory,
+        [string]$Type = 'all',
+        [string]$Category,
+        [string]$Side,
+        [string]$Source,
+        [string]$State = 'all',
+        [string]$Search
+    )
+
+    $effectiveType = Resolve-InventoryType $Type
+    $normalizedSide = if ($Side) { $Side.ToLowerInvariant() } else { $null }
+    if ($normalizedSide -eq 'host') { $normalizedSide = 'server' }
+    if ($normalizedSide -and $normalizedSide -notin @('client', 'server', 'both', 'unknown')) {
+        throw "Side desconocido '$Side'. Usa client, host, server, both o unknown."
+    }
+    $normalizedSource = if ($Source) { $Source.ToLowerInvariant() } else { $null }
+    if ($normalizedSource -and $normalizedSource -notin @('packwiz', 'local', 'builtin', 'missing')) {
+        throw "Fuente desconocida '$Source'. Usa packwiz, local, builtin o missing."
+    }
+    $normalizedState = ($State ?? 'all').ToLowerInvariant()
+    if ($normalizedState -notin @('all', 'active', 'inactive')) {
+        throw "Estado desconocido '$State'. Usa all, active o inactive."
+    }
+
+    if ($Category -or $normalizedSide) {
+        if ($effectiveType -notin @('all', 'mod')) { throw 'Los filtros --category y --side solo se pueden aplicar a mods.' }
+        if ($normalizedState -ne 'all') { throw 'No se pueden combinar filtros de mods con --state.' }
+        $effectiveType = 'mod'
+    }
+    if ($normalizedState -ne 'all') {
+        if ($effectiveType -notin @('all', 'resourcepack')) { throw 'El filtro --state solo se puede aplicar a resource packs.' }
+        $effectiveType = 'resourcepack'
+    }
+    if ($Category -and $Category -ne 'unclassified' -and -not $Inventory.Metadata.Categories.ContainsKey($Category)) {
+        $available = @($Inventory.Metadata.Categories.Keys | Sort-Object) -join ', '
+        throw "La categoría '$Category' no existe. Disponibles: $available, unclassified."
+    }
+
+    function Test-InventoryCommonFilter {
+        param($Item)
+        if ($normalizedSource -and [string]$Item.Source -ne $normalizedSource) { return $false }
+        if ($Search) {
+            $haystack = @($Item.Name, $Item.Id, $Item.Filename) -join ' '
+            if ($haystack.IndexOf($Search, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) { return $false }
+        }
+        return $true
+    }
+
+    $mods = @(if ($effectiveType -in @('all', 'mod')) {
+        $Inventory.Mods | Where-Object {
+            (Test-InventoryCommonFilter $_) -and
+            (-not $Category -or $_.Category -eq $Category) -and
+            (-not $normalizedSide -or $_.Side -eq $normalizedSide)
+        }
+    })
+
+    $activeResources = @(if ($effectiveType -in @('all', 'resourcepack') -and $normalizedState -ne 'inactive') {
+        $Inventory.ActiveResources | Where-Object { Test-InventoryCommonFilter $_ }
+    })
+    $inactiveResources = @(if ($effectiveType -in @('all', 'resourcepack') -and $normalizedState -ne 'active') {
+        $Inventory.InactiveResources | Where-Object { Test-InventoryCommonFilter $_ }
+    })
+    $shaders = @(if ($effectiveType -in @('all', 'shaderpack')) {
+        $Inventory.Shaders | Where-Object { Test-InventoryCommonFilter $_ }
+    })
+
+    $includedTypes = switch ($effectiveType) {
+        'mod'          { @('mod') }
+        'resourcepack' { @('resourcepack') }
+        'shaderpack'   { @('shaderpack') }
+        default        { @('mod', 'resourcepack', 'shaderpack') }
+    }
+    $filterLabels = [System.Collections.Generic.List[string]]::new()
+    if ($effectiveType -ne 'all') { $filterLabels.Add("type=$effectiveType") }
+    if ($Category) { $filterLabels.Add("category=$Category") }
+    if ($normalizedSide) { $filterLabels.Add("side=$(if ($normalizedSide -eq 'server') { 'host' } else { $normalizedSide })") }
+    if ($normalizedSource) { $filterLabels.Add("source=$normalizedSource") }
+    if ($normalizedState -ne 'all') { $filterLabels.Add("state=$normalizedState") }
+    if ($Search) { $filterLabels.Add("search=$Search") }
+
+    [pscustomobject]@{
+        Project           = $Inventory.Project
+        Metadata          = $Inventory.Metadata
+        Mods              = @($mods)
+        ActiveResources   = @($activeResources)
+        InactiveResources = @($inactiveResources)
+        Shaders           = @($shaders)
+        IncludedTypes     = $includedTypes
+        Filters           = @($filterLabels)
+        TotalMatches      = $mods.Count + $activeResources.Count + $inactiveResources.Count + $shaders.Count
+    }
+}

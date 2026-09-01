@@ -3,6 +3,7 @@ $ErrorActionPreference = 'Stop'
 
 $script:ActiveProjectId = $null
 $script:ModuleRoot = $PSScriptRoot
+$script:ConfigHomeOverride = $null
 
 foreach ($file in @(
     'Private/Configuration.ps1'
