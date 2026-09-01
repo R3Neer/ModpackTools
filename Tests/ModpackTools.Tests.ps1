@@ -98,9 +98,36 @@ minecraft = "1.21.1"
             $diff.Removed[0].Path | Should Be 'mods/old.jar'
         }
 
+        It 'renders a partial diff when other sections are empty' {
+            $diff = [pscustomobject]@{
+                Project = [pscustomobject]@{ DisplayName = 'Sample' }
+                BaselinePath = 'C:\builds\sample.mrpack'
+                BaselineTime = [datetime]'2026-01-01'
+                Added = @()
+                Changed = @([pscustomobject]@{ Kind='OVERRIDE'; Path='README.md' })
+                Removed = @()
+                Total = 1
+            }
+            { Write-ModpackDiff -Diff $diff } | Should Not Throw
+        }
+
         It 'rejects the old add mod syntax' {
             { Invoke-MpAdd @('mod') } | Should Throw 'Invalid syntax'
             { Invoke-MpAdd @('mod', 'sodium') } | Should Throw 'Usage: modpack add <slug>'
+        }
+    }
+
+    Describe 'Generated project README' {
+        It 'documents the current CLI and sources of truth' {
+            $fixtureRoot = Join-Path $TestDrive 'readme-packs'
+            [System.IO.Directory]::CreateDirectory($fixtureRoot) | Out-Null
+            $projectPath = New-TestModpack $fixtureRoot 'Readme Pack' 'readme'
+            $text = Get-ModpackProjectReadmeText -Project (Read-ModpackProject $projectPath)
+            $text | Should Match 'modpack add <slug>'
+            $text | Should Match 'modpack diff'
+            $text | Should Match 'modpack resource enable'
+            $text | Should Match 'defaultoptions-common.toml'
+            $text | Should Not Match 'modpack add mod'
         }
     }
 

@@ -324,7 +324,7 @@ function Write-BuildSummary {
 }
 
 function Write-MpDiffItems {
-    param([Parameter(Mandatory)][array]$Items, [Parameter(Mandatory)][ValidateSet('Added', 'Changed', 'Removed')][string]$Status)
+    param([Parameter(Mandatory)][AllowEmptyCollection()][array]$Items, [Parameter(Mandatory)][ValidateSet('Added', 'Changed', 'Removed')][string]$Status)
     if ($Items.Count -eq 0) { return }
     $settings = switch ($Status) {
         'Added'   { @{ Symbol = '+'; Color = $script:Palette.Success } }

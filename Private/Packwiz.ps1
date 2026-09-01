@@ -47,6 +47,90 @@ function Invoke-Packwiz {
     return @(Invoke-NativeCommandChecked -FilePath 'packwiz' -Arguments $Arguments -WorkingDirectory $WorkingDirectory)
 }
 
+function Get-ModpackProjectReadmeText {
+    param([Parameter(Mandatory)]$Project)
+
+    $loaderName = if ($Project.Loader) { (Get-Culture).TextInfo.ToTitleCase($Project.Loader) } else { 'Unknown' }
+    $loaderDescription = if ($Project.LoaderVersion) { "$loaderName $($Project.LoaderVersion)" } else { $loaderName }
+    $template = @'
+# {0} {1}
+
+Minecraft Java modpack managed with [Packwiz](https://packwiz.infra.link/) and ModpackTools.
+
+## Project
+
+- **ID:** `{2}`
+- **Minecraft:** {3}
+- **Loader:** {4}
+- **Technical pack version:** {5}
+- **Build artifact:** `dist/{6}`
+
+## Quick start
+
+```powershell
+modpack use {2}
+modpack status
+modpack inventory
+modpack diff
+modpack build
+```
+
+`modpack use` selects this project only for the current PowerShell process. Every command that accepts a project ID can also be called explicitly, for example `modpack diff {2}`.
+
+## Managing content
+
+Add a Modrinth mod and optionally assign an existing editorial category:
+
+```powershell
+modpack add <slug>
+modpack add <slug> --category <category>
+```
+
+Inspect or filter the current contents:
+
+```powershell
+modpack inventory --type mod
+modpack inventory --category <category>
+modpack inventory --type resourcepack --state inactive
+modpack inventory --search <text>
+```
+
+Enable or reposition a resource pack. Position `1` is the highest priority in the Minecraft GUI:
+
+```powershell
+modpack resource enable <name|id|filename> --position <n>
+```
+
+## Build workflow
+
+```powershell
+modpack diff
+modpack build
+```
+
+`modpack diff` compares the current project with the newest `.mrpack` in `dist/`. `modpack build` refreshes Packwiz metadata and writes the generated artifact to `dist/`.
+
+## Sources of truth
+
+- `pack.toml`, `index.toml`, and `.pw.toml` files own technical Packwiz data.
+- `.modpack/project.psd1` owns the short ID and display/build identity.
+- `.modpack/metadata.psd1` owns editorial categories and display-name overrides.
+- `config/defaultoptions-common.toml` owns enabled resource packs and their order.
+- `dist/` contains generated artifacts and is not a source of truth.
+'@
+    return $template -f @(
+        $Project.DisplayName, $Project.DisplayVersion, $Project.Id, $Project.MinecraftVersion,
+        $loaderDescription, $Project.PackVersion, $Project.OutputName
+    )
+}
+
+function Write-ModpackProjectReadme {
+    param([Parameter(Mandatory)]$Project)
+    $path = Join-Path $Project.Root 'README.md'
+    Write-Utf8TextFileAtomic -Path $path -Text (Get-ModpackProjectReadmeText -Project $Project)
+    return $path
+}
+
 function New-ModpackProjectFiles {
     param(
         [Parameter(Mandatory)][string]$Root,
@@ -72,23 +156,8 @@ function New-ModpackProjectFiles {
         ResourcePacks = [ordered]@{}
     })
 
-    $readme = @"
-# $DisplayName
-
-Packwiz project managed with ModpackTools.
-
-Common commands:
-
-```powershell
-modpack use $Id
-modpack status
-modpack add <slug> --category <category>
-modpack build
-```
-
-Technical data belongs to Packwiz. Editorial decisions are stored in `.modpack`.
-"@
-    [System.IO.File]::WriteAllText((Join-Path $Root 'README.md'), $readme, [System.Text.UTF8Encoding]::new($false))
+    $project = Read-ModpackProject -ProjectRoot $Root
+    [void](Write-ModpackProjectReadme -Project $project)
     [System.IO.File]::WriteAllText((Join-Path $Root '.gitignore'), "dist/`n", [System.Text.UTF8Encoding]::new($false))
 }
 
