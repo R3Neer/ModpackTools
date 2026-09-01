@@ -42,7 +42,7 @@ function Assert-PositionalCount {
 function Invoke-MpHelp {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     $topic = if ($Arguments.Count) { [string]$Arguments[0] } else { '' }
-    $topics = @('', 'build', 'diff', 'status', 'inventory', 'resource', 'add', 'update', 'new', 'config', 'use', 'list')
+    $topics = @('', 'build', 'diff', 'status', 'inventory', 'resource', 'search', 'add', 'update', 'new', 'config', 'use', 'list')
     if ($topic -notin $topics) { throw "No help is available for '$topic'." }
     if (-not $topic) {
         Write-MpBanner "MODPACKTOOLS $script:ModuleVersion"
@@ -51,7 +51,8 @@ function Invoke-MpHelp {
         Write-MpCommandLine 'modpack status [id] [--full]' 'Project summary'
         Write-MpCommandLine 'modpack inventory [id] [filters]' 'Contents and filters'
         Write-MpCommandLine 'modpack resource enable <selector> --position <n>' 'Enable or reposition a resource pack'
-        Write-MpCommandLine 'modpack add <slug> [options]' 'Add a mod with Packwiz'
+        Write-MpCommandLine 'modpack search <query> [options]' 'Search compatible Modrinth content'
+        Write-MpCommandLine 'modpack add <id|slug|number> [options]' 'Add content with Packwiz'
         Write-MpCommandLine 'modpack update <selector...> | --all' 'Update Packwiz-managed content'
         Write-MpCommandLine 'modpack build [id] [options]' 'Generate the .mrpack in dist/'
         Write-MpCommandLine 'modpack diff [id]' 'Compare the current project with the latest build'
@@ -74,7 +75,11 @@ function Invoke-MpHelp {
             Write-MpInfo 'Position 1 is the highest priority in the Minecraft GUI.'
             Write-MpInfo 'If the pack is already enabled, it is repositioned.'
         }
-        'add' { Write-MpUsage 'modpack add <slug> [--project <id>] [--category <id>]' }
+        'search' {
+            Write-MpUsage 'modpack search <query> [--type <mod|resourcepack|shaderpack>] [--limit <1-50>] [--project <id>]'
+            Write-MpInfo 'Results are numbered and saved for 24 hours. Install one with modpack add <number>.'
+        }
+        'add' { Write-MpUsage 'modpack add <id|slug|search-number> [--project <id>] [--category <id>]' }
         'update' {
             Write-MpUsage 'modpack update <name|id|filename...> [--type <type>] [--project <id>]'
             Write-MpUsage 'modpack update --all [--type <type>] [--project <id>]'
@@ -204,16 +209,44 @@ function Invoke-MpAdd {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Invoke-MpHelp add; return }
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project', 'category')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack add <slug> [--project <id>] [--category <id>]'
-    if ($parsed.Positionals[0].ToLowerInvariant() -eq 'mod') { throw "Invalid syntax. Use: modpack add <slug> [--project <id>] [--category <id>]" }
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack add <id|slug|search-number> [--project <id>] [--category <id>]'
+    if ($parsed.Positionals[0].ToLowerInvariant() -eq 'mod') { throw "Invalid syntax. Use: modpack add <id|slug|search-number> [--project <id>] [--category <id>]" }
     $projectId = if ($parsed.Options.ContainsKey('project')) { $parsed.Options.project } else { $null }
     $project = Resolve-ModpackProject -Id $projectId
     $category = if ($parsed.Options.ContainsKey('category')) { $parsed.Options.category } else { $null }
-    Write-MpStep "Adding '$($parsed.Positionals[0])' to $($project.Id)..."
-    $result = Add-ModpackMod -Project $project -Slug $parsed.Positionals[0] -Category $category
+    $selector = [string]$parsed.Positionals[0]
+    $cached = Resolve-ModrinthSearchNumber -Selector $selector -Project $project
+    if ($cached -and $category -and $cached.Type -ne 'mod') {
+        throw "Option '--category' can only be used with mods; search result $selector is a $($cached.Type)."
+    }
+    $label = if ($cached) { "#$selector $($cached.Title)" } else { $selector }
+    Write-MpStep "Adding '$label' to $($project.Id)..."
+    $parameters = @{ Project = $project; Selector = $selector; Category = $category }
+    if ($cached) { $parameters.ModrinthProjectId = [string]$cached.ProjectId }
+    $result = Add-ModpackContent @parameters
     Write-MpSuccess "$($result.Item.Name) added as '$($result.Item.Id)'."
+    Write-MpKeyValue 'Type' $result.Item.Kind
     if ($category) { Write-MpKeyValue 'Category' $category }
-    else { Write-MpKeyValue 'Category' 'UNCLASSIFIED' }
+    elseif ($result.Item.Kind -eq 'mod') { Write-MpKeyValue 'Category' 'UNCLASSIFIED' }
+}
+
+function Invoke-MpSearch {
+    param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
+    if ($Arguments -contains '--help') { Invoke-MpHelp search; return }
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project', 'type', 'limit')
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 100 -Usage 'modpack search <query> [--type <type>] [--limit <1-50>] [--project <id>]'
+    $projectId = if ($parsed.Options.ContainsKey('project')) { $parsed.Options.project } else { $null }
+    $project = Resolve-ModpackProject -Id $projectId
+    $type = if ($parsed.Options.ContainsKey('type')) { $parsed.Options.type } else { 'all' }
+    $limit = 10
+    if ($parsed.Options.ContainsKey('limit') -and (-not [int]::TryParse([string]$parsed.Options.limit, [ref]$limit) -or $limit -lt 1 -or $limit -gt 50)) {
+        throw "Option '--limit' must be an integer between 1 and 50."
+    }
+    $query = @($parsed.Positionals) -join ' '
+    if ([string]::IsNullOrWhiteSpace($query)) { throw 'The search query cannot be empty.' }
+    Write-MpStep "Searching Modrinth for '$query'..."
+    $search = Search-ModrinthContent -Project $project -Query $query -Type $type -Limit $limit
+    Write-ModrinthSearchResults -Search $search -Project $project
 }
 
 function Invoke-MpUpdate {

@@ -113,7 +113,7 @@ minecraft = "1.21.1"
 
         It 'rejects the old add mod syntax' {
             { Invoke-MpAdd @('mod') } | Should Throw 'Invalid syntax'
-            { Invoke-MpAdd @('mod', 'sodium') } | Should Throw 'Usage: modpack add <slug>'
+            { Invoke-MpAdd @('mod', 'sodium') } | Should Throw 'Usage: modpack add <id|slug|search-number>'
         }
     }
 
@@ -124,6 +124,8 @@ minecraft = "1.21.1"
             $projectPath = New-TestModpack $fixtureRoot 'Readme Pack' 'readme'
             $text = Get-ModpackProjectReadmeText -Project (Read-ModpackProject $projectPath)
             $text | Should Match 'modpack add <slug>'
+            $text | Should Match 'modpack search <query>'
+            $text | Should Match 'modpack add <search-number>'
             $text | Should Match 'modpack update --all'
             $text | Should Match 'resource packs, and shaders'
             $text | Should Match 'one transaction'
@@ -234,6 +236,70 @@ mod-id = "abc123"
         }
     }
 
+    Describe 'Modrinth search' {
+        BeforeEach {
+            $fixtureRoot = Join-Path $TestDrive 'search-packs'
+            [System.IO.Directory]::CreateDirectory($fixtureRoot) | Out-Null
+            $projectPath = New-TestModpack $fixtureRoot 'Search Pack' 'search'
+            $project = Read-ModpackProject $projectPath
+            $script:ConfigHomeOverride = Join-Path $TestDrive 'search-config'
+            Mock Invoke-RestMethod {
+                [pscustomobject]@{
+                    total_hits = 2
+                    hits = @(
+                        [pscustomobject]@{ project_id='AANobbMI'; slug='sodium'; project_type='mod'; title='Sodium'; author='jellysquid3'; description='Renderer optimization'; downloads=12000000 }
+                        [pscustomobject]@{ project_id='fresh-id'; slug='fresh-animations'; project_type='resourcepack'; title='Fresh Animations'; author='FreshLX'; description='Animated entities'; downloads=3400000 }
+                    )
+                }
+            }
+        }
+
+        It 'queries compatible Modrinth projects and normalizes numbered results' {
+            $search = Search-ModrinthContent -Project $project -Query 'sodium' -Limit 10
+            $search.Results.Count | Should Be 2
+            $search.Results[0].Index | Should Be 1
+            $search.Results[1].Type | Should Be 'resourcepack'
+            Test-Path -LiteralPath (Get-ModrinthSearchCachePath) | Should Be $true
+            Assert-MockCalled Invoke-RestMethod -Times 1 -ParameterFilter {
+                $Uri -match 'api\.modrinth\.com/v2/search' -and
+                [System.Uri]::UnescapeDataString($Uri) -match 'versions:1\.21\.1' -and
+                $Headers.'User-Agent' -eq 'R3Neer-ModpackTools/0.7.0'
+            }
+        }
+
+        It 'adds the loader facet to a mod-only search' {
+            [void](Search-ModrinthContent -Project $project -Query 'performance' -Type mod)
+            Assert-MockCalled Invoke-RestMethod -Times 1 -ParameterFilter {
+                [System.Uri]::UnescapeDataString($Uri) -match 'categories:fabric'
+            }
+        }
+
+        It 'resolves a saved number to its stable project ID' {
+            [void](Search-ModrinthContent -Project $project -Query 'sodium')
+            $result = Resolve-ModrinthSearchNumber -Selector '2' -Project $project
+            $result.ProjectId | Should Be 'fresh-id'
+            $result.Type | Should Be 'resourcepack'
+        }
+
+        It 'rejects a saved number for a different project' {
+            [void](Search-ModrinthContent -Project $project -Query 'sodium')
+            $otherPath = New-TestModpack $fixtureRoot 'Other Pack' 'other'
+            $other = Read-ModpackProject $otherPath
+            { Resolve-ModrinthSearchNumber -Selector '1' -Project $other } | Should Throw "belongs to project 'search'"
+        }
+
+        It 'rejects numbers after the project compatibility changes' {
+            [void](Search-ModrinthContent -Project $project -Query 'sodium')
+            $project.MinecraftVersion = '1.22'
+            { Resolve-ModrinthSearchNumber -Selector '1' -Project $project } | Should Throw 'compatibility settings changed'
+        }
+
+        It 'renders IDs and numbered choices' {
+            $search = Search-ModrinthContent -Project $project -Query 'sodium'
+            { Write-ModrinthSearchResults -Search $search -Project $project } | Should Not Throw
+        }
+    }
+
     Describe 'Content updates' {
         BeforeEach {
             $fixtureRoot = Join-Path $TestDrive 'update-packs'
@@ -339,6 +405,53 @@ version = "old"
             { Update-ModpackContent -Project $project -Selectors @('sodium') } | Should Throw 'state was restored'
             Test-Path -LiteralPath $sodiumPath | Should Be $true
             [System.Linq.Enumerable]::SequenceEqual([byte[]]$before, [byte[]][System.IO.File]::ReadAllBytes($sodiumPath)) | Should Be $true
+        }
+    }
+
+    Describe 'Adding searched content' {
+        BeforeEach {
+            $fixtureRoot = Join-Path $TestDrive 'add-packs'
+            [System.IO.Directory]::CreateDirectory($fixtureRoot) | Out-Null
+            $projectPath = New-TestModpack $fixtureRoot ('Pack-' + [guid]::NewGuid().ToString('N')) 'pack'
+            $project = Read-ModpackProject $projectPath
+        }
+
+        It 'installs a resource pack by stable cached project ID' {
+            Mock Invoke-Packwiz {
+                [System.IO.File]::WriteAllText((Join-Path $projectPath 'resourcepacks/fresh.pw.toml'), @'
+name = "Fresh Animations"
+filename = "fresh.zip"
+side = "client"
+[update.modrinth]
+mod-id = "fresh-id"
+version = "v1"
+'@)
+                return @('installed')
+            }
+            $result = Add-ModpackContent -Project $project -Selector 2 -ModrinthProjectId 'fresh-id'
+            $result.Item.Kind | Should Be 'resourcepack'
+            $result.Item.Id | Should Be 'modrinth:fresh-id'
+            Assert-MockCalled Invoke-Packwiz -Times 1 -ParameterFilter { $Arguments -contains '--project-id' -and $Arguments -contains 'fresh-id' }
+        }
+
+        It 'rolls back when a category is applied to non-mod content' {
+            $indexPath = Join-Path $projectPath 'index.toml'
+            $beforeIndex = [System.IO.File]::ReadAllBytes($indexPath)
+            $resourcePath = Join-Path $projectPath 'resourcepacks/fresh.pw.toml'
+            Mock Invoke-Packwiz {
+                [System.IO.File]::WriteAllText($resourcePath, @'
+name = "Fresh Animations"
+filename = "fresh.zip"
+side = "client"
+[update.modrinth]
+mod-id = "fresh-id"
+'@)
+                [System.IO.File]::WriteAllText($indexPath, 'changed')
+                return @('installed')
+            }
+            { Add-ModpackContent -Project $project -Selector 'fresh-animations' -Category performance } | Should Throw 'state was restored'
+            Test-Path -LiteralPath $resourcePath | Should Be $false
+            [System.Linq.Enumerable]::SequenceEqual([byte[]]$beforeIndex, [byte[]][System.IO.File]::ReadAllBytes($indexPath)) | Should Be $true
         }
     }
 

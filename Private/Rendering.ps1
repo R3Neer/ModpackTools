@@ -376,3 +376,48 @@ function Write-ModUpdateSummary {
     Write-MpKeyValue 'Updated' @($Update.Items | Where-Object Changed).Count
     Write-MpInfo 'No build was generated. Run modpack diff, then modpack build when ready.'
 }
+
+function Format-MpCompactNumber {
+    param([long]$Value)
+    if ($Value -ge 1000000) { return ('{0:N1}M' -f ($Value / 1000000)) }
+    if ($Value -ge 1000) { return ('{0:N1}K' -f ($Value / 1000)) }
+    return [string]$Value
+}
+
+function Write-ModrinthSearchResults {
+    param(
+        [Parameter(Mandatory)]$Search,
+        [Parameter(Mandatory)]$Project
+    )
+
+    Write-MpBanner 'SEARCH · MODRINTH'
+    Write-MpKeyValue 'Query' $Search.Query
+    Write-MpKeyValue 'Project' "$($Project.Id) · Minecraft $($Project.MinecraftVersion) · $($Project.Loader)"
+    Write-MpKeyValue 'Type' $Search.Type
+    Write-MpKeyValue 'Found' "$(@($Search.Results).Count) shown · $($Search.TotalHits) total"
+    if (@($Search.Results).Count -eq 0) {
+        Write-Host ''
+        Write-MpInfo 'No compatible results were found.'
+        return
+    }
+
+    Write-MpSection 'RESULTS' @($Search.Results).Count
+    foreach ($item in $Search.Results) {
+        $typeLabel = switch ($item.Type) {
+            'mod'          { 'MOD' }
+            'resourcepack' { 'RESOURCE' }
+            'shaderpack'   { 'SHADER' }
+            default        { ([string]$item.Type).ToUpperInvariant() }
+        }
+        Write-Host "  $($script:Palette.Process)$('[{0}]' -f $item.Index)$($script:Palette.Reset) " -NoNewline
+        Write-Host "$($script:Palette.Accent)$('{0,-10}' -f "[$typeLabel]")$($script:Palette.Reset) " -NoNewline
+        Write-Host "$($script:Palette.Value)$($item.Title)$($script:Palette.Reset)"
+        Write-Host "      $($script:Palette.Secondary)ID$($script:Palette.Reset) $($script:Palette.Value)$($item.ProjectId)$($script:Palette.Reset)  " -NoNewline
+        Write-Host "$($script:Palette.Secondary)slug$($script:Palette.Reset) $($item.Slug)  " -NoNewline
+        Write-Host "$($script:Palette.Secondary)by$($script:Palette.Reset) $($item.Author)  " -NoNewline
+        Write-Host "$($script:Palette.Secondary)downloads$($script:Palette.Reset) $(Format-MpCompactNumber $item.Downloads)"
+        if ($item.Description) { Write-Host "      $($script:Palette.Secondary)$($item.Description)$($script:Palette.Reset)" }
+    }
+    Write-Host ''
+    Write-MpInfo 'Install a result with modpack add <number>. You can also use its ID or slug.'
+}

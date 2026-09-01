@@ -79,9 +79,12 @@ modpack build
 
 ## Managing content
 
-Add a Modrinth mod and optionally assign an existing editorial category:
+Search or add Modrinth content. Editorial categories apply only to mods:
 
 ```powershell
+modpack search <query>
+modpack search <query> --type mod
+modpack add <search-number>
 modpack add <slug>
 modpack add <slug> --category <category>
 modpack update <name|id|filename...>
@@ -112,6 +115,8 @@ modpack build
 ```
 
 `modpack diff` compares the current project with the newest `.mrpack` in `dist/`. `modpack build` refreshes Packwiz metadata and writes the generated artifact to `dist/`.
+
+`modpack search` queries compatible Modrinth projects and saves the numbered results for 24 hours. `modpack add <number>` installs from that saved list; IDs and slugs remain valid directly. The cache is only a convenience reference and Packwiz remains the technical source of truth.
 
 `modpack update` updates mods, resource packs, and shaders managed by Packwiz. Multiple selectors form one transaction: if any update fails, every Packwiz metadata change in the group is rolled back. Use `--type mod|resourcepack|shaderpack` to narrow the operation. Local files are never updated. Review the result with `modpack diff` before building.
 
@@ -210,10 +215,29 @@ function New-ModpackProject {
     return (Read-ModpackProject -ProjectRoot $target)
 }
 
-function Add-ModpackMod {
+function Get-PackwizContentItemByMetadataPath {
     param(
         [Parameter(Mandatory)]$Project,
-        [Parameter(Mandatory)][string]$Slug,
+        [Parameter(Mandatory)][string]$MetadataPath
+    )
+
+    $relative = [System.IO.Path]::GetRelativePath($Project.Root, $MetadataPath).Replace('\', '/')
+    $definition = switch -Regex ($relative) {
+        '^mods/'          { @{ Directory = 'mods'; Kind = 'mod' }; break }
+        '^resourcepacks/' { @{ Directory = 'resourcepacks'; Kind = 'resourcepack' }; break }
+        '^shaderpacks/'   { @{ Directory = 'shaderpacks'; Kind = 'shaderpack' }; break }
+        default { throw "Unsupported Packwiz metadata location '$relative'." }
+    }
+    return Get-PackwizItems -Project $Project -Directory $definition.Directory -Kind $definition.Kind |
+        Where-Object MetadataPath -eq $MetadataPath |
+        Select-Object -First 1
+}
+
+function Add-ModpackContent {
+    param(
+        [Parameter(Mandatory)]$Project,
+        [Parameter(Mandatory)][string]$Selector,
+        [string]$ModrinthProjectId,
         [string]$Category
     )
 
@@ -223,25 +247,42 @@ function Add-ModpackMod {
             throw "Category '$Category' does not exist in '$($Project.Id)'."
         }
     }
-    $before = @{}
-    $modsPath = Join-Path $Project.Root 'mods'
-    if (Test-Path -LiteralPath $modsPath) {
-        foreach ($file in Get-ChildItem -LiteralPath $modsPath -Filter '*.pw.toml' -File) {
-            $before[$file.FullName] = "$($file.Length):$($file.LastWriteTimeUtc.Ticks)"
+    $snapshot = Get-PackwizStateSnapshot -Project $Project
+    try {
+        $arguments = if ($ModrinthProjectId) {
+            @('modrinth', 'add', '--project-id', $ModrinthProjectId, '--yes')
         }
+        else {
+            @('modrinth', 'add', $Selector, '--yes')
+        }
+        $log = @(Invoke-Packwiz -Arguments $arguments -WorkingDirectory $Project.Root)
+        $candidates = @(
+            Get-ChildItem -LiteralPath $Project.Root -Filter '*.pw.toml' -File -Recurse -ErrorAction SilentlyContinue |
+                Where-Object {
+                    $relative = [System.IO.Path]::GetRelativePath($Project.Root, $_.FullName)
+                    if (-not $snapshot.ContainsKey($relative)) { return $true }
+                    $current = [System.IO.File]::ReadAllBytes($_.FullName)
+                    return -not [System.Linq.Enumerable]::SequenceEqual([byte[]]$snapshot[$relative], [byte[]]$current)
+                } |
+                Sort-Object LastWriteTimeUtc -Descending
+        )
+        if ($candidates.Count -eq 0) { throw 'Packwiz completed successfully, but the added or updated .pw.toml file could not be identified.' }
+        $items = @($candidates | ForEach-Object { Get-PackwizContentItemByMetadataPath -Project $Project -MetadataPath $_.FullName })
+        $item = if ($ModrinthProjectId) {
+            $items | Where-Object Id -eq "modrinth:$ModrinthProjectId" | Select-Object -First 1
+        }
+        else { $items | Select-Object -First 1 }
+        if (-not $item) { throw 'The installed Modrinth project could not be normalized.' }
+        if ($Category -and $item.Kind -ne 'mod') {
+            throw "Option '--category' can only be used with mods; '$($item.Name)' is a $($item.Kind)."
+        }
+        if ($Category) { Set-ModMetadataCategory -Project $Project -ModId $item.Id -Category $Category }
+        return [pscustomobject]@{ Item = $item; Log = $log; RelatedItems = $items }
     }
-    $log = @(Invoke-Packwiz -Arguments @('modrinth', 'add', $Slug, '--yes') -WorkingDirectory $Project.Root)
-    $candidates = @(
-        Get-ChildItem -LiteralPath $modsPath -Filter '*.pw.toml' -File |
-            Where-Object { -not $before.ContainsKey($_.FullName) -or $before[$_.FullName] -ne "$($_.Length):$($_.LastWriteTimeUtc.Ticks)" } |
-            Sort-Object LastWriteTimeUtc -Descending
-    )
-    if ($candidates.Count -eq 0) { throw "Packwiz completed successfully, but the added or updated .pw.toml file could not be identified." }
-    $items = @(Get-PackwizItems -Project $Project -Directory mods -Kind mod)
-    $item = $items | Where-Object MetadataPath -eq $candidates[0].FullName | Select-Object -First 1
-    if (-not $item) { throw "Could not normalize '$($candidates[0].FullName)'." }
-    if ($Category) { Set-ModMetadataCategory -Project $Project -ModId $item.Id -Category $Category }
-    return [pscustomobject]@{ Item = $item; Log = $log }
+    catch {
+        Restore-PackwizStateSnapshot -Project $Project -Snapshot $snapshot
+        throw "No content was added because the operation failed and Packwiz state was restored. $($_.Exception.Message)"
+    }
 }
 
 function Get-ModpackUpdateItems {

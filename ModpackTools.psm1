@@ -13,6 +13,7 @@ foreach ($file in @(
     'Private/Metadata.ps1'
     'Private/DefaultOptions.ps1'
     'Private/Inventory.ps1'
+    'Private/Modrinth.ps1'
     'Private/ResourcePacks.ps1'
     'Private/Packwiz.ps1'
     'Private/Diff.ps1'

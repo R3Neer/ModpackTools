@@ -100,6 +100,9 @@ modpack inventory --type resourcepack --state active
 modpack inventory --search sodium
 modpack resource enable "Fresh Animations" --position 1
 modpack resource enable "fresh-animations.zip" --position 3 --project vp26
+modpack search sodium
+modpack search "fresh animations" --type resourcepack
+modpack add 2
 modpack add sodium --category performance
 modpack add sodium --project vp26 --category performance
 modpack update sodium
@@ -146,9 +149,20 @@ modpack new demo --name Demo --minecraft 1.21.1 --loader fabric
 
 By default, Packwiz selects the latest compatible Fabric Loader; the technical version is `0.1.0`, the display version matches Minecraft, and the directory is `<Name>-<Minecraft>`. These can be adjusted with `--loader-version`, `--pack-version`, `--display-version`, and `--path`. Creation uses a temporary directory and never overwrites the destination.
 
-### Adding a mod
+### Adding content
 
-`modpack add` delegates technical selection and writing to `packwiz modrinth add`, then reads the generated `.pw.toml`. When `--category` is provided, only that editorial decision is written to metadata; the category must already exist. The former `modpack add mod` form is invalid.
+`modpack add` delegates technical selection and writing to `packwiz modrinth add`, then reads the generated `.pw.toml`. It accepts a Modrinth ID, slug, or a number from the last search and can install mods, resource packs, and shaders. When `--category` is provided, the result must be a mod and only that editorial decision is written to metadata; the category must already exist. The former `modpack add mod` form is invalid.
+
+### Searching Modrinth
+
+```powershell
+modpack search <query> [--type <mod|resourcepack|shaderpack>] [--limit <1-50>] [--project <id>]
+modpack add <number>
+```
+
+Search results are filtered by the selected project's Minecraft version. Mod-only searches also filter by its loader. Each result displays a temporary number, type, title, stable Modrinth project ID, slug, author, and download count.
+
+The numbered list is stored in `LocalApplicationData\ModpackTools\last-search.json`, expires after 24 hours, and is tied to the project used for the search. It exists only for command-line convenience: Packwiz remains the source of truth and installation uses the stable project ID. Running another search replaces the list. A number that is missing, expired, or belongs to another project is rejected without installing anything.
 
 ### Updating mods
 
