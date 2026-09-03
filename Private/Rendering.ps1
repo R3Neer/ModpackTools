@@ -201,6 +201,7 @@ function Write-MpSideEntry {
         }
     }
     Write-Host "$($script:Palette.Success)✓$($script:Palette.Reset) $($PSStyle.Bold)$($Item.Name)$($PSStyle.Reset)" -NoNewline
+    if ((Get-MpPropertyValue $Item 'Pinned') -eq $true) { Write-Host ' [pinned]' -NoNewline }
     if ($Item.Source -eq 'local') {
         Write-Host "  $($script:Palette.Local)LOCAL$($script:Palette.Reset)" -NoNewline
     }

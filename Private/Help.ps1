@@ -72,9 +72,9 @@ function Get-MpCommandCatalog {
             ); Notes = @('Results are numbered for add. Numbers belong to this project and expire after 24 hours.'); Examples = @('modpack search sodium', 'modpack search "fresh animations" --type resourcepack', 'modpack search iris --limit 5 --project vp26')
         }
         add = [pscustomobject]@{
-            Handler = 'Invoke-MpAdd'; Group = 'CONTENT'; Summary = 'Install content'; Description = 'Add a compatible Modrinth project to the selected modpack with Packwiz.'
-            Usage = @('modpack add <id|slug|search-number> [options]'); Items = @(
-                New-MpHelpItem '<selector>' 'Modrinth ID, slug, or number from the latest search.'
+            Handler = 'Invoke-MpAdd'; Group = 'CONTENT'; Summary = 'Install content'; Description = 'Resolve and install compatible Modrinth content and its dependencies as one transaction.'
+            Usage = @('modpack add <selector...> [options]'); Items = @(
+                New-MpHelpItem '<selector>' 'Modrinth ID, slug, version URL, or number from the latest search.'
                 New-MpHelpItem '--category <id>' 'Assign an editorial category when adding a mod.'
                 New-MpHelpItem '--project <id>' 'Use this project instead of the active one.'
             ); Notes = @('Search numbers are separate from inventory numbers.', 'Categories apply only to mods.'); Examples = @('modpack add sodium', 'modpack add 2', 'modpack add sodium --category performance --project vp26')
@@ -84,8 +84,8 @@ function Get-MpCommandCatalog {
             Usage = @(
                 'modpack classify list [--project <id>]'
                 'modpack classify create <id> [--name <name>] [--order <n>] [--project <id>]'
-                'modpack classify remove <category|number> [--unclassify] [--project <id>]'
-                'modpack classify set <mod|inventory-number> <category|number|unclassified> [--project <id>]'
+                'modpack classify remove <category...> [--unclassify] [--project <id>]'
+                'modpack classify set <mod...> <category|number|unclassified> [--project <id>]'
             ); Items = @(
                 New-MpHelpItem 'list' 'Show defined categories and save their numbered references.'
                 New-MpHelpItem 'create <id>' 'Create a category with a stable lowercase ID.'
@@ -103,7 +103,7 @@ function Get-MpCommandCatalog {
         }
         resource = [pscustomobject]@{
             Handler = 'Invoke-MpResource'; Group = 'CONTENT'; Summary = 'Manage resource pack activation'; Description = 'Enable, move, or disable an installed resource pack through Default Options.'
-            Usage = @('modpack resource enable <selector> --position <n> [options]', 'modpack resource move <selector> --position <n> [options]', 'modpack resource disable <selector> [options]'); Items = @(
+            Usage = @('modpack resource enable <selector...> --position <n> [options]', 'modpack resource move <selector...> --position <n> [options]', 'modpack resource disable <selector...> [options]'); Items = @(
                 New-MpHelpItem '<selector>' 'Name, ID, filename, or latest inventory number.'
                 New-MpHelpItem '--position <n>' 'Minecraft priority for enable or move. Position 1 is highest.'
                 New-MpHelpItem '--project <id>' 'Use this project instead of the active one.'
@@ -111,7 +111,7 @@ function Get-MpCommandCatalog {
         }
         side = [pscustomobject]@{
             Handler = 'Invoke-MpSide'; Group = 'CONTENT'; Summary = 'Set a mod distribution side'; Description = 'Correct whether an installed mod is distributed to clients, hosts, or both.'
-            Usage = @('modpack side set <mod|inventory-number> <client|host|both> [options]'); Items = @(
+            Usage = @('modpack side set <mod...> <client|host|both> [options]'); Items = @(
                 New-MpHelpItem 'set' 'Replace the selected mod side.'
                 New-MpHelpItem '<mod>' 'Name, ID, filename, or latest inventory number.'
                 New-MpHelpItem '<side>' 'client, host, or both.'
@@ -169,6 +169,30 @@ function Get-MpCommandCatalog {
             ); Notes = @('Automatic discovery checks PATH and then the managed ModpackTools copy.'); Examples = @('modpack config get packwiz', 'modpack config set packwiz "C:\Tools\packwiz.exe"', 'modpack config set packwiz auto')
         }
     }
+    foreach ($name in @('pin', 'unpin')) {
+        $script:MpCommandCatalog[$name] = [pscustomobject]@{
+            Handler = $(if ($name -eq 'pin') { 'Invoke-MpPin' } else { 'Invoke-MpUnpin' }); Group = 'CONTENT'
+            Summary = "$name managed content"; Description = 'Control automatic version changes using Packwiz pins.'
+            Usage = @("modpack $name <selector...> [--project <id>] [--dry-run]"); Items = @(); Notes = @(); Examples = @()
+        }
+    }
+    foreach ($name in @('add','update','classify','side','resource','build','doctor')) {
+        $dryRunHelp = if ($name -eq 'classify') { 'Preview set/remove without applying project changes.' } else { 'Prepare and validate without applying project changes.' }
+        $script:MpCommandCatalog[$name].Items += New-MpHelpItem '--dry-run' $dryRunHelp
+    }
+    foreach ($name in @('add','update','doctor')) {
+        $script:MpCommandCatalog[$name].Items += New-MpHelpItem '--allow-downgrade' 'Allow dependency resolution to select an older installed version.'
+    }
+    foreach ($name in @('add','build','doctor')) {
+        $script:MpCommandCatalog[$name].Items += New-MpHelpItem '--strict' 'Require complete verification and no known dependency conflicts.'
+    }
+    $script:MpCommandCatalog.inventory.Items += New-MpHelpItem '--check' 'Download missing artifacts and refresh dependency health. Default: local data and cache only.'
+    $script:MpCommandCatalog.add.Items += New-MpHelpItem '--enable --position <n>' 'Activate a resource pack batch as one ordered block; requires Default Options.'
+    $script:MpCommandCatalog.doctor.Items += New-MpHelpItem '--project <id>' 'Check or repair this project instead of the active project.'
+    $script:MpCommandCatalog.doctor.Description = 'Check the environment and selected project; --fix previews safe repairs.'
+    $script:MpCommandCatalog.update.Notes = @('New or aggravated conflicts block updates; unrelated existing conflicts are warnings unless --strict.', 'Pinned files are skipped by --all. Explicit pinned targets require unpin.', 'All selected versions are frozen before applying the transaction.')
+    $script:MpCommandCatalog.resource.Notes += 'A batch is removed from the list first, then inserted at the requested position in argument order.'
+    $script:MpCommandCatalog.build.Notes += 'Known dependency conflicts always block export; --no-refresh does not bypass validation.'
     return $script:MpCommandCatalog
 }
 

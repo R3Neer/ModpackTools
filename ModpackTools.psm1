@@ -19,6 +19,7 @@ foreach ($file in @(
     'Private/Inventory.ps1'
     'Private/Modrinth.ps1'
     'Private/Compatibility.ps1'
+    'Private/LoaderMetadata.ps1'
     'Private/ResourcePacks.ps1'
     'Private/Packwiz.ps1'
     'Private/Diff.ps1'
@@ -26,6 +27,12 @@ foreach ($file in @(
     'Private/Doctor.ps1'
     'Private/Help.ps1'
     'Private/Commands.ps1'
+    'Private/Transaction.ps1'
+    'Private/Batch.ps1'
+    'Private/Graph.ps1'
+    'Private/Resolver.ps1'
+    'Private/Operations.ps1'
+    'Private/Health.ps1'
     'Public/modpack.ps1'
 )) {
     . (Join-Path $PSScriptRoot $file)

@@ -19,6 +19,12 @@ function Get-ModpackMetadata {
             Throw-MpError -Message "Section '$section' in metadata file '$path' must be a table" -Hint 'repair .modpack/metadata.psd1' -ErrorId 'Metadata.InvalidSection' -Category InvalidData -TargetObject $section
         }
     }
+    if ($metadata.ContainsKey('ContentSchemaVersion') -and $metadata.ContentSchemaVersion -ne 1) {
+        Throw-MpError -Message 'Content intent metadata uses an unsupported schema' -Hint 'upgrade ModpackTools before modifying this project' -ErrorId 'Metadata.UnsupportedContentSchema' -Category InvalidData
+    }
+    if ($metadata.ContainsKey('Content') -and $metadata.Content -isnot [System.Collections.IDictionary]) {
+        Throw-MpError -Message 'Content intent metadata must be a table' -Hint 'repair the Content section of metadata.psd1' -ErrorId 'Metadata.InvalidContentSection' -Category InvalidData
+    }
     return $metadata
 }
 

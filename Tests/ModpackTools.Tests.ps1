@@ -399,7 +399,7 @@ $Loader = "loader-version"
 
         It 'rejects the old add mod syntax' {
             { Invoke-MpAdd @('mod') } | Should Throw "Argument 'mod' is not valid"
-            { Invoke-MpAdd @('mod', 'sodium') } | Should Throw 'The command arguments do not match'
+            { Invoke-MpAdd @('mod', 'sodium') } | Should Throw "Argument 'mod' is not valid"
         }
     }
 
@@ -444,8 +444,8 @@ $Loader = "loader-version"
     Describe 'CLI help' {
         It 'uses one catalog for every executable command' {
             $catalog = Get-MpCommandCatalog
-            @($catalog.Keys).Count | Should Be 17
-            @($catalog.Keys) | Should Be @('list', 'use', 'status', 'new', 'init', 'inventory', 'search', 'add', 'classify', 'resource', 'side', 'versions', 'update', 'build', 'diff', 'doctor', 'config')
+            @($catalog.Keys).Count | Should Be 19
+            @($catalog.Keys) | Should Be @('list', 'use', 'status', 'new', 'init', 'inventory', 'search', 'add', 'classify', 'resource', 'side', 'versions', 'update', 'build', 'diff', 'doctor', 'config', 'pin', 'unpin')
             foreach ($name in $catalog.Keys) {
                 $catalog[$name].Summary | Should Not BeNullOrEmpty
                 $catalog[$name].Description | Should Not BeNullOrEmpty
@@ -838,17 +838,14 @@ mod-id = "inventory-id"
             (Resolve-ModrinthSearchNumber -Selector '1' -Project $project).ProjectId | Should Be 'AANobbMI'
             (Resolve-ModpackInventoryNumber -Selector '1' -Project $project).Id | Should Be 'modrinth:inventory-id'
 
-            Mock Add-ModpackContent {
-                [pscustomobject]@{ Item = [pscustomobject]@{ Name='Sodium'; Id='modrinth:AANobbMI'; Kind='mod' }; Log=@(); RelatedItems=@() }
+            Mock Invoke-MpContentOperation {
+                [pscustomobject]@{ Changes=@(); Applied=$false; Result=[pscustomobject]@{ Changes=@(); Report=[pscustomobject]@{ Issues=@() } } }
             }
-            Mock Update-ModpackContent {
-                [pscustomobject]@{ Project=$project; Items=@(); Log=@() }
-            }
-
             Invoke-MpAdd @('1', '--project', 'search')
-            Assert-MockCalled Add-ModpackContent -Times 1 -ParameterFilter { $ModrinthProjectId -eq 'AANobbMI' }
+            Assert-MockCalled Invoke-MpContentOperation -Times 1 -ParameterFilter { $Operation -eq 'add' -and $Selectors[0] -eq 'modrinth:AANobbMI' }
             Invoke-MpUpdate @('1', '--project', 'search')
-            Assert-MockCalled Update-ModpackContent -Times 1 -ParameterFilter { @($Selectors).Count -eq 1 -and $Selectors[0] -eq 'modrinth:inventory-id' }
+            Assert-MockCalled Invoke-MpContentOperation -Times 1 -ParameterFilter { $Operation -eq 'update' -and $Selectors[0] -eq 'modrinth:inventory-id' }
+
         }
     }
 

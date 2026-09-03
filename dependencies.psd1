@@ -1,4 +1,11 @@
 @{
+    Tomlyn = @{
+        Version = '0.19.0'
+        Target = 'netstandard2.0'
+        Source = 'https://www.nuget.org/packages/Tomlyn/0.19.0'
+        AssemblySha256 = 'A7D2EA40533A5A912BC6A64AB8F1347E60FE92EA0AB456D423B64DB2214C904B'
+        License = 'Private/lib/LICENSE.Tomlyn.txt'
+    }
     Packwiz = @{
         WindowsX64 = @{
             Commit          = 'dfd8b68a4796c763e25bad50265ea1f1233e24f1'

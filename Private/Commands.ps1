@@ -88,68 +88,6 @@ function Invoke-MpUse {
     Write-MpSuccess "Active project: $($project.Id) ($($project.DisplayName))"
 }
 
-function Invoke-MpResource {
-    param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
-    if ($Arguments -contains '--help') { Show-MpHelp resource; return }
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project', 'position')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum 2 -Usage 'modpack resource enable|move|disable <name|id|filename> [options]' -OptionNames @('project', 'position')
-    $operation = $parsed.Positionals[0].ToLowerInvariant()
-    if ($operation -notin @('enable', 'move', 'disable')) { Throw-MpError -Message "Resource pack operation '$($parsed.Positionals[0])' is not recognized; allowed values: enable, move, disable" -Hint 'modpack resource --help' -ErrorId 'ResourcePack.UnknownOperation' -Category InvalidArgument -TargetObject $parsed.Positionals[0] }
-    $position = 0
-    if ($operation -in @('enable', 'move')) {
-        if (-not $parsed.Options.ContainsKey('position')) { Throw-MpError -Message "Required option '--position' is missing" -Hint "modpack resource $operation <selector> --position <n>" -ErrorId 'Option.Required' -Category InvalidArgument -TargetObject 'position' }
-        if (-not [int]::TryParse([string]$parsed.Options.position, [ref]$position) -or $position -lt 1) { Throw-MpError -Message "Position '$($parsed.Options.position)' is not a positive integer" -Hint '--position <integer greater than or equal to 1>' -ErrorId 'Option.InvalidPosition' -Category InvalidArgument -TargetObject $parsed.Options.position }
-    }
-    elseif ($parsed.Options.ContainsKey('position')) {
-        Throw-MpError -Message "Option '--position' cannot be used with 'resource disable'" -Hint 'remove --position' -ErrorId 'Option.ForbiddenCombination' -Category InvalidArgument -TargetObject 'position'
-    }
-    $project = Resolve-MpCommandProject -Options $parsed.Options
-    Assert-ModpackStructure -Project $project
-    $rawSelector = [string]$parsed.Positionals[1]
-    $reference = Resolve-ModpackInventoryNumber -Selector $rawSelector -Project $project -AllowedKinds @('resourcepack')
-    $selector = if ($reference) { [string]$reference.Selector } else { $rawSelector }
-    $label = if ($reference) { "#$rawSelector $($reference.Name)" } else { $rawSelector }
-    if ($operation -eq 'enable') {
-        Write-MpStep "Enabling or repositioning '$label'..."
-        $result = Enable-ModpackResourcePack -Project $project -Selector $selector -Position $position
-        $verb = if ($result.WasActive) { 'repositioned' } else { 'enabled' }
-        Write-MpSuccess "$($result.Item.Name) was $verb at priority $($result.Item.Priority)."
-    }
-    elseif ($operation -eq 'move') {
-        Write-MpStep "Moving '$label'..."
-        $result = Move-ModpackResourcePack -Project $project -Selector $selector -Position $position
-        Write-MpSuccess "$($result.Item.Name) was moved to priority $($result.Item.Priority)."
-    }
-    else {
-        Write-MpStep "Disabling '$label'..."
-        $result = Disable-ModpackResourcePack -Project $project -Selector $selector
-        if ($result.WasActive) { Write-MpSuccess "$($result.Item.Name) was disabled." }
-        else { Write-MpInfo "$($result.Item.Name) is already disabled." }
-    }
-    Write-ResourcePackInventory -Inventory $result.Inventory -HideEmptySections
-}
-
-function Invoke-MpSide {
-    param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
-    if ($Arguments -contains '--help') { Show-MpHelp side; return }
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 3 -Maximum 3 -Usage 'modpack side set <mod|inventory-number> <client|host|both> [--project <id>]' -OptionNames @('project')
-    if (-not ([string]$parsed.Positionals[0]).Equals('set', [System.StringComparison]::OrdinalIgnoreCase)) {
-        Throw-MpError -Message "Side operation '$($parsed.Positionals[0])' is not recognized; allowed value: set" -Hint 'modpack side --help' -ErrorId 'Content.UnknownSideOperation' -Category InvalidArgument -TargetObject $parsed.Positionals[0]
-    }
-    $project = Resolve-MpCommandProject -Options $parsed.Options
-    $rawSelector = [string]$parsed.Positionals[1]
-    $reference = Resolve-ModpackInventoryNumber -Selector $rawSelector -Project $project -AllowedKinds @('mod')
-    $selector = if ($reference) { [string]$reference.Selector } else { $rawSelector }
-    $label = if ($reference) { "#$rawSelector $($reference.Name)" } else { $rawSelector }
-    Write-MpStep "Setting the side for '$label'..."
-    $result = Set-ModpackModSide -Project $project -Selector $selector -Side ([string]$parsed.Positionals[2])
-    $displaySide = if ($result.Side -eq 'server') { 'host' } else { $result.Side }
-    Write-MpSuccess "$($result.Item.Name) now uses side '$displaySide'."
-    Write-MpKeyValue 'Previous' $(if ($result.PreviousSide -eq 'server') { 'host' } else { $result.PreviousSide })
-    Write-MpKeyValue 'Source' $(if ($result.Item.Source -eq 'packwiz') { 'Packwiz metadata' } else { 'local override' })
-}
-
 function Invoke-MpClassify {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Show-MpHelp classify; return }
@@ -184,32 +122,8 @@ function Invoke-MpClassify {
             Write-ModpackCategoryCache -View $view
             Write-ModpackCategoryList -View $view
         }
-        'remove' {
-            $parsed = ConvertFrom-MpOptions -Arguments $remaining -ValueOptions @('project') -SwitchOptions @('unclassify')
-            Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack classify remove <category|number> [--unclassify] [--project <id>]' -OptionNames @('project', 'unclassify')
-            $project = Resolve-MpCommandProject -Options $parsed.Options
-            $removed = Remove-ModpackCategory -Project $project -Selector ([string]$parsed.Positionals[0]) -Unclassify:$parsed.Options.ContainsKey('unclassify')
-            Write-MpSuccess "Category '$($removed.Id)' was removed."
-            if ($removed.UnclassifiedCount) { Write-MpInfo "$($removed.UnclassifiedCount) mod(s) are now unclassified." }
-            $view = Get-ModpackCategoryView -Project $project
-            Write-ModpackCategoryCache -View $view
-            Write-ModpackCategoryList -View $view
-        }
-        'set' {
-            $parsed = ConvertFrom-MpOptions -Arguments $remaining -ValueOptions @('project')
-            Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum 2 -Usage 'modpack classify set <mod|inventory-number> <category|number|unclassified> [--project <id>]' -OptionNames @('project')
-            $project = Resolve-MpCommandProject -Options $parsed.Options
-            $rawSelector = [string]$parsed.Positionals[0]
-            $reference = Resolve-ModpackInventoryNumber -Selector $rawSelector -Project $project -AllowedKinds @('mod')
-            $selector = if ($reference) { [string]$reference.Selector } else { $rawSelector }
-            $label = if ($reference) { "#$rawSelector $($reference.Name)" } else { $rawSelector }
-            $categoryId = Resolve-ModpackCategoryId -Project $project -Selector ([string]$parsed.Positionals[1]) -AllowUnclassified
-            Write-MpStep "Classifying '$label'..."
-            $result = Set-ModpackModClassification -Project $project -Selector $selector -Category $categoryId
-            Write-MpSuccess "$($result.Item.Name) is classified as '$($result.Category)'."
-            Write-MpKeyValue 'Previous' $result.PreviousCategory
-            Write-MpKeyValue 'ID' $result.Item.Id
-        }
+        'remove' { Invoke-MpClassifyBatch -Operation remove -Arguments $remaining }
+        'set' { Invoke-MpClassifyBatch -Operation set -Arguments $remaining }
         default {
             Throw-MpError -Message "Classify operation '$($Arguments[0])' is not recognized; allowed values: list, create, remove, set" -Hint 'modpack classify --help' -ErrorId 'Metadata.UnknownClassificationOperation' -Category InvalidArgument -TargetObject $Arguments[0]
         }
@@ -238,7 +152,7 @@ function Invoke-MpInventory {
     if ($Arguments -contains '--help') { Show-MpHelp inventory; return }
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments `
         -ValueOptions @('project', 'type', 'category', 'side', 'source', 'state', 'search') `
-        -SwitchOptions @('unclassified')
+        -SwitchOptions @('unclassified', 'check')
     Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack inventory [id] [--project <id>] [filters]' -OptionNames @('project', 'type', 'category', 'side', 'source', 'state', 'search', 'unclassified')
     if ($parsed.Options.ContainsKey('unclassified') -and $parsed.Options.ContainsKey('category')) {
         Throw-MpError -Message "Options '--unclassified' and '--category' cannot be combined" -Hint 'remove one of the two options' -ErrorId 'Option.ForbiddenCombination' -Category InvalidArgument
@@ -260,18 +174,21 @@ function Invoke-MpInventory {
     [void](Set-ModpackInventoryReferences -View $view)
 
     Write-ModpackHeader -Project $project -Inventory $inventory
+    Write-MpHealth (Get-MpProjectHealth $project -Check:$parsed.Options.ContainsKey('check'))
     Write-InventoryView -View $view -ShowFilters
 }
 
 function Invoke-MpBuild {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Show-MpHelp build; return }
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project') -SwitchOptions @('no-refresh', 'keep-old', 'open', 'raw-log')
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project') -SwitchOptions @('no-refresh', 'keep-old', 'open', 'raw-log', 'strict', 'dry-run')
     Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack build [id] [--project <id>] [options]' -OptionNames @('project', 'no-refresh', 'keep-old', 'open', 'raw-log')
     $id = if ($parsed.Positionals.Count) { $parsed.Positionals[0] } else { $null }
     $project = Resolve-MpCommandProject -Options $parsed.Options -PositionalId $id
     Write-MpStep "Building $($project.DisplayName)..."
-    $build = Build-ModpackProject -Project $project -NoRefresh:$parsed.Options.ContainsKey('no-refresh') -KeepOld:$parsed.Options.ContainsKey('keep-old') -RawLog:$parsed.Options.ContainsKey('raw-log')
+    $build = Build-ModpackProject -Project $project -NoRefresh:$parsed.Options.ContainsKey('no-refresh') -KeepOld:$parsed.Options.ContainsKey('keep-old') -RawLog:$parsed.Options.ContainsKey('raw-log') -Strict:$parsed.Options.ContainsKey('strict') -DryRun:$parsed.Options.ContainsKey('dry-run')
+    Write-MpHealth $build.Health
+    if ($build.DryRun) { Write-MpInfo 'Dry run: export validated without changing the project.'; return }
     foreach ($line in $build.Log) { Write-Host "$($script:Palette.Secondary)$line$($script:Palette.Reset)" }
     Write-ModInventory $build.Inventory
     Write-ResourcePackInventory $build.Inventory
@@ -291,30 +208,6 @@ function Invoke-MpDiff {
     Write-MpStep "Comparing $($project.DisplayName) with its latest build..."
     $diff = Compare-ModpackBuild -Project $project
     Write-ModpackDiff -Diff $diff
-}
-
-function Invoke-MpAdd {
-    param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
-    if ($Arguments -contains '--help') { Show-MpHelp add; return }
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project', 'category')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack add <id|slug|search-number> [--project <id>] [--category <id>]' -OptionNames @('project', 'category')
-    if ($parsed.Positionals[0].ToLowerInvariant() -eq 'mod') { Throw-MpError -Message "Argument 'mod' is not valid after 'modpack add'" -Hint 'modpack add <id|slug|search-number> [--project <id>] [--category <id>]' -ErrorId 'Command.LegacyAddSyntax' -Category InvalidArgument -TargetObject 'mod' }
-    $project = Resolve-MpCommandProject -Options $parsed.Options
-    $category = if ($parsed.Options.ContainsKey('category')) { $parsed.Options.category } else { $null }
-    $selector = [string]$parsed.Positionals[0]
-    $cached = Resolve-ModrinthSearchNumber -Selector $selector -Project $project
-    if ($cached -and $category -and $cached.Type -ne 'mod') {
-        Throw-MpError -Message "Option '--category' applies only to mods; search result '$selector' is '$($cached.Type)'" -Hint 'remove --category' -ErrorId 'Option.CategoryRequiresMod' -Category InvalidArgument -TargetObject $selector
-    }
-    $label = if ($cached) { "#$selector $($cached.Title)" } else { $selector }
-    Write-MpStep "Adding '$label' to $($project.Id)..."
-    $parameters = @{ Project = $project; Selector = $selector; Category = $category }
-    if ($cached) { $parameters.ModrinthProjectId = [string]$cached.ProjectId }
-    $result = Add-ModpackContent @parameters
-    Write-MpSuccess "$($result.Item.Name) added as '$($result.Item.Id)'."
-    Write-MpKeyValue 'Type' $result.Item.Kind
-    if ($category) { Write-MpKeyValue 'Category' $category }
-    elseif ($result.Item.Kind -eq 'mod') { Write-MpKeyValue 'Category' 'UNCLASSIFIED' }
 }
 
 function Invoke-MpSearch {
@@ -348,38 +241,6 @@ function Invoke-MpVersions {
     Write-MpStep "Finding compatible versions for '$($item.Name)'..."
     $view = Get-ModrinthCompatibleVersions -Project $project -Item $item
     Write-ModrinthVersionResults -View $view -Project $project
-}
-
-function Invoke-MpUpdate {
-    param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
-    if ($Arguments -contains '--help') { Show-MpHelp update; return }
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project', 'type', 'to') -SwitchOptions @('all', 'strict')
-    if ($parsed.Options.ContainsKey('all') -and $parsed.Positionals.Count) {
-        Throw-MpError -Message "Content selectors and '--all' cannot be combined" -Hint 'remove the selectors or --all' -ErrorId 'Option.ForbiddenCombination' -Category InvalidArgument
-    }
-    if (-not $parsed.Options.ContainsKey('all') -and $parsed.Positionals.Count -eq 0) {
-        Throw-MpError -Message "The update command requires at least one selector or '--all'" -Hint 'modpack update --help' -ErrorId 'Command.MissingUpdateTarget' -Category InvalidArgument
-    }
-    if ($parsed.Options.ContainsKey('to') -and ($parsed.Options.ContainsKey('all') -or $parsed.Positionals.Count -ne 1)) {
-        Throw-MpError -Message "Option '--to' requires exactly one content selector" -Hint 'modpack update <selector> --to <version>' -ErrorId 'Option.VersionTargetConflict' -Category InvalidArgument -TargetObject $parsed.Options.to
-    }
-    $project = Resolve-MpCommandProject -Options $parsed.Options
-    $type = if ($parsed.Options.ContainsKey('type')) { $parsed.Options.type } else { 'all' }
-    $normalizedType = Resolve-InventoryType -Type $type
-    $allowedKinds = if ($normalizedType -eq 'all') { @('mod', 'resourcepack', 'shaderpack') } else { @($normalizedType) }
-    $label = if ($parsed.Options.ContainsKey('all')) { 'all matching Packwiz-managed content' } else { "$($parsed.Positionals.Count) selected item(s)" }
-    $selectors = @(
-        foreach ($rawSelector in $parsed.Positionals) {
-            $reference = Resolve-ModpackInventoryNumber -Selector ([string]$rawSelector) -Project $project -AllowedKinds $allowedKinds -RequirePackwiz
-            if ($reference) { [string]$reference.Selector } else { [string]$rawSelector }
-        }
-    )
-    Write-MpStep "Updating $label in $($project.Id)..."
-    $parameters = @{ Project = $project; Selectors = $selectors; All = $parsed.Options.ContainsKey('all'); Type = $type }
-    if ($parsed.Options.ContainsKey('to')) { $parameters.To = [string]$parsed.Options.to }
-    if ($parsed.Options.ContainsKey('strict')) { $parameters.Strict = $true }
-    $result = Update-ModpackContent @parameters
-    Write-ModUpdateSummary -Update $result
 }
 
 function Invoke-MpNew {
@@ -449,16 +310,4 @@ function Invoke-MpConfig {
         }
         default { Throw-MpError -Message "Configuration operation '$verb' is not recognized; allowed values: get, set" -Hint 'modpack config --help' -ErrorId 'Configuration.UnknownOperation' -Category InvalidArgument -TargetObject $verb }
     }
-}
-
-function Invoke-MpDoctor {
-    param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
-    if ($Arguments -contains '--help') { Show-MpHelp doctor; return }
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -SwitchOptions @('fix', 'yes')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 0 -Usage 'modpack doctor [--fix] [--yes]' -OptionNames @('fix', 'yes')
-    if ($parsed.Options.ContainsKey('yes') -and -not $parsed.Options.ContainsKey('fix')) {
-        Throw-MpError -Message "Option '--yes' requires '--fix'" -Hint 'modpack doctor --fix --yes' -ErrorId 'Option.RequiredCombination' -Category InvalidArgument -TargetObject 'yes'
-    }
-    if ($parsed.Options.ContainsKey('fix')) { Repair-MpDoctorEnvironment -Yes:$parsed.Options.ContainsKey('yes') }
-    Write-MpDoctorReport -Report (Get-MpDoctorReport)
 }

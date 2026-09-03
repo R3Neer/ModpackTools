@@ -156,7 +156,7 @@ Search, inventory, version, and category numbers have separate contexts. `modpac
 
 `modpack classify` defines, lists, removes, and assigns editorial categories. Its final `unclassified` list row can be assigned but never removed. Removing a defined category that is in use requires `--unclassify`. Category definitions and assignments live only in `.modpack/metadata.psd1`; numbered lists are temporary references. Resource pack activation and ordering require Default Options; `modpack resource move` reorders an enabled pack and `disable` removes it from the enabled order without uninstalling it.
 
-`modpack versions` lists compatible Modrinth releases and saves numbered choices. `modpack update` updates Packwiz-managed mods, resource packs, and shaders; `--to` selects an exact release, including an older one. Every update checks the declared dependency graph first: newly introduced known conflicts block the operation, while `--strict` also requires complete metadata and a clean resulting graph. Multiple selectors form one transaction, and every Packwiz metadata change is rolled back if one fails. Use `--type mod|resourcepack|shaderpack` to narrow the operation. Local files are never updated. Review the result with `modpack diff` before building.
+`modpack versions` lists compatible Modrinth releases and saves numbered choices. `modpack update` updates Packwiz-managed mods, resource packs, and shaders; `--to` selects an exact release, including an older one. Add and update resolve each batch together against a dependency graph combining provider and native JAR requirements for Fabric, Quilt, Forge and NeoForge. New or affected conflicts block the operation; `--strict` requires complete verification and a clean graph. Multiple selectors form one transaction covering technical files, editorial metadata and Default Options. Use `--dry-run` to preview it and `--allow-downgrade` to permit automatic dependency downgrades. `modpack pin <selector...>` fixes versions and `unpin` releases them; `update --all` skips pinned items. Use `--type mod|resourcepack|shaderpack` to narrow the operation. Local files are never updated. Review the result with `modpack diff` before building.
 
 ## Sources of truth
 
@@ -665,7 +665,7 @@ function Update-ModpackContent {
     }
 }
 
-function Build-ModpackProject {
+function Invoke-MpStagedBuild {
     param(
         [Parameter(Mandatory)]$Project,
         [switch]$NoRefresh,

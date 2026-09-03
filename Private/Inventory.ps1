@@ -24,9 +24,9 @@ function Get-PackwizItems {
     $path = Join-Path $Project.Root $Directory
     if (-not (Test-Path -LiteralPath $path -PathType Container)) { return @() }
     return @(
-        foreach ($file in Get-ChildItem -LiteralPath $path -Filter '*.pw.toml' -File -ErrorAction SilentlyContinue) {
+        foreach ($file in Get-ChildItem -LiteralPath $path -Filter '*.pw.toml' -File -Recurse -ErrorAction SilentlyContinue) {
             $text = Get-Content -Raw -LiteralPath $file.FullName -Encoding UTF8
-            $relative = "$Directory/$($file.Name)"
+            $relative = [IO.Path]::GetRelativePath($Project.Root, $file.FullName).Replace('\', '/')
             $name = Get-TomlString -Text $text -Key 'name'
             $filename = Get-TomlString -Text $text -Key 'filename'
             $side = Get-TomlString -Text $text -Key 'side'
@@ -43,6 +43,7 @@ function Get-PackwizItems {
                 Source       = 'packwiz'
                 MetadataPath = $file.FullName
                 Category     = $null
+                Pinned       = [regex]::IsMatch((Get-TomlSectionText -Text $text), '(?m)^pin[ \t]*=[ \t]*true[ \t]*(?:#.*)?\r?$')
             }
         }
     )
@@ -85,16 +86,17 @@ function Get-LocalModItems {
 
     $path = Join-Path $Project.Root 'mods'
     if (-not (Test-Path -LiteralPath $path -PathType Container)) { return @() }
-    $knownFiles = @($KnownItems | ForEach-Object { $_.Filename })
+    $knownFiles = @($KnownItems | ForEach-Object { [IO.Path]::GetRelativePath($path, (Join-Path (Split-Path -Parent $_.MetadataPath) $_.Filename)).Replace('\', '/') })
     return @(
-        foreach ($file in Get-ChildItem -LiteralPath $path -Filter '*.jar' -File -ErrorAction SilentlyContinue) {
-            if ($knownFiles -contains $file.Name) { continue }
+        foreach ($file in Get-ChildItem -LiteralPath $path -Filter '*.jar' -File -Recurse -ErrorAction SilentlyContinue) {
+            $relative = [IO.Path]::GetRelativePath($path, $file.FullName).Replace('\', '/')
+            if ($knownFiles -contains $relative) { continue }
             $jar = Get-LocalJarMetadata -Path $file.FullName
             [pscustomobject]@{
-                Id           = 'local:mods/' + $file.Name.ToLowerInvariant()
+                Id           = 'local:mods/' + $relative.ToLowerInvariant()
                 Kind         = 'mod'
                 Name         = $jar.Name
-                Filename     = $file.Name
+                Filename     = $relative
                 Side         = $jar.Side
                 Source       = 'local'
                 MetadataPath = $null
