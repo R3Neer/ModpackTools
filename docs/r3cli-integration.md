@@ -13,6 +13,10 @@ catalogue, selection rules, domain data and composition of inventory/build/docto
 views. Rows pass literal text segments and semantic roles to R3CLI. The product
 contains no common ANSI palette or copy of the generic renderer.
 
+Doctor and inventory pass each known dependency conflict as its own status item.
+Large optional and incomplete-verification sets are represented by bounded summary
+items; they are never joined into a single renderer line.
+
 The existing catalogue is projected into R3CLI's `HelpCatalogue` shape without
 creating a second documentation catalogue. Each public invocation constructs its
 own presentation context, removes `--colour` and `--ascii` once, and passes the

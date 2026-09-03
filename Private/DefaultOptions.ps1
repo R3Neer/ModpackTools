@@ -68,7 +68,7 @@ function Set-TomlArrayStrings {
 }
 
 function Write-Utf8TextFileAtomic {
-    param([Parameter(Mandatory)][string]$Path, [Parameter(Mandatory)][string]$Text)
+    param([Parameter(Mandatory)][string]$Path, [Parameter(Mandatory)][AllowEmptyString()][string]$Text)
     $directory = Split-Path -Parent $Path
     $temporary = Join-Path $directory ('.' + [System.IO.Path]::GetFileName($Path) + '.' + [guid]::NewGuid().ToString('N') + '.tmp')
     try {

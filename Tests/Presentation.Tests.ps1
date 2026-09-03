@@ -118,5 +118,30 @@ InModuleScope ModpackTools {
             $check.Status | Should Be pass
             $check.Value | Should Match ([regex]::Escape($script:verifiedR3.Revision))
         }
+
+        It 'renders dependency conflicts as separate statuses and summarizes incomplete verification' {
+            $health = [pscustomobject]@{
+                Errors = @(
+                    [pscustomobject]@{ Message = 'First dependency conflict' },
+                    [pscustomobject]@{ Message = 'Second dependency conflict' }
+                )
+                Warnings = @([pscustomobject]@{ Message = 'Optional recommendation detail' })
+                Unknown = @(
+                    [pscustomobject]@{ Message = 'Unavailable detail one' },
+                    [pscustomobject]@{ Message = 'Unavailable detail two' }
+                )
+            }
+            $check = New-MpDoctorCheck PROJECT fail Dependencies '2 conflict(s)' -Items @(Get-MpHealthDisplayItems $health)
+            $report = [pscustomobject]@{ Checks = @($check); Failures = 1; Warnings = 0 }
+            $text = (Write-MpDoctorReport $report *>&1 | ForEach-Object { [string]$_ }) -join "`n"
+            $text | Should Match 'First dependency conflict'
+            $text | Should Match 'Second dependency conflict'
+            $text | Should Match '1 optional dependency recommendation\(s\)'
+            $text | Should Match '2 requirement\(s\) could not be verified'
+            $text | Should Not Match 'Optional recommendation detail'
+            $text | Should Not Match 'Unavailable detail one'
+            $text | Should Not Match 'Unavailable detail two'
+            $text | Should Not Match 'First dependency conflict; Second dependency conflict'
+        }
     }
 }

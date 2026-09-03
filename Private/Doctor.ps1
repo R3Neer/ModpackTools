@@ -4,9 +4,10 @@ function New-MpDoctorCheck {
         [Parameter(Mandatory)][ValidateSet('pass', 'warn', 'fail', 'info')][string]$Status,
         [Parameter(Mandatory)][string]$Label,
         [Parameter(Mandatory)][AllowEmptyString()][string]$Value,
-        [string]$Detail
+        [string]$Detail,
+        [AllowEmptyCollection()][object[]]$Items = @()
     )
-    return [pscustomobject]@{ Section = $Section; Status = $Status; Label = $Label; Value = $Value; Detail = $Detail }
+    return [pscustomobject]@{ Section = $Section; Status = $Status; Label = $Label; Value = $Value; Detail = $Detail; Items = @($Items) }
 }
 
 function Test-MpConfigurationWritable {
@@ -200,7 +201,12 @@ function Write-MpDoctorReport {
         $items = @($Report.Checks | Where-Object Section -eq $section)
         if (-not $items.Count) { continue }
         Write-R3Heading (Get-MpConsole) $section
-        foreach ($item in $items) { Write-MpDoctorLine -Status $item.Status -Label $item.Label -Value $item.Value -Detail $item.Detail }
+        foreach ($item in $items) {
+            Write-MpDoctorLine -Status $item.Status -Label $item.Label -Value $item.Value -Detail $item.Detail
+            foreach ($detailItem in @($item.Items)) {
+                Write-MpDoctorItem -Status $detailItem.Status -Text $detailItem.Text
+            }
+        }
     }
     Write-R3Line (Get-MpConsole) @(@{Text=''})
     if ($Report.Failures) {

@@ -82,6 +82,15 @@ function Write-MpDoctorLine {
     if ($Detail) { Write-R3Line (Get-MpConsole) @(@{Text="  $Detail";Role='secondary'}) }
 }
 
+function Write-MpDoctorItem {
+    param(
+        [ValidateSet('pass','warn','fail','info')][string]$Status = 'info',
+        [Parameter(Mandatory)][string]$Text
+    )
+    $kind = @{pass='success';warn='warning';fail='error';info='info'}[$Status]
+    Write-R3Status (Get-MpConsole) $kind $Text
+}
+
 function Write-MpDoctorSummary {
     param([string]$Status, [string]$Text)
     Write-R3Status (Get-MpConsole) (@{pass='success';warn='warning';fail='error'}[$Status]) $Text

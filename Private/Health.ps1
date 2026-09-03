@@ -22,7 +22,26 @@ function Write-MpHealth {
     param($Report)
     $label = if ($Report.Errors.Count) { "$($Report.Errors.Count) dependency issue(s)" } elseif ($Report.Unknown.Count) { 'Incomplete verification' } elseif ($Report.Warnings.Count) { "Verified with $($Report.Warnings.Count) warning(s)" } else { 'Healthy' }
     Write-R3KeyValue (Get-MpConsole) 'Health' $label
-    foreach ($issue in $Report.Issues) { Write-R3Status (Get-MpConsole) info "$($issue.Severity): $($issue.Message)" }
+    foreach ($item in @(Get-MpHealthDisplayItems $Report)) { Write-MpDoctorItem -Status $item.Status -Text $item.Text }
+}
+
+function Get-MpHealthDisplayItems {
+    param($Report)
+    foreach ($issue in @($Report.Errors)) {
+        [pscustomobject]@{ Status = 'fail'; Text = $issue.Message }
+    }
+    if ($Report.Warnings.Count) {
+        [pscustomobject]@{
+            Status = 'warn'
+            Text = "$($Report.Warnings.Count) optional dependency recommendation(s)."
+        }
+    }
+    if ($Report.Unknown.Count) {
+        [pscustomobject]@{
+            Status = 'warn'
+            Text = "$($Report.Unknown.Count) requirement(s) could not be verified from the available metadata."
+        }
+    }
 }
 
 function Test-MpProjectIndex {
@@ -90,7 +109,9 @@ function Get-MpProjectDoctorChecks {
     New-MpDoctorCheck PROJECT $(if ($index.Count) { 'fail' } else { 'pass' }) Index $(if ($index.Count) { $index -join '; ' } else { 'Hashes match' })
     try {
         $health = Get-MpProjectHealth $Project -Check
-        New-MpDoctorCheck PROJECT $(if ($health.Errors.Count) { 'fail' } elseif ($health.Unknown.Count) { 'warn' } else { 'pass' }) 'Dependencies' "$($health.Errors.Count) issue(s), $($health.Unknown.Count) unverified" -Detail (@($health.Issues | ForEach-Object Message) -join '; ')
+        $status = if ($health.Errors.Count) { 'fail' } elseif ($health.Unknown.Count -or $health.Warnings.Count) { 'warn' } else { 'pass' }
+        $value = if ($health.Errors.Count) { "$($health.Errors.Count) conflict(s)" } elseif ($health.Unknown.Count) { 'Verification incomplete' } elseif ($health.Warnings.Count) { "$($health.Warnings.Count) warning(s)" } else { 'Healthy' }
+        New-MpDoctorCheck PROJECT $status Dependencies $value -Items @(Get-MpHealthDisplayItems $health)
     } catch { New-MpDoctorCheck PROJECT fail Dependencies $_.Exception.Message }
 }
 

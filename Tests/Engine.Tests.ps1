@@ -160,6 +160,12 @@ InModuleScope ModpackTools {
     }
     Describe 'Project transaction boundary' {
         BeforeEach { New-EngineFixture }
+        It 'writes an intentionally empty text file atomically' {
+            $path = Join-Path $script:FixtureProject.Root 'empty.txt'
+            Write-Utf8TextFileAtomic -Path $path -Text ''
+            [IO.File]::ReadAllText($path) | Should Be ''
+            (Get-MpHash '') | Should Be 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+        }
         It 'keeps the project byte identical when preparation fails after several writes' {
             $before = Get-MpTreeState $script:FixtureProject.Root
             { Invoke-MpProjectTransaction $script:FixtureProject -Prepare { param($p); [IO.File]::WriteAllText((Join-Path $p.Root 'new.txt'),'new'); [IO.File]::WriteAllText((Join-Path $p.Root '.modpack/metadata.psd1'),'broken'); throw 'injected' } } | Should Throw
@@ -203,6 +209,16 @@ InModuleScope ModpackTools {
             ($inventory.Mods | Where-Object Id -eq 'modrinth:emf').VersionId | Should Be 'emf-3.3.2'
             ($inventory.Mods | Where-Object Id -eq 'modrinth:unrelated').VersionId | Should Be 'unrelated-1'
             $inventory.Metadata.Content['modrinth:compat'].Intent | Should Be explicit
+        }
+        It 'prepares a dependency repair without an empty text binding failure' {
+            [void](Add-FixtureVersion root '1' -Installed -Depends @{ lib = '>=2' } -ProviderDependencies @(@{ project_id = 'lib'; version_id = $null; dependency_type = 'required' }))
+            [void](Add-FixtureVersion lib '1' -Installed)
+            [void](Add-FixtureVersion lib '2' -Published '2026-02-01T00:00:00Z')
+            $before = Get-MpTreeState $script:FixtureProject.Root
+            $preview = Invoke-MpContentOperation $script:FixtureProject -Operation repair -DryRun
+            $preview.Result.Changes.Count | Should Be 1
+            $preview.Result.Changes[0].After.VersionId | Should Be 'lib-2'
+            @(Get-MpTreeChanges $before (Get-MpTreeState $script:FixtureProject.Root)).Count | Should Be 0
         }
         It 'respects pins and leaves no partial add' {
             [void](Add-FixtureVersion emf '3.3' -Installed -Pinned)
