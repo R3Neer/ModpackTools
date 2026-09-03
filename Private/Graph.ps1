@@ -1,6 +1,11 @@
+function Get-MpMetadataCachePath {
+    param([string]$Endpoint)
+    Join-Path (Get-ModpackToolsConfigDirectory) ('metadata/' + (Get-MpHash $Endpoint) + '.json')
+}
+
 function Get-MpMetadataCache {
     param([string]$Endpoint, [switch]$Check)
-    $path = Join-Path (Get-ModpackToolsConfigDirectory) ('metadata/' + (Get-MpHash $Endpoint) + '.json')
+    $path = Get-MpMetadataCachePath $Endpoint
     if ($Check) {
         $value = Invoke-ModrinthApiRequest -PathAndQuery $Endpoint
         [void][IO.Directory]::CreateDirectory((Split-Path -Parent $path))
@@ -57,7 +62,7 @@ function ConvertTo-MpNode {
             if (-not $id -and $exact) {
                 try { $linked = Get-MpMetadataCache "version/$exact" -Check:$Check; if ($linked) { $id = [string]$linked.project_id } } catch { $warnings.Add($_.Exception.Message) }
             }
-            if ($id) { $requirements += New-MpRequirement -Target "modrinth:$id" -Range $(if ($exact) { $exact } else { '*' }) -Kind $kind -Scope project }
+            if ($id) { $requirements += New-MpRequirement -Target "modrinth:$id" -Kind $kind -Scope project -Source provider -SuggestedVersionId $exact }
             else { $warnings.Add('A provider dependency has no verifiable project identity') }
         }
     }
@@ -100,13 +105,32 @@ function Get-MpProjectState {
     $inventory = Get-ModpackInventory $Project
     $nodes = @{}
     $intent = Get-MpPropertyValue $inventory.Metadata 'Content'
-    foreach ($item in @(Get-ModpackUpdateItems $inventory)) {
+    $items = @(Get-ModpackUpdateItems $inventory)
+    $checkedVersions = @{}; $batchWarning = $null
+    if ($Check) {
+        $versionIds = @($items | Where-Object { $_.Id.StartsWith('modrinth:') -and (Get-MpPropertyValue $_ 'VersionId') } | ForEach-Object VersionId)
+        try {
+            foreach ($version in @(Get-ModrinthVersionsByIds $versionIds)) {
+                $checkedVersions[[string]$version.id] = $version
+                $cachePath = Get-MpMetadataCachePath ('version/' + [string]$version.id)
+                [void][IO.Directory]::CreateDirectory((Split-Path -Parent $cachePath))
+                Write-Utf8TextFileAtomic $cachePath ($version | ConvertTo-Json -Depth 60 -Compress)
+            }
+        } catch { $batchWarning = $_.Exception.Message }
+    }
+    foreach ($item in $items) {
         if ($nodes.ContainsKey($item.Id)) {
             Throw-MpError -Message "Duplicate content ID '$($item.Id)'" -Details "Metadata files: '$($nodes[$item.Id].Item.MetadataPath)' and '$($item.MetadataPath)'" -Hint 'resolve the duplicate metadata before changing or building the pack' -ErrorId 'Content.DuplicateIdentity' -Category InvalidData -TargetObject $item.Id
         }
         $version = $null; $warning = $null
         if ($item.Id.StartsWith('modrinth:') -and (Get-MpPropertyValue $item 'VersionId')) {
-            try { $version = Get-MpMetadataCache ('version/' + $item.VersionId) -Check:$Check }
+            try {
+                if ($Check) {
+                    if ($checkedVersions.ContainsKey([string]$item.VersionId)) { $version = $checkedVersions[[string]$item.VersionId] }
+                    else { $warning = if ($batchWarning) { $batchWarning } else { 'Installed provider version metadata is unavailable' } }
+                }
+                else { $version = Get-MpMetadataCache ('version/' + $item.VersionId) }
+            }
             catch { $warning = $_.Exception.Message }
         }
         $origin = 'explicit'
@@ -149,7 +173,11 @@ function Test-MpRequirement {
         return $Requirement.Kind -in @('optional','incompatible','discouraged')
     }
     $matches = $false; $unknown = $false
-    if ($Requirement.Scope -eq 'project') { $matches = $Requirement.Range -eq '*' -or $Nodes[$Requirement.Target].VersionId -ceq $Requirement.Range }
+    if ($Requirement.Scope -eq 'project') {
+        $matches = $Requirement.Range -eq '*' -or $Nodes[$Requirement.Target].VersionId -ceq $Requirement.Range
+        $suggestedVersion = [string](Get-MpPropertyValue $Requirement 'SuggestedVersionId')
+        if ($matches -and $suggestedVersion -and $Nodes[$Requirement.Target].VersionId -cne $suggestedVersion) { return $null }
+    }
     else {
         foreach ($version in @($Mods[$Requirement.Target])) {
             if (-not $version) { $unknown = $true; continue }
@@ -204,7 +232,10 @@ function Get-MpGraphReport {
                 if ($valid -eq $true) { continue }
                 if ($valid -eq $false -and $requirement.Scope -eq 'mod' -and $requirement.Target -and -not $mods.ContainsKey($requirement.Target) -and @($active.Values | Where-Object { $_.Item.Kind -eq 'mod' -and $_.Mods.Count -eq 0 }).Count) { $valid = $null }
                 $severity = if ($null -eq $valid) { 'unknown' } elseif ($requirement.Kind -in @('recommended','discouraged')) { 'warning' } else { 'error' }
-                $message = "$($node.Item.Name): $($requirement.Kind) $($requirement.Target) $($requirement.Range -join ' OR ') [$side]"
+                $constraint = $requirement.Range -join ' OR '
+                $suggestedVersion = [string](Get-MpPropertyValue $requirement 'SuggestedVersionId')
+                if ($suggestedVersion) { $constraint = "provider version $suggestedVersion" }
+                $message = "$($node.Item.Name): $($requirement.Kind) $($requirement.Target) $constraint [$side]"
                 $issue = New-MpGraphIssue $node $requirement $side $severity $message
                 $facts = @(foreach ($target in @(Get-MpRequirementTargets $requirement)) {
                     if ($target.Scope -eq 'project' -and $active.ContainsKey($target.Target)) { $active[$target.Target].VersionId }

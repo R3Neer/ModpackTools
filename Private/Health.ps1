@@ -1,7 +1,7 @@
 function Get-MpProjectHealth {
     param($Project, [switch]$Check)
     $tree = Get-MpTreeState $Project.Root
-    $fingerprint = Get-MpHash ((@($tree.Keys | Where-Object { $_ -notlike 'dist/*' } | Sort-Object | ForEach-Object { "$_=$($tree[$_])" }) -join "`n") + '|validator=1')
+    $fingerprint = Get-MpHash ((@($tree.Keys | Where-Object { $_ -notlike 'dist/*' } | Sort-Object | ForEach-Object { "$_=$($tree[$_])" }) -join "`n") + '|validator=2')
     $path = Join-Path (Get-ModpackToolsConfigDirectory) ('health/' + (Get-MpHash $Project.Root.ToLowerInvariant()) + '.json')
     if (-not $Check -and [IO.File]::Exists($path)) {
         try {
@@ -11,10 +11,10 @@ function Get-MpProjectHealth {
     }
     $state = Get-MpProjectState $Project -Check:$Check
     $report = Get-MpGraphReport $Project $state.Nodes
-    if ($Check) {
-        [void][IO.Directory]::CreateDirectory((Split-Path -Parent $path))
-        Write-Utf8TextFileAtomic $path (@{ Fingerprint = $fingerprint; CreatedUtc = [datetime]::UtcNow.ToString('o'); Report = $report } | ConvertTo-Json -Depth 60)
-    }
+    $context = @{ Project = $Project; Info = @{}; Domains = @{}; DomainKnown = @{}; ProviderAvailability = @{}; Check = [bool]$Check }
+    $report = Resolve-MpProviderAvailabilityReport $context $state.Nodes $report
+    [void][IO.Directory]::CreateDirectory((Split-Path -Parent $path))
+    Write-Utf8TextFileAtomic $path (@{ Fingerprint = $fingerprint; CreatedUtc = [datetime]::UtcNow.ToString('o'); Report = $report } | ConvertTo-Json -Depth 60)
     return $report
 }
 
@@ -95,7 +95,7 @@ function Build-ModpackProject {
 }
 
 function Get-MpProjectDoctorChecks {
-    param($Project)
+    param($Project, $HealthReport)
     foreach ($relative in @('pack.toml', $Project.IndexFile, '.modpack/project.psd1', '.modpack/metadata.psd1')) {
         $present = Test-Path -LiteralPath (Join-Path $Project.Root $relative) -PathType Leaf
         New-MpDoctorCheck -Section PROJECT -Status $(if ($present) { 'pass' } else { 'fail' }) -Label $relative -Value $(if ($present) { 'Present' } else { 'Missing' })
@@ -108,7 +108,7 @@ function Get-MpProjectDoctorChecks {
     $index = @(Test-MpProjectIndex $Project)
     New-MpDoctorCheck PROJECT $(if ($index.Count) { 'fail' } else { 'pass' }) Index $(if ($index.Count) { $index -join '; ' } else { 'Hashes match' })
     try {
-        $health = Get-MpProjectHealth $Project -Check
+        $health = if ($HealthReport) { $HealthReport } else { Get-MpProjectHealth $Project }
         $status = if ($health.Errors.Count) { 'fail' } elseif ($health.Unknown.Count -or $health.Warnings.Count) { 'warn' } else { 'pass' }
         $value = if ($health.Errors.Count) { "$($health.Errors.Count) conflict(s)" } elseif ($health.Unknown.Count) { 'Verification incomplete' } elseif ($health.Warnings.Count) { "$($health.Warnings.Count) warning(s)" } else { 'Healthy' }
         New-MpDoctorCheck PROJECT $status Dependencies $value -Items @(Get-MpHealthDisplayItems $health)
@@ -125,21 +125,24 @@ function Invoke-MpDoctor {
     if ($parsed.Options.ContainsKey('project') -or $script:ActiveProjectId) {
         try { $project = Resolve-MpCommandProject $parsed.Options } catch { $projectError = $_.Exception.Message }
     }
+    $doctorHealth = $null
     if ($parsed.Options.ContainsKey('fix')) {
         if (-not $parsed.Options.ContainsKey('dry-run')) { Repair-MpDoctorEnvironment -Yes:$parsed.Options.ContainsKey('yes') }
         if ($project) {
             $preview = Invoke-MpContentOperation $project -Operation repair -DryRun -Strict:$parsed.Options.ContainsKey('strict') -AllowDowngrade:$parsed.Options.ContainsKey('allow-downgrade')
+            $doctorHealth = $preview.Result.Baseline
             Write-MpContentPlan $preview.Result
             Write-MpTransactionSummary $preview -DryRun
             if (-not $parsed.Options.ContainsKey('dry-run') -and (Confirm-MpDoctorAction -Prompt 'Apply the project repair?' -Yes:$parsed.Options.ContainsKey('yes'))) {
                 # Recompute under the project lock; a changed plan must be reviewed again.
                 $repair = Invoke-MpContentOperation $project -Operation repair -ExpectedChanges $preview.Changes -Strict:$parsed.Options.ContainsKey('strict') -AllowDowngrade:$parsed.Options.ContainsKey('allow-downgrade')
                 Write-MpTransactionSummary $repair
+                $doctorHealth = $repair.Result.Report
             }
         }
     }
     $report = Get-MpDoctorReport
-    if ($project) { $report.Checks += @(Get-MpProjectDoctorChecks $project) }
+    if ($project) { $report.Checks += @(Get-MpProjectDoctorChecks $project $doctorHealth) }
     if ($projectError) { $report.Checks += New-MpDoctorCheck PROJECT fail Project $projectError }
     $report.Failures = @($report.Checks | Where-Object Status -eq fail).Count
     $report.Warnings = @($report.Checks | Where-Object Status -eq warn).Count

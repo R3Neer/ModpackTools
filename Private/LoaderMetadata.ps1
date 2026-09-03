@@ -102,8 +102,12 @@ function Test-MpVersionRange {
 }
 
 function New-MpRequirement {
-    param([string]$Target, $Range = '*', [string]$Kind = 'required', [string]$Side = 'both', [string]$Scope = 'mod', [bool]$Maven = $false)
-    [pscustomobject]@{ Target = $Target; Range = $Range; Kind = $Kind; Side = $Side; Scope = $Scope; Maven = $Maven; Any = @(); All = @(); Unless = $null }
+    param([string]$Target, $Range = '*', [string]$Kind = 'required', [string]$Side = 'both', [string]$Scope = 'mod', [bool]$Maven = $false,
+        [string]$Source = 'manifest', [string]$SuggestedVersionId = '')
+    [pscustomobject]@{
+        Target = $Target; Range = $Range; Kind = $Kind; Side = $Side; Scope = $Scope; Maven = $Maven
+        Source = $Source; SuggestedVersionId = $SuggestedVersionId; Any = @(); All = @(); Unless = $null
+    }
 }
 
 function ConvertFrom-MpQuiltRequirement {

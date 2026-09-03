@@ -195,6 +195,7 @@ InModuleScope ModpackTools {
         BeforeEach {
             New-EngineFixture
             Mock Invoke-ModrinthApiRequest { $key = ($PathAndQuery -split '\?')[0]; if (-not $script:FixtureApi.ContainsKey($key)) { throw "Missing fixture $key" }; return $script:FixtureApi[$key] }
+            Mock Get-ModrinthVersionsByIds { @($VersionIds | ForEach-Object { $script:FixtureApi["version/$_"] } | Where-Object { $null -ne $_ }) }
             Mock Get-MpArtifact { return $script:FixtureArtifacts[$Hash] }
             Mock Invoke-Packwiz { return @('refreshed') }
         }
@@ -219,6 +220,29 @@ InModuleScope ModpackTools {
             $preview.Result.Changes.Count | Should Be 1
             $preview.Result.Changes[0].After.VersionId | Should Be 'lib-2'
             @(Get-MpTreeChanges $before (Get-MpTreeState $script:FixtureProject.Root)).Count | Should Be 0
+        }
+        It 'treats a different installed version from a provider pointer as incomplete verification' {
+            [void](Add-FixtureVersion lib '1')
+            [void](Add-FixtureVersion lib '2' -Installed -Published '2026-02-01T00:00:00Z')
+            [void](Add-FixtureVersion root '1' -Installed -ProviderDependencies @(@{ project_id = 'lib'; version_id = 'lib-1'; dependency_type = 'required' }))
+            $report = Get-MpProjectHealth $script:FixtureProject -Check
+            $report.Errors.Count | Should Be 0
+            $report.Unknown.Count | Should BeGreaterThan 0
+            $report.Unknown[0].Message | Should Match 'provider version lib-1'
+        }
+        It 'repairs solvable requirements when provider metadata has no compatible candidate' {
+            [void](Add-FixtureVersion owner '1' -Installed -ProviderDependencies @(@{ project_id = 'ghost'; version_id = $null; dependency_type = 'required' }))
+            $script:FixtureApi['project/ghost'] = [pscustomobject]@{ id='ghost'; title='Ghost'; project_type='mod'; server_side='required'; client_side='required' }
+            $script:FixtureApi['project/ghost/version'] = @()
+            [void](Add-FixtureVersion compat '1' -Installed -Depends @{ lib = '>=2' } -ProviderDependencies @(@{ project_id = 'lib'; version_id = $null; dependency_type = 'required' }))
+            [void](Add-FixtureVersion lib '1' -Installed)
+            [void](Add-FixtureVersion lib '2' -Published '2026-02-01T00:00:00Z')
+            $preview = Invoke-MpContentOperation $script:FixtureProject -Operation repair -DryRun
+            $preview.Result.Changes.Count | Should Be 1
+            $preview.Result.Changes[0].After.VersionId | Should Be 'lib-2'
+            $preview.Result.Report.Errors.Count | Should Be 0
+            $preview.Result.Report.Unknown.Count | Should BeGreaterThan 0
+            { Invoke-MpContentOperation $script:FixtureProject -Operation repair -DryRun -Strict } | Should Throw 'No verified dependency solution'
         }
         It 'respects pins and leaves no partial add' {
             [void](Add-FixtureVersion emf '3.3' -Installed -Pinned)
@@ -263,6 +287,7 @@ InModuleScope ModpackTools {
         BeforeEach {
             New-EngineFixture
             Mock Invoke-ModrinthApiRequest { $key = ($PathAndQuery -split '\?')[0]; if (-not $script:FixtureApi.ContainsKey($key)) { throw "Missing fixture $key" }; return $script:FixtureApi[$key] }
+            Mock Get-ModrinthVersionsByIds { @($VersionIds | ForEach-Object { $script:FixtureApi["version/$_"] } | Where-Object { $null -ne $_ }) }
             Mock Get-MpArtifact { return $script:FixtureArtifacts[$Hash] }
             Mock Invoke-Packwiz { return @('refreshed') }
             Mock Resolve-MpCommandProject { return $script:FixtureProject }

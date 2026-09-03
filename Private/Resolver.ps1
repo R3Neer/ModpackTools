@@ -3,7 +3,10 @@ function Get-MpProjectCandidates {
     if ($Context.Domains.ContainsKey($Id)) { return @($Context.Domains[$Id]) }
     if (-not $Id.StartsWith('modrinth:')) { return @() }
     $projectId = $Id.Substring(9)
-    $info = if ($Context.Info.ContainsKey($Id)) { $Context.Info[$Id] } else { Get-MpMetadataCache "project/$projectId" -Check }
+    $check = (Get-MpPropertyValue $Context 'Check') -eq $true
+    $projectEndpoint = "project/$projectId"
+    $info = if ($Context.Info.ContainsKey($Id)) { $Context.Info[$Id] } else { Get-MpMetadataCache $projectEndpoint -Check:$check }
+    if (-not $info) { $Context.DomainKnown[$Id] = $false; $Context.Domains[$Id] = @(); return @() }
     $kind = [string]$info.project_type
     if ($kind -notin @('mod','resourcepack','shaderpack')) {
         Throw-MpError -Message "Unsupported content kind '$kind'" -Hint 'select a mod, resource pack or shader pack' -ErrorId 'Content.UnsupportedKind' -Category InvalidArgument
@@ -13,9 +16,12 @@ function Get-MpProjectCandidates {
     if ($Context.Project.Loader -eq 'quilt' -and $kind -eq 'mod') { $loaders = @('quilt','fabric') }
     $query = "project/$projectId/version?game_versions=$game"
     if ($loaders.Count) { $query += '&loaders=' + [Uri]::EscapeDataString((ConvertTo-Json -InputObject $loaders -Compress)) }
-    $versions = @(Get-MpMetadataCache $query -Check | ForEach-Object { $_ } | Sort-Object @{ Expression = { [datetime]$_.date_published }; Descending = $true },id)
+    $cachePath = Get-MpMetadataCachePath $query
+    $known = $check -or ([IO.File]::Exists($cachePath) -and [IO.File]::GetLastWriteTimeUtc($cachePath) -gt [datetime]::UtcNow.AddHours(-24))
+    $versions = @(Get-MpMetadataCache $query -Check:$check | ForEach-Object { $_ } | Sort-Object @{ Expression = { [datetime]$_.date_published }; Descending = $true },id)
     $Context.Info[$Id] = $info
     $Context.Domains[$Id] = $versions
+    $Context.DomainKnown[$Id] = $known
     return $versions
 }
 
@@ -72,6 +78,32 @@ function Get-MpSolutionCost {
     return @($changed,$explicit,$added,(-$freshness))
 }
 
+function Resolve-MpProviderAvailabilityReport {
+    param($Context, [hashtable]$Nodes, $Report)
+    foreach ($issue in @($Report.Errors)) {
+        $requirement = $issue.Requirement
+        if (-not $requirement -or $requirement.Scope -ne 'project' -or (Get-MpPropertyValue $requirement 'Source') -ne 'provider') { continue }
+        if ($Nodes.ContainsKey($requirement.Target)) { continue }
+        if (-not $Context.ProviderAvailability.ContainsKey($requirement.Target)) {
+            $versions = @(Get-MpProjectCandidates $Context $requirement.Target)
+            if (-not $Context.DomainKnown[$requirement.Target]) { continue }
+            $Context.ProviderAvailability[$requirement.Target] = $versions.Count -gt 0
+        }
+        if (-not $Context.ProviderAvailability[$requirement.Target]) {
+            $issue.Severity = 'unknown'
+            $issue.Message += '; provider metadata exposes no compatible candidate'
+        }
+    }
+    $all = @($Report.Issues)
+    return [pscustomobject]@{
+        Issues = $all
+        Errors = @($all | Where-Object Severity -eq error)
+        Unknown = @($all | Where-Object Severity -eq unknown)
+        Warnings = @($all | Where-Object Severity -eq warning)
+        Complete = @($all | Where-Object Severity -eq unknown).Count -eq 0
+    }
+}
+
 function Search-MpSolution {
     param($Context, [hashtable]$Nodes)
     $key = (@($Nodes.Keys | Sort-Object | ForEach-Object { "$_=$($Nodes[$_].VersionId)" }) -join '|')
@@ -80,7 +112,7 @@ function Search-MpSolution {
     if ($Context.Visited.Count -gt 10000) {
         Throw-MpError -Message 'Dependency search exceeded 10000 states; no changes were applied' -Hint 'narrow the requested batch or pin a known compatible dependency' -ErrorId 'Compatibility.SearchLimit' -Category LimitsExceeded
     }
-    $report = Get-MpGraphReport $Context.Project $Nodes
+    $report = Resolve-MpProviderAvailabilityReport $Context $Nodes (Get-MpGraphReport $Context.Project $Nodes)
     $errors = @($report.Errors | Where-Object { $Context.Strict -or $_.Key -notin $Context.BaselineKeys })
     if (-not $errors.Count) {
         if ($Context.Strict -and $report.Unknown.Count) { $Context.LastReport = $report; return }
@@ -101,14 +133,21 @@ function Search-MpSolution {
     foreach ($requirement in @(Get-MpRequirementTargets $issue.Requirement)) {
         if ($requirement.Scope -eq 'project') { $ids += $requirement.Target }
         else {
+            $directProviders = @()
             foreach ($node in $Nodes.Values) {
-                if (@($node.Mods | Where-Object { $_.Id -eq $requirement.Target -or $_.Provides.ContainsKey($requirement.Target) }).Count) { $ids += $node.Id }
+                if (@($node.Mods | Where-Object { $_.Id -eq $requirement.Target -or $_.Provides.ContainsKey($requirement.Target) }).Count) { $directProviders += $node.Id }
             }
-            # Only verified provider relationships may introduce a project for a missing mod ID.
-            foreach ($node in $Nodes.Values) { foreach ($dep in $node.Requirements) { if ($dep.Scope -eq 'project' -and $dep.Kind -eq 'required') { $ids += $dep.Target } } }
+            $ids = @($directProviders) + @($ids)
+            # Only relationships declared by the failing owner may introduce a project for a missing internal mod ID.
+            if (-not $directProviders.Count -and $Nodes.ContainsKey($issue.Owner)) {
+                foreach ($dep in $Nodes[$issue.Owner].Requirements) {
+                    if ($dep.Scope -eq 'project' -and $dep.Kind -eq 'required') { $ids += $dep.Target }
+                }
+            }
         }
     }
-    foreach ($id in @($ids | Sort-Object -Unique)) {
+    $orderedIds = @(); foreach ($id in $ids) { if ($id -and $id -notin $orderedIds) { $orderedIds += $id } }
+    foreach ($id in $orderedIds) {
         if ($Context.Roots.ContainsKey($id)) { continue }
         if ($Context.Before.ContainsKey($id) -and ($Context.Before[$id].Pinned -or $Context.Before[$id].Item.Source -eq 'local')) { continue }
         $versions = @(Get-MpProjectCandidates $Context $id)
@@ -128,10 +167,12 @@ function New-MpContentPlan {
     $state = if ($State) { $State } else { Get-MpProjectState $Project -Check }
     $baseline = Get-MpGraphReport $Project $state.Nodes
     $context = @{
-        Project = $Project; Before = $state.Nodes; Info = @{}; Domains = @{}; Candidates = @{}; Roots = @{}; Visited = @{}
-        BaselineKeys = @($(if ($Operation -ne 'repair') { $baseline.Errors | ForEach-Object Key })); Strict = [bool]$Strict
+        Project = $Project; Before = $state.Nodes; Info = @{}; Domains = @{}; DomainKnown = @{}; Candidates = @{}; Roots = @{}; Visited = @{}; ProviderAvailability = @{}; Check = $true
+        BaselineKeys = @(); Strict = [bool]$Strict
         AllowDowngrade = [bool]$AllowDowngrade; Best = $null; Cost = $null; Report = $null; LastReport = $baseline
     }
+    $baseline = Resolve-MpProviderAvailabilityReport $context $state.Nodes $baseline
+    if ($Operation -ne 'repair') { $context.BaselineKeys = @($baseline.Errors | ForEach-Object Key) }
     $nodes = $state.Nodes.Clone(); $requested = @()
     if ($Operation -eq 'add') {
         foreach ($selector in $Selectors) {
