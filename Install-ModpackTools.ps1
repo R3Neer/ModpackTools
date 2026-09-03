@@ -72,7 +72,15 @@ $backup = Join-Path $userModuleRoot ('.ModpackTools.backup-' + [guid]::NewGuid()
 $safeModuleRoot = [IO.Path]::GetFullPath($userModuleRoot).TrimEnd('\','/') + [IO.Path]::DirectorySeparatorChar
 foreach ($target in @($destination,$temporary,$backup)) {
     if (-not [IO.Path]::GetFullPath($target).StartsWith($safeModuleRoot,[StringComparison]::OrdinalIgnoreCase)) { throw 'Installer target escapes the module directory.' }
-    if ((Test-Path -LiteralPath $target) -and ((Get-Item -LiteralPath $target -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw "Installer target is a linked path: $target" }
+    if (Test-Path -LiteralPath $target) {
+        $item = Get-Item -LiteralPath $target -Force
+        # OneDrive Files On-Demand uses ReparsePoint on ordinary synced files
+        # and directories. Only reject an actual filesystem link, for which
+        # PowerShell exposes LinkType or Target.
+        if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -and ($item.LinkType -or $item.Target)) {
+            throw "Installer target is a linked path: $target"
+        }
+    }
 }
 [System.IO.Directory]::CreateDirectory($temporary) | Out-Null
 try {
@@ -100,7 +108,13 @@ try {
     Remove-Module $stagedModule
     if (Test-Path -LiteralPath $destination) { Move-Item -LiteralPath $destination -Destination $backup }
     Move-Item -LiteralPath $temporary -Destination $destination
-    if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Recurse -Force }
+    if (Test-Path -LiteralPath $backup) {
+        try {
+            Remove-Item -LiteralPath $backup -Recurse -Force
+        } catch {
+            Write-Warning "ModpackTools was updated, but OneDrive is still using the backup at '$backup'. It can be removed after synchronization completes."
+        }
+    }
 }
 catch {
     if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Recurse -Force }

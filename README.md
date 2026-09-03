@@ -40,7 +40,7 @@ The module is copied directly to `ModpackTools` under the first user directory i
 
 ### Upgrading to 3.0
 
-Re-run `Install-ModpackTools.ps1` from the 3.0.0 release. The installer keeps
+Re-run `Install-ModpackTools.ps1` from the latest 3.x release. The installer keeps
 a customized installed theme unchanged and verifies the bundled R3CLI adapter
 before replacing the module.
 
