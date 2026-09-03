@@ -50,6 +50,7 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
     exit $LASTEXITCODE
 }
 
+. (Join-Path $PSScriptRoot 'Private/FileSystem.ps1')
 $manifest = Import-PowerShellDataFile -LiteralPath (Join-Path $PSScriptRoot 'ModpackTools.psd1')
 $version = [string]$manifest.ModuleVersion
 $modulePaths = @($env:PSModulePath -split ';' | Where-Object { $_ } | ForEach-Object { [System.IO.Path]::GetFullPath($_) })
@@ -74,10 +75,7 @@ foreach ($target in @($destination,$temporary,$backup)) {
     if (-not [IO.Path]::GetFullPath($target).StartsWith($safeModuleRoot,[StringComparison]::OrdinalIgnoreCase)) { throw 'Installer target escapes the module directory.' }
     if (Test-Path -LiteralPath $target) {
         $item = Get-Item -LiteralPath $target -Force
-        # OneDrive Files On-Demand uses ReparsePoint on ordinary synced files
-        # and directories. Only reject an actual filesystem link, for which
-        # PowerShell exposes LinkType or Target.
-        if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -and ($item.LinkType -or $item.Target)) {
+        if (Test-MpFileSystemLink $item) {
             throw "Installer target is a linked path: $target"
         }
     }

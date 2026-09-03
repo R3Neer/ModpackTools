@@ -17,13 +17,16 @@ function Resolve-MpContainedPath {
 
 function Get-MpTreeState {
     param([string]$Root)
+    if (Test-MpFileSystemLink (Get-Item -LiteralPath $Root -Force)) {
+        Throw-MpError -Message "Linked path '$Root' cannot be transacted safely" -Hint 'use a project with regular files and directories' -ErrorId 'Transaction.LinkedPath' -Category InvalidOperation
+    }
     $state = @{}
     $pending = [Collections.Generic.Stack[string]]::new()
     $pending.Push($Root)
     while ($pending.Count) {
         foreach ($entry in Get-ChildItem -LiteralPath $pending.Pop() -Force) {
             if ($entry.Name -eq '.git') { continue }
-            if ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+            if (Test-MpFileSystemLink $entry) {
                 Throw-MpError -Message "Linked path '$($entry.FullName)' cannot be transacted safely" -Hint 'use a project with regular files and directories' -ErrorId 'Transaction.LinkedPath' -Category InvalidOperation
             }
             if ($entry.PSIsContainer) { $pending.Push($entry.FullName); continue }

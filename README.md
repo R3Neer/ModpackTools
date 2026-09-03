@@ -10,6 +10,12 @@ See [the dependency engine guide](docs/dependency-engine.md) for atomic
 batches, `pin`/`unpin`, `--dry-run`, loader validation, `inventory --check`,
 and project repair.
 
+OneDrive-synchronized project directories are supported. The installer and
+project engine share the same check to distinguish cloud placeholders from
+symbolic links and junctions, which remain blocked. After upgrading in an
+open terminal, run `Import-Module ModpackTools -Force` and select the project
+again with `modpack use <id>`.
+
 [![CI](https://github.com/R3Neer/ModpackTools/actions/workflows/ci.yml/badge.svg)](https://github.com/R3Neer/ModpackTools/actions/workflows/ci.yml)
 
 ModpackTools is a small CLI for managing multiple Minecraft Java modpacks based on Packwiz and exporting them to Modrinth. Its only public command is `modpack`.

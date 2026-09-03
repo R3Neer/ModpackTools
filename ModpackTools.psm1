@@ -10,6 +10,7 @@ $script:DependencyManifestOverride = $null
 
 foreach ($file in @(
     'Private/Errors.ps1'
+    'Private/FileSystem.ps1'
     'Private/Configuration.ps1'
     'Private/Dependencies.ps1'
     'Private/Toml.ps1'

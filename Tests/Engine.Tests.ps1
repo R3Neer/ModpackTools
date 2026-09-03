@@ -84,6 +84,80 @@ InModuleScope ModpackTools {
             (Get-MpLoaderMetadata $jar fabric).Warnings.Count | Should BeGreaterThan 0
         }
     }
+    Describe 'Cloud project files' {
+        BeforeEach {
+            New-EngineFixture
+            # Model the attributes of hydrated OneDrive files and directories.
+            # Hashing, parsing, copying and rollback still use real fixture bytes.
+            Mock Get-ChildItem {
+                foreach ($entry in ([IO.DirectoryInfo]::new($LiteralPath)).GetFileSystemInfos()) {
+                    [pscustomobject]@{
+                        FullName = $entry.FullName; Name = $entry.Name
+                        Attributes = $entry.Attributes -bor [IO.FileAttributes]::ReparsePoint
+                        LinkType = $null; Target = $null
+                        PSIsContainer = $entry -is [IO.DirectoryInfo]
+                    }
+                }
+            } -ParameterFilter {
+                $LiteralPath -eq $script:FixtureProject.Root -or
+                $LiteralPath.StartsWith($script:FixtureProject.Root + [IO.Path]::DirectorySeparatorChar)
+            }
+        }
+        It 'reads project health and hashes metadata in cloud directories' {
+            $tree = Get-MpTreeState $script:FixtureProject.Root
+            $tree['.modpack/metadata.psd1'] | Should Be (Get-FileHash (Join-Path $script:FixtureProject.Root '.modpack/metadata.psd1')).Hash
+            $health = Get-MpProjectHealth $script:FixtureProject
+            $health.Errors.Count | Should Be 0
+        }
+        It 'prepares commits and rolls back changes to cloud project files' {
+            $before = Get-MpTreeState $script:FixtureProject.Root
+            $prepare = { param($p); [IO.File]::AppendAllText((Join-Path $p.Root '.modpack/metadata.psd1'), "`r`n# edited") }
+            $dry = Invoke-MpProjectTransaction $script:FixtureProject -Prepare $prepare -DryRun
+            $dry.Changes.Count | Should Be 1
+            @(Get-MpTreeChanges $before (Get-MpTreeState $script:FixtureProject.Root)).Count | Should Be 0
+            $commit = Invoke-MpProjectTransaction $script:FixtureProject -Prepare $prepare
+            $commit.Applied | Should Be $true
+            $commit.Changes[0].After | Should Be $dry.Changes[0].After
+            $committed = Get-MpTreeState $script:FixtureProject.Root
+            Mock Copy-MpFileAtomic { throw 'injected cloud commit failure' } -ParameterFilter { $Destination.EndsWith('z.txt') }
+            { Invoke-MpProjectTransaction $script:FixtureProject -Prepare {
+                param($p)
+                [IO.File]::AppendAllText((Join-Path $p.Root '.modpack/metadata.psd1'), "`r`n# rollback")
+                [IO.File]::WriteAllText((Join-Path $p.Root 'z.txt'), 'new')
+            } } | Should Throw 'injected cloud commit failure'
+            @(Get-MpTreeChanges $committed (Get-MpTreeState $script:FixtureProject.Root)).Count | Should Be 0
+        }
+    }
+    Describe 'Filesystem link protection' {
+        BeforeEach { New-EngineFixture }
+        It 'rejects real junctions including a linked project root without touching their target' -Skip:(-not $IsWindows) {
+            $outside = Join-Path $TestDrive ('outside-' + [guid]::NewGuid().ToString('N'))
+            [void][IO.Directory]::CreateDirectory($outside)
+            $sentinel = Join-Path $outside 'sentinel.txt'
+            [IO.File]::WriteAllText($sentinel, 'keep')
+            $junction = Join-Path $script:FixtureProject.Root 'linked'
+            New-Item -ItemType Junction -Path $junction -Target $outside | Out-Null
+            try {
+                { Get-MpTreeState $script:FixtureProject.Root } | Should Throw 'Linked path'
+                { Get-MpTreeState $junction } | Should Throw 'Linked path'
+                { Invoke-MpProjectTransaction $script:FixtureProject -Prepare { throw 'must not prepare' } } | Should Throw 'Linked path'
+                (Get-Content -LiteralPath $sentinel -Raw) | Should Be 'keep'
+            } finally {
+                # Delete the junction itself, never recurse into its target.
+                [IO.Directory]::Delete($junction)
+            }
+        }
+        It 'rejects a dangling symbolic file before attempting to hash it' {
+            Mock Get-ChildItem {
+                [pscustomobject]@{
+                    Name = 'linked.jar'; FullName = (Join-Path $LiteralPath 'linked.jar')
+                    Attributes = [IO.FileAttributes]::ReparsePoint
+                    LinkType = 'SymbolicLink'; Target = 'missing.jar'; PSIsContainer = $false
+                }
+            }
+            { Get-MpTreeState $script:FixtureProject.Root } | Should Throw 'Linked path'
+        }
+    }
     Describe 'Project transaction boundary' {
         BeforeEach { New-EngineFixture }
         It 'keeps the project byte identical when preparation fails after several writes' {
