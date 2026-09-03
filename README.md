@@ -1,5 +1,10 @@
 # ModpackTools
 
+
+Dependency-aware project operations now share staged transactions. See
+[the dependency engine guide](docs/dependency-engine.md) for atomic batches,
+`pin`/`unpin`, `--dry-run`, loader validation, `inventory --check`, and project repair.
+
 [![CI](https://github.com/R3Neer/ModpackTools/actions/workflows/ci.yml/badge.svg)](https://github.com/R3Neer/ModpackTools/actions/workflows/ci.yml)
 
 ModpackTools is a small CLI for managing multiple Minecraft Java modpacks based on Packwiz and exporting them to Modrinth. Its only public command is `modpack`.
@@ -42,7 +47,7 @@ modpack config set packwiz auto
 
 Configuration is stored in the user's standard `LocalApplicationData\ModpackTools\config.psd1` directory. Packwiz resolution uses an explicit configured path first, then `PATH`, then the managed copy. `auto` removes the explicit override and restores discovery.
 
-## Environment doctor
+## Environment and project doctor
 
 ```powershell
 modpack doctor
@@ -50,9 +55,9 @@ modpack doctor --fix
 modpack doctor --fix --yes
 ```
 
-`doctor` checks PowerShell, the loaded ModpackTools version, configuration writability, Packwiz resolution and invocation, the project root, project discovery, Git, and a standard Minecraft Java installation. It does not modify anything except a temporary configuration write probe that is immediately removed.
+`doctor` checks PowerShell, the loaded ModpackTools version, configuration writability, Packwiz resolution and invocation, the project root, project discovery, Git, and a standard Minecraft Java installation. With an active project or `--project`, it also checks structure, the index, editorial metadata and the dependency graph, accumulating diagnostics across damaged sections. Without a selected project, environment diagnosis still works. Read-only diagnosis may populate caches; the configuration write probe is immediately removed.
 
-Git and Minecraft Java are optional. A missing standard Minecraft installation produces a warning, not a failure; custom launchers may not be detected. `doctor --fix` offers safe repairs for required components. It never installs Minecraft. `--yes` accepts recommended defaults without adding Packwiz to `PATH` or inventing a project root.
+Git and Minecraft Java are optional. A missing standard Minecraft installation produces a warning, not a failure; custom launchers may not be detected. `doctor --fix` offers safe repairs for required components. It never installs Minecraft. `--yes` accepts recommended defaults without adding Packwiz to `PATH` or inventing a project root. Project repairs preview a transaction that can regenerate the index and resolve dependencies; they do not guess categories, rewrite corrupt metadata or remove content. Use `--dry-run` to review project changes, `--strict` to require complete verification, and `--allow-downgrade` to authorize automatic dependency downgrades.
 
 ## Project structure
 
@@ -183,42 +188,42 @@ modpack versions <inventory-number>
 modpack update <inventory-number>...
 ```
 
-Number contexts are deliberately separate. `modpack add <number>` resolves against the latest `search` results; a mod number passed to `side`, `versions`, or as the first argument of `classify set`, and numbers passed to `resource` or as update selectors, resolve against the latest `inventory` view. `modpack update <content> --to <number>` uses the latest `versions` list. A category number passed as the second argument of `classify set` or to `classify remove` resolves against the latest `classify list`. The argument position determines the context, so the lists never become ambiguous. The caches are convenience references only; project files remain the sources of truth.
+Number contexts are deliberately separate. `modpack add <number>` resolves against the latest `search` results; a mod number passed to `side`, `versions`, or as a mod argument of `classify set`, and numbers passed to `resource` or as update selectors, resolve against the latest `inventory` view. `modpack update <content> --to <number>` uses the latest `versions` list. A category number passed as the final positional argument of `classify set` or to `classify remove` resolves against the latest `classify list`. The argument position determines the context, so the lists never become ambiguous. The caches are convenience references only; project files remain the sources of truth.
 
 ### Enabling, disabling, and ordering resource packs
 
 ```powershell
-modpack resource enable <name|id|filename> --position <n> [--project <id>]
-modpack resource move <name|id|filename> --position <n> [--project <id>]
-modpack resource disable <name|id|filename> [--project <id>]
+modpack resource enable <selector...> --position <n> [--project <id>]
+modpack resource move <selector...> --position <n> [--project <id>]
+modpack resource disable <selector...> [--project <id>]
 ```
 
-The selector accepts the name displayed by `inventory`, the Default Options ID, or the exact filename. Position 1 is the highest priority visible in the Minecraft GUI. If the pack is already enabled, `enable` repositions it; if it is disabled, the command enables it. `move` requires an enabled pack and changes only its priority. `disable` removes it from the enabled order without deleting its ZIP or `.pw.toml`. Repeated disable operations are safe. Ambiguous selectors and out-of-range positions are rejected without writing.
+Each selector accepts the name displayed by `inventory`, the Default Options ID, or the exact filename. Position 1 is the highest priority visible in the Minecraft GUI. If the pack is already enabled, `enable` repositions it; if it is disabled, the command enables it. `move` requires an enabled pack and changes only its priority. `disable` removes it from the enabled order without deleting its ZIP or `.pw.toml`. Repeated disable operations are safe. A batch is resolved against one initial inventory; duplicates keep their first occurrence. For enable/move, selected packs are removed from the current order and inserted as one block in the requested order. The position is measured after removal, and every pack in a move batch must already be active. Ambiguous selectors and out-of-range positions are rejected without writing.
 
-These commands require the Default Options mod in the selected project and modify only `defaultResourcePacks` in `config/defaultoptions-common.toml`; they do not maintain a second activation list. If the mod is absent, the error suggests `modpack add WEg59z5b`, allowing Packwiz to select a release compatible with that project's Minecraft version and loader.
+These commands require the Default Options mod in the selected project and modify only `defaultResourcePacks` in `config/defaultoptions-common.toml`; they do not maintain a second activation list. If the mod is absent, the error suggests `modpack add WEg59z5b`, allowing the resolver to select a release compatible with that project's Minecraft version and loader.
 
 ### Managing mod categories
 
 ```powershell
 modpack classify list [--project <id>]
 modpack classify create <id> [--name <name>] [--order <n>] [--project <id>]
-modpack classify remove <category|number> [--unclassify] [--project <id>]
-modpack classify set <mod|inventory-number> <category|number|unclassified> [--project <id>]
+modpack classify remove <category|number...> [--unclassify] [--project <id>]
+modpack classify set <mod|inventory-number...> <category|number|unclassified> [--project <id>]
 ```
 
 `list` shows every classification, including `unclassified`, with its ID, display name, order where applicable, and assigned-mod count. Its numbers are saved for 24 hours and bound to the selected project. The final `unclassified` row can be used with `set`, but cannot be removed. `create` appends a category by default; `--name` controls its display label and `--order` controls its inventory order.
 
-`remove` accepts an ID or number from the latest category list. It refuses to remove a category that is assigned to mods unless `--unclassify` is explicit. `set` accepts a displayed mod name, stable ID, current filename, `.pw.toml` stem, or number from the latest inventory. Its category accepts an ID, a number from `classify list`, or `unclassified`.
+`remove` accepts one or more IDs or numbers from the latest category list; a used category blocks the entire batch unless `--unclassify` is supplied. It refuses to remove a category that is assigned to mods unless `--unclassify` is explicit. `set` accepts a displayed mod name, stable ID, current filename, `.pw.toml` stem, or number from the latest inventory. Its final positional argument supplies the common category: an ID, a number from `classify list`, or `unclassified`. All preceding selectors are mods. Both batch commands support `--dry-run`.
 
 These operations change only editorial metadata in `.modpack/metadata.psd1`; they never move, reinstall, or modify Packwiz content. Clearing a category preserves other editorial fields such as a name override. The former two-positional form, such as `modpack classify sodium performance`, is invalid; the `set` operation is required.
 
 ### Correcting a mod side
 
 ```powershell
-modpack side set <mod|inventory-number> <client|host|both> [--project <id>]
+modpack side set <mod|inventory-number...> <client|host|both> [--project <id>]
 ```
 
-For Packwiz-managed mods this replaces the top-level `side` value in the existing `.pw.toml`, which remains the technical source of truth. For a local JAR, the command writes an explicit `Side` override to `.modpack/metadata.psd1` because there is no Packwiz metadata file to change. `host` is stored as Packwiz's `server` value. The command changes distribution metadata only; it cannot make an intrinsically client-only mod work on a dedicated server.
+For Packwiz-managed mods this replaces the top-level `side` value in the existing `.pw.toml`, which remains the technical source of truth. For a local JAR, the command writes an explicit `Side` override to `.modpack/metadata.psd1` because there is no Packwiz metadata file to change. `host` is stored as Packwiz's `server` value. All selected mods receive the final side argument in one transaction; `--dry-run` previews the changes. The resulting dependency graph is checked for new conflicts. The command changes distribution metadata only; it cannot make an intrinsically client-only mod work on a dedicated server.
 
 ### Creating a project
 
@@ -248,7 +253,7 @@ Existing `README.md` and `.gitignore` files are preserved. When either file is a
 
 ### Adding content
 
-`modpack add` delegates technical selection and writing to `packwiz modrinth add`, then reads the generated `.pw.toml`. It accepts a Modrinth ID, slug, or a number from the last search and can install mods, resource packs, and shaders. When `--category` is provided, the result must be a mod and only that editorial decision is written to metadata; the category must already exist. The former `modpack add mod` form is invalid.
+`modpack add <selector...>` accepts Modrinth IDs, slugs, version URLs, or numbers from the last search and installs mods, resource packs, and shaders. The entire batch is resolved together, with requested versions fixed and only necessary dependency changes permitted. The plan freezes versions, files and hashes before materialization. `--category` applies an existing category only to explicitly requested mods, preserving dependency classifications. Resource packs can be installed and activated atomically with `--enable --position <n>`; both options and Default Options are required. Use `--dry-run`, `--strict` and `--allow-downgrade` as described below. The former `modpack add mod` form is invalid.
 
 ### Searching Modrinth
 
@@ -274,19 +279,30 @@ modpack update --all [--type <type>] [--strict] [--project <id>]
 
 `update --to` moves one Modrinth-managed mod, resource pack, or shader to an exact compatible version, including an older release. It preserves an explicitly selected side, refreshes the Packwiz index, and rejects version numbers that identify more than one release. Local files and providers without Modrinth version metadata cannot use `--to`.
 
-Before changing files, every update builds a best-effort dependency graph for the resulting pack. New declared `required` version mismatches, missing required projects, and declared `incompatible` relationships block the update. Existing unrelated issues and unavailable provider metadata are warnings by default; `--strict` requires the complete resulting graph to be both verifiable and free of known conflicts. This is stronger than Packwiz's normal update behavior, but it cannot prove runtime compatibility when publishers omit metadata or incompatibilities arise only during Minecraft startup.
+Add and update share a dependency resolver that combines Modrinth relationships with Fabric, Quilt, Forge and NeoForge JAR metadata. It minimizes changes to installed content, respects pins, and never removes mods or changes the target Minecraft, loader or Java configuration to resolve conflicts. Automatic downgrades require `--allow-downgrade`; an explicit `update --to` can select an older release. New or affected mandatory conflicts block the operation. Existing unrelated conflicts and incomplete verification remain warnings; `--strict` requires a fully verified, conflict-free result. These checks cover declared requirements, not mixins or successful Minecraft startup.
 
-A selector can be the displayed name, stable ID, current filename, `.pw.toml` stem, or current inventory number. It can identify a mod, resource pack, or shader. Several selectors are updated as one transaction: all are validated before Packwiz runs, and if any update fails, `pack.toml`, its configured index, and all `.pw.toml` files are restored to their original bytes.
+A selector can be the displayed name, stable ID, current filename, `.pw.toml` stem, or current inventory number. It can identify a mod, resource pack, or shader. Several selectors form one transaction prepared outside the pack. It covers `pack.toml`, the configurable index, technical metadata, editorial metadata and Default Options. A project lock, state checks, backups and a recovery journal protect application of the prepared result. `--dry-run` displays the plan without changing project files.
 
-`--all` means all Packwiz-managed external content: mods, resource packs, and shaders. `--type mod|resourcepack|shaderpack` narrows either a selector operation or `--all`. Local JAR and ZIP files are never updated and are reported as non-updatable when explicitly selected. Updating does not generate a build; use `modpack diff` to review the changes and `modpack build` when ready.
+`--all` skips pinned items and includes the remaining Packwiz-managed external content: mods, resource packs, and shaders. `--type mod|resourcepack|shaderpack` narrows either a selector operation or `--all`. Local JAR and ZIP files are never updated and are reported as non-updatable when explicitly selected. Updating does not generate a build; use `modpack diff` to review the changes and `modpack build` when ready.
+
+### Pinning content
+
+```powershell
+modpack pin <selector...> [--dry-run] [--project <id>]
+modpack unpin <selector...> [--dry-run] [--project <id>]
+```
+
+Pins use the technical Packwiz `pin` field. A request or dependency resolution that needs to change a pinned item fails with an instruction to unpin it. Explicit/transitive intent is recorded separately in the versioned `Content` section of `.modpack/metadata.psd1`; older entries default conservatively to explicit. Explicitly adding an installed dependency promotes it to explicit.
 
 ### Building
 
-`modpack build` validates the project, runs `packwiz refresh` and `packwiz modrinth export`, and publishes the result in `dist/`. It exports to a temporary file first so a valid artifact is not destroyed if Packwiz fails.
+`modpack build` validates the structure and dependency graph before `packwiz refresh` and `packwiz modrinth export`. Known mandatory conflicts block export, including with `--no-refresh`. Incomplete verification warns by default and blocks with `--strict`. Preparation and export run in an isolated transaction; only a successful result replaces the artifact in `dist/`.
 
 A `.mrpack` left in the root of a migrated project is a legacy artifact that ModpackTools preserves to avoid deleting data. New builds and replacements live exclusively in `dist/`; the legacy file can be removed manually when it is no longer needed.
 
-- `--no-refresh`: skips `packwiz refresh`.
+- `--no-refresh`: skips `packwiz refresh`; requires an already valid index and still validates dependencies.
+- `--strict`: requires complete dependency verification and no mandatory conflicts.
+- `--dry-run`: prepares and verifies a build without writing project files or replacing artifacts.
 - `--keep-old`: generates the new artifact with a timestamp when the usual name exists.
 - `--raw-log`: also shows repetitive `added to manifest` lines.
 - `--open`: opens Explorer with the result selected.
@@ -344,7 +360,7 @@ Expected CLI errors use a shared structure: a precise cause, optional upstream d
 
 ## Default Options
 
-Default Options is an optional per-project integration reported by `modpack doctor`. It is required only by `modpack resource enable`, `move`, and `disable`. When the mod and `config/defaultoptions-common.toml` exist, `defaultResourcePacks` is the source of truth for enabled ordering. Default Options stores packs from lowest to highest priority; ModpackTools reverses the list to display the actual GUI priority. The parser supports brackets, apostrophes, symbols, and escapes inside strings. Built-in IDs without an override are displayed literally. Physical ZIP files not included in the list appear as present but disabled.
+Default Options is an optional per-project integration reported by `modpack doctor`. It is required by `modpack resource enable`, `move`, `disable`, and `add --enable --position`. When the mod and `config/defaultoptions-common.toml` exist, `defaultResourcePacks` is the source of truth for enabled ordering. Default Options stores packs from lowest to highest priority; ModpackTools reverses the list to display the actual GUI priority. The parser supports brackets, apostrophes, symbols, and escapes inside strings. Built-in IDs without an override are displayed literally. Physical ZIP files not included in the list appear as present but disabled.
 
 ## License
 
