@@ -5,13 +5,18 @@ function modpack {
         [Parameter(Position = 1, ValueFromRemainingArguments)][object[]]$Arguments = @()
     )
 
+    $previousConsole = $script:MpConsole
     try {
+        $tokens = @($(if ($PSBoundParameters.ContainsKey('Command')) { $Command })) + @($Arguments)
+        $presentation = ConvertFrom-MpPresentationOptions $tokens
+        $Command = if ($presentation.Arguments.Count) { [string]$presentation.Arguments[0] } else { '' }
+        $Arguments = @($presentation.Arguments | Select-Object -Skip 1)
+        Initialize-MpConsole -Colour $presentation.Colour -Ascii:$presentation.Ascii -Invocation $MyInvocation
         if ($Command -eq '--version') {
             if ($Arguments.Count) {
                 Throw-MpError -Message 'The global version option does not accept additional arguments' -Hint 'modpack --version' -ErrorId 'Command.InvalidArguments' -Category InvalidArgument -TargetObject $Arguments
             }
-            Write-Host "ModpackTools $script:ModuleVersion"
-            Write-MpOutputEnd
+            Write-R3Line (Get-MpConsole) @(@{Text="ModpackTools $script:ModuleVersion"})
             return
         }
         if (-not $Command -or $Command -eq '--help') {
@@ -19,7 +24,6 @@ function modpack {
                 Throw-MpError -Message 'The global help option does not accept additional arguments' -Hint 'modpack --help' -ErrorId 'Command.InvalidArguments' -Category InvalidArgument -TargetObject $Arguments
             }
             Show-MpHelp
-            Write-MpOutputEnd
             return
         }
         $key = $Command.ToLowerInvariant()
@@ -29,7 +33,7 @@ function modpack {
         }
         $handler = $commands[$key].Handler
         & $handler @Arguments
-        Write-MpOutputEnd
+        if ($Arguments -notcontains '--help') { Write-R3Line (Get-MpConsole) }
     } catch {
         if (-not (Test-MpExpectedError -Exception $_.Exception)) { throw }
         $errorId = [string]$_.Exception.Data['ModpackTools.ErrorId']
@@ -37,5 +41,5 @@ function modpack {
         $target = $_.Exception.Data['ModpackTools.TargetObject']
         $record = [System.Management.Automation.ErrorRecord]::new($_.Exception, $errorId, $category, $target)
         $PSCmdlet.ThrowTerminatingError($record)
-    }
+    } finally { $script:MpConsole = $previousConsole }
 }

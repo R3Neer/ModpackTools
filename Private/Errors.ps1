@@ -26,7 +26,10 @@ function Throw-MpError {
         $lines.Add("Try: $($Hint.Trim())")
     }
 
-    $exception = [System.InvalidOperationException]::new(($lines -join [Environment]::NewLine))
+    $formatted = $lines -join [Environment]::NewLine
+    $renderer = Get-Variable -Name R3Module -Scope Script -ValueOnly -ErrorAction SilentlyContinue
+    if ($renderer) { $formatted = Format-R3Diagnostic -Message $Message -Details $Details -Hint $Hint }
+    $exception = [System.InvalidOperationException]::new($formatted)
     $exception.Data['ModpackTools.ExpectedError'] = $true
     $exception.Data['ModpackTools.ErrorId'] = "ModpackTools.$ErrorId"
     $exception.Data['ModpackTools.ErrorCategory'] = [int]$Category

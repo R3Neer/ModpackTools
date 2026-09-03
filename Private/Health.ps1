@@ -21,8 +21,8 @@ function Get-MpProjectHealth {
 function Write-MpHealth {
     param($Report)
     $label = if ($Report.Errors.Count) { "$($Report.Errors.Count) dependency issue(s)" } elseif ($Report.Unknown.Count) { 'Incomplete verification' } elseif ($Report.Warnings.Count) { "Verified with $($Report.Warnings.Count) warning(s)" } else { 'Healthy' }
-    Write-MpKeyValue 'Health' $label
-    foreach ($issue in $Report.Issues) { Write-MpInfo "$($issue.Severity): $($issue.Message)" }
+    Write-R3KeyValue (Get-MpConsole) 'Health' $label
+    foreach ($issue in $Report.Issues) { Write-R3Status (Get-MpConsole) info "$($issue.Severity): $($issue.Message)" }
 }
 
 function Test-MpProjectIndex {

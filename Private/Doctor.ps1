@@ -143,6 +143,9 @@ function Get-MpDoctorReport {
     }
     else { $checks.Add((New-MpDoctorCheck -Section 'OPTIONAL' -Status warn -Label 'Git' -Value 'Not found')) }
     $checks.Add((Get-MpDefaultOptionsDoctorCheck -Projects $projects))
+    if ($script:R3Module) {
+        $checks.Add((New-MpDoctorCheck -Section SYSTEM -Status pass -Label R3CLI -Value "$($script:verifiedR3.Version) ($($script:verifiedR3.Revision))" -Detail $script:R3Module.Path))
+    } else { $checks.Add((New-MpDoctorCheck -Section SYSTEM -Status fail -Label R3CLI -Value 'Unavailable' -Detail $script:R3LoadError)) }
     $checks.Add((Get-MpMinecraftJavaCheck))
 
     $failures = @($checks | Where-Object Status -eq 'fail').Count
@@ -164,18 +167,18 @@ function Repair-MpDoctorEnvironment {
 
     $packwiz = Resolve-MpPackwiz
     if (-not $packwiz.Available -and (Confirm-MpDoctorAction -Prompt 'Install the verified Packwiz build recommended for this ModpackTools release?' -Default $true -Yes:$Yes)) {
-        Write-MpStep 'Downloading and verifying Packwiz...'
+        Write-R3Status (Get-MpConsole) step 'Downloading and verifying Packwiz...'
         $installed = Install-MpManagedPackwiz
-        Write-MpSuccess "Packwiz $($installed.Version) installed at $($installed.Path)"
+        Write-R3Status (Get-MpConsole) success "Packwiz $($installed.Version) installed at $($installed.Path)"
         $addToPath = Confirm-MpDoctorAction -Prompt 'Add the Packwiz directory to your user PATH?' -Default $false -Yes:$Yes
         if ($addToPath) {
             [void](Add-MpDirectoryToUserPath -Directory (Split-Path -Parent $installed.Path))
             [void](Set-ModpackToolsConfigValue -Name packwiz -Value auto)
-            Write-MpSuccess 'Packwiz was added to the user PATH.'
+            Write-R3Status (Get-MpConsole) success 'Packwiz was added to the user PATH.'
         }
         else {
             [void](Set-ModpackToolsConfigValue -Name packwiz -Value $installed.Path)
-            Write-MpInfo 'Packwiz was saved as the ModpackTools executable without changing PATH.'
+            Write-R3Status (Get-MpConsole) info 'Packwiz was saved as the ModpackTools executable without changing PATH.'
         }
     }
 
@@ -185,21 +188,21 @@ function Repair-MpDoctorEnvironment {
         $root = Read-Host 'Project root directory'
         if (-not [string]::IsNullOrWhiteSpace($root)) {
             $resolved = Set-ModpackToolsConfigValue -Name root -Value $root
-            Write-MpSuccess "Project root configured: $resolved"
+            Write-R3Status (Get-MpConsole) success "Project root configured: $resolved"
         }
     }
 }
 
 function Write-MpDoctorReport {
     param([Parameter(Mandatory)]$Report)
-    Write-MpBanner 'MODPACKTOOLS · DOCTOR'
+    Write-R3Banner (Get-MpConsole) 'MODPACKTOOLS · DOCTOR'
     foreach ($section in @('SYSTEM', 'PACKWIZ', 'PROJECT ROOT', 'PROJECT', 'OPTIONAL')) {
         $items = @($Report.Checks | Where-Object Section -eq $section)
         if (-not $items.Count) { continue }
-        Write-MpHelpHeading $section
+        Write-R3Heading (Get-MpConsole) $section
         foreach ($item in $items) { Write-MpDoctorLine -Status $item.Status -Label $item.Label -Value $item.Value -Detail $item.Detail }
     }
-    Write-Host ''
+    Write-R3Line (Get-MpConsole) @(@{Text=''})
     if ($Report.Failures) {
         Write-MpDoctorSummary -Status fail -Text "$($Report.Failures) required issue(s) need attention. Run: modpack doctor --fix"
     }

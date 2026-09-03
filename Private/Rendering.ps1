@@ -1,170 +1,3 @@
-function Read-MpThemeColors {
-    param([string]$Path = (Join-Path $script:ModuleRoot 'theme.toml'))
-
-    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-        Throw-MpError -Message "Theme file '$Path' does not exist" -Hint 'restore theme.toml and reinstall ModpackTools' -ErrorId 'Theme.NotFound' -Category ObjectNotFound -TargetObject $Path
-    }
-    $text = Get-Content -Raw -LiteralPath $Path -Encoding UTF8
-    $colors = [ordered]@{}
-    foreach ($name in @('client', 'host', 'success', 'error', 'process', 'secondary', 'heading', 'local', 'accent', 'value')) {
-        $value = Get-TomlString -Text $text -Section colors -Key $name
-        if (-not $value) { Throw-MpError -Message "Required theme color '$name' is missing from '$Path'" -Hint 'restore the missing color and reinstall ModpackTools' -ErrorId 'Theme.MissingColor' -Category InvalidData -TargetObject $name }
-        if ($value -notmatch '^#[0-9A-Fa-f]{6}$') {
-            Throw-MpError -Message "Theme color '$name' in '$Path' must use #RRGGBB; received '$value'" -Hint 'correct the color and reinstall ModpackTools' -ErrorId 'Theme.InvalidColor' -Category InvalidData -TargetObject $value
-        }
-        $colors[$name] = $value.ToUpperInvariant()
-    }
-    return $colors
-}
-
-function ConvertTo-MpAnsiColor {
-    param([Parameter(Mandatory)][string]$Hex)
-    return $PSStyle.Foreground.FromRgb(
-        [Convert]::ToInt32($Hex.Substring(1, 2), 16),
-        [Convert]::ToInt32($Hex.Substring(3, 2), 16),
-        [Convert]::ToInt32($Hex.Substring(5, 2), 16)
-    )
-}
-
-$themeColors = Read-MpThemeColors
-$script:Palette = @{
-    Client    = ConvertTo-MpAnsiColor $themeColors.client
-    Host      = ConvertTo-MpAnsiColor $themeColors.host
-    Success   = ConvertTo-MpAnsiColor $themeColors.success
-    Error     = ConvertTo-MpAnsiColor $themeColors.error
-    Process   = ConvertTo-MpAnsiColor $themeColors.process
-    Secondary = ConvertTo-MpAnsiColor $themeColors.secondary
-    Heading   = ConvertTo-MpAnsiColor $themeColors.heading
-    Local     = ConvertTo-MpAnsiColor $themeColors.local
-    Accent    = ConvertTo-MpAnsiColor $themeColors.accent
-    Value     = ConvertTo-MpAnsiColor $themeColors.value
-    Reset     = $PSStyle.Reset
-}
-Remove-Variable themeColors
-
-function Write-MpTitle {
-    param([Parameter(Mandatory)][string]$Text)
-    Write-Host ''
-    Write-Host "$($script:Palette.Heading)$Text$($script:Palette.Reset)"
-}
-
-function Write-MpBanner {
-    param([Parameter(Mandatory)][string]$Text)
-    $line = '═' * 68
-    Write-Host ''
-    Write-Host "$($script:Palette.Secondary)$line$($script:Palette.Reset)"
-    Write-Host " $($script:Palette.Heading)$($PSStyle.Bold)$Text$($PSStyle.Reset)"
-    Write-Host "$($script:Palette.Secondary)$line$($script:Palette.Reset)"
-}
-
-function Write-MpSection {
-    param([Parameter(Mandatory)][string]$Title, [Parameter(Mandatory)][int]$Count)
-    $prefix = "  $Title"
-    $countText = [string]$Count
-    $padding = [Math]::Max(1, 66 - $prefix.Length - $countText.Length)
-    Write-Host ''
-    Write-Host "$($script:Palette.Heading)$prefix$($script:Palette.Reset)" -NoNewline
-    Write-Host (' ' * $padding) -NoNewline
-    Write-Host "$($script:Palette.Accent)$countText$($script:Palette.Reset)"
-    Write-Host "$($script:Palette.Secondary)  $('─' * 64)$($script:Palette.Reset)"
-}
-
-function Write-MpStep {
-    param([Parameter(Mandatory)][string]$Text)
-    Write-Host "$($script:Palette.Process)→$($script:Palette.Reset) $Text"
-}
-
-function Write-MpSuccess {
-    param([Parameter(Mandatory)][string]$Text)
-    Write-Host "$($script:Palette.Success)✓$($script:Palette.Reset) $Text"
-}
-
-function Write-MpWarning {
-    param([Parameter(Mandatory)][string]$Text)
-    Write-Warning $Text
-}
-
-function Write-MpInfo {
-    param([Parameter(Mandatory)][string]$Text)
-    Write-Host "$($script:Palette.Heading)•$($script:Palette.Reset) $($script:Palette.Value)$Text$($script:Palette.Reset)"
-}
-
-function Write-MpOutputEnd {
-    Write-Host ''
-}
-
-function Write-MpKeyValue {
-    param([Parameter(Mandatory)][string]$Key, [AllowNull()][object]$Value, [int]$Width = 16)
-    Write-Host "$($script:Palette.Secondary)$($Key.PadRight($Width))$($script:Palette.Reset) " -NoNewline
-    Write-Host "$($script:Palette.Value)$Value$($script:Palette.Reset)"
-}
-
-function Write-MpCommandLine {
-    param([Parameter(Mandatory)][string]$Command, [string]$Description)
-    Write-Host "  $($script:Palette.Accent)$Command$($script:Palette.Reset)" -NoNewline
-    if ($Description) { Write-Host "  $($script:Palette.Secondary)$Description$($script:Palette.Reset)" }
-    else { Write-Host '' }
-}
-
-function Write-MpUsage {
-    param([Parameter(Mandatory)][string]$Text)
-    Write-Host "$($script:Palette.Secondary)Usage:$($script:Palette.Reset) $($script:Palette.Accent)$Text$($script:Palette.Reset)"
-}
-
-function Write-MpHelpText {
-    param([Parameter(Mandatory)][string]$Text)
-    Write-Host "$($script:Palette.Value)$Text$($script:Palette.Reset)"
-}
-
-function Write-MpHelpHeading {
-    param([Parameter(Mandatory)][string]$Text)
-    Write-Host ''
-    Write-Host "$($script:Palette.Heading)$($PSStyle.Bold)$Text$($PSStyle.Reset)"
-}
-
-function Write-MpHelpRow {
-    param(
-        [Parameter(Mandatory)][string]$Label,
-        [Parameter(Mandatory)][string]$Description,
-        [int]$Width = 24
-    )
-    Write-Host "  $($script:Palette.Accent)$($Label.PadRight($Width))$($script:Palette.Reset)" -NoNewline
-    Write-Host "$($script:Palette.Secondary)$Description$($script:Palette.Reset)"
-}
-
-function Write-MpDoctorLine {
-    param(
-        [Parameter(Mandatory)][ValidateSet('pass', 'warn', 'fail', 'info')][string]$Status,
-        [Parameter(Mandatory)][string]$Label,
-        [Parameter(Mandatory)][AllowEmptyString()][string]$Value,
-        [string]$Detail
-    )
-    $symbol = switch ($Status) { 'pass' { '✓' } 'warn' { '!' } 'fail' { '✗' } default { '•' } }
-    $color = switch ($Status) { 'pass' { $script:Palette.Success } 'warn' { $script:Palette.Process } 'fail' { $script:Palette.Error } default { $script:Palette.Heading } }
-    Write-Host "  $color$symbol$($script:Palette.Reset) " -NoNewline
-    Write-Host "$($script:Palette.Secondary)$($Label.PadRight(18))$($script:Palette.Reset)" -NoNewline
-    Write-Host "$($script:Palette.Value)$Value$($script:Palette.Reset)"
-    if ($Detail) { Write-Host "    $($script:Palette.Secondary)$Detail$($script:Palette.Reset)" }
-}
-
-function Write-MpDoctorSummary {
-    param([Parameter(Mandatory)][ValidateSet('pass', 'warn', 'fail')][string]$Status, [Parameter(Mandatory)][string]$Text)
-    $symbol = switch ($Status) { 'pass' { '✓' } 'warn' { '!' } default { '✗' } }
-    $color = switch ($Status) { 'pass' { $script:Palette.Success } 'warn' { $script:Palette.Process } default { $script:Palette.Error } }
-    Write-Host "$color$symbol$($script:Palette.Reset) $Text"
-}
-
-function Write-MpSideLegend {
-    Write-Host ''
-    Write-Host '  ' -NoNewline
-    Write-Host "$($script:Palette.Client)[C]$($script:Palette.Reset)" -NoNewline
-    Write-Host "$($script:Palette.Secondary) Client    $($script:Palette.Reset)" -NoNewline
-    Write-Host "$($script:Palette.Host)[H]$($script:Palette.Reset)" -NoNewline
-    Write-Host "$($script:Palette.Secondary) Host    $($script:Palette.Reset)" -NoNewline
-    Write-Host "$($script:Palette.Client)[C]$($script:Palette.Reset)$($script:Palette.Host)[H]$($script:Palette.Reset)" -NoNewline
-    Write-Host "$($script:Palette.Secondary) Both$($script:Palette.Reset)"
-}
-
 function Get-MpReferenceWidth {
     param([Parameter(Mandatory)][AllowEmptyCollection()][array]$Items, [string]$PropertyName = 'ReferenceNumber')
     $references = @($Items | Where-Object { $_.PSObject.Properties[$PropertyName] } | ForEach-Object { [string]$_.PSObject.Properties[$PropertyName].Value })
@@ -183,30 +16,30 @@ function Write-MpSideEntry {
 
     if ($Item.PSObject.Properties['ReferenceNumber']) {
         $label = Format-MpReferenceLabel -Reference $Item.ReferenceNumber -Width $ReferenceWidth
-        Write-Host "  $($script:Palette.Accent)$label$($script:Palette.Reset) " -NoNewline
+        Write-R3Line (Get-MpConsole) @(@{Text="  "}, @{Text="$label";Role='accent'}, @{Text=" "}) -NoNewline
     }
-    else { Write-Host '  ' -NoNewline }
+    else { Write-R3Line (Get-MpConsole) @(@{Text='  '}) -NoNewline }
     switch ($Item.Side) {
         'client' {
-            Write-Host "$($script:Palette.Client)[C]$($script:Palette.Reset)    " -NoNewline
+            Write-R3Line (Get-MpConsole) @(@{Text="[C]";Role='client'}, @{Text="    "}) -NoNewline
         }
         'server' {
-            Write-Host "$($script:Palette.Host)[H]$($script:Palette.Reset)    " -NoNewline
+            Write-R3Line (Get-MpConsole) @(@{Text="[H]";Role='host'}, @{Text="    "}) -NoNewline
         }
         'both' {
-            Write-Host "$($script:Palette.Client)[C]$($script:Palette.Reset)$($script:Palette.Host)[H]$($script:Palette.Reset) " -NoNewline
+            Write-R3Line (Get-MpConsole) @(@{Text="[C]";Role='client'}, @{Text="[H]";Role='host'}, @{Text=" "}) -NoNewline
         }
         default {
-            Write-Host "$($script:Palette.Secondary)[?]$($script:Palette.Reset)    " -NoNewline
+            Write-R3Line (Get-MpConsole) @(@{Text="[?]";Role='secondary'}, @{Text="    "}) -NoNewline
         }
     }
-    Write-Host "$($script:Palette.Success)✓$($script:Palette.Reset) $($PSStyle.Bold)$($Item.Name)$($PSStyle.Reset)" -NoNewline
-    if ((Get-MpPropertyValue $Item 'Pinned') -eq $true) { Write-Host ' [pinned]' -NoNewline }
+    Write-R3Line (Get-MpConsole) @(@{Text="$(Get-R3Symbol (Get-MpConsole) success)";Role='success'}, @{Text=" "}, @{Text="$($Item.Name)";Bold=$true}) -NoNewline
+    if ((Get-MpPropertyValue $Item 'Pinned') -eq $true) { Write-R3Line (Get-MpConsole) @(@{Text=' [pinned]'}) -NoNewline }
     if ($Item.Source -eq 'local') {
-        Write-Host "  $($script:Palette.Local)LOCAL$($script:Palette.Reset)" -NoNewline
+        Write-R3Line (Get-MpConsole) @(@{Text="  "}, @{Text="LOCAL";Role='local'}) -NoNewline
     }
-    if ($Item.Filename) { Write-Host "  $($script:Palette.Secondary)$($Item.Filename)$($script:Palette.Reset)" }
-    else { Write-Host '' }
+    if ($Item.Filename) { Write-R3Line (Get-MpConsole) @(@{Text="  "}, @{Text="$($Item.Filename)";Role='secondary'}) }
+    else { Write-R3Line (Get-MpConsole) @(@{Text=''}) }
 }
 
 function Write-ModInventory {
@@ -225,24 +58,24 @@ function Write-ModInventory {
     ) | Sort-Object Order, Name
 
     if ($Inventory.Mods.Count -eq 0) {
-        Write-MpSection 'MODS' 0
-        Write-Host "$($script:Palette.Secondary)  · None$($script:Palette.Reset)"
+        Write-R3Section (Get-MpConsole) 'MODS' 0
+        Write-R3Line (Get-MpConsole) @(@{Text="  · None";Role='secondary'})
         return
     }
     Write-MpSideLegend
     foreach ($category in $orderedCategories) {
         $items = @($Inventory.Mods | Where-Object Category -eq $category.Key | Sort-Object Name)
         if ($items.Count -eq 0) { continue }
-        Write-MpSection "MODS · $($category.Name)" $items.Count
+        Write-R3Section (Get-MpConsole) "MODS · $($category.Name)" $items.Count
         foreach ($item in $items) { Write-MpSideEntry -Item $item -ReferenceWidth $ReferenceWidth }
     }
 
     $unclassified = @($Inventory.Mods | Where-Object Category -eq 'unclassified' | Sort-Object Name)
     if ($unclassified.Count -gt 0) {
-        Write-MpSection 'MODS · UNCLASSIFIED' $unclassified.Count
+        Write-R3Section (Get-MpConsole) 'MODS · UNCLASSIFIED' $unclassified.Count
         foreach ($item in $unclassified) {
             if ($item.InvalidCategory) {
-                Write-MpWarning "'$($item.Name)' references the missing category '$($item.InvalidCategory)' and is shown as unclassified."
+                Write-R3Status (Get-MpConsole) warning "'$($item.Name)' references the missing category '$($item.InvalidCategory)' and is shown as unclassified."
             }
             Write-MpSideEntry -Item $item -ReferenceWidth $ReferenceWidth
         }
@@ -253,9 +86,9 @@ function Write-ResourcePackInventory {
     param([Parameter(Mandatory)]$Inventory, [switch]$HideEmptySections, [int]$ReferenceWidth = 0)
 
     if (-not $HideEmptySections -or $Inventory.ActiveResources.Count -gt 0 -or $Inventory.InactiveResources.Count -eq 0) {
-        Write-MpSection 'RESOURCE PACKS · ACTUAL PRIORITY' $Inventory.ActiveResources.Count
+        Write-R3Section (Get-MpConsole) 'RESOURCE PACKS · ACTUAL PRIORITY' $Inventory.ActiveResources.Count
         if ($Inventory.ActiveResources.Count -eq 0) {
-            Write-Host "$($script:Palette.Secondary)  · None$($script:Palette.Reset)"
+            Write-R3Line (Get-MpConsole) @(@{Text="  · None";Role='secondary'})
         }
     }
     foreach ($item in $Inventory.ActiveResources) {
@@ -267,39 +100,39 @@ function Write-ResourcePackInventory {
         }
         if ($item.PSObject.Properties['ReferenceNumber']) {
             $label = Format-MpReferenceLabel -Reference $item.ReferenceNumber -Width $ReferenceWidth
-            Write-Host "  $($script:Palette.Accent)$label$($script:Palette.Reset) " -NoNewline
+            Write-R3Line (Get-MpConsole) @(@{Text="  "}, @{Text="$label";Role='accent'}, @{Text=" "}) -NoNewline
         }
         else {
-            Write-Host "$($script:Palette.Secondary)$('{0,3}. ' -f $item.Priority)$($script:Palette.Reset)" -NoNewline
+            Write-R3Line (Get-MpConsole) @(@{Text="$('{0,3}. ' -f $item.Priority)";Role='secondary'}) -NoNewline
         }
-        Write-Host "$($script:Palette.Success)✓$($script:Palette.Reset) $($PSStyle.Bold)$($item.Name)$($PSStyle.Reset)" -NoNewline
-        if ($item.PSObject.Properties['ReferenceNumber']) { Write-Host "  $($script:Palette.Accent)priority $($item.Priority)$($script:Palette.Reset)" -NoNewline }
-        if ($item.Source -eq 'local') { Write-Host "  $($script:Palette.Local)LOCAL$($script:Palette.Reset)" -NoNewline }
-        if ($source) { Write-Host "  $($script:Palette.Secondary)$source$($script:Palette.Reset)" }
-        else { Write-Host '' }
+        Write-R3Line (Get-MpConsole) @(@{Text="$(Get-R3Symbol (Get-MpConsole) success)";Role='success'}, @{Text=" "}, @{Text="$($item.Name)";Bold=$true}) -NoNewline
+        if ($item.PSObject.Properties['ReferenceNumber']) { Write-R3Line (Get-MpConsole) @(@{Text="  "}, @{Text="priority $($item.Priority)";Role='accent'}) -NoNewline }
+        if ($item.Source -eq 'local') { Write-R3Line (Get-MpConsole) @(@{Text="  "}, @{Text="LOCAL";Role='local'}) -NoNewline }
+        if ($source) { Write-R3Line (Get-MpConsole) @(@{Text="  "}, @{Text="$source";Role='secondary'}) }
+        else { Write-R3Line (Get-MpConsole) @(@{Text=''}) }
     }
 
     if ($Inventory.InactiveResources.Count -gt 0) {
-        Write-MpSection 'RESOURCE PACKS · PRESENT BUT DISABLED' $Inventory.InactiveResources.Count
+        Write-R3Section (Get-MpConsole) 'RESOURCE PACKS · PRESENT BUT DISABLED' $Inventory.InactiveResources.Count
         foreach ($item in $Inventory.InactiveResources) {
             if ($item.PSObject.Properties['ReferenceNumber']) {
                 $label = Format-MpReferenceLabel -Reference $item.ReferenceNumber -Width $ReferenceWidth
-                Write-Host "  $($script:Palette.Accent)$label$($script:Palette.Reset) " -NoNewline
+                Write-R3Line (Get-MpConsole) @(@{Text="  "}, @{Text="$label";Role='accent'}, @{Text=" "}) -NoNewline
             }
-            else { Write-Host '  ' -NoNewline }
-            Write-Host "$($script:Palette.Secondary)○$($script:Palette.Reset) $($PSStyle.Bold)$($item.Name)$($PSStyle.Reset)" -NoNewline
-            if ($item.Source -eq 'local') { Write-Host "  $($script:Palette.Local)LOCAL$($script:Palette.Reset)" -NoNewline }
-            if ($item.Filename) { Write-Host "  $($script:Palette.Secondary)$($item.Filename)$($script:Palette.Reset)" }
-            else { Write-Host '' }
+            else { Write-R3Line (Get-MpConsole) @(@{Text='  '}) -NoNewline }
+            Write-R3Line (Get-MpConsole) @(@{Text="$(Get-R3Symbol (Get-MpConsole) inactive)";Role='secondary'}, @{Text=" "}, @{Text="$($item.Name)";Bold=$true}) -NoNewline
+            if ($item.Source -eq 'local') { Write-R3Line (Get-MpConsole) @(@{Text="  "}, @{Text="LOCAL";Role='local'}) -NoNewline }
+            if ($item.Filename) { Write-R3Line (Get-MpConsole) @(@{Text="  "}, @{Text="$($item.Filename)";Role='secondary'}) }
+            else { Write-R3Line (Get-MpConsole) @(@{Text=''}) }
         }
     }
 }
 
 function Write-ShaderInventory {
     param([Parameter(Mandatory)]$Inventory, [int]$ReferenceWidth = 0)
-    Write-MpSection 'SHADER PACKS' $Inventory.Shaders.Count
+    Write-R3Section (Get-MpConsole) 'SHADER PACKS' $Inventory.Shaders.Count
     if ($Inventory.Shaders.Count -eq 0) {
-        Write-Host "$($script:Palette.Secondary)  · None$($script:Palette.Reset)"
+        Write-R3Line (Get-MpConsole) @(@{Text="  · None";Role='secondary'})
         return
     }
     foreach ($item in $Inventory.Shaders) {
@@ -315,13 +148,13 @@ function Write-InventoryView {
     param([Parameter(Mandatory)]$View, [switch]$ShowFilters)
     if ($ShowFilters) {
         $description = if ($View.Filters.Count) { $View.Filters -join ' · ' } else { 'none' }
-        Write-Host ''
-        Write-Host "$($script:Palette.Accent)FILTERS$($script:Palette.Reset)  $($script:Palette.Secondary)$description$($script:Palette.Reset)"
-        Write-Host "$($script:Palette.Accent)MATCHES$($script:Palette.Reset)  $($View.TotalMatches)"
+        Write-R3Line (Get-MpConsole) @(@{Text=''})
+        Write-R3Line (Get-MpConsole) @(@{Text="FILTERS";Role='accent'}, @{Text="  "}, @{Text="$description";Role='secondary'})
+        Write-R3Line (Get-MpConsole) @(@{Text="MATCHES";Role='accent'}, @{Text="  $($View.TotalMatches)"})
     }
     if ($View.TotalMatches -eq 0) {
-        Write-Host ''
-        Write-Host "$($script:Palette.Process)No items match the filters.$($script:Palette.Reset)"
+        Write-R3Line (Get-MpConsole) @(@{Text=''})
+        Write-R3Line (Get-MpConsole) @(@{Text="No items match the filters.";Role='process'})
         return
     }
     $hideEmpty = $View.Filters.Count -gt 0
@@ -338,14 +171,14 @@ function Write-InventoryView {
     }
     $hasReferences = @(Get-ModpackInventoryReferenceItems -View $View | Where-Object { $_.PSObject.Properties['ReferenceNumber'] }).Count -gt 0
     if ($hasReferences) {
-        Write-MpInfo 'Use these numbers with resource, classify, or update. The add command uses search result numbers.'
+        Write-R3Status (Get-MpConsole) info 'Use these numbers with resource, classify, or update. The add command uses search result numbers.'
     }
 }
 
 function Write-ModpackHeader {
     param([Parameter(Mandatory)]$Project, [Parameter(Mandatory)]$Inventory)
 
-    Write-MpBanner "$($Project.DisplayName) $($Project.DisplayVersion)"
+    Write-R3Banner (Get-MpConsole) "$($Project.DisplayName) $($Project.DisplayVersion)"
     $rows = [ordered]@{
         ID        = $Project.Id
         Minecraft = $Project.MinecraftVersion
@@ -356,26 +189,19 @@ function Write-ModpackHeader {
         Shaders   = $Inventory.Shaders.Count
     }
     foreach ($key in $rows.Keys) {
-        Write-Host "$($script:Palette.Secondary)$('{0,-11}' -f $key)$($script:Palette.Reset) " -NoNewline
-        Write-Host "$($script:Palette.Value)$($rows[$key])$($script:Palette.Reset)"
+        Write-R3Line (Get-MpConsole) @(@{Text="$('{0,-11}' -f $key)";Role='secondary'}, @{Text=" "}) -NoNewline
+        Write-R3Line (Get-MpConsole) @(@{Text="$($rows[$key])";Role='value'})
     }
 }
 
 function Write-ModpackList {
     param([Parameter(Mandatory)][array]$Projects, [Parameter(Mandatory)][string]$Root)
-    Write-MpBanner 'REGISTERED MODPACKS'
-    Write-Host "$($script:Palette.Secondary)Root: $Root$($script:Palette.Reset)"
-    Write-Host ''
-    Write-Host "$($script:Palette.Secondary)$('{0,-10} {1,-24} {2,-10} {3}' -f 'ID','NAME','MC','LOADER')$($script:Palette.Reset)"
-    Write-Host "$($script:Palette.Secondary)$('─' * 60)$($script:Palette.Reset)"
-    foreach ($project in $Projects) {
-        Write-Host "$($script:Palette.Accent)$('{0,-10}' -f $project.Id)$($script:Palette.Reset) " -NoNewline
-        Write-Host "$($PSStyle.Bold)$('{0,-24}' -f $project.DisplayName)$($PSStyle.Reset) " -NoNewline
-        Write-Host "$($script:Palette.Value)$('{0,-10}' -f $project.MinecraftVersion)$($script:Palette.Reset) " -NoNewline
-        Write-Host "$($script:Palette.Heading)$($project.Loader)$($script:Palette.Reset)"
-    }
-    Write-Host ''
-    Write-Host "$($script:Palette.Secondary)$($Projects.Count) project(s)$($script:Palette.Reset)"
+    Write-R3Banner (Get-MpConsole) 'REGISTERED MODPACKS'
+    Write-R3Line (Get-MpConsole) @(@{Text="Root: $Root";Role='secondary'})
+    Write-R3Line (Get-MpConsole) @(@{Text=''})
+    $rows = @(foreach ($project in $Projects) { ,@($project.Id, $project.DisplayName, $project.MinecraftVersion, $project.Loader) })
+    Write-R3Table (Get-MpConsole) -Headers @('ID','NAME','MC','LOADER') -Rows $rows
+    Write-R3Line (Get-MpConsole) @(@{Text="$($Projects.Count) project(s)";Role='secondary'})
 }
 
 function Format-ByteSize {
@@ -389,8 +215,8 @@ function Format-ByteSize {
 function Write-BuildSummary {
     param([Parameter(Mandatory)]$Build)
     $mods = $Build.Inventory.Mods
-    Write-MpBanner 'BUILD COMPLETE'
-    Write-MpSuccess 'Status: successful'
+    Write-R3Banner (Get-MpConsole) 'BUILD COMPLETE'
+    Write-R3Status (Get-MpConsole) success 'Status: successful'
     foreach ($row in ([ordered]@{
         File             = [System.IO.Path]::GetFileName($Build.Path)
         Size             = Format-ByteSize $Build.Size
@@ -404,7 +230,7 @@ function Write-BuildSummary {
         Shaders          = $Build.Inventory.Shaders.Count
         Path             = $Build.Path
     }).GetEnumerator()) {
-        Write-MpKeyValue -Key $row.Key -Value $row.Value -Width 20
+        Write-R3KeyValue (Get-MpConsole) -Key $row.Key -Value $row.Value -Width 20
     }
 }
 
@@ -412,59 +238,59 @@ function Write-MpDiffItems {
     param([Parameter(Mandatory)][AllowEmptyCollection()][array]$Items, [Parameter(Mandatory)][ValidateSet('Added', 'Changed', 'Removed')][string]$Status)
     if ($Items.Count -eq 0) { return }
     $settings = switch ($Status) {
-        'Added'   { @{ Symbol = '+'; Color = $script:Palette.Success } }
-        'Changed' { @{ Symbol = '~'; Color = $script:Palette.Process } }
-        'Removed' { @{ Symbol = '-'; Color = $script:Palette.Error } }
+        'Added'   { @{ Symbol = '+'; Role = 'success' } }
+        'Changed' { @{ Symbol = '~'; Role = 'process' } }
+        'Removed' { @{ Symbol = '-'; Role = 'error' } }
     }
-    Write-MpSection ("DIFF · " + $Status.ToUpperInvariant()) $Items.Count
+    Write-R3Section (Get-MpConsole) ("DIFF · " + $Status.ToUpperInvariant()) $Items.Count
     foreach ($item in $Items) {
-        Write-Host "  $($settings.Color)$($settings.Symbol)$($script:Palette.Reset) " -NoNewline
-        Write-Host "$($script:Palette.Accent)$('{0,-10}' -f "[$($item.Kind)]")$($script:Palette.Reset) " -NoNewline
-        Write-Host "$($script:Palette.Value)$($item.Path)$($script:Palette.Reset)"
+        Write-R3Line (Get-MpConsole) @(@{Text="  "}, @{Text="$($settings.Symbol)";Role=$settings.Role}, @{Text=" "}) -NoNewline
+        Write-R3Line (Get-MpConsole) @(@{Text="$('{0,-10}' -f "[$($item.Kind)]")";Role='accent'}, @{Text=" "}) -NoNewline
+        Write-R3Line (Get-MpConsole) @(@{Text="$($item.Path)";Role='value'})
     }
 }
 
 function Write-ModpackDiff {
     param([Parameter(Mandatory)]$Diff)
-    Write-MpBanner "DIFF · $($Diff.Project.DisplayName)"
-    Write-MpKeyValue 'Baseline' ([System.IO.Path]::GetFileName($Diff.BaselinePath))
-    Write-MpKeyValue 'Built' $Diff.BaselineTime
+    Write-R3Banner (Get-MpConsole) "DIFF · $($Diff.Project.DisplayName)"
+    Write-R3KeyValue (Get-MpConsole) 'Baseline' ([System.IO.Path]::GetFileName($Diff.BaselinePath))
+    Write-R3KeyValue (Get-MpConsole) 'Built' $Diff.BaselineTime
     if ($Diff.Total -eq 0) {
-        Write-Host ''
-        Write-MpSuccess 'No differences from the latest build.'
+        Write-R3Line (Get-MpConsole) @(@{Text=''})
+        Write-R3Status (Get-MpConsole) success 'No differences from the latest build.'
         return
     }
     Write-MpDiffItems -Items $Diff.Added -Status Added
     Write-MpDiffItems -Items $Diff.Changed -Status Changed
     Write-MpDiffItems -Items $Diff.Removed -Status Removed
-    Write-Host ''
-    Write-MpKeyValue 'Differences' $Diff.Total
+    Write-R3Line (Get-MpConsole) @(@{Text=''})
+    Write-R3KeyValue (Get-MpConsole) 'Differences' $Diff.Total
 }
 
 function Write-ModUpdateSummary {
     param([Parameter(Mandatory)]$Update)
 
-    Write-MpBanner "UPDATE · $($Update.Project.DisplayName)"
+    Write-R3Banner (Get-MpConsole) "UPDATE · $($Update.Project.DisplayName)"
     if ($Update.PSObject.Properties['Preflight']) {
-        Write-MpKeyValue 'Dependency check' "$($Update.Preflight.Checked) version(s) inspected"
-        foreach ($warning in @($Update.Preflight.Warnings)) { Write-MpWarning $warning }
-        if (@($Update.Preflight.Warnings).Count) { Write-Host '' }
+        Write-R3KeyValue (Get-MpConsole) 'Dependency check' "$($Update.Preflight.Checked) version(s) inspected"
+        foreach ($warning in @($Update.Preflight.Warnings)) { Write-R3Status (Get-MpConsole) warning $warning }
+        if (@($Update.Preflight.Warnings).Count) { Write-R3Line (Get-MpConsole) @(@{Text=''}) }
     }
     foreach ($item in $Update.Items) {
         $status = if ($item.Changed) { 'UPDATED' } else { 'CURRENT' }
-        $color = if ($item.Changed) { $script:Palette.Success } else { $script:Palette.Secondary }
-        Write-Host "  $color$('{0,-9}' -f $status)$($script:Palette.Reset) " -NoNewline
-        Write-Host "$($script:Palette.Accent)$('{0,-14}' -f "[$($item.Kind)]")$($script:Palette.Reset) " -NoNewline
-        Write-Host "$($script:Palette.Value)$($item.Name)$($script:Palette.Reset)" -NoNewline
+        $role = if ($item.Changed) { 'success' } else { 'secondary' }
+        Write-R3Line (Get-MpConsole) @(@{Text="  "}, @{Text="$('{0,-9}' -f $status)";Role=$role}, @{Text=" "}) -NoNewline
+        Write-R3Line (Get-MpConsole) @(@{Text="$('{0,-14}' -f "[$($item.Kind)]")";Role='accent'}, @{Text=" "}) -NoNewline
+        Write-R3Line (Get-MpConsole) @(@{Text="$($item.Name)";Role='value'}) -NoNewline
         if ($item.PreviousFile -ne $item.Filename) {
-            Write-Host " $($script:Palette.Secondary)$($item.PreviousFile) -> $($item.Filename)$($script:Palette.Reset)"
+            Write-R3Line (Get-MpConsole) @(@{Text=" "}, @{Text="$($item.PreviousFile) -> $($item.Filename)";Role='secondary'})
         }
-        else { Write-Host '' }
+        else { Write-R3Line (Get-MpConsole) @(@{Text=''}) }
     }
-    Write-Host ''
-    Write-MpKeyValue 'Checked' $Update.Items.Count
-    Write-MpKeyValue 'Updated' @($Update.Items | Where-Object Changed).Count
-    Write-MpInfo 'No build was generated. Run modpack diff, then modpack build when ready.'
+    Write-R3Line (Get-MpConsole) @(@{Text=''})
+    Write-R3KeyValue (Get-MpConsole) 'Checked' $Update.Items.Count
+    Write-R3KeyValue (Get-MpConsole) 'Updated' @($Update.Items | Where-Object Changed).Count
+    Write-R3Status (Get-MpConsole) info 'No build was generated. Run modpack diff, then modpack build when ready.'
 }
 
 function Format-MpCompactNumber {
@@ -480,18 +306,18 @@ function Write-ModrinthSearchResults {
         [Parameter(Mandatory)]$Project
     )
 
-    Write-MpBanner 'SEARCH · MODRINTH'
-    Write-MpKeyValue 'Query' $Search.Query
-    Write-MpKeyValue 'Project' "$($Project.Id) · Minecraft $($Project.MinecraftVersion) · $($Project.Loader)"
-    Write-MpKeyValue 'Type' $Search.Type
-    Write-MpKeyValue 'Found' "$(@($Search.Results).Count) shown · $($Search.TotalHits) total"
+    Write-R3Banner (Get-MpConsole) 'SEARCH · MODRINTH'
+    Write-R3KeyValue (Get-MpConsole) 'Query' $Search.Query
+    Write-R3KeyValue (Get-MpConsole) 'Project' "$($Project.Id) · Minecraft $($Project.MinecraftVersion) · $($Project.Loader)"
+    Write-R3KeyValue (Get-MpConsole) 'Type' $Search.Type
+    Write-R3KeyValue (Get-MpConsole) 'Found' "$(@($Search.Results).Count) shown · $($Search.TotalHits) total"
     if (@($Search.Results).Count -eq 0) {
-        Write-Host ''
-        Write-MpInfo 'No compatible results were found.'
+        Write-R3Line (Get-MpConsole) @(@{Text=''})
+        Write-R3Status (Get-MpConsole) info 'No compatible results were found.'
         return
     }
 
-    Write-MpSection 'RESULTS' @($Search.Results).Count
+    Write-R3Section (Get-MpConsole) 'RESULTS' @($Search.Results).Count
     $referenceWidth = Get-MpReferenceWidth -Items @($Search.Results) -PropertyName Index
     foreach ($item in $Search.Results) {
         $typeLabel = switch ($item.Type) {
@@ -501,55 +327,55 @@ function Write-ModrinthSearchResults {
             default        { ([string]$item.Type).ToUpperInvariant() }
         }
         $label = Format-MpReferenceLabel -Reference $item.Index -Width $referenceWidth
-        Write-Host "  $($script:Palette.Process)$label$($script:Palette.Reset) " -NoNewline
-        Write-Host "$($script:Palette.Accent)$('{0,-10}' -f "[$typeLabel]")$($script:Palette.Reset) " -NoNewline
-        Write-Host "$($script:Palette.Value)$($item.Title)$($script:Palette.Reset)"
-        Write-Host "      $($script:Palette.Secondary)ID$($script:Palette.Reset) $($script:Palette.Value)$($item.ProjectId)$($script:Palette.Reset)  " -NoNewline
-        Write-Host "$($script:Palette.Secondary)slug$($script:Palette.Reset) $($item.Slug)  " -NoNewline
-        Write-Host "$($script:Palette.Secondary)by$($script:Palette.Reset) $($item.Author)  " -NoNewline
-        Write-Host "$($script:Palette.Secondary)downloads$($script:Palette.Reset) $(Format-MpCompactNumber $item.Downloads)"
-        if ($item.Description) { Write-Host "      $($script:Palette.Secondary)$($item.Description)$($script:Palette.Reset)" }
+        Write-R3Line (Get-MpConsole) @(@{Text="  "}, @{Text="$label";Role='process'}, @{Text=" "}) -NoNewline
+        Write-R3Line (Get-MpConsole) @(@{Text="$('{0,-10}' -f "[$typeLabel]")";Role='accent'}, @{Text=" "}) -NoNewline
+        Write-R3Line (Get-MpConsole) @(@{Text="$($item.Title)";Role='value'})
+        Write-R3Line (Get-MpConsole) @(@{Text="      "}, @{Text="ID";Role='secondary'}, @{Text=" "}, @{Text="$($item.ProjectId)";Role='value'}, @{Text="  "}) -NoNewline
+        Write-R3Line (Get-MpConsole) @(@{Text="slug";Role='secondary'}, @{Text=" $($item.Slug)  "}) -NoNewline
+        Write-R3Line (Get-MpConsole) @(@{Text="by";Role='secondary'}, @{Text=" $($item.Author)  "}) -NoNewline
+        Write-R3Line (Get-MpConsole) @(@{Text="downloads";Role='secondary'}, @{Text=" $(Format-MpCompactNumber $item.Downloads)"})
+        if ($item.Description) { Write-R3Line (Get-MpConsole) @(@{Text="      "}, @{Text="$($item.Description)";Role='secondary'}) }
     }
-    Write-Host ''
-    Write-MpInfo 'Install a result with modpack add <number>. You can also use its ID or slug.'
+    Write-R3Line (Get-MpConsole) @(@{Text=''})
+    Write-R3Status (Get-MpConsole) info 'Install a result with modpack add <number>. You can also use its ID or slug.'
 }
 
 function Write-ModrinthVersionResults {
     param([Parameter(Mandatory)]$View, [Parameter(Mandatory)]$Project)
-    Write-MpBanner "VERSIONS · $($View.ItemName)"
-    Write-MpKeyValue 'Project' "$($Project.Id) · Minecraft $($Project.MinecraftVersion) · $($Project.Loader)"
-    Write-MpKeyValue 'Type' $View.ItemKind
-    Write-MpKeyValue 'Compatible' @($View.Versions).Count
-    if (@($View.Versions).Count -eq 0) { Write-Host ''; Write-MpInfo 'No compatible versions were found.'; return }
-    Write-MpSection 'AVAILABLE VERSIONS' @($View.Versions).Count
+    Write-R3Banner (Get-MpConsole) "VERSIONS · $($View.ItemName)"
+    Write-R3KeyValue (Get-MpConsole) 'Project' "$($Project.Id) · Minecraft $($Project.MinecraftVersion) · $($Project.Loader)"
+    Write-R3KeyValue (Get-MpConsole) 'Type' $View.ItemKind
+    Write-R3KeyValue (Get-MpConsole) 'Compatible' @($View.Versions).Count
+    if (@($View.Versions).Count -eq 0) { Write-R3Line (Get-MpConsole) @(@{Text=''}); Write-R3Status (Get-MpConsole) info 'No compatible versions were found.'; return }
+    Write-R3Section (Get-MpConsole) 'AVAILABLE VERSIONS' @($View.Versions).Count
     $referenceWidth = Get-MpReferenceWidth -Items @($View.Versions) -PropertyName Index
     foreach ($version in $View.Versions) {
         $label = Format-MpReferenceLabel -Reference $version.Index -Width $referenceWidth
         $marker = if ($version.Installed) { 'INSTALLED' } elseif ([int]$version.Index -eq 1) { 'LATEST' } else { '' }
-        Write-Host "  $($script:Palette.Process)$label$($script:Palette.Reset) " -NoNewline
-        Write-Host "$($script:Palette.Value)$($PSStyle.Bold)$($version.VersionNumber)$($PSStyle.Reset) " -NoNewline
-        if ($marker) { Write-Host "$($script:Palette.Success)$marker$($script:Palette.Reset) " -NoNewline }
-        Write-Host "$($script:Palette.Secondary)$($version.VersionType) · $($version.Id)$($script:Palette.Reset)"
+        Write-R3Line (Get-MpConsole) @(@{Text="  "}, @{Text="$label";Role='process'}, @{Text=" "}) -NoNewline
+        Write-R3Line (Get-MpConsole) @(@{Text="$($version.VersionNumber)";Role='value';Bold=$true}, @{Text=" "}) -NoNewline
+        if ($marker) { Write-R3Line (Get-MpConsole) @(@{Text="$marker";Role='success'}, @{Text=" "}) -NoNewline }
+        Write-R3Line (Get-MpConsole) @(@{Text="$($version.VersionType) · $($version.Id)";Role='secondary'})
         $details = @($version.Filename, $version.Published) | Where-Object { $_ }
-        if ($details.Count) { Write-Host "      $($script:Palette.Secondary)$($details -join ' · ')$($script:Palette.Reset)" }
+        if ($details.Count) { Write-R3Line (Get-MpConsole) @(@{Text="      "}, @{Text="$($details -join ' · ')";Role='secondary'}) }
     }
-    Write-Host ''
-    Write-MpInfo 'Select one with modpack update <content> --to <number>. Exact version IDs also work.'
+    Write-R3Line (Get-MpConsole) @(@{Text=''})
+    Write-R3Status (Get-MpConsole) info 'Select one with modpack update <content> --to <number>. Exact version IDs also work.'
 }
 
 function Write-ModpackCategoryList {
     param([Parameter(Mandatory)]$View)
-    Write-MpBanner "CATEGORIES · $($View.Project.Id)"
-    Write-MpSection 'CLASSIFICATIONS' @($View.Categories).Count
+    Write-R3Banner (Get-MpConsole) "CATEGORIES · $($View.Project.Id)"
+    Write-R3Section (Get-MpConsole) 'CLASSIFICATIONS' @($View.Categories).Count
     $referenceWidth = Get-MpReferenceWidth -Items @($View.Categories)
     foreach ($category in $View.Categories) {
         $mods = if ($category.ModCount -eq 1) { '1 mod' } else { "$($category.ModCount) mods" }
         $order = if ($category.PSObject.Properties['IsUnclassified'] -and $category.IsUnclassified) { 'not assigned' } else { "order $($category.Order)" }
         $label = Format-MpReferenceLabel -Reference $category.ReferenceNumber -Width $referenceWidth
-        Write-Host "  $($script:Palette.Accent)$label$($script:Palette.Reset) " -NoNewline
-        Write-Host "$($script:Palette.Value)$($PSStyle.Bold)$($category.Name)$($PSStyle.Reset) " -NoNewline
-        Write-Host "$($script:Palette.Secondary)$($category.Id) · $mods · $order$($script:Palette.Reset)"
+        Write-R3Line (Get-MpConsole) @(@{Text="  "}, @{Text="$label";Role='accent'}, @{Text=" "}) -NoNewline
+        Write-R3Line (Get-MpConsole) @(@{Text="$($category.Name)";Role='value';Bold=$true}, @{Text=" "}) -NoNewline
+        Write-R3Line (Get-MpConsole) @(@{Text="$($category.Id) · $mods · $order";Role='secondary'})
     }
-    Write-Host ''
-    Write-MpInfo 'Use a classification ID or number with classify set. Only defined categories can be removed.'
+    Write-R3Line (Get-MpConsole) @(@{Text=''})
+    Write-R3Status (Get-MpConsole) info 'Use a classification ID or number with classify set. Only defined categories can be removed.'
 }

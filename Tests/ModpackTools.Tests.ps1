@@ -50,9 +50,9 @@ minecraft = "1.21.1"
     }
 
     Describe 'Theme configuration' {
-        It 'loads every color from the source theme file' {
-            $colors = Read-MpThemeColors
-            $colors.Count | Should Be 10
+        It 'loads only product extensions from the source theme file' {
+            $colors = Read-MpThemeExtension
+            $colors.Count | Should Be 3
             $colors.client | Should Be '#748FFC'
             $colors.host | Should Be '#BE70FF'
         }
@@ -60,12 +60,12 @@ minecraft = "1.21.1"
         It 'rejects missing and malformed colors' {
             $missing = Join-Path $TestDrive 'missing-theme.toml'
             [System.IO.File]::WriteAllText($missing, "[colors]`nclient = `"#748FFC`"")
-            { Read-MpThemeColors -Path $missing } | Should Throw "Required theme color 'host'"
+            { Read-MpThemeExtension -Path $missing } | Should Throw "Required theme color 'host'"
 
             $invalid = Join-Path $TestDrive 'invalid-theme.toml'
             $theme = Get-Content -Raw -LiteralPath (Join-Path $script:ModuleRoot 'theme.toml')
             [System.IO.File]::WriteAllText($invalid, $theme.Replace('#748FFC', 'blue'))
-            { Read-MpThemeColors -Path $invalid } | Should Throw '#RRGGBB'
+            { Read-MpThemeExtension -Path $invalid } | Should Throw '#RRGGBB'
         }
     }
 
@@ -488,14 +488,11 @@ $Loader = "loader-version"
             { modpack version } | Should Throw "Command 'version' is not recognized"
         }
 
-        It 'terminates every successful public command output with a blank line' {
-            Mock Write-MpOutputEnd {}
-
-            modpack --version
-            Assert-MockCalled Write-MpOutputEnd -Times 1 -Exactly
-
-            modpack --help
-            Assert-MockCalled Write-MpOutputEnd -Times 2 -Exactly
+        It 'keeps version output compact and frames multiline help' {
+            @(modpack --version 6>&1).Count | Should Be 1
+            $help = @(modpack --help 6>&1)
+            ([string]$help[0]) | Should Be ''
+            ([string]$help[-1]) | Should Be ''
         }
     }
 

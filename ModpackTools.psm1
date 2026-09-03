@@ -23,6 +23,7 @@ foreach ($file in @(
     'Private/ResourcePacks.ps1'
     'Private/Packwiz.ps1'
     'Private/Diff.ps1'
+    'Private/Presentation.ps1'
     'Private/Rendering.ps1'
     'Private/Doctor.ps1'
     'Private/Help.ps1'

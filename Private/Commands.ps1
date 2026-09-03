@@ -79,13 +79,13 @@ function Invoke-MpUse {
     if ($Arguments -contains '--help') { Show-MpHelp use; return }
     Assert-PositionalCount -Values $Arguments -Minimum 0 -Maximum 1 -Usage 'modpack use [id]'
     if ($Arguments.Count -eq 0) {
-        Write-MpBanner 'ACTIVE PROJECT'
-        if ($script:ActiveProjectId) { Write-MpKeyValue 'ID' $script:ActiveProjectId }
-        else { Write-MpInfo 'There is no active project in this session.' }
+        Write-R3Banner (Get-MpConsole) 'ACTIVE PROJECT'
+        if ($script:ActiveProjectId) { Write-R3KeyValue (Get-MpConsole) 'ID' $script:ActiveProjectId }
+        else { Write-R3Status (Get-MpConsole) info 'There is no active project in this session.' }
         return
     }
     $project = Set-ActiveModpackProject -Id ([string]$Arguments[0])
-    Write-MpSuccess "Active project: $($project.Id) ($($project.DisplayName))"
+    Write-R3Status (Get-MpConsole) success "Active project: $($project.Id) ($($project.DisplayName))"
 }
 
 function Invoke-MpClassify {
@@ -117,7 +117,7 @@ function Invoke-MpClassify {
             if ($parsed.Options.ContainsKey('name')) { $parameters.Name = [string]$parsed.Options.name }
             if ($parsed.Options.ContainsKey('order')) { $parameters.Order = $order }
             $created = New-ModpackCategory @parameters
-            Write-MpSuccess "Category '$($created.Id)' was created."
+            Write-R3Status (Get-MpConsole) success "Category '$($created.Id)' was created."
             $view = Get-ModpackCategoryView -Project $project
             Write-ModpackCategoryCache -View $view
             Write-ModpackCategoryList -View $view
@@ -185,11 +185,11 @@ function Invoke-MpBuild {
     Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack build [id] [--project <id>] [options]' -OptionNames @('project', 'no-refresh', 'keep-old', 'open', 'raw-log')
     $id = if ($parsed.Positionals.Count) { $parsed.Positionals[0] } else { $null }
     $project = Resolve-MpCommandProject -Options $parsed.Options -PositionalId $id
-    Write-MpStep "Building $($project.DisplayName)..."
+    Write-R3Status (Get-MpConsole) step "Building $($project.DisplayName)..."
     $build = Build-ModpackProject -Project $project -NoRefresh:$parsed.Options.ContainsKey('no-refresh') -KeepOld:$parsed.Options.ContainsKey('keep-old') -RawLog:$parsed.Options.ContainsKey('raw-log') -Strict:$parsed.Options.ContainsKey('strict') -DryRun:$parsed.Options.ContainsKey('dry-run')
     Write-MpHealth $build.Health
-    if ($build.DryRun) { Write-MpInfo 'Dry run: export validated without changing the project.'; return }
-    foreach ($line in $build.Log) { Write-Host "$($script:Palette.Secondary)$line$($script:Palette.Reset)" }
+    if ($build.DryRun) { Write-R3Status (Get-MpConsole) info 'Dry run: export validated without changing the project.'; return }
+    foreach ($line in $build.Log) { Write-R3Line (Get-MpConsole) @(@{Text="$line";Role='secondary'}) }
     Write-ModInventory $build.Inventory
     Write-ResourcePackInventory $build.Inventory
     Write-ShaderInventory $build.Inventory
@@ -205,7 +205,7 @@ function Invoke-MpDiff {
     $id = if ($parsed.Positionals.Count) { [string]$parsed.Positionals[0] } else { $null }
     $project = Resolve-MpCommandProject -Options $parsed.Options -PositionalId $id
     Assert-ModpackStructure -Project $project
-    Write-MpStep "Comparing $($project.DisplayName) with its latest build..."
+    Write-R3Status (Get-MpConsole) step "Comparing $($project.DisplayName) with its latest build..."
     $diff = Compare-ModpackBuild -Project $project
     Write-ModpackDiff -Diff $diff
 }
@@ -223,7 +223,7 @@ function Invoke-MpSearch {
     }
     $query = @($parsed.Positionals) -join ' '
     if ([string]::IsNullOrWhiteSpace($query)) { Throw-MpError -Message 'The search query cannot be empty' -Hint 'modpack search <query>' -ErrorId 'Search.EmptyQuery' -Category InvalidArgument }
-    Write-MpStep "Searching Modrinth for '$query'..."
+    Write-R3Status (Get-MpConsole) step "Searching Modrinth for '$query'..."
     $search = Search-ModrinthContent -Project $project -Query $query -Type $type -Limit $limit
     Write-ModrinthSearchResults -Search $search -Project $project
 }
@@ -238,7 +238,7 @@ function Invoke-MpVersions {
     $reference = Resolve-ModpackInventoryNumber -Selector $rawSelector -Project $project -AllowedKinds @('mod', 'resourcepack', 'shaderpack') -RequirePackwiz
     $selector = if ($reference) { [string]$reference.Selector } else { $rawSelector }
     $item = (Resolve-ModpackUpdateSelectors -Project $project -Selectors @($selector))[0]
-    Write-MpStep "Finding compatible versions for '$($item.Name)'..."
+    Write-R3Status (Get-MpConsole) step "Finding compatible versions for '$($item.Name)'..."
     $view = Get-ModrinthCompatibleVersions -Project $project -Item $item
     Write-ModrinthVersionResults -View $view -Project $project
 }
@@ -258,9 +258,9 @@ function Invoke-MpNew {
     if ($parsed.Options.ContainsKey('loader-version')) { $parameters.LoaderVersion = $parsed.Options['loader-version'] }
     if ($parsed.Options.ContainsKey('pack-version')) { $parameters.PackVersion = $parsed.Options['pack-version'] }
     if ($parsed.Options.ContainsKey('display-version')) { $parameters.DisplayVersion = $parsed.Options['display-version'] }
-    Write-MpStep "Creating project '$($parsed.Positionals[0])'..."
+    Write-R3Status (Get-MpConsole) step "Creating project '$($parsed.Positionals[0])'..."
     $project = New-ModpackProject @parameters
-    Write-MpSuccess "Project created at $($project.Root)"
+    Write-R3Status (Get-MpConsole) success "Project created at $($project.Root)"
 }
 
 function Invoke-MpInit {
@@ -274,15 +274,15 @@ function Invoke-MpInit {
     if ($parsed.Options.ContainsKey('display-version')) { $parameters.DisplayVersion = $parsed.Options['display-version'] }
     if ($parsed.Options.ContainsKey('output-name')) { $parameters.OutputName = $parsed.Options['output-name'] }
     $location = if ($parameters.ContainsKey('Path')) { $parameters.Path } else { (Get-Location).Path }
-    Write-MpStep "Initializing Packwiz project '$location' as '$($parsed.Positionals[0])'..."
+    Write-R3Status (Get-MpConsole) step "Initializing Packwiz project '$location' as '$($parsed.Positionals[0])'..."
     $result = Initialize-ExistingModpackProject @parameters
     $project = $result.Project
-    Write-MpSuccess 'Existing Packwiz project initialized for ModpackTools.'
-    Write-MpKeyValue 'ID' $project.Id
-    Write-MpKeyValue 'Minecraft' $project.MinecraftVersion
-    Write-MpKeyValue 'Loader' $(if ($project.LoaderVersion) { "$($project.Loader) $($project.LoaderVersion)" } else { $project.Loader })
-    Write-MpKeyValue 'Root' $project.Root
-    Write-MpInfo "Created $(@($result.CreatedFiles).Count) file(s). Next: modpack use $($project.Id)"
+    Write-R3Status (Get-MpConsole) success 'Existing Packwiz project initialized for ModpackTools.'
+    Write-R3KeyValue (Get-MpConsole) 'ID' $project.Id
+    Write-R3KeyValue (Get-MpConsole) 'Minecraft' $project.MinecraftVersion
+    Write-R3KeyValue (Get-MpConsole) 'Loader' $(if ($project.LoaderVersion) { "$($project.Loader) $($project.LoaderVersion)" } else { $project.Loader })
+    Write-R3KeyValue (Get-MpConsole) 'Root' $project.Root
+    Write-R3Status (Get-MpConsole) info "Created $(@($result.CreatedFiles).Count) file(s). Next: modpack use $($project.Id)"
 }
 
 function Invoke-MpConfig {
@@ -295,18 +295,18 @@ function Invoke-MpConfig {
     switch ($verb.ToLowerInvariant()) {
         'get' {
             if ($Arguments.Count -ne 2) { Throw-MpError -Message "The arguments for 'config get' do not match the expected syntax" -Hint 'modpack config --help' -ErrorId 'Command.InvalidArguments' -Category InvalidArgument }
-            Write-MpBanner 'CONFIGURATION'
-            if ($name -eq 'root') { Write-MpKeyValue 'root' (Get-ModpackRoot) }
+            Write-R3Banner (Get-MpConsole) 'CONFIGURATION'
+            if ($name -eq 'root') { Write-R3KeyValue (Get-MpConsole) 'root' (Get-ModpackRoot) }
             else {
                 $packwiz = Resolve-MpPackwiz
-                Write-MpKeyValue 'packwiz' $(if ($packwiz.Available) { $packwiz.Path } else { 'Not found' })
-                Write-MpKeyValue 'source' $packwiz.Source
+                Write-R3KeyValue (Get-MpConsole) 'packwiz' $(if ($packwiz.Available) { $packwiz.Path } else { 'Not found' })
+                Write-R3KeyValue (Get-MpConsole) 'source' $packwiz.Source
             }
         }
         'set' {
             if ($Arguments.Count -ne 3) { Throw-MpError -Message "The arguments for 'config set' do not match the expected syntax" -Hint 'modpack config --help' -ErrorId 'Command.InvalidArguments' -Category InvalidArgument }
             $value = Set-ModpackToolsConfigValue -Name $name -Value ([string]$Arguments[2])
-            Write-MpSuccess "$name = $value"
+            Write-R3Status (Get-MpConsole) success "$name = $value"
         }
         default { Throw-MpError -Message "Configuration operation '$verb' is not recognized; allowed values: get, set" -Hint 'modpack config --help' -ErrorId 'Configuration.UnknownOperation' -Category InvalidArgument -TargetObject $verb }
     }

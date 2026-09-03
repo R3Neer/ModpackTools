@@ -69,11 +69,35 @@ if ((Test-Path -LiteralPath $destination) -and -not $Force) {
 }
 $temporary = Join-Path $userModuleRoot ('.ModpackTools.install-' + [guid]::NewGuid().ToString('N'))
 $backup = Join-Path $userModuleRoot ('.ModpackTools.backup-' + [guid]::NewGuid().ToString('N'))
+$safeModuleRoot = [IO.Path]::GetFullPath($userModuleRoot).TrimEnd('\','/') + [IO.Path]::DirectorySeparatorChar
+foreach ($target in @($destination,$temporary,$backup)) {
+    if (-not [IO.Path]::GetFullPath($target).StartsWith($safeModuleRoot,[StringComparison]::OrdinalIgnoreCase)) { throw 'Installer target escapes the module directory.' }
+    if ((Test-Path -LiteralPath $target) -and ((Get-Item -LiteralPath $target -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw "Installer target is a linked path: $target" }
+}
 [System.IO.Directory]::CreateDirectory($temporary) | Out-Null
 try {
     foreach ($name in @('docs', 'Private', 'Public', 'ModpackTools.psd1', 'ModpackTools.psm1', 'README.md', 'LICENSE', 'theme.toml', 'dependencies.psd1')) {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $temporary -Recurse -Force
     }
+    . (Join-Path $temporary 'Private/Errors.ps1')
+    . (Join-Path $temporary 'Private/VerifyR3CLI.ps1')
+    [void](Test-MpR3Package -ModuleRoot $temporary)
+    $stagedModule = Import-Module (Join-Path $temporary 'ModpackTools.psd1') -Force -PassThru
+    & $stagedModule {
+        param($InstalledTheme)
+        Assert-MpPresentation
+        $incoming = Read-MpThemeExtension
+        if (Test-Path -LiteralPath $InstalledTheme -PathType Leaf) {
+            $existing = Read-MpThemeExtension -Path $InstalledTheme
+            $custom = @($existing.Keys | Where-Object { -not $incoming.ContainsKey($_) -or $incoming[$_] -ne $existing[$_] })
+            if ($custom.Count) {
+                # Preserve the original file byte-for-byte; the data adapter understands legacy themes.
+                [IO.File]::Copy($InstalledTheme, (Join-Path $script:ModuleRoot 'theme.toml'), $true)
+            }
+        }
+        [void](Get-MpConsole)
+    } (Join-Path $destination 'theme.toml')
+    Remove-Module $stagedModule
     if (Test-Path -LiteralPath $destination) { Move-Item -LiteralPath $destination -Destination $backup }
     Move-Item -LiteralPath $temporary -Destination $destination
     if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Recurse -Force }
@@ -85,11 +109,10 @@ catch {
     }
     throw
 }
-Write-Host "ModpackTools $version installed at $destination"
+Write-Information "ModpackTools $version installed at $destination" -InformationAction Continue
 Import-Module (Join-Path $destination 'ModpackTools.psd1') -Force
 if (-not $SkipDoctor) {
     if ($NonInteractive) { modpack doctor }
     else { modpack doctor --fix }
 }
-Write-Host ''
-Write-Host 'ModpackTools is ready. Open a new session or run: Import-Module ModpackTools -Force'
+& (Get-Module ModpackTools) { Write-R3Status (Get-MpConsole) success 'ModpackTools is ready. Open a new session or run: Import-Module ModpackTools -Force' }

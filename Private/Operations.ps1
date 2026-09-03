@@ -109,7 +109,7 @@ function Write-MpContentPlan {
     param($Plan)
     foreach ($change in $Plan.Changes) {
         $previous = if ($change.Before) { $change.Before.VersionId } else { 'not installed' }
-        Write-MpInfo "$($change.After.Item.Name): $previous -> $($change.After.VersionId) ($($change.Reason))"
+        Write-R3Status (Get-MpConsole) info "$($change.After.Item.Name): $previous -> $($change.After.VersionId) ($($change.Reason))"
     }
-    foreach ($issue in $Plan.Report.Issues) { Write-MpInfo "$($issue.Severity): $($issue.Message)" }
+    foreach ($issue in $Plan.Report.Issues) { Write-R3Status (Get-MpConsole) info "$($issue.Severity): $($issue.Message)" }
 }

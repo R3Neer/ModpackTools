@@ -173,7 +173,11 @@ function Get-MpCommandCatalog {
         $script:MpCommandCatalog[$name] = [pscustomobject]@{
             Handler = $(if ($name -eq 'pin') { 'Invoke-MpPin' } else { 'Invoke-MpUnpin' }); Group = 'CONTENT'
             Summary = "$name managed content"; Description = 'Control automatic version changes using Packwiz pins.'
-            Usage = @("modpack $name <selector...> [--project <id>] [--dry-run]"); Items = @(); Notes = @(); Examples = @()
+            Usage = @("modpack $name <selector...> [--project <id>] [--dry-run]"); Items = @(
+                New-MpHelpItem '<selector...>' 'Managed content names, IDs, filenames or inventory numbers; duplicates are consolidated.'
+                New-MpHelpItem '--project <id>' 'Use this project instead of the active one.'
+                New-MpHelpItem '--dry-run' 'Preview the complete batch without changing project files.'
+            ); Notes = @('Local files cannot be pinned. Updates that change a pin require unpin first.'); Examples = @("modpack $name sodium lithium")
         }
     }
     foreach ($name in @('add','update','classify','side','resource','build','doctor')) {
@@ -199,44 +203,27 @@ function Get-MpCommandCatalog {
 function Show-MpHelp {
     param([string]$Command)
     $catalog = Get-MpCommandCatalog
-    if (-not $Command) {
-        Write-MpBanner "MODPACKTOOLS $script:ModuleVersion"
-        Write-MpHelpText 'Manage, inspect, update, and build Packwiz modpacks.'
-        Write-MpHelpHeading 'USAGE'
-        Write-MpCommandLine 'modpack <command> [arguments] [options]'
-        Write-MpCommandLine 'modpack <command> --help'
-        Write-MpCommandLine 'modpack --version'
-        foreach ($group in @('PROJECTS', 'CONTENT', 'BUILD AND CONFIGURATION')) {
-            Write-MpHelpHeading $group
-            foreach ($name in $catalog.Keys) {
-                if ($catalog[$name].Group -eq $group) { Write-MpHelpRow -Label $name -Description $catalog[$name].Summary -Width 14 }
-            }
+    if ($Command -and -not $catalog.Contains($Command.ToLowerInvariant())) {
+        Throw-MpError -Message "Command '$Command' does not have a help page" -Hint 'modpack --help' -ErrorId 'Command.UnknownHelpTopic' -Category InvalidArgument
+    }
+    $commands = @(
+        foreach ($name in $catalog.Keys) {
+            $entry = $catalog[$name]
+            [pscustomobject]@{ Name=$name; Group=$entry.Group; Summary=$entry.Summary; Description=$entry.Description; Usage=$entry.Usage; Items=$entry.Items; Notes=$entry.Notes; Examples=$entry.Examples }
         }
-        Write-Host ''
-        Write-MpInfo 'Project commands accept --project <id>. It overrides the active project for that command.'
-        Write-MpInfo 'Run modpack <command> --help for detailed help.'
-        return
+    )
+    $view = [pscustomobject]@{
+        Product='MODPACKTOOLS'; Version=$script:ModuleVersion
+        Description='Manage, inspect, update, and build Packwiz modpacks.'; Invocation='modpack'
+        Groups=@('PROJECTS','CONTENT','BUILD AND CONFIGURATION'); Commands=$commands
+        Usage=@('modpack <command> [arguments] [options]','modpack <command> --help','modpack --version')
+        GlobalItems=@(
+            New-MpHelpItem '--version' 'Print the installed version.'
+            New-MpHelpItem '--colour auto|always|never' 'Control colour; auto follows terminal detection and NO_COLOR.'
+            New-MpHelpItem '--ascii' 'Use ASCII symbols for presentation.'
+        )
+        Notes=@('Project commands accept --project <id>. It overrides the active project for that command.','Run modpack <command> --help for detailed help.')
     }
-
-    $key = $Command.ToLowerInvariant()
-    if (-not $catalog.Contains($key)) {
-        Throw-MpError -Message "Command '$Command' does not have a help page" -Hint 'modpack --help' -ErrorId 'Command.UnknownHelpTopic' -Category InvalidArgument -TargetObject $Command
-    }
-    $entry = $catalog[$key]
-    Write-MpBanner $key.ToUpperInvariant()
-    Write-MpHelpText $entry.Description
-    Write-MpHelpHeading 'USAGE'
-    foreach ($usage in $entry.Usage) { Write-MpCommandLine $usage }
-    if ($entry.Items.Count) {
-        Write-MpHelpHeading 'ARGUMENTS AND OPTIONS'
-        foreach ($item in $entry.Items) { Write-MpHelpRow -Label $item.Label -Description $item.Description -Width 28 }
-    }
-    if ($entry.Notes.Count) {
-        Write-MpHelpHeading 'NOTES'
-        foreach ($note in $entry.Notes) { Write-MpInfo $note }
-    }
-    if ($entry.Examples.Count) {
-        Write-MpHelpHeading 'EXAMPLES'
-        foreach ($example in $entry.Examples) { Write-MpCommandLine $example }
-    }
+    [void](Test-R3HelpCatalogue $view -ExecutableCommands @($catalog.Keys))
+    Write-R3Help (Get-MpConsole) $view $Command
 }
