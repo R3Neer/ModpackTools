@@ -60,3 +60,7 @@ jobs:
               throw "Installed version $installed does not match manifest version $expected."
           }
           modpack --version
+
+      - name: Verify isolated presentation installation and failed upgrade
+        shell: pwsh
+        run: ./Tests/Invoke-PresentationIntegration.ps1

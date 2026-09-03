@@ -332,27 +332,32 @@ The UI says “Host”, although Packwiz's technical value is `server`.
 
 ## CLI presentation
 
-Menus, help pages, status views, confirmations, inventories, and build summaries share the same palette and visual hierarchy. The reserved `[C]` and `[H]` colors are used exclusively for client and host sides.
+ModpackTools uses the official PowerShell adapter from [R3CLI](https://github.com/R3Neer/R3CLI) for banners, help, tables, status messages and diagnostics. The adapter is bundled at an exact revision and verified by hash; Python and network access are not needed at runtime. Domain views retain inventory references, `[C]`/`[H]`, pins, LOCAL markers and resource priority.
+
+```powershell
+modpack --colour never inventory
+modpack inventory --ascii --colour auto
+modpack --help --colour always
+```
+
+Presentation options can appear before or after the command and must occur only once. Auto follows terminal detection and `NO_COLOR`; explicit colour modes take precedence. Human output uses PowerShell's information stream, warnings retain their stream, and expected errors remain catchable error records. The PowerShell host may strip ANSI during its own formatting or redirection even when the renderer generates it; no session-wide rendering preference is changed.
 
 ### Theme configuration
 
-The complete CLI palette has a single source of truth in `theme.toml`, located at the root of the ModpackTools source code:
+The default `theme.toml` extends R3CLI with product-specific roles:
 
 ```toml
-[colors]
+[colours]
 client = "#748FFC"
 host = "#BE70FF"
-success = "#50C878"
-error = "#F55A5A"
-process = "#F5C850"
-secondary = "#9196A0"
-heading = "#50CDDC"
 local = "#FF91CD"
-accent = "#FFAA46"
-value = "#EBEEF5"
 ```
 
-Colors use the `#RRGGBB` format. Every key is required so an incomplete theme fails clearly instead of silently mixing configured colors with hidden defaults. After editing the source file, run `./Install-ModpackTools.ps1 -Force` and reload the module. The installer copies this same file into the installed module; there is no second palette definition in PowerShell code.
+Common roles (`heading`, `accent`, `secondary`, `value`, `success`, `error`, `process`) inherit the canonical R3CLI palette. Add an explicit `#RRGGBB` override only when customising one. Client and host colours remain reserved for side badges.
+
+Legacy `[colors]` themes remain readable. Unchanged common colours inherit R3CLI; customised values are preserved. The installer retains a customised installed theme byte-for-byte during upgrades, and invalid themes fail before replacing the old installation. Changes to the installed theme are read on the next command.
+
+See [the integration and maintenance guide](docs/r3cli-integration.md) for dependency updates, stream behaviour and validation.
 
 ### Error messages
 
