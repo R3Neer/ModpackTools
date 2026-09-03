@@ -1,9 +1,14 @@
 # ModpackTools
 
+ModpackTools 3.0 introduces a transaction-based dependency engine for Packwiz
+projects. Adding, updating, pinning, changing sides, classifying content, and
+reordering resource packs now resolve the complete requested batch, validate
+the resulting project, and apply one prepared change set or leave the pack
+unchanged.
 
-Dependency-aware project operations now share staged transactions. See
-[the dependency engine guide](docs/dependency-engine.md) for atomic batches,
-`pin`/`unpin`, `--dry-run`, loader validation, `inventory --check`, and project repair.
+See [the dependency engine guide](docs/dependency-engine.md) for atomic
+batches, `pin`/`unpin`, `--dry-run`, loader validation, `inventory --check`,
+and project repair.
 
 [![CI](https://github.com/R3Neer/ModpackTools/actions/workflows/ci.yml/badge.svg)](https://github.com/R3Neer/ModpackTools/actions/workflows/ci.yml)
 
@@ -32,6 +37,18 @@ The installer is the only setup entry point. It can start under Windows PowerShe
 If Packwiz is already configured or available in `PATH`, it is reused. Otherwise the installer offers the Windows x64 build pinned in `dependencies.psd1`, verifies the archive and executable SHA-256 hashes, and installs it under `LocalApplicationData\ModpackTools\tools`. Adding that directory to the user `PATH` is optional. When declined, ModpackTools saves the executable path and calls it directly.
 
 The module is copied directly to `ModpackTools` under the first user directory in `PSModulePath`. It does not create numeric version subdirectories, modify `$PROFILE`, or keep older installed copies. PowerShell autoloads `modpack` when it is used.
+
+### Upgrading to 3.0
+
+Re-run `Install-ModpackTools.ps1` from the 3.0.0 release. The installer keeps
+a customized installed theme unchanged and verifies the bundled R3CLI adapter
+before replacing the module.
+
+The command contracts for content batches are intentionally stricter. Use
+`modpack add <selector...>` instead of the former `modpack add mod` form, and
+use `modpack classify set <mod...> <category>` instead of the former
+two-positional classification form. Run `modpack --help` after upgrading to
+review the current syntax.
 
 For unattended installation, `-NonInteractive` skips repair prompts and only reports environment health. `-SkipDoctor` skips the final diagnostic entirely.
 

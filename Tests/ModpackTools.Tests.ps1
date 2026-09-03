@@ -484,7 +484,7 @@ $Loader = "loader-version"
         }
 
         It 'prints the module version through the global version option' {
-            (modpack --version 6>&1 | Out-String).Trim() | Should Be 'ModpackTools 2.1.0'
+            (modpack --version 6>&1 | Out-String).Trim() | Should Be 'ModpackTools 3.0.0'
             { modpack version } | Should Throw "Command 'version' is not recognized"
         }
 
