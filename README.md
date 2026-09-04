@@ -1,96 +1,326 @@
 # ModpackTools
 
-ModpackTools 3.0 introduces a transaction-based dependency engine for Packwiz
-projects. Adding, updating, pinning, changing sides, classifying content, and
-reordering resource packs now resolve the complete requested batch, validate
-the resulting project, and apply one prepared change set or leave the pack
-unchanged.
-
-See [the dependency engine guide](docs/dependency-engine.md) for atomic
-batches, `pin`/`unpin`, `--dry-run`, loader validation, `inventory --check`,
-and project repair.
-
-OneDrive-synchronized project directories are supported. The installer and
-project engine share the same check to distinguish cloud placeholders from
-symbolic links and junctions, which remain blocked. After upgrading in an
-open terminal, run `Import-Module ModpackTools -Force` and select the project
-again with `modpack use <id>`.
-
 [![CI](https://github.com/R3Neer/ModpackTools/actions/workflows/ci.yml/badge.svg)](https://github.com/R3Neer/ModpackTools/actions/workflows/ci.yml)
 
-ModpackTools is a small CLI for managing multiple Minecraft Java modpacks based on Packwiz and exporting them to Modrinth. Its only public command is `modpack`.
+ModpackTools is a Windows PowerShell CLI for managing several Minecraft Java
+modpacks built with [Packwiz](https://packwiz.infra.link/). It inventories pack
+content, resolves compatible Modrinth releases and declared dependencies, applies
+multi-item changes as transactions, and exports checked `.mrpack` files. Its only
+public PowerShell command is `modpack`.
 
-## Design and sources of truth
+```text
+current project -> resolve -> validate -> plan -> apply -> checked MRPack
+```
 
-- Packwiz owns technical data: technical name, filename, version, side, provider, IDs, URLs, and hashes. Only local JARs without Packwiz metadata can have an explicit project-side override.
-- `.modpack` stores only identity and editorial decisions: short ID, display name/version, artifact name, categories, notes, and name overrides.
-- `config/defaultoptions-common.toml` owns the enabled resource-pack order.
-- `dependencies.psd1` pins the verified Packwiz build, download, and SHA-256 hashes used by managed installation.
-- `dist/` contains generated results and is never a source of truth for the modpack.
+## What it does
 
-A mod without metadata remains valid and appears under `MODS · UNCLASSIFIED`. A reference to a missing category produces a warning and the mod is not discarded.
+- Creates new Packwiz projects or adopts existing ones without replacing their
+  technical metadata.
+- Manages mods, resource packs and shader packs across named projects.
+- Resolves an entire add or update batch together, including transitive Modrinth
+  dependencies, pins and installed constraints.
+- Reads declared dependencies from Fabric, Quilt, Forge and NeoForge JAR metadata.
+- Applies project changes atomically with staging, rollback, recovery journals and
+  concurrent-change detection.
+- Keeps editorial categories and names separate from Packwiz's technical data.
+- Manages enabled resource-pack priority through Default Options.
+- Diagnoses the environment, project structure, dependency graph, verification
+  coverage and freshness of the latest `.mrpack`.
+- Uses R3CLI for consistent help, status output, colour and error presentation.
 
-## Installation
+Dependency validation has a deliberate boundary. It checks requirements that
+Modrinth and mod manifests declare; it does not launch Minecraft, execute mixins or
+prove that every mod will work at runtime. When metadata is missing or ambiguous,
+ModpackTools reports **verification incomplete** and states that the loader may
+still reject the pack during startup. Use `--strict` when incomplete verification
+must block an operation.
 
-ModpackTools targets Windows. Download and extract the [latest release](https://github.com/R3Neer/ModpackTools/releases/latest), or clone the repository. Then run this from the extracted or cloned directory:
+## Requirements
+
+- Windows and PowerShell 7 or newer.
+- Packwiz. The installer can download the pinned, hash-verified Windows build.
+- A directory whose direct children are Packwiz projects.
+
+Git and a standard Minecraft installation are optional integrations reported by
+`doctor`; they are not required to manage a project.
+
+## Install or update
+
+Download and extract the [latest release](https://github.com/R3Neer/ModpackTools/releases/latest),
+or clone this repository, then run:
 
 ```powershell
 .\Install-ModpackTools.ps1
 ```
 
-The installer is the only setup entry point. It can start under Windows PowerShell 5.1: when PowerShell 7 is missing, it offers to install the latest stable version with WinGet and relaunches itself under `pwsh`. It then installs the module, runs `modpack doctor --fix`, and offers to configure missing requirements.
+The installer can start under Windows PowerShell 5.1. If PowerShell 7 is missing,
+it offers to install it with WinGet and relaunches itself. It then installs the
+module, verifies the bundled R3CLI adapter, locates or installs Packwiz, and runs
+`modpack doctor --fix`.
 
-If Packwiz is already configured or available in `PATH`, it is reused. Otherwise the installer offers the Windows x64 build pinned in `dependencies.psd1`, verifies the archive and executable SHA-256 hashes, and installs it under `LocalApplicationData\ModpackTools\tools`. Adding that directory to the user `PATH` is optional. When declined, ModpackTools saves the executable path and calls it directly.
+The module is copied directly to `ModpackTools` under the first user directory in
+`PSModulePath`. Re-running the installer updates that copy while preserving a
+customized installed theme. For unattended installation:
 
-The module is copied directly to `ModpackTools` under the first user directory in `PSModulePath`. It does not create numeric version subdirectories, modify `$PROFILE`, or keep older installed copies. PowerShell autoloads `modpack` when it is used.
+```powershell
+.\Install-ModpackTools.ps1 -Force -NonInteractive
+.\Install-ModpackTools.ps1 -Force -NonInteractive -SkipDoctor
+```
 
-### Upgrading to 3.0
+After updating an open terminal, reload the module. A new terminal will autoload it:
 
-Re-run `Install-ModpackTools.ps1` from the latest 3.x release. The installer keeps
-a customized installed theme unchanged and verifies the bundled R3CLI adapter
-before replacing the module.
+```powershell
+Import-Module ModpackTools -Force
+modpack --version
+(Get-Module ModpackTools).Path
+```
 
-The command contracts for content batches are intentionally stricter. Use
-`modpack add <selector...>` instead of the former `modpack add mod` form, and
-use `modpack classify set <mod...> <category>` instead of the former
-two-positional classification form. Run `modpack --help` after upgrading to
-review the current syntax.
+Users coming from 2.x should review `modpack --help`: content commands now accept
+batches, `add` no longer uses the old `add mod` form, and category assignment uses
+`modpack classify set <mod...> <category>`.
 
-For unattended installation, `-NonInteractive` skips repair prompts and only reports environment health. `-SkipDoctor` skips the final diagnostic entirely.
+## Quick start
 
-## Initial configuration
+Configure the directory that contains your projects:
 
 ```powershell
 modpack config set root "D:\Minecraft"
-modpack config get root
-modpack config get packwiz
-modpack config set packwiz "C:\Tools\packwiz.exe"
-modpack config set packwiz auto
+modpack doctor
 ```
 
-Configuration is stored in the user's standard `LocalApplicationData\ModpackTools\config.psd1` directory. Packwiz resolution uses an explicit configured path first, then `PATH`, then the managed copy. `auto` removes the explicit override and restores discovery.
+Create a project, or adopt an existing Packwiz project:
 
-## Environment and project doctor
+```powershell
+modpack new vanilla-plus --name "Vanilla Plus" --minecraft 1.21.1 --loader fabric
+modpack init existing-pack --path "D:\Minecraft\Existing Pack"
+```
+
+Select it for the current PowerShell session and inspect it:
+
+```powershell
+modpack use vanilla-plus
+modpack status --full
+modpack inventory
+modpack doctor
+```
+
+Search, preview and apply content changes:
+
+```powershell
+modpack search sodium
+modpack add sodium lithium --dry-run
+modpack add sodium lithium
+modpack update --all --dry-run
+modpack update --all
+```
+
+Build only after reviewing project health:
 
 ```powershell
 modpack doctor
-modpack doctor --details
-modpack doctor --fix
-modpack doctor --fix --yes
+modpack build
+modpack diff
 ```
 
-`doctor` checks PowerShell, the loaded ModpackTools version, configuration writability, Packwiz resolution and invocation, the project root, project discovery, Git, and a standard Minecraft Java installation. With an active project or `--project`, it also checks structure, the index, editorial metadata and the dependency graph, accumulating diagnostics across damaged sections. It reports the project graph, verification coverage and latest `.mrpack` freshness separately. A stale build lists representative differences and says not to install it until `modpack build` succeeds. Known dependency conflicts are rendered as separate status entries. Optional recommendations are consolidated across client and server and grouped by owning mod. Incomplete verification is grouped by cause with an actionable explanation; `--details` expands every individual result. Without a selected project, environment diagnosis still works. Read-only diagnosis may populate caches; the configuration write probe is immediately removed.
+`build` writes the result to `dist/`. The generated artifact is checked against a
+fresh export of the prepared project before it replaces the previous build.
 
-Git and Minecraft Java are optional. A missing standard Minecraft installation produces a warning, not a failure; custom launchers may not be detected. Incomplete dependency verification means the available provider and JAR metadata was insufficient; Fabric Loader may still reject the pack during startup. Even complete declared-metadata verification does not execute Minecraft, mixins or mod runtime code. `doctor --fix` offers safe repairs for required components. It never installs Minecraft or rebuilds a stale artifact. `--yes` accepts recommended defaults without adding Packwiz to `PATH` or inventing a project root. Project repairs preview a transaction that can regenerate the index and resolve dependencies; they do not guess categories, rewrite corrupt metadata or remove content. A plan with no file changes finishes without asking for confirmation. Use `--dry-run` to review project changes, `--strict` to require complete verification, and `--allow-downgrade` to authorize automatic dependency downgrades.
+## Normal workflow
 
-## Project structure
+1. **Inspect:** `status`, `inventory`, `versions` and `doctor` show the current
+   project and any known or unverifiable requirements.
+2. **Preview:** add `--dry-run` to project mutations and builds to see the complete
+   batch without changing project files.
+3. **Apply:** ModpackTools resolves selectors against one initial view, freezes the
+   plan and commits it as one transaction.
+4. **Check:** run `doctor`; use `--details` for every incomplete requirement or
+   `--strict` when incomplete coverage must fail.
+5. **Build:** `build` validates again, refreshes Packwiz, exports in isolation and
+   verifies the result.
+6. **Compare:** `diff` shows semantic differences between the project and the
+   newest `.mrpack`, ignoring ZIP timestamps and compression details.
+
+Every command that operates on an existing project accepts `--project <id>`.
+This makes one-off commands explicit without changing the session selection:
+
+```powershell
+modpack inventory --project vanilla-plus --unclassified
+modpack doctor --project vanilla-plus
+modpack build --project vanilla-plus
+```
+
+## Command map
+
+Run `modpack --help` for the generated overview and
+`modpack <command> --help` for complete syntax and focused examples.
+
+| Area | Command | Purpose |
+|---|---|---|
+| Projects | `list` | List registered projects. |
+| Projects | `use` | Select the active project for this PowerShell session. |
+| Projects | `status` | Show a project summary or full configuration. |
+| Projects | `new` | Create a new Fabric, Quilt, Forge or NeoForge Packwiz project. |
+| Projects | `init` | Adopt an existing Packwiz project. |
+| Content | `inventory` | Inspect and filter mods, resource packs and shaders. |
+| Content | `search` | Search compatible Modrinth content. |
+| Content | `add` | Resolve and install a Modrinth batch with its dependencies. |
+| Content | `versions` | List compatible releases for installed Modrinth content. |
+| Content | `update` | Update selected content or all eligible managed content. |
+| Content | `pin` / `unpin` | Prevent or permit automatic version changes. |
+| Content | `classify` | Create, list, remove and assign editorial mod categories. |
+| Content | `side` | Correct whether mods are distributed to clients, hosts or both. |
+| Content | `resource` | Enable, move or disable resource packs through Default Options. |
+| Build | `doctor` | Diagnose and safely repair the environment or selected project. |
+| Build | `build` | Validate and export a checked `.mrpack`. |
+| Build | `diff` | Compare project content with the latest build. |
+| Configuration | `config` | Read or change the project root and Packwiz executable. |
+
+Global presentation options are `--colour auto|always|never` and `--ascii`.
+
+### Inventory and selectors
+
+Inventory filters can be combined:
+
+```powershell
+modpack inventory --type mod --category performance --side client
+modpack inventory --type resourcepack --state active
+modpack inventory --source local --search graves
+modpack inventory --unclassified
+modpack inventory --check
+```
+
+Supported filter values are:
+
+- `--type all|mod|resourcepack|shaderpack`
+- `--category <id|saved-number>` or `--unclassified`
+- `--side client|host|both|unknown`
+- `--source packwiz|local|builtin|missing`
+- `--state all|active|inactive`
+- `--search <text>`
+
+`inventory --check` downloads missing verification artifacts and refreshes health.
+The default inventory uses local data and valid caches without new downloads.
+
+Commands accept names, stable IDs, filenames and, where documented, saved numbers.
+Search results, inventory entries, categories and version lists have separate number
+scopes. They are project-bound and expire after 24 hours. An invalid or ambiguous
+selector cancels the whole batch; duplicates are consolidated in first-use order.
+
+## Dependency resolution and pins
+
+```powershell
+modpack add sodium lithium --category performance --dry-run
+modpack update sodium --to 2
+modpack update --all --type resourcepack
+modpack pin sodium lithium
+modpack unpin sodium
+```
+
+The resolver fixes explicitly requested versions, searches dependencies with
+backtracking, detects cycles and minimizes changes to installed content. It then
+prefers fewer changes to explicit items, fewer additions, newer releases and stable
+ID ordering. It never resolves a conflict by removing content or changing the
+project's Minecraft, loader or Java configuration.
+
+Automatic downgrades require `--allow-downgrade`. An explicit `update --to` may
+select an older release. `update --all` skips pins, and an operation that needs to
+change pinned content fails with an `unpin` instruction. Packwiz's `pin` field is
+the only pin source of truth.
+
+By default, add and update block conflicts introduced or aggravated by the planned
+change while retaining unrelated existing conflicts as warnings. Builds block all
+known required conflicts. `--strict` additionally requires complete verification
+and a clean graph.
+
+Automatic acquisition of new dependencies currently uses Modrinth. JAR validation
+works for supported loader metadata regardless of where the file came from, but
+ModpackTools does not invent replacement projects when another provider has no
+verifiable candidate. Local files are validated when possible and are never
+replaced automatically.
+
+See [Dependency engine and project transactions](docs/dependency-engine.md) for the
+full resolution, loader and policy contracts.
+
+## Atomic project changes
+
+`add`, `update`, `pin`, `unpin`, category and side batches, resource ordering,
+project repairs and builds use the same transaction layer.
+
+- Preparation happens outside the pack.
+- The project is locked and fingerprinted before preparation and commit.
+- A changed project aborts rather than merging against a stale plan.
+- A failed commit restores modified bytes and removes only files created by that
+  transaction.
+- A pending journal is recovered before another write begins.
+- `--dry-run` prepares and validates the same operation without committing project
+  files.
+
+Cloud-backed OneDrive directories are supported. Real symbolic links, junctions
+and linked paths remain blocked because their targets cannot be rolled back safely.
+
+## Health, repair and build freshness
+
+```powershell
+modpack doctor
+modpack doctor --project vanilla-plus --details
+modpack doctor --fix --dry-run
+modpack doctor --fix --yes --allow-downgrade
+modpack build --strict
+```
+
+Doctor reports three separate facts:
+
+| Result | Meaning |
+|---|---|
+| Known required issue | A declared conflict or broken required project component was found. |
+| Verification incomplete | Available provider or JAR metadata cannot prove every requirement. Loader startup may still fail. |
+| Latest `.mrpack` stale | The source project and newest installable artifact differ. Do not install that artifact; run `build`. |
+
+Optional dependency recommendations are grouped by owning mod. Incomplete checks
+are grouped by cause; `--details` lists every result. A success summary says no
+**known** required issues were found rather than claiming that Minecraft will run.
+
+`doctor --fix` can repair regenerable indexes and dependency changes with a
+determinate resolver solution. It previews the project transaction and respects the
+existing confirmation or `--yes`. It does not guess categories, reconstruct corrupt
+editorial metadata, remove content, install Minecraft or rebuild a stale artifact.
+
+Build options include:
+
+- `--no-refresh`: use an already valid index; dependency validation still runs.
+- `--strict`: block known conflicts and incomplete verification.
+- `--dry-run`: prepare, export and verify without replacing project files or builds.
+- `--keep-old`: write a timestamped artifact instead of replacing the usual name.
+- `--raw-log`: show Packwiz's repetitive manifest output.
+- `--open`: reveal the finished artifact in Explorer.
+
+`dist/` contains generated results and is never a project source of truth. A legacy
+`.mrpack` in the project root is preserved but ignored by new builds.
+
+## Resource packs and Default Options
+
+When Default Options and `config/defaultoptions-common.toml` are present,
+ModpackTools can edit the enabled resource-pack order as part of a transaction:
+
+```powershell
+modpack resource enable "Fresh Animations" --position 1
+modpack resource move A B C --position 2
+modpack resource disable A B
+modpack add <resource-pack> --enable --position 1
+```
+
+Position 1 is the highest visible Minecraft priority. For a batch, selected packs
+are removed first and inserted as one ordered block. `move` requires every selected
+pack to be active; disabling an inactive pack is a no-op. `add --enable` requires
+both `--enable` and `--position`, and installs and activates the batch in one
+transaction.
+
+## Project model and sources of truth
 
 ```text
-MyPack-1.21/
+MyPack/
 ├── pack.toml
 ├── index.toml
-├── README.md
-├── .gitignore
 ├── .modpack/
 │   ├── project.psd1
 │   └── metadata.psd1
@@ -101,274 +331,41 @@ MyPack-1.21/
 └── dist/
 ```
 
-### `project.psd1`
+| Data | Source of truth |
+|---|---|
+| Minecraft, loader, technical versions, files, hashes, provider IDs and managed sides | Packwiz files |
+| Stable project ID, display/build identity and optional target Java version | `.modpack/project.psd1` |
+| Categories, display overrides, notes and explicit/transitive intent | `.modpack/metadata.psd1` |
+| Enabled resource-pack order | `config/defaultoptions-common.toml` |
+| Generated installable artifacts | `dist/` (output only) |
+| Installer dependency versions and hashes | `dependencies.psd1` |
+
+Minimal project identity:
 
 ```powershell
 @{
     SchemaVersion  = 1
     Id             = 'example'
-    DisplayName    = 'My Pack'
-    DisplayVersion = '1.21'
-    OutputName     = 'MyPack-1.21.mrpack'
+    DisplayName    = 'Example Pack'
+    DisplayVersion = '1.21.1'
+    OutputName     = 'Example-Pack-1.21.1.mrpack'
+    JavaVersion    = '21' # optional, enables Java requirement checks
 }
 ```
 
-Minecraft, loader, and technical version are not duplicated: they are read from `pack.toml`. `DisplayName` and `DisplayVersion` are editorial concepts and may differ from the technical values.
-
-### `metadata.psd1`
-
-```powershell
-@{
-    Categories = @{
-        performance = @{ Name = 'PERFORMANCE'; Order = 10 }
-    }
-    Mods = @{
-        'modrinth:AANobbMI' = @{ Category = 'performance' }
-    }
-    ResourcePacks = @{
-        '$polymer-resources' = @{ Name = 'Polymer Resources' }
-    }
-}
-```
-
-Mod keys are stable, namespaced IDs: `modrinth:<id>`, `curseforge:<id>`, `packwiz:<path>`, or `local:<path>`.
-
-## Commands
-
-```powershell
-modpack --help
-modpack --version
-modpack doctor
-modpack build --help
-modpack list
-modpack use vp26
-modpack use
-modpack status
-modpack status vp26 --full
-modpack status --project vp26 --full
-modpack inventory
-modpack inventory --project vp26
-modpack inventory --category performance
-modpack inventory --side host --source local
-modpack inventory --type resourcepack --state active
-modpack inventory --search sodium
-modpack side set sodium client
-modpack versions sodium
-modpack update sodium --to 2
-modpack update sodium --strict
-modpack update 3
-modpack resource enable "Fresh Animations" --position 1
-modpack resource move "Fresh Animations" --position 3
-modpack resource enable "fresh-animations.zip" --position 3 --project vp26
-modpack resource disable "Fresh Animations"
-modpack search sodium
-modpack search "fresh animations" --type resourcepack
-modpack add 2
-modpack add sodium --category performance
-modpack classify list
-modpack classify create world-generation --name "WORLD GENERATION"
-modpack classify set sodium performance
-modpack classify remove world-generation
-modpack add sodium --project vp26 --category performance
-modpack update sodium
-modpack update sodium lithium ferrite-core
-modpack update --all
-modpack update --all --type resourcepack
-modpack update --all --project vp26
-modpack build
-modpack build vp26 --keep-old --raw-log
-modpack build --project vp26 --keep-old --raw-log
-modpack diff
-modpack diff vp26
-modpack diff --project vp26
-```
-
-Run `modpack --help` for the command overview or `modpack <command> --help` for a command's syntax, options, important behavior, and focused examples. Help is generated from one catalog so the overview and detailed pages stay consistent; `help` is not a command.
-
-Every command that operates on an existing project accepts `--project <id>`. After `modpack use <id>`, omit it to use the active project for the current PowerShell process. `status`, `inventory`, `build`, and `diff` also retain their positional ID shorthand; specifying both forms at once is rejected.
-
-### Inspecting and filtering the inventory
-
-`modpack inventory [id] [--project <id>]` displays mods, enabled and disabled resource packs, and shaders. Filters can be combined:
-
-- `--type all|mod|resourcepack|shaderpack`
-- `--category <id|number|unclassified>` or `--unclassified`; numbers come from `modpack classify list`
-- `--side client|host|both|unknown`
-- `--source packwiz|local|builtin|missing`
-- `--state all|active|inactive`
-- `--search <text>` searches the name, ID, and filename.
-
-`host` corresponds to Packwiz's technical `server` value. Category and side filters automatically narrow the view to mods; `--state` narrows it to resource packs.
-
-Every item displayed by `inventory` receives one global `[number]` for that exact filtered view. The numbering continues across mod categories, enabled and disabled resource packs, and shaders. It is saved for 24 hours and bound to the selected project. These references can be used by:
-
-```powershell
-modpack resource enable <inventory-number> --position <n>
-modpack resource move <inventory-number> --position <n>
-modpack resource disable <inventory-number>
-modpack classify set <inventory-number> <category|category-number|unclassified>
-modpack side set <inventory-number> <client|host|both>
-modpack versions <inventory-number>
-modpack update <inventory-number>...
-```
-
-Number contexts are deliberately separate. `modpack add <number>` resolves against the latest `search` results; a mod number passed to `side`, `versions`, or as a mod argument of `classify set`, and numbers passed to `resource` or as update selectors, resolve against the latest `inventory` view. `modpack update <content> --to <number>` uses the latest `versions` list. A category number passed as the final positional argument of `classify set` or to `classify remove` resolves against the latest `classify list`. The argument position determines the context, so the lists never become ambiguous. The caches are convenience references only; project files remain the sources of truth.
-
-### Enabling, disabling, and ordering resource packs
-
-```powershell
-modpack resource enable <selector...> --position <n> [--project <id>]
-modpack resource move <selector...> --position <n> [--project <id>]
-modpack resource disable <selector...> [--project <id>]
-```
-
-Each selector accepts the name displayed by `inventory`, the Default Options ID, or the exact filename. Position 1 is the highest priority visible in the Minecraft GUI. If the pack is already enabled, `enable` repositions it; if it is disabled, the command enables it. `move` requires an enabled pack and changes only its priority. `disable` removes it from the enabled order without deleting its ZIP or `.pw.toml`. Repeated disable operations are safe. A batch is resolved against one initial inventory; duplicates keep their first occurrence. For enable/move, selected packs are removed from the current order and inserted as one block in the requested order. The position is measured after removal, and every pack in a move batch must already be active. Ambiguous selectors and out-of-range positions are rejected without writing.
-
-These commands require the Default Options mod in the selected project and modify only `defaultResourcePacks` in `config/defaultoptions-common.toml`; they do not maintain a second activation list. If the mod is absent, the error suggests `modpack add WEg59z5b`, allowing the resolver to select a release compatible with that project's Minecraft version and loader.
-
-### Managing mod categories
-
-```powershell
-modpack classify list [--project <id>]
-modpack classify create <id> [--name <name>] [--order <n>] [--project <id>]
-modpack classify remove <category|number...> [--unclassify] [--project <id>]
-modpack classify set <mod|inventory-number...> <category|number|unclassified> [--project <id>]
-```
-
-`list` shows every classification, including `unclassified`, with its ID, display name, order where applicable, and assigned-mod count. Its numbers are saved for 24 hours and bound to the selected project. The final `unclassified` row can be used with `set`, but cannot be removed. `create` appends a category by default; `--name` controls its display label and `--order` controls its inventory order.
-
-`remove` accepts one or more IDs or numbers from the latest category list; a used category blocks the entire batch unless `--unclassify` is supplied. It refuses to remove a category that is assigned to mods unless `--unclassify` is explicit. `set` accepts a displayed mod name, stable ID, current filename, `.pw.toml` stem, or number from the latest inventory. Its final positional argument supplies the common category: an ID, a number from `classify list`, or `unclassified`. All preceding selectors are mods. Both batch commands support `--dry-run`.
-
-These operations change only editorial metadata in `.modpack/metadata.psd1`; they never move, reinstall, or modify Packwiz content. Clearing a category preserves other editorial fields such as a name override. The former two-positional form, such as `modpack classify sodium performance`, is invalid; the `set` operation is required.
-
-### Correcting a mod side
-
-```powershell
-modpack side set <mod|inventory-number...> <client|host|both> [--project <id>]
-```
-
-For Packwiz-managed mods this replaces the top-level `side` value in the existing `.pw.toml`, which remains the technical source of truth. For a local JAR, the command writes an explicit `Side` override to `.modpack/metadata.psd1` because there is no Packwiz metadata file to change. `host` is stored as Packwiz's `server` value. All selected mods receive the final side argument in one transaction; `--dry-run` previews the changes. The resulting dependency graph is checked for new conflicts. The command changes distribution metadata only; it cannot make an intrinsically client-only mod work on a dedicated server.
-
-### Creating a project
-
-```powershell
-modpack new demo --name Demo --minecraft 1.21.1 --loader fabric
-modpack new neoforge-demo --name "NeoForge Demo" --minecraft 1.21.1 --loader neoforge
-modpack new forge-demo --name "Forge Demo" --minecraft 1.20.1 --loader forge
-modpack new quilt-demo --name "Quilt Demo" --minecraft 1.21.1 --loader quilt
-```
-
-Fabric, Quilt, Forge, and NeoForge are supported for project creation. By default, Packwiz selects the latest compatible loader version; the technical pack version is `0.1.0`, the display version matches Minecraft, and the directory is `<Name>-<Minecraft>`. These can be adjusted with `--loader-version`, `--pack-version`, `--display-version`, and `--path`. Packwiz validates the Minecraft/loader combination. Creation uses a temporary directory and never overwrites the destination.
-
-### Adopting an existing Packwiz project
-
-An existing Fabric, Quilt, Forge, or NeoForge Packwiz project can be initialized for ModpackTools without changing its Packwiz metadata or installed content:
-
-```powershell
-cd "D:\Minecraft\Existing Pack"
-modpack init existing-pack
-
-modpack init another-pack --path "D:\Minecraft\Another Pack"
-```
-
-The project must be a direct child of the configured root and must contain a valid `pack.toml` plus its configured Packwiz index file. Custom relative index paths are supported. `init` creates the minimal `.modpack/project.psd1` and an empty editorial metadata file. Technical name, pack version, Minecraft version, loader, and index location continue to come exclusively from `pack.toml`. Use `--display-name`, `--display-version`, or `--output-name` only when an editorial override is wanted.
-
-Existing `README.md` and `.gitignore` files are preserved. When either file is absent, ModpackTools creates its standard project README or a `.gitignore` containing `dist/`. Initialization is transactional and removes only the files it created if validation fails.
-
-### Adding content
-
-`modpack add <selector...>` accepts Modrinth IDs, slugs, version URLs, or numbers from the last search and installs mods, resource packs, and shaders. The entire batch is resolved together, with requested versions fixed and only necessary dependency changes permitted. The plan freezes versions, files and hashes before materialization. `--category` applies an existing category only to explicitly requested mods, preserving dependency classifications. Resource packs can be installed and activated atomically with `--enable --position <n>`; both options and Default Options are required. Use `--dry-run`, `--strict` and `--allow-downgrade` as described below. The former `modpack add mod` form is invalid.
-
-### Searching Modrinth
-
-```powershell
-modpack search <query> [--type <mod|resourcepack|shaderpack>] [--limit <1-50>] [--project <id>]
-modpack add <number>
-```
-
-Search results are filtered by the selected project's Minecraft version. Mod-only searches also filter by its loader. Each result displays a temporary number, type, title, stable Modrinth project ID, slug, author, and download count.
-
-The numbered list is stored in `LocalApplicationData\ModpackTools\last-search.json`, expires after 24 hours, and is tied to the project used for the search. It exists only for command-line convenience: Packwiz remains the source of truth and installation uses the stable project ID. Running another search replaces the list. A number that is missing, expired, or belongs to another project is rejected without installing anything.
-
-### Selecting versions and updating content
-
-```powershell
-modpack versions <name|id|filename|inventory-number> [--project <id>]
-modpack update <selector> --to <version-id|version-number|versions-number> [--project <id>]
-modpack update <selector...> [--type <type>] [--strict] [--project <id>]
-modpack update --all [--type <type>] [--strict] [--project <id>]
-```
-
-`versions` queries Modrinth versions compatible with the project's Minecraft version and, for mods, its loader. Resource-pack versions use Modrinth's `minecraft` loader; shader versions are filtered by Minecraft version. The result marks the installed and latest compatible versions, saves numbered references for 24 hours, and binds them to the selected project and content item. Running `versions` again replaces that context.
-
-`update --to` moves one Modrinth-managed mod, resource pack, or shader to an exact compatible version, including an older release. It preserves an explicitly selected side, refreshes the Packwiz index, and rejects version numbers that identify more than one release. Local files and providers without Modrinth version metadata cannot use `--to`.
-
-Add and update share a dependency resolver that combines Modrinth relationships with Fabric, Quilt, Forge and NeoForge JAR metadata. It minimizes changes to installed content, respects pins, and never removes mods or changes the target Minecraft, loader or Java configuration to resolve conflicts. Automatic downgrades require `--allow-downgrade`; an explicit `update --to` can select an older release. New or affected mandatory conflicts block the operation. Existing unrelated conflicts and incomplete verification remain warnings; `--strict` requires a fully verified, conflict-free result. These checks cover declared requirements, not mixins or successful Minecraft startup.
-
-A selector can be the displayed name, stable ID, current filename, `.pw.toml` stem, or current inventory number. It can identify a mod, resource pack, or shader. Several selectors form one transaction prepared outside the pack. It covers `pack.toml`, the configurable index, technical metadata, editorial metadata and Default Options. A project lock, state checks, backups and a recovery journal protect application of the prepared result. `--dry-run` displays the plan without changing project files.
-
-`--all` skips pinned items and includes the remaining Packwiz-managed external content: mods, resource packs, and shaders. `--type mod|resourcepack|shaderpack` narrows either a selector operation or `--all`. Local JAR and ZIP files are never updated and are reported as non-updatable when explicitly selected. Updating does not generate a build; use `modpack diff` to review the changes and `modpack build` when ready.
-
-### Pinning content
-
-```powershell
-modpack pin <selector...> [--dry-run] [--project <id>]
-modpack unpin <selector...> [--dry-run] [--project <id>]
-```
-
-Pins use the technical Packwiz `pin` field. A request or dependency resolution that needs to change a pinned item fails with an instruction to unpin it. Explicit/transitive intent is recorded separately in the versioned `Content` section of `.modpack/metadata.psd1`; older entries default conservatively to explicit. Explicitly adding an installed dependency promotes it to explicit.
-
-### Building
-
-`modpack build` validates the structure and dependency graph before `packwiz refresh` and `packwiz modrinth export`. It uses the same provider-availability policy as `doctor`: unavailable candidate metadata produces incomplete verification instead of a contradictory build-only conflict. Known mandatory conflicts block export, including with `--no-refresh`. Incomplete verification warns by default and blocks with `--strict`. Preparation and export run in an isolated transaction. The generated artifact is compared semantically with a fresh export of the prepared project; only a matching, successful result replaces the artifact in `dist/`.
-
-A `.mrpack` left in the root of a migrated project is a legacy artifact that ModpackTools preserves to avoid deleting data. New builds and replacements live exclusively in `dist/`; the legacy file can be removed manually when it is no longer needed.
-
-- `--no-refresh`: skips `packwiz refresh`; requires an already valid index and still validates dependencies.
-- `--strict`: requires complete dependency verification and no mandatory conflicts.
-- `--dry-run`: prepares and verifies a build without writing project files or replacing artifacts.
-- `--keep-old`: generates the new artifact with a timestamp when the usual name exists.
-- `--raw-log`: also shows repetitive `added to manifest` lines.
-- `--open`: opens Explorer with the result selected.
-
-### Comparing with the latest build
-
-```powershell
-modpack diff [id] [--project <id>]
-```
-
-`diff` selects the newest `.mrpack` in `dist/`, creates a temporary Packwiz export of the current project without running `packwiz refresh`, and compares both artifacts semantically. It reports added, changed, and removed dependencies, mods, resource packs, shaders, configurations, local files, metadata, and other overrides. ZIP compression and entry timestamps do not create false differences.
-
-The hidden temporary artifact is created in `dist/` so Packwiz can export on the same volume, and it is always removed. It is excluded from baseline selection. The project, Packwiz index, and previous builds are not modified. When `dist/` contains no previous build, the command fails with a clear error.
-
-## Inventory and sides
-
-`.pw.toml` files provide `client`, `server`, or `both` for every supported loader. For local JAR files, ModpackTools currently reads `fabric.mod.json`; NeoForge local JARs remain valid but use `unknown` when their side cannot be inferred. Use `modpack side set` for an explicit correction.
-
-```text
-[C]    client only
-[H]    host/server only
-[C][H] both
-[?]    unknown
-```
-
-The UI says “Host”, although Packwiz's technical value is `server`.
-
-## CLI presentation
-
-ModpackTools uses the official PowerShell adapter from [R3CLI](https://github.com/R3Neer/R3CLI) for banners, help, tables, status messages and diagnostics. The adapter is bundled at an exact revision and verified by hash; Python and network access are not needed at runtime. Domain views retain inventory references, `[C]`/`[H]`, pins, LOCAL markers and resource priority.
-
-```powershell
-modpack --colour never inventory
-modpack inventory --ascii --colour auto
-modpack --help --colour always
-```
-
-Presentation options can appear before or after the command and must occur only once. Auto follows terminal detection and `NO_COLOR`; explicit colour modes take precedence. Human output uses PowerShell's information stream, warnings retain their stream, and expected errors remain catchable error records. The PowerShell host may strip ANSI during its own formatting or redirection even when the renderer generates it; no session-wide rendering preference is changed.
-
-### Theme configuration
-
-The default `theme.toml` extends R3CLI with product-specific roles:
+Editorial metadata keys use stable namespaced identities such as
+`modrinth:<project-id>`, `curseforge:<project-id>`, `packwiz:<path>` and
+`local:<path>`. Older content without recorded intent is treated conservatively as
+explicit. Adding an installed transitive dependency promotes it to explicit.
+
+## Output, errors and themes
+
+R3CLI owns the CLI layout, status symbols, help rendering, colour handling and
+expected-error format. ModpackTools supplies domain data and a small product theme.
+Expected failures show a concise cause, optional details and an actionable `Try:`
+line; unexpected PowerShell errors remain visible for diagnosis.
+
+The bundled `theme.toml` adds semantic colours for client, host and local content:
 
 ```toml
 [colours]
@@ -377,20 +374,53 @@ host = "#BE70FF"
 local = "#FF91CD"
 ```
 
-Common roles (`heading`, `accent`, `secondary`, `value`, `success`, `error`, `process`) inherit the canonical R3CLI palette. Add an explicit `#RRGGBB` override only when customising one. Client and host colours remain reserved for side badges.
+Place a complete personal theme at
+`$env:LOCALAPPDATA\ModpackTools\theme.toml`. User values override the bundled theme;
+missing roles fall back through R3CLI. `NO_COLOR` and redirected output disable ANSI
+under automatic colour detection.
 
-Legacy `[colors]` themes remain readable. Unchanged common colours inherit R3CLI; customised values are preserved. The installer retains a customised installed theme byte-for-byte during upgrades, and invalid themes fail before replacing the old installation. Changes to the installed theme are read on the next command.
+See [R3CLI integration](docs/r3cli-integration.md) and
+[Error design](docs/error-design.md) for the presentation contracts.
 
-See [the integration and maintenance guide](docs/r3cli-integration.md) for dependency updates, stream behaviour and validation.
+## Troubleshooting
 
-### Error messages
+- **A new terminal loads an old version:** run `Get-Module -ListAvailable
+  ModpackTools | Select Version,Path`, update every unintended duplicate, then check
+  `modpack --version` and `(Get-Module ModpackTools).Path` in a normal new terminal.
+- **The active project disappeared:** `modpack use` is session-local. Select it
+  again or pass `--project <id>`.
+- **Doctor says verification is incomplete:** use `doctor --details`; add
+  `JavaVersion` when appropriate, but do not interpret incomplete coverage as a
+  successful loader launch.
+- **Doctor says the `.mrpack` is stale:** the project changed after the last build.
+  Run `modpack build` and install the new file from `dist/`.
+- **A synced folder is rejected as linked:** normal OneDrive Files On-Demand folders
+  are supported. Move real symlinks or junctions out of the transactional project.
+- **A local JAR is outdated:** local files participate in validation but must be
+  replaced manually.
 
-Expected CLI errors use a shared structure: a precise cause, optional upstream details, and one actionable `Try:` line. They also expose stable `ModpackTools.<area>.<condition>` error IDs and no longer report private module source lines as the apparent failure location. Unexpected programming errors remain ordinary PowerShell exceptions so diagnostic context is preserved. The complete contract and audited error namespaces are documented in [`docs/error-design.md`](docs/error-design.md).
+## Development and documentation
 
-## Default Options
+Run the deterministic suite with PowerShell 7 and Pester 4.10.1:
 
-Default Options is an optional per-project integration reported by `modpack doctor`. It is required by `modpack resource enable`, `move`, `disable`, and `add --enable --position`. When the mod and `config/defaultoptions-common.toml` exist, `defaultResourcePacks` is the source of truth for enabled ordering. Default Options stores packs from lowest to highest priority; ModpackTools reverses the list to display the actual GUI priority. The parser supports brackets, apostrophes, symbols, and escapes inside strings. Built-in IDs without an override are displayed literally. Physical ZIP files not included in the list appear as present but disabled.
+```powershell
+Import-Module Pester -RequiredVersion 4.10.1
+Invoke-Pester -Script .\Tests
+```
+
+The optional live integration creates a disposable project, downloads real
+Modrinth artifacts and inspects the generated MRPack:
+
+```powershell
+.\Tests\Invoke-LiveIntegration.ps1 -WorkRoot <scratch-directory> -PackwizPath <packwiz.exe>
+```
+
+Further documentation:
+
+- [Dependency engine and project transactions](docs/dependency-engine.md)
+- [R3CLI integration](docs/r3cli-integration.md)
+- [Error design](docs/error-design.md)
 
 ## License
 
-ModpackTools is released under the [MIT License](LICENSE).
+[MIT](LICENSE)
