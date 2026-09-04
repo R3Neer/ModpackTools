@@ -21,6 +21,7 @@ modpack add <resource-pack-slug> --enable --position 1
 modpack inventory --check
 modpack build --strict
 modpack doctor --project my-pack
+modpack doctor --project my-pack --details
 modpack doctor --fix --dry-run
 modpack doctor --fix --yes --allow-downgrade
 ```
@@ -95,7 +96,9 @@ providers retain staged updates with validation of the prepared result.
 `Transaction.ps1` owns staging, the project lock, fingerprints and recovery.
 `LoaderMetadata.ps1`, `Graph.ps1` and `Resolver.ps1` own parsing, diagnostics and
 resolution; `Operations.ps1` and `Batch.ps1` connect the command handlers.
-`Health.ps1` serves inventory, build and doctor from the same graph report.
+`Health.ps1` serves inventory, build and doctor from the same graph report. Graph
+issues carry structured cause codes so presentation can consolidate sides, group
+recommendations and explain incomplete verification without parsing message text.
 
 Staging and journals live under the ModpackTools configuration directory, outside
 the pack. The source tree is copied without `.git`; linked paths are rejected.
@@ -115,7 +118,9 @@ renames to unrelated processes. A pending conflicted journal requires reconcilia
 
 Build preserves the previous artifact until the staged export succeeds. Doctor's
 environment repair remains separate. Project repair previews the file plan, uses
-the existing confirmation/`--yes`, and rejects a changed plan before applying it.
+the existing confirmation/`--yes` when the plan contains changes, and rejects a
+changed plan before applying it. Empty plans finish without prompting or running a
+second transaction.
 It regenerates the index and resolves repairable required dependencies without
 guessing categories or rewriting corrupt editorial metadata.
 

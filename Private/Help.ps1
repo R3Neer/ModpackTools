@@ -159,7 +159,8 @@ function Get-MpCommandCatalog {
             Usage = @('modpack doctor [options]'); Items = @(
                 New-MpHelpItem '--fix' 'Offer safe repairs for missing required components.'
                 New-MpHelpItem '--yes' 'Accept recommended repair defaults without prompts. Requires --fix.'
-            ); Notes = @('Minecraft Java and Git are optional. Their warnings do not prevent ModpackTools from working.', 'Doctor never installs Minecraft.'); Examples = @('modpack doctor', 'modpack doctor --fix', 'modpack doctor --fix --yes')
+                New-MpHelpItem '--details' 'List every incomplete dependency verification grouped by cause.'
+            ); Notes = @('Minecraft Java and Git are optional. Their warnings do not prevent ModpackTools from working.', 'Doctor never installs Minecraft.'); Examples = @('modpack doctor', 'modpack doctor --details', 'modpack doctor --fix --yes')
         }
         config = [pscustomobject]@{
             Handler = 'Invoke-MpConfig'; Group = 'BUILD AND CONFIGURATION'; Summary = 'View or change global configuration'; Description = 'Read or change ModpackTools global configuration.'

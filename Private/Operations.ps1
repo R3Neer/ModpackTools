@@ -106,12 +106,12 @@ function Invoke-MpUpdate {
 }
 
 function Write-MpContentPlan {
-    param($Plan)
+    param($Plan, [switch]$SkipHealth)
     foreach ($change in $Plan.Changes) {
         $previous = if ($change.Before) { $change.Before.VersionId } else { 'not installed' }
         Write-R3Status (Get-MpConsole) info "$($change.After.Item.Name): $previous -> $($change.After.VersionId) ($($change.Reason))"
     }
-    if ($Plan.Report -and $Plan.Report.PSObject.Properties['Errors'] -and $Plan.Report.PSObject.Properties['Unknown'] -and $Plan.Report.PSObject.Properties['Warnings']) {
-        foreach ($item in @(Get-MpHealthDisplayItems $Plan.Report)) { Write-MpDoctorItem -Status $item.Status -Text $item.Text }
+    if (-not $SkipHealth -and $Plan.Report -and $Plan.Report.PSObject.Properties['Errors'] -and $Plan.Report.PSObject.Properties['Unknown'] -and $Plan.Report.PSObject.Properties['Warnings']) {
+        foreach ($item in @(Get-MpHealthDisplayItems $Plan.Report -Compact)) { Write-MpDoctorItem -Status $item.Status -Text $item.Text }
     }
 }

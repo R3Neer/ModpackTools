@@ -91,6 +91,7 @@ function Resolve-MpProviderAvailabilityReport {
         }
         if (-not $Context.ProviderAvailability[$requirement.Target]) {
             $issue.Severity = 'unknown'
+            $issue.Code = 'provider.no-compatible-candidate'
             $issue.Message += '; provider metadata exposes no compatible candidate'
         }
     }

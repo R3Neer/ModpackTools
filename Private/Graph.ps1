@@ -143,9 +143,18 @@ function Get-MpProjectState {
 }
 
 function New-MpGraphIssue {
-    param($Owner, $Requirement, [string]$Side, [string]$Severity, [string]$Message)
+    param($Owner, $Requirement, [string]$Side, [string]$Severity, [string]$Message, [string]$Code = 'verification.requirement')
     $identity = "$($Owner.Id)|$($Owner.VersionId)|$Side|" + ($Requirement | ConvertTo-Json -Depth 30 -Compress)
-    [pscustomobject]@{ Key = Get-MpHash $identity; Owner = $Owner.Id; Requirement = $Requirement; Side = $Side; Severity = $Severity; Message = $Message }
+    [pscustomobject]@{
+        Key = Get-MpHash $identity
+        Code = $Code
+        Owner = $Owner.Id
+        OwnerName = $Owner.Item.Name
+        Requirement = $Requirement
+        Side = $Side
+        Severity = $Severity
+        Message = $Message
+    }
 }
 
 function Test-MpRequirement {
@@ -194,7 +203,10 @@ function Get-MpGraphReport {
     param($Project, [hashtable]$Nodes)
     $issues = [Collections.Generic.List[object]]::new()
     foreach ($node in $Nodes.Values) {
-        foreach ($warning in $node.Warnings) { $issues.Add((New-MpGraphIssue $node $warning 'both' 'unknown' "$($node.Item.Name): $warning")) }
+        foreach ($warning in $node.Warnings) {
+            $code = if ($warning -eq 'Provider dependency metadata is unavailable') { 'provider.metadata-unavailable' } else { 'verification.metadata' }
+            $issues.Add((New-MpGraphIssue $node $warning 'both' 'unknown' "$($node.Item.Name): $warning" -Code $code))
+        }
     }
     foreach ($side in @('client','server')) {
         $active = @{}; $nativeOwners = @{}; $mods = @{ minecraft = @($Project.MinecraftVersion) }
@@ -220,7 +232,8 @@ function Get-MpGraphReport {
                 $topLevel = @($nativeOwners[$id] | Where-Object { -not $_.Nested })
                 $severity = if ($topLevel.Count -gt 1) { 'error' } else { 'unknown' }
                 $message = if ($topLevel.Count -gt 1) { "Duplicate top-level mod ID '$id' [$side]" } else { "Multiple bundled versions of '$id' require runtime selection [$side]" }
-                $issues.Add((New-MpGraphIssue $nativeOwners[$id][0].Node (New-MpRequirement -Target $id) $side $severity $message))
+                $code = if ($severity -eq 'error') { 'conflict.duplicate-id' } else { 'verification.bundled-selection' }
+                $issues.Add((New-MpGraphIssue $nativeOwners[$id][0].Node (New-MpRequirement -Target $id) $side $severity $message -Code $code))
             }
         }
         foreach ($node in $active.Values) {
@@ -232,11 +245,17 @@ function Get-MpGraphReport {
                 if ($valid -eq $true) { continue }
                 if ($valid -eq $false -and $requirement.Scope -eq 'mod' -and $requirement.Target -and -not $mods.ContainsKey($requirement.Target) -and @($active.Values | Where-Object { $_.Item.Kind -eq 'mod' -and $_.Mods.Count -eq 0 }).Count) { $valid = $null }
                 $severity = if ($null -eq $valid) { 'unknown' } elseif ($requirement.Kind -in @('recommended','discouraged')) { 'warning' } else { 'error' }
+                $code = if ($severity -eq 'error') { 'conflict.required' }
+                    elseif ($severity -eq 'warning') { if ($requirement.Kind -eq 'discouraged') { 'recommendation.discouraged' } else { 'recommendation.optional' } }
+                    elseif ($requirement.Target -eq 'java' -and -not $mods.ContainsKey('java')) { 'environment.java-undeclared' }
+                    elseif ($requirement.Scope -eq 'project' -and (Get-MpPropertyValue $requirement 'SuggestedVersionId')) { 'provider.version-differs' }
+                    elseif ($mods.ContainsKey($requirement.Target)) { 'version-range.unsupported' }
+                    else { 'verification.requirement' }
                 $constraint = $requirement.Range -join ' OR '
                 $suggestedVersion = [string](Get-MpPropertyValue $requirement 'SuggestedVersionId')
                 if ($suggestedVersion) { $constraint = "provider version $suggestedVersion" }
                 $message = "$($node.Item.Name): $($requirement.Kind) $($requirement.Target) $constraint [$side]"
-                $issue = New-MpGraphIssue $node $requirement $side $severity $message
+                $issue = New-MpGraphIssue $node $requirement $side $severity $message -Code $code
                 $facts = @(foreach ($target in @(Get-MpRequirementTargets $requirement)) {
                     if ($target.Scope -eq 'project' -and $active.ContainsKey($target.Target)) { $active[$target.Target].VersionId }
                     elseif ($mods.ContainsKey($target.Target)) { $mods[$target.Target] }
@@ -248,7 +267,7 @@ function Get-MpGraphReport {
     }
     foreach ($relative in @('config/fabric_loader_dependencies.json','config/quilt-loader-overrides.json')) {
         if (Test-Path -LiteralPath (Join-Path $Project.Root $relative)) {
-            $issues.Add([pscustomobject]@{ Key = Get-MpHash $relative; Owner = ''; Requirement = $null; Side = 'both'; Severity = 'unknown'; Message = "Runtime overrides in $relative require manual verification" })
+            $issues.Add([pscustomobject]@{ Key = Get-MpHash $relative; Code = 'verification.runtime-override'; Owner = ''; OwnerName = ''; Requirement = $null; Side = 'both'; Severity = 'unknown'; Message = "Runtime overrides in $relative require manual verification" })
         }
     }
     $all = @($issues | Sort-Object Key,Severity -Unique)

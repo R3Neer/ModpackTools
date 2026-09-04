@@ -119,16 +119,22 @@ InModuleScope ModpackTools {
             $check.Value | Should Match ([regex]::Escape($script:verifiedR3.Revision))
         }
 
-        It 'renders dependency conflicts as separate statuses and summarizes incomplete verification' {
+        It 'renders conflicts, consolidates recommendations by side and groups incomplete verification' {
+            $recommendation = New-MpRequirement -Target appleskin -Kind recommended
+            $java = New-MpRequirement -Target java -Range '>=25'
             $health = [pscustomobject]@{
                 Errors = @(
                     [pscustomobject]@{ Message = 'First dependency conflict' },
                     [pscustomobject]@{ Message = 'Second dependency conflict' }
                 )
-                Warnings = @([pscustomobject]@{ Message = 'Optional recommendation detail' })
+                Warnings = @(
+                    [pscustomobject]@{ Code='recommendation.optional'; Owner='combatify'; OwnerName='Combatify'; Requirement=$recommendation; Side='client'; Message='Combatify: recommended appleskin * [client]' },
+                    [pscustomobject]@{ Code='recommendation.optional'; Owner='combatify'; OwnerName='Combatify'; Requirement=$recommendation; Side='server'; Message='Combatify: recommended appleskin * [server]' }
+                )
                 Unknown = @(
-                    [pscustomobject]@{ Message = 'Unavailable detail one' },
-                    [pscustomobject]@{ Message = 'Unavailable detail two' }
+                    [pscustomobject]@{ Code='environment.java-undeclared'; Owner='example'; OwnerName='Example'; Requirement=$java; Side='client'; Message='Example: required java >=25 [client]' },
+                    [pscustomobject]@{ Code='environment.java-undeclared'; Owner='example'; OwnerName='Example'; Requirement=$java; Side='server'; Message='Example: required java >=25 [server]' },
+                    [pscustomobject]@{ Code='provider.metadata-unavailable'; Owner='local'; OwnerName='Local'; Requirement=$null; Side='both'; Message='Local: Provider dependency metadata is unavailable' }
                 )
             }
             $check = New-MpDoctorCheck PROJECT fail Dependencies '2 conflict(s)' -Items @(Get-MpHealthDisplayItems $health)
@@ -137,11 +143,43 @@ InModuleScope ModpackTools {
             $text | Should Match 'First dependency conflict'
             $text | Should Match 'Second dependency conflict'
             $text | Should Match '1 optional dependency recommendation\(s\)'
+            $text | Should Match 'Combatify: appleskin \[client/server\]'
             $text | Should Match '2 requirement\(s\) could not be verified'
-            $text | Should Not Match 'Optional recommendation detail'
-            $text | Should Not Match 'Unavailable detail one'
-            $text | Should Not Match 'Unavailable detail two'
+            $text | Should Match '1 Java requirement\(s\) cannot be checked'
+            $text | Should Match '1 item\(s\) do not expose provider dependency metadata'
+            $text | Should Match 'Run: modpack doctor --details'
+            $text | Should Not Match 'Example: required java'
             $text | Should Not Match 'First dependency conflict; Second dependency conflict'
+
+            $detailed = (@(Get-MpHealthDisplayItems $health -Details) | ForEach-Object Text) -join "`n"
+            $detailed | Should Match 'Example: required java >=25 \[client/server\]'
+            $detailed | Should Match 'Local: Provider dependency metadata is unavailable'
+            $detailed | Should Not Match 'Run: modpack doctor --details'
+        }
+
+        It 'names warning checks instead of reporting an unexplained optional count' {
+            $check = New-MpDoctorCheck PROJECT warn Dependencies 'Verification incomplete'
+            $report = [pscustomobject]@{ Checks = @($check); Failures = 0; Warnings = 1 }
+            $text = (Write-MpDoctorReport $report *>&1 | ForEach-Object { [string]$_ }) -join "`n"
+            $text | Should Match 'Warning\(s\) remain in: Dependencies'
+            $text | Should Not Match '1 optional warning'
+        }
+
+        It 'does not prompt or apply a doctor repair plan with no file changes' {
+            $health = [pscustomobject]@{ Errors=@(); Warnings=@(); Unknown=@() }
+            $plan = [pscustomobject]@{ Changes=@(); Baseline=$health; Report=$health }
+            Mock Resolve-MpCommandProject { [pscustomobject]@{ Id='fixture' } }
+            Mock Repair-MpDoctorEnvironment {}
+            Mock Invoke-MpContentOperation { [pscustomobject]@{ Changes=@(); Result=$plan } }
+            Mock Confirm-MpDoctorAction { $true }
+            Mock Get-MpDoctorReport { [pscustomobject]@{ Checks=@(); Failures=0; Warnings=0 } }
+            Mock Get-MpProjectDoctorChecks { @() }
+            Mock Write-MpDoctorReport {}
+
+            Invoke-MpDoctor @('--project','fixture','--fix')
+
+            Assert-MockCalled Confirm-MpDoctorAction -Times 0 -Scope It
+            Assert-MockCalled Invoke-MpContentOperation -Times 1 -Scope It
         }
     }
 }

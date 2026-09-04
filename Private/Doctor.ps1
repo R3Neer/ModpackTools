@@ -214,6 +214,9 @@ function Write-MpDoctorReport {
     }
     else {
         Write-MpDoctorSummary -Status pass -Text 'Everything required is ready.'
-        if ($Report.Warnings) { Write-MpDoctorSummary -Status warn -Text "$($Report.Warnings) optional warning(s)." }
+        if ($Report.Warnings) {
+            $labels = @($Report.Checks | Where-Object Status -eq warn | ForEach-Object Label | Sort-Object -Unique)
+            Write-MpDoctorSummary -Status warn -Text "Warning(s) remain in: $($labels -join ', ')."
+        }
     }
 }
