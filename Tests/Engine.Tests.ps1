@@ -413,6 +413,38 @@ InModuleScope ModpackTools {
             { Build-ModpackProject $script:FixtureProject -NoRefresh } | Should Throw 'dependency validation'
             Assert-MockCalled Invoke-Packwiz -Times 0 -Scope It
         }
+        It 'uses the same unavailable-provider policy for doctor and build' {
+            [void](Add-FixtureVersion owner '1' -Installed -ProviderDependencies @(@{ project_id='ghost'; version_id=$null; dependency_type='required' }))
+            $script:FixtureApi['project/ghost'] = [pscustomobject]@{ id='ghost'; title='Ghost'; project_type='mod'; server_side='required'; client_side='required' }
+            $script:FixtureApi['project/ghost/version'] = @()
+            Mock Test-MpProjectIndex { @() }
+            Mock Invoke-MpStagedBuild {
+                $path = Join-Path $Project.Root 'dist/fixture.mrpack'
+                [void][IO.Directory]::CreateDirectory((Split-Path -Parent $path)); [IO.File]::WriteAllText($path,'artifact')
+                $inventory = Get-ModpackInventory $Project
+                [pscustomobject]@{ Path=$path; Size=8; Duration=[timespan]::Zero; Log=@(); RawLog=@(); Inventory=$inventory }
+            }
+            Mock Compare-MpBuildArtifactToProject { [pscustomobject]@{ Added=@(); Changed=@(); Removed=@(); Total=0 } }
+
+            $build = Build-ModpackProject $script:FixtureProject -DryRun
+
+            $build.Health.Errors.Count | Should Be 0
+            $build.Health.Unknown.Count | Should BeGreaterThan 0
+            Assert-MockCalled Invoke-MpStagedBuild -Times 1 -Scope It
+        }
+        It 'rejects an exported artifact that differs from the prepared project' {
+            [void](Add-FixtureVersion example '1' -Installed)
+            Mock Test-MpProjectIndex { @() }
+            Mock Invoke-MpStagedBuild {
+                $path = Join-Path $Project.Root 'dist/fixture.mrpack'
+                [void][IO.Directory]::CreateDirectory((Split-Path -Parent $path)); [IO.File]::WriteAllText($path,'artifact')
+                $inventory = Get-ModpackInventory $Project
+                [pscustomobject]@{ Path=$path; Size=8; Duration=[timespan]::Zero; Log=@(); RawLog=@(); Inventory=$inventory }
+            }
+            Mock Compare-MpBuildArtifactToProject { [pscustomobject]@{ Added=@([pscustomobject]@{Path='mods/missing.jar'}); Changed=@(); Removed=@(); Total=1 } }
+
+            { Build-ModpackProject $script:FixtureProject -DryRun } | Should Throw 'does not match the prepared project'
+        }
         It 'preserves the previous artifact on export failure' {
             $path = Join-Path $script:FixtureProject.Root ('dist/' + $script:FixtureProject.OutputName)
             [void][IO.Directory]::CreateDirectory((Split-Path -Parent $path)); [IO.File]::WriteAllText($path,'original')
@@ -429,6 +461,23 @@ InModuleScope ModpackTools {
             $jar = New-FixtureJar 'local.jar' @{ 'fabric.mod.json'='{"schemaVersion":1,"id":"local","version":"1","depends":{"missing":"*"}}' }
             [IO.File]::Copy($jar,(Join-Path $script:FixtureProject.Root 'mods/local.jar'))
             (Get-MpProjectHealth $script:FixtureProject).Errors.Count | Should BeGreaterThan 0
+        }
+        It 'reports a stale installable artifact separately from project health' {
+            $artifact = Join-Path $script:FixtureProject.Root 'dist/fixture.mrpack'
+            [void][IO.Directory]::CreateDirectory((Split-Path -Parent $artifact)); [IO.File]::WriteAllText($artifact,'old')
+            Mock Compare-MpBuildArtifactToProject {
+                [pscustomobject]@{
+                    Added=@([pscustomobject]@{Kind='MOD';Path='mods/new.jar'})
+                    Changed=@(); Removed=@([pscustomobject]@{Kind='MOD';Path='mods/old.jar'}); Total=2
+                }
+            }
+
+            $check = Get-MpBuildArtifactDoctorCheck $script:FixtureProject
+
+            $check.Section | Should Be 'BUILD ARTIFACT'
+            $check.Status | Should Be warn
+            $check.Value | Should Be Stale
+            ($check.Items.Text -join '; ') | Should Match 'Do not install this artifact'
         }
         It 'rejects duplicate provider identities instead of hiding one artifact' {
             [void](Add-FixtureVersion a '1' -Installed)

@@ -197,7 +197,7 @@ function Repair-MpDoctorEnvironment {
 function Write-MpDoctorReport {
     param([Parameter(Mandatory)]$Report)
     Write-R3Banner (Get-MpConsole) 'MODPACKTOOLS · DOCTOR'
-    foreach ($section in @('SYSTEM', 'PACKWIZ', 'PROJECT ROOT', 'PROJECT', 'OPTIONAL')) {
+    foreach ($section in @('SYSTEM', 'PACKWIZ', 'PROJECT ROOT', 'PROJECT', 'BUILD ARTIFACT', 'OPTIONAL')) {
         $items = @($Report.Checks | Where-Object Section -eq $section)
         if (-not $items.Count) { continue }
         Write-R3Heading (Get-MpConsole) $section
@@ -213,7 +213,7 @@ function Write-MpDoctorReport {
         Write-MpDoctorSummary -Status fail -Text "$($Report.Failures) required issue(s) need attention. Run: modpack doctor --fix"
     }
     else {
-        Write-MpDoctorSummary -Status pass -Text 'Everything required is ready.'
+        Write-MpDoctorSummary -Status pass -Text 'No known required issues were found.'
         if ($Report.Warnings) {
             $labels = @($Report.Checks | Where-Object Status -eq warn | ForEach-Object Label | Sort-Object -Unique)
             Write-MpDoctorSummary -Status warn -Text "Warning(s) remain in: $($labels -join ', ')."

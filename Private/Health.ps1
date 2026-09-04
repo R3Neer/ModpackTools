@@ -1,3 +1,10 @@
+function Get-MpValidatedGraphReport {
+    param($Project, $State, [switch]$Check)
+    $report = Get-MpGraphReport $Project $State.Nodes
+    $context = @{ Project = $Project; Info = @{}; Domains = @{}; DomainKnown = @{}; ProviderAvailability = @{}; Check = [bool]$Check }
+    return Resolve-MpProviderAvailabilityReport $context $State.Nodes $report
+}
+
 function Get-MpProjectHealth {
     param($Project, [switch]$Check)
     $tree = Get-MpTreeState $Project.Root
@@ -10,9 +17,7 @@ function Get-MpProjectHealth {
         } catch { Write-Verbose 'Ignoring unreadable health cache' }
     }
     $state = Get-MpProjectState $Project -Check:$Check
-    $report = Get-MpGraphReport $Project $state.Nodes
-    $context = @{ Project = $Project; Info = @{}; Domains = @{}; DomainKnown = @{}; ProviderAvailability = @{}; Check = [bool]$Check }
-    $report = Resolve-MpProviderAvailabilityReport $context $state.Nodes $report
+    $report = Get-MpValidatedGraphReport $Project $state -Check:$Check
     [void][IO.Directory]::CreateDirectory((Split-Path -Parent $path))
     Write-Utf8TextFileAtomic $path (@{ Fingerprint = $fingerprint; CreatedUtc = [datetime]::UtcNow.ToString('o'); Report = $report } | ConvertTo-Json -Depth 60)
     return $report
@@ -154,6 +159,16 @@ function Get-MpHealthDisplayItems {
             }
             if (-not $Details) { [pscustomobject]@{ Status = 'info'; Text = 'Run: modpack doctor --details' } }
         }
+        [pscustomobject]@{
+            Status = 'warn'
+            Text = 'Verification is incomplete; Fabric Loader may still reject this pack during startup.'
+        }
+    }
+    elseif (-not $Compact) {
+        [pscustomobject]@{
+            Status = 'info'
+            Text = 'Scope: declared dependency metadata only; game startup, mixins and runtime behaviour are not tested.'
+        }
     }
 }
 
@@ -181,6 +196,66 @@ function Test-MpProjectIndex {
     return @($issues)
 }
 
+function Get-MpBuildArtifactStatus {
+    param($Project)
+    $artifact = Get-MpLatestBuildFile $Project
+    if (-not $artifact) {
+        return [pscustomobject]@{ State='missing'; Path=''; BuiltUtc=$null; Total=0; Added=@(); Changed=@(); Removed=@(); Error='' }
+    }
+    $tree = Get-MpTreeState $Project.Root
+    $sourceFingerprint = Get-MpHash (@($tree.Keys | Where-Object { $_ -notlike 'dist/*' } | Sort-Object | ForEach-Object { "$_=$($tree[$_])" }) -join "`n")
+    $artifactFingerprint = (Get-FileHash -LiteralPath $artifact.FullName -Algorithm SHA256).Hash
+    $fingerprint = Get-MpHash "$sourceFingerprint|$artifactFingerprint|artifact-validator=1"
+    $cachePath = Join-Path (Get-ModpackToolsConfigDirectory) ('build-health/' + (Get-MpHash $Project.Root.ToLowerInvariant()) + '.json')
+    if ([IO.File]::Exists($cachePath)) {
+        try {
+            $cached = Get-Content -LiteralPath $cachePath -Raw | ConvertFrom-Json
+            if ($cached.Fingerprint -eq $fingerprint) { return $cached.Status }
+        } catch { Write-Verbose 'Ignoring unreadable build health cache' }
+    }
+    try {
+        $comparison = Compare-MpBuildArtifactToProject $Project $artifact.FullName
+        $status = [pscustomobject]@{
+            State = $(if ($comparison.Total) { 'stale' } else { 'current' })
+            Path = $artifact.FullName
+            BuiltUtc = $artifact.LastWriteTimeUtc.ToString('o')
+            Total = $comparison.Total
+            Added = @($comparison.Added)
+            Changed = @($comparison.Changed)
+            Removed = @($comparison.Removed)
+            Error = ''
+        }
+        [void][IO.Directory]::CreateDirectory((Split-Path -Parent $cachePath))
+        Write-Utf8TextFileAtomic $cachePath (@{ Fingerprint=$fingerprint; Status=$status } | ConvertTo-Json -Depth 30)
+        return $status
+    }
+    catch {
+        return [pscustomobject]@{ State='unknown'; Path=$artifact.FullName; BuiltUtc=$artifact.LastWriteTimeUtc.ToString('o'); Total=0; Added=@(); Changed=@(); Removed=@(); Error=$_.Exception.Message }
+    }
+}
+
+function Get-MpBuildArtifactDoctorCheck {
+    param($Project)
+    $status = Get-MpBuildArtifactStatus $Project
+    if ($status.State -eq 'missing') {
+        return New-MpDoctorCheck -Section 'BUILD ARTIFACT' -Status info -Label 'Latest .mrpack' -Value 'Not built' -Detail "Run: modpack build --project $($Project.Id)"
+    }
+    if ($status.State -eq 'unknown') {
+        return New-MpDoctorCheck -Section 'BUILD ARTIFACT' -Status warn -Label 'Latest .mrpack' -Value 'Could not verify' -Detail $status.Error
+    }
+    if ($status.State -eq 'current') {
+        return New-MpDoctorCheck -Section 'BUILD ARTIFACT' -Status pass -Label 'Latest .mrpack' -Value 'Current' -Detail $status.Path
+    }
+    $items = [Collections.Generic.List[object]]::new()
+    foreach ($entry in @($status.Added | Select-Object -First 4)) { $items.Add([pscustomobject]@{ Status='info'; Text="Project adds: $($entry.Path)" }) }
+    foreach ($entry in @($status.Changed | Select-Object -First 4)) { $items.Add([pscustomobject]@{ Status='info'; Text="Project changes: $($entry.Path)" }) }
+    foreach ($entry in @($status.Removed | Select-Object -First 4)) { $items.Add([pscustomobject]@{ Status='info'; Text="Artifact still contains: $($entry.Path)" }) }
+    if ($status.Total -gt $items.Count) { $items.Add([pscustomobject]@{ Status='info'; Text="$($status.Total - $items.Count) additional difference(s)." }) }
+    $items.Add([pscustomobject]@{ Status='warn'; Text="Do not install this artifact. Run: modpack build --project $($Project.Id)" })
+    $built = ([datetime]$status.BuiltUtc).ToLocalTime().ToString('yyyy-MM-dd HH:mm:ss')
+    return New-MpDoctorCheck -Section 'BUILD ARTIFACT' -Status warn -Label 'Latest .mrpack' -Value 'Stale' -Detail "$([IO.Path]::GetFileName($status.Path)); built $built; $($status.Total) difference(s)." -Items @($items)
+}
+
 function Build-ModpackProject {
     param($Project, [switch]$NoRefresh, [switch]$KeepOld, [switch]$RawLog, [switch]$Strict, [switch]$DryRun)
     if ([IO.Path]::GetFileName($Project.OutputName) -cne $Project.OutputName -or -not $Project.OutputName.EndsWith('.mrpack')) { Throw-MpError -Message 'OutputName must be an MRPack filename' -Hint 'repair the project descriptor OutputName' -ErrorId 'Build.InvalidOutputName' -Category InvalidData }
@@ -188,7 +263,7 @@ function Build-ModpackProject {
     $transaction = Invoke-MpProjectTransaction $Project -DryRun:$DryRun -Prepare {
         param($stage)
         $state = Get-MpProjectState $stage -Check
-        $report = Get-MpGraphReport $stage $state.Nodes
+        $report = Get-MpValidatedGraphReport $stage $state -Check
         Assert-MpGraphPolicy $report -Build -Strict:$Strict
         if ($NoRefresh) {
             $indexIssues = @(Test-MpProjectIndex $stage)
@@ -197,6 +272,10 @@ function Build-ModpackProject {
         $build = Invoke-MpStagedBuild $stage -NoRefresh:$NoRefresh -KeepOld:$KeepOld -RawLog:$RawLog
         $indexIssues = @(Test-MpProjectIndex $stage)
         if ($indexIssues.Count) { Throw-MpError -Message 'Export preparation left an inconsistent index' -Details ($indexIssues -join '; ') -Hint 'inspect the Packwiz refresh result' -ErrorId 'Build.InvalidIndex' -Category InvalidResult }
+        $artifactComparison = Compare-MpBuildArtifactToProject $stage $build.Path
+        if ($artifactComparison.Total) {
+            Throw-MpError -Message 'The generated artifact does not match the prepared project' -Details "$($artifactComparison.Total) manifest or override difference(s) remained after export" -Hint 'inspect the Packwiz export and retry' -ErrorId 'Build.ArtifactMismatch' -Category InvalidResult
+        }
         $build | Add-Member -NotePropertyName Health -NotePropertyValue $report
         return $build
     }
@@ -226,6 +305,8 @@ function Get-MpProjectDoctorChecks {
         $value = if ($health.Errors.Count) { "$($health.Errors.Count) conflict(s)" } elseif ($health.Unknown.Count) { 'Verification incomplete' } elseif ($health.Warnings.Count) { "$($health.Warnings.Count) warning(s)" } else { 'Healthy' }
         New-MpDoctorCheck PROJECT $status Dependencies $value -Items @(Get-MpHealthDisplayItems $health -Details:$Details)
     } catch { New-MpDoctorCheck PROJECT fail Dependencies $_.Exception.Message }
+    try { Get-MpBuildArtifactDoctorCheck $Project }
+    catch { New-MpDoctorCheck 'BUILD ARTIFACT' warn 'Latest .mrpack' 'Could not verify' $_.Exception.Message }
 }
 
 function Invoke-MpDoctor {

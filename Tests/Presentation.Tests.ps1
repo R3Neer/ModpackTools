@@ -148,6 +148,7 @@ InModuleScope ModpackTools {
             $text | Should Match '1 Java requirement\(s\) cannot be checked'
             $text | Should Match '1 item\(s\) do not expose provider dependency metadata'
             $text | Should Match 'Run: modpack doctor --details'
+            $text | Should Match 'Fabric Loader may still reject this pack during startup'
             $text | Should Not Match 'Example: required java'
             $text | Should Not Match 'First dependency conflict; Second dependency conflict'
 
@@ -163,6 +164,7 @@ InModuleScope ModpackTools {
             $text = (Write-MpDoctorReport $report *>&1 | ForEach-Object { [string]$_ }) -join "`n"
             $text | Should Match 'Warning\(s\) remain in: Dependencies'
             $text | Should Not Match '1 optional warning'
+            $text | Should Match 'No known required issues were found'
         }
 
         It 'does not prompt or apply a doctor repair plan with no file changes' {

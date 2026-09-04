@@ -145,7 +145,7 @@ function Get-MpCommandCatalog {
                 New-MpHelpItem '--keep-old' 'Keep older .mrpack files in dist/.'
                 New-MpHelpItem '--open' 'Reveal the generated file in File Explorer.'
                 New-MpHelpItem '--raw-log' 'Show the complete Packwiz output.'
-            ); Notes = @('The generated dist/ artifact is not a source of truth.'); Examples = @('modpack build', 'modpack build vp26 --keep-old', 'modpack build --project vp26 --open')
+            ); Notes = @('The generated dist/ artifact is not a source of truth.', 'The finished artifact is compared with a fresh export of the prepared project before it replaces the previous build.'); Examples = @('modpack build', 'modpack build vp26 --keep-old', 'modpack build --project vp26 --open')
         }
         diff = [pscustomobject]@{
             Handler = 'Invoke-MpDiff'; Group = 'BUILD AND CONFIGURATION'; Summary = 'Compare with the latest build'; Description = 'Compare the current project with its newest .mrpack in dist/.'
@@ -160,7 +160,7 @@ function Get-MpCommandCatalog {
                 New-MpHelpItem '--fix' 'Offer safe repairs for missing required components.'
                 New-MpHelpItem '--yes' 'Accept recommended repair defaults without prompts. Requires --fix.'
                 New-MpHelpItem '--details' 'List every incomplete dependency verification grouped by cause.'
-            ); Notes = @('Minecraft Java and Git are optional. Their warnings do not prevent ModpackTools from working.', 'Doctor never installs Minecraft.'); Examples = @('modpack doctor', 'modpack doctor --details', 'modpack doctor --fix --yes')
+            ); Notes = @('Minecraft Java and Git are optional. Their warnings do not prevent ModpackTools from working.', 'Doctor reports project health, dependency coverage, and latest build freshness separately.', 'Incomplete verification means Fabric Loader may still reject the pack during startup.', 'Doctor never installs Minecraft or rebuilds an outdated artifact.'); Examples = @('modpack doctor', 'modpack doctor --details', 'modpack doctor --fix --yes')
         }
         config = [pscustomobject]@{
             Handler = 'Invoke-MpConfig'; Group = 'BUILD AND CONFIGURATION'; Summary = 'View or change global configuration'; Description = 'Read or change ModpackTools global configuration.'

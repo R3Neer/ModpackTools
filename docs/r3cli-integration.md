@@ -17,7 +17,10 @@ Doctor and inventory pass each known dependency conflict as its own status item.
 Doctor consolidates optional recommendations across client and server, groups them
 by owning mod, and groups incomplete verification by structured cause. The default
 view stays bounded while `doctor --details` expands every individual incomplete
-result. Items are never joined into a single renderer line.
+result. A separate build-artifact section reports whether the newest `.mrpack`
+matches the current project and gives a direct rebuild instruction when stale.
+Incomplete coverage also states that Fabric Loader may still reject startup. Items
+are never joined into a single renderer line.
 
 The existing catalogue is projected into R3CLI's `HelpCatalogue` shape without
 creating a second documentation catalogue. Each public invocation constructs its

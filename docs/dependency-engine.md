@@ -73,6 +73,9 @@ but block conflicts introduced by changed requirements or affected versions.
 Build blocks every known required conflict, including with `--no-refresh`.
 Unverifiable metadata is reported separately. `--strict` additionally requires a
 clean graph with complete verification; optional recommendations remain warnings.
+Doctor and build apply the same provider-availability normalization, so a provider
+with no verifiable candidate cannot become a build-only hard conflict. It remains
+incomplete verification and blocks only under `--strict`.
 
 Fabric, Quilt, Forge and NeoForge manifests are read without executing mod code.
 Supported metadata includes ranges, aliases, nested JARs, multiple mods per file,
@@ -116,7 +119,12 @@ unexpected external edit and reports its journal rather than overwriting it.
 This provides rollback/recovery, not simultaneous visibility of multiple filesystem
 renames to unrelated processes. A pending conflicted journal requires reconciliation.
 
-Build preserves the previous artifact until the staged export succeeds. Doctor's
+Build preserves the previous artifact until the staged export succeeds. Before
+replacement, it compares that artifact semantically with a fresh export of the
+prepared project and rejects any mismatch. Doctor reports the newest artifact as
+missing, current, stale or unverifiable; a stale artifact is explicitly unsafe to
+install until a new build succeeds. The freshness cache combines the source-tree
+fingerprint, artifact hash and validator revision. Doctor's
 environment repair remains separate. Project repair previews the file plan, uses
 the existing confirmation/`--yes` when the plan contains changes, and rejects a
 changed plan before applying it. Empty plans finish without prompting or running a

@@ -104,27 +104,39 @@ function Compare-MrpackSnapshots {
     return [pscustomobject]@{ Added = $added; Removed = $removed; Changed = $changed; Total = $added.Count + $removed.Count + $changed.Count }
 }
 
+function Get-MpLatestBuildFile {
+    param([Parameter(Mandatory)]$Project)
+    $dist = Join-Path $Project.Root 'dist'
+    return Get-ChildItem -LiteralPath $dist -Filter '*.mrpack' -File -ErrorAction SilentlyContinue |
+        Where-Object { -not $_.Name.StartsWith('.modpacktools-') } |
+        Sort-Object LastWriteTimeUtc -Descending |
+        Select-Object -First 1
+}
+
+function Compare-MpBuildArtifactToProject {
+    param([Parameter(Mandatory)]$Project, [Parameter(Mandatory)][string]$ArtifactPath)
+    $dist = Join-Path $Project.Root 'dist'
+    [void][IO.Directory]::CreateDirectory($dist)
+    $temporary = Join-Path $dist ('.modpacktools-compare-' + [guid]::NewGuid().ToString('N') + '.mrpack')
+    try {
+        [void](Invoke-Packwiz -Arguments @('modrinth', 'export', '--output', $temporary) -WorkingDirectory $Project.Root)
+        if (-not (Test-Path -LiteralPath $temporary -PathType Leaf)) { Throw-MpError -Message 'Packwiz did not generate the temporary comparison artifact' -Hint 'modpack build --raw-log' -ErrorId 'Diff.TemporaryArtifactMissing' -Category InvalidResult }
+        return Compare-MrpackSnapshots -Baseline (Get-MrpackSnapshot $ArtifactPath) -Current (Get-MrpackSnapshot $temporary)
+    }
+    finally {
+        if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force }
+    }
+}
+
 function Compare-ModpackBuild {
     param([Parameter(Mandatory)]$Project)
 
     $dist = Join-Path $Project.Root 'dist'
-    $baseline = Get-ChildItem -LiteralPath $dist -Filter '*.mrpack' -File -ErrorAction SilentlyContinue |
-        Where-Object { -not $_.Name.StartsWith('.modpacktools-') } |
-        Sort-Object LastWriteTimeUtc -Descending |
-        Select-Object -First 1
+    $baseline = Get-MpLatestBuildFile $Project
     if (-not $baseline) { Throw-MpError -Message "No previous build exists in '$dist'" -Hint 'modpack build' -ErrorId 'Diff.BaselineNotFound' -Category ObjectNotFound -TargetObject $dist }
-
-    $temporary = Join-Path $dist ('.modpacktools-diff-' + [guid]::NewGuid().ToString('N') + '.mrpack')
-    try {
-        [void](Invoke-Packwiz -Arguments @('modrinth', 'export', '--output', $temporary) -WorkingDirectory $Project.Root)
-        if (-not (Test-Path -LiteralPath $temporary -PathType Leaf)) { Throw-MpError -Message 'Packwiz did not generate the temporary comparison artifact' -Hint 'modpack build --raw-log' -ErrorId 'Diff.TemporaryArtifactMissing' -Category InvalidResult }
-        $comparison = Compare-MrpackSnapshots -Baseline (Get-MrpackSnapshot $baseline.FullName) -Current (Get-MrpackSnapshot $temporary)
-        return [pscustomobject]@{
-            Project = $Project; BaselinePath = $baseline.FullName; BaselineTime = $baseline.LastWriteTime; Added = $comparison.Added
-            Removed = $comparison.Removed; Changed = $comparison.Changed; Total = $comparison.Total
-        }
-    }
-    finally {
-        if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force }
+    $comparison = Compare-MpBuildArtifactToProject $Project $baseline.FullName
+    return [pscustomobject]@{
+        Project = $Project; BaselinePath = $baseline.FullName; BaselineTime = $baseline.LastWriteTime; Added = $comparison.Added
+        Removed = $comparison.Removed; Changed = $comparison.Changed; Total = $comparison.Total
     }
 }
