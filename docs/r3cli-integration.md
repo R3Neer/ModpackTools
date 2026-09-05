@@ -26,7 +26,8 @@ The existing catalogue is projected into R3CLI's `HelpCatalogue` shape without
 creating a second documentation catalogue. Each public invocation constructs its
 own presentation context, removes `--colour` and `--ascii` once, and passes the
 remaining arguments to the original command parser. Help runs before project or
-provider access. Version output is a single plain line. No JSON mode is added.
+provider access. Offline version output is a single plain line. Normal version
+output may append an update notification through R3CLI. No JSON mode is added.
 
 ## Streams and errors
 
@@ -86,6 +87,7 @@ Run the complete Pester 4.10.1 suite, then the disposable installation scenario:
 ```powershell
 Invoke-Pester -Script ./Tests
 ./Tests/Invoke-PresentationIntegration.ps1 -WorkRoot <scratch-directory>
+./Tests/Invoke-SelfUpdateIntegration.ps1 -WorkRoot <scratch-directory>
 ```
 
 The integration checks fresh-process help and errors, custom-theme preservation,
@@ -93,3 +95,17 @@ rejection of a corrupt upgrade with the installed bytes unchanged, and redirecte
 output. It isolates PSModulePath inside child processes so it cannot accidentally
 select or overwrite the user's normal installation. The optional existing live
 Packwiz scenario also accepts `-ModulePath` to verify this installed artifact.
+
+`--update` is an executable entry in the same help catalogue and has a detailed
+help page. Its release check, plan, cancellation and completion use the shared
+renderer. `--version --offline` never reads the update cache or contacts GitHub;
+normal `--version` silently tolerates failed checks, while an explicit update
+check raises a namespaced diagnostic. The first version line reports loaded code,
+which can remain older until a new PowerShell session is opened.
+
+`Installation.ps1` centralizes user target selection and child-process execution
+for the installer and updater. The installer verifies the newly placed package
+through `VerifyInstallation.ps1` before deleting its backup. The self-update
+integration substitutes HTTP transport only: real ZIP verification, an old loaded
+module, the real installer, custom-theme preservation, fresh-process validation
+and rollback after an injected post-replacement failure are exercised in isolation.

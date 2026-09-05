@@ -2,7 +2,9 @@
 param(
     [switch]$Force,
     [switch]$NonInteractive,
-    [switch]$SkipDoctor
+    [switch]$SkipDoctor,
+    [string]$InstallPath,
+    [string]$ExpectedManifestHash
 )
 
 $ErrorActionPreference = 'Stop'
@@ -46,32 +48,27 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
     if ($Force) { $forward += '-Force' }
     if ($NonInteractive) { $forward += '-NonInteractive' }
     if ($SkipDoctor) { $forward += '-SkipDoctor' }
+    if ($InstallPath) { $forward += @('-InstallPath', $InstallPath) }
+    if ($ExpectedManifestHash) { $forward += @('-ExpectedManifestHash', $ExpectedManifestHash) }
     & $pwshPath @forward
     exit $LASTEXITCODE
 }
 
 . (Join-Path $PSScriptRoot 'Private/FileSystem.ps1')
+. (Join-Path $PSScriptRoot 'Private/Errors.ps1')
+. (Join-Path $PSScriptRoot 'Private/Installation.ps1')
 $manifest = Import-PowerShellDataFile -LiteralPath (Join-Path $PSScriptRoot 'ModpackTools.psd1')
 $version = [string]$manifest.ModuleVersion
-$modulePaths = @($env:PSModulePath -split ';' | Where-Object { $_ } | ForEach-Object { [System.IO.Path]::GetFullPath($_) })
-$preferredRoot = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell/Modules'
-$userModuleRoot = $modulePaths | Where-Object { $_ -eq $preferredRoot } | Select-Object -First 1
-if (-not $userModuleRoot) {
-    $userModuleRoot = $modulePaths | Where-Object {
-        $_.StartsWith([System.IO.Path]::GetFullPath($HOME), [System.StringComparison]::OrdinalIgnoreCase)
-    } | Select-Object -First 1
-}
-if (-not $userModuleRoot) { throw 'No user module directory was found in PSModulePath.' }
-
-$moduleBase = Join-Path $userModuleRoot 'ModpackTools'
-$destination = $moduleBase
+$destination = Resolve-MpInstallDestination $InstallPath
+$userModuleRoot = Split-Path -Parent $destination
 if ((Test-Path -LiteralPath $destination) -and -not $Force) {
     throw "ModpackTools is already installed at '$destination'. Use -Force to update it."
 }
 $temporary = Join-Path $userModuleRoot ('.ModpackTools.install-' + [guid]::NewGuid().ToString('N'))
 $backup = Join-Path $userModuleRoot ('.ModpackTools.backup-' + [guid]::NewGuid().ToString('N'))
 $safeModuleRoot = [IO.Path]::GetFullPath($userModuleRoot).TrimEnd('\','/') + [IO.Path]::DirectorySeparatorChar
-foreach ($target in @($destination,$temporary,$backup)) {
+$lockPath = Join-Path $userModuleRoot '.ModpackTools.install.lock'
+foreach ($target in @($destination,$temporary,$backup,$lockPath)) {
     if (-not [IO.Path]::GetFullPath($target).StartsWith($safeModuleRoot,[StringComparison]::OrdinalIgnoreCase)) { throw 'Installer target escapes the module directory.' }
     if (Test-Path -LiteralPath $target) {
         $item = Get-Item -LiteralPath $target -Force
@@ -80,8 +77,12 @@ foreach ($target in @($destination,$temporary,$backup)) {
         }
     }
 }
-[System.IO.Directory]::CreateDirectory($temporary) | Out-Null
+[void][IO.Directory]::CreateDirectory($userModuleRoot)
+$installLock = [IO.File]::Open($lockPath, 'OpenOrCreate', 'ReadWrite', 'None')
+$replacementPlaced = $false
 try {
+    if ($ExpectedManifestHash -and (Get-FileHash -LiteralPath (Join-Path $destination 'ModpackTools.psd1')).Hash -ne $ExpectedManifestHash) { throw 'Installed version changed while the update was being prepared.' }
+    [System.IO.Directory]::CreateDirectory($temporary) | Out-Null
     foreach ($name in @('docs', 'Private', 'Public', 'ModpackTools.psd1', 'ModpackTools.psm1', 'README.md', 'LICENSE', 'theme.toml', 'dependencies.psd1')) {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $temporary -Recurse -Force
     }
@@ -106,21 +107,36 @@ try {
     Remove-Module $stagedModule
     if (Test-Path -LiteralPath $destination) { Move-Item -LiteralPath $destination -Destination $backup }
     Move-Item -LiteralPath $temporary -Destination $destination
+    $replacementPlaced = $true
+    [void](Invoke-MpInstallProcess @('-File', (Join-Path $destination 'Private/VerifyInstallation.ps1'), '-ModulePath', (Join-Path $destination 'ModpackTools.psd1'), '-ExpectedVersion', $version))
     if (Test-Path -LiteralPath $backup) {
         try {
             Remove-Item -LiteralPath $backup -Recurse -Force
         } catch {
-            Write-Warning "ModpackTools was updated, but OneDrive is still using the backup at '$backup'. It can be removed after synchronization completes."
+            Write-Warning "ModpackTools was updated, but a process is still using the backup at '$backup'. It can be removed after the previous PowerShell sessions and file locks are closed."
         }
     }
 }
 catch {
-    if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Recurse -Force }
+    $installationFailure = $_
+    if (Test-Path -LiteralPath $temporary) {
+        try { Remove-Item -LiteralPath $temporary -Recurse -Force }
+        catch { Write-Warning "A process is still using the rejected package at '$temporary'." }
+    }
+    if ($replacementPlaced -and (Test-Path -LiteralPath $destination)) {
+        # Both locations were validated below safeModuleRoot before replacement.
+        Move-Item -LiteralPath $destination -Destination $temporary
+    }
     if ((Test-Path -LiteralPath $backup) -and -not (Test-Path -LiteralPath $destination)) {
         Move-Item -LiteralPath $backup -Destination $destination
     }
-    throw
+    if (Test-Path -LiteralPath $temporary) {
+        try { Remove-Item -LiteralPath $temporary -Recurse -Force }
+        catch { Write-Warning "A process is still using the rejected package at '$temporary'." }
+    }
+    throw $installationFailure
 }
+finally { $installLock.Dispose() }
 Write-Information "ModpackTools $version installed at $destination" -InformationAction Continue
 Import-Module (Join-Path $destination 'ModpackTools.psd1') -Force
 if (-not $SkipDoctor) {

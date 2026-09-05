@@ -35,6 +35,8 @@ foreach ($file in @(
     'Private/Resolver.ps1'
     'Private/Operations.ps1'
     'Private/Remove.ps1'
+    'Private/Installation.ps1'
+    'Private/SelfUpdate.ps1'
     'Private/Health.ps1'
     'Public/modpack.ps1'
 )) {

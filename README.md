@@ -46,6 +46,39 @@ Git and a standard Minecraft installation are optional integrations reported by
 
 ## Install or update
 
+From ModpackTools 3.2.0 onward, update the tool itself from PowerShell:
+
+```powershell
+modpack --version
+modpack --version --offline
+modpack --update --check
+modpack --update
+modpack --update --yes
+```
+
+`--version` prints the loaded version first, then announces a newer stable release
+when one is available. Successful GitHub checks are cached for 24 hours; an expired
+cache triggers a request with a three-second timeout. Connection failures leave
+the local version readable without claiming that it is current. `--offline` skips
+both cache and network access and prints only the version line.
+
+`--update --check` always checks GitHub without installing. `--update` previews the
+selected user installation, versions and release link, then asks for confirmation
+(default no); `--yes` skips the prompt. It downloads the official release ZIP,
+checks GitHub's SHA256 digest and package identity, and runs the installer in a
+separate PowerShell process. The installer preserves the custom theme and verifies
+the installed version, path and command help in a fresh process before discarding
+its backup. A failed verification restores the previous installation.
+
+User installation selection follows `PSModulePath`. Other visible copies are
+reported; a machine-wide or versioned installation that takes precedence blocks
+the update with an instruction to select the intended user installation. Open a
+new PowerShell session afterward to load the new code. Self-update does not
+require a project or run project repairs. `modpack update` continues to update
+content inside a pack.
+
+Older versions need the release package installer once to acquire self-update:
+
 Download and extract the [latest release](https://github.com/R3Neer/ModpackTools/releases/latest),
 or clone this repository, then run:
 
@@ -58,14 +91,19 @@ it offers to install it with WinGet and relaunches itself. It then installs the
 module, verifies the bundled R3CLI adapter, locates or installs Packwiz, and runs
 `modpack doctor --fix`.
 
-The module is copied directly to `ModpackTools` under the first user directory in
-`PSModulePath`. Re-running the installer updates that copy while preserving a
+The module is copied directly to the first existing user `ModpackTools` installation
+in `PSModulePath`, or the first user directory if none exists. Re-running the installer updates that copy while preserving a
 customized installed theme. For unattended installation:
 
 ```powershell
 .\Install-ModpackTools.ps1 -Force -NonInteractive
 .\Install-ModpackTools.ps1 -Force -NonInteractive -SkipDoctor
 ```
+
+The installer also accepts `-InstallPath <directory>` for an explicit existing
+user module root target. The directory must be named `ModpackTools` directly
+inside a user `PSModulePath` entry. Concurrent installations share an exclusive
+installation lock.
 
 After updating an open terminal, reload the module. A new terminal will autoload it:
 

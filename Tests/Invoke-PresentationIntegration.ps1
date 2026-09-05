@@ -50,7 +50,7 @@ if (@($module.ExportedFunctions.Keys) -join ',' -ne 'modpack') { throw 'Unexpect
 & $module {
     [void](Test-MpR3Package $script:ModuleRoot)
     if ((Get-MpConsole).Theme.heading -ne '#123456') { throw 'Custom theme override was not loaded' }
-    $version = @(modpack --version 6>&1)
+    $version = @(modpack --version --offline 6>&1)
     if ($version.Count -ne 1) { throw 'Version output is not compact' }
     foreach ($name in (Get-MpCommandCatalog).Keys) { modpack $name --help --ascii --colour never 6>$null }
     $data = @(modpack --help 6>$null)

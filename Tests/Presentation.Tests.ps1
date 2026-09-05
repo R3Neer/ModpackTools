@@ -87,7 +87,7 @@ InModuleScope ModpackTools {
 
         It 'keeps human output out of the object pipeline' {
             @(modpack --help 6>$null).Count | Should Be 0
-            @(modpack --version 6>$null).Count | Should Be 0
+            @(modpack --version --offline 6>$null).Count | Should Be 0
         }
 
         It 'honours explicit colour and restores the context for the next command' {

@@ -13,10 +13,7 @@ function modpack {
         $Arguments = @($presentation.Arguments | Select-Object -Skip 1)
         Initialize-MpConsole -Colour $presentation.Colour -Ascii:$presentation.Ascii -Invocation $MyInvocation
         if ($Command -eq '--version') {
-            if ($Arguments.Count) {
-                Throw-MpError -Message 'The global version option does not accept additional arguments' -Hint 'modpack --version' -ErrorId 'Command.InvalidArguments' -Category InvalidArgument -TargetObject $Arguments
-            }
-            Write-R3Line (Get-MpConsole) @(@{Text="ModpackTools $script:ModuleVersion"})
+            Invoke-MpVersion -Arguments $Arguments
             return
         }
         if (-not $Command -or $Command -eq '--help') {

@@ -7,6 +7,13 @@ function Get-MpCommandCatalog {
     if ($script:MpCommandCatalog) { return $script:MpCommandCatalog }
 
     $script:MpCommandCatalog = [ordered]@{
+        '--update' = [pscustomobject]@{
+            Handler = 'Invoke-MpSelfUpdate'; Group = 'BUILD AND CONFIGURATION'; Summary = 'Update ModpackTools itself'; Description = 'Check and install the latest stable official ModpackTools release, preserving the installed theme and configuration.'
+            Usage = @('modpack --update [--yes]', 'modpack --update --check'); Items = @(
+                New-MpHelpItem '--check' 'Query the latest stable release without downloading or installing it.'
+                New-MpHelpItem '--yes' 'Install without interactive confirmation.'
+            ); Notes = @('No project is required. modpack update still updates pack content.', 'ZIP hashes and package identity are checked before installation. A fresh process verifies the installed module.', 'The selected user installation follows PSModulePath; shadowing installations are reported.', 'Open a new PowerShell session after updating.'); Examples = @('modpack --update --check', 'modpack --update', 'modpack --update --yes')
+        }
         list = [pscustomobject]@{
             Handler = 'Invoke-MpList'; Group = 'PROJECTS'; Summary = 'Show registered projects'; Description = 'Show every registered modpack with its name, ID, and location.'
             Usage = @('modpack list'); Items = @(); Notes = @(); Examples = @()
@@ -232,7 +239,8 @@ function Show-MpHelp {
         Groups=@('PROJECTS','CONTENT','BUILD AND CONFIGURATION'); Commands=$commands
         Usage=@('modpack <command> [arguments] [options]','modpack <command> --help','modpack --version')
         GlobalItems=@(
-            New-MpHelpItem '--version' 'Print the installed version.'
+            New-MpHelpItem '--version [--offline]' 'Print the loaded version and notify about newer releases; --offline skips network and cache.'
+            New-MpHelpItem '--update [--check | --yes]' 'Check or update ModpackTools itself. Run modpack --update --help for details.'
             New-MpHelpItem '--colour auto|always|never' 'Control colour; auto follows terminal detection and NO_COLOR.'
             New-MpHelpItem '--ascii' 'Use ASCII symbols for presentation.'
         )
