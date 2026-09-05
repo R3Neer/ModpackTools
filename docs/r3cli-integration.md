@@ -35,6 +35,12 @@ success-pipeline objects. `Throw-MpError` retains its namespaced ID, category,
 target and terminating behaviour; R3CLI formats the message without emitting a
 second diagnostic. Unexpected exceptions remain visible.
 
+Removal help is another entry in the same command catalogue. Removal plans pass
+literal names and reasons (requested, dependent, unused dependency) to the shared
+status renderer. File previews use the common transaction summary, and cancellation
+uses an information status. Confirmation follows the existing prompt convention
+with a default of no; `--yes` and `--dry-run` do not prompt.
+
 `--colour always` generates ANSI in the information records. PowerShell's host
 and downstream formatters can remove those sequences according to their own
 `OutputRendering` preference. Inspect `InformationRecord.MessageData` to capture

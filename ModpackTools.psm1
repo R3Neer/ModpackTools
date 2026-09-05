@@ -34,6 +34,7 @@ foreach ($file in @(
     'Private/Graph.ps1'
     'Private/Resolver.ps1'
     'Private/Operations.ps1'
+    'Private/Remove.ps1'
     'Private/Health.ps1'
     'Public/modpack.ps1'
 )) {

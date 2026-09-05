@@ -444,8 +444,8 @@ $Loader = "loader-version"
     Describe 'CLI help' {
         It 'uses one catalog for every executable command' {
             $catalog = Get-MpCommandCatalog
-            @($catalog.Keys).Count | Should Be 19
-            @($catalog.Keys) | Should Be @('list', 'use', 'status', 'new', 'init', 'inventory', 'search', 'add', 'classify', 'resource', 'side', 'versions', 'update', 'build', 'diff', 'doctor', 'config', 'pin', 'unpin')
+            @($catalog.Keys).Count | Should Be 20
+            @($catalog.Keys) | Should Be @('list', 'use', 'status', 'new', 'init', 'inventory', 'search', 'add', 'remove', 'classify', 'resource', 'side', 'versions', 'update', 'build', 'diff', 'doctor', 'config', 'pin', 'unpin')
             foreach ($name in $catalog.Keys) {
                 $catalog[$name].Summary | Should Not BeNullOrEmpty
                 $catalog[$name].Description | Should Not BeNullOrEmpty
@@ -484,7 +484,7 @@ $Loader = "loader-version"
         }
 
         It 'prints the module version through the global version option' {
-            (modpack --version 6>&1 | Out-String).Trim() | Should Be 'ModpackTools 3.0.4'
+            (modpack --version 6>&1 | Out-String).Trim() | Should Be 'ModpackTools 3.1.0'
             { modpack version } | Should Throw "Command 'version' is not recognized"
         }
 

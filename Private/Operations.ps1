@@ -108,6 +108,10 @@ function Invoke-MpUpdate {
 function Write-MpContentPlan {
     param($Plan, [switch]$SkipHealth)
     foreach ($change in $Plan.Changes) {
+        if (-not $change.After) {
+            Write-R3Status (Get-MpConsole) info "$($change.Before.Item.Name): remove ($($change.Reason))"
+            continue
+        }
         $previous = if ($change.Before) { $change.Before.VersionId } else { 'not installed' }
         Write-R3Status (Get-MpConsole) info "$($change.After.Item.Name): $previous -> $($change.After.VersionId) ($($change.Reason))"
     }

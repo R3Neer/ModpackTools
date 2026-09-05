@@ -171,7 +171,7 @@ function Write-InventoryView {
     }
     $hasReferences = @(Get-ModpackInventoryReferenceItems -View $View | Where-Object { $_.PSObject.Properties['ReferenceNumber'] }).Count -gt 0
     if ($hasReferences) {
-        Write-R3Status (Get-MpConsole) info 'Use these numbers with resource, classify, or update. The add command uses search result numbers.'
+        Write-R3Status (Get-MpConsole) info 'Use these numbers with resource, classify, update, or remove. The add command uses search result numbers.'
     }
 }
 

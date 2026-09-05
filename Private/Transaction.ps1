@@ -142,7 +142,7 @@ function Invoke-MpProjectTransaction {
             Throw-MpError -Message 'The project changed during preparation; nothing was applied' -Hint 'retry after other writers finish' -ErrorId 'Transaction.ConcurrentChange' -Category InvalidOperation
         }
         if ($null -ne $ExpectedChanges -and ($changes | ConvertTo-Json -Depth 8 -Compress) -cne ($ExpectedChanges | ConvertTo-Json -Depth 8 -Compress)) {
-            Throw-MpError -Message 'The repair plan changed since it was reviewed' -Hint 'run doctor --fix again to review the new plan' -ErrorId 'Transaction.PlanChanged' -Category InvalidOperation
+            Throw-MpError -Message 'The transaction plan changed since it was reviewed' -Hint 'run the command again to review the new plan' -ErrorId 'Transaction.PlanChanged' -Category InvalidOperation
         }
         if ($DryRun -or -not $changes.Count) { return [pscustomobject]@{ Changes = $changes; Result = $result; Applied = $false } }
         foreach ($change in $changes) {

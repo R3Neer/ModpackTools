@@ -66,7 +66,25 @@ skips pins; explicitly changing a pin fails with an `unpin` hint. Intent is stor
 in `.modpack/metadata.psd1` as `ContentSchemaVersion = 1` and a `Content` table keyed
 by stable content IDs, with `Intent = 'explicit'` or `'transitive'`. Older entries
 are explicit by default. Adding an installed transitive explicitly promotes it.
-There is no automatic orphan removal.
+Orphan removal is opt-in through `remove --autoremove` and limited to dependencies
+reachable from the requested/cascaded removals. Explicit content, local artifacts,
+pins and unrelated old orphans become retention roots. Reachability retains shared
+dependencies and conservatively retains all alternatives and conditional guards;
+unreachable transitive cycles can be removed together. Incomplete baseline
+verification blocks autoremove instead of guessing about hidden references.
+
+`Remove.ps1` resolves the whole installed batch, subtracts the requested nodes and
+uses `Get-MpGraphReport` to detect newly broken requirements. `--cascade` repeatedly
+subtracts their owners until stable. It never invokes the add/update resolver to
+reinstall deleted content or change a surviving version. The final graph uses the
+same baseline/strict policy as other content operations. Pins block explicit and
+cascaded removal. A staged inventory and graph verify materialization before commit.
+
+The CLI freezes selectors to IDs before preview. It displays the plan with R3CLI,
+confirms with a default of no (or `--yes`), and compares the prepared file hashes
+with the preview before applying. `--dry-run` does not prompt or mutate the project.
+Removal cleans content-specific editorial entries and active resource references,
+preserving categories, configs, worlds and remaining Default Options order.
 
 Without `--strict`, add/update permit unchanged, unrelated baseline conflicts,
 but block conflicts introduced by changed requirements or affected versions.

@@ -166,6 +166,7 @@ Run `modpack --help` for the generated overview and
 | Content | `add` | Resolve and install a Modrinth batch with its dependencies. |
 | Content | `versions` | List compatible releases for installed Modrinth content. |
 | Content | `update` | Update selected content or all eligible managed content. |
+| Content | `remove` | Remove installed content, optionally cascading and cleaning unused dependencies. |
 | Content | `pin` / `unpin` | Prevent or permit automatic version changes. |
 | Content | `classify` | Create, list, remove and assign editorial mod categories. |
 | Content | `side` | Correct whether mods are distributed to clients, hosts or both. |
@@ -205,6 +206,47 @@ Commands accept names, stable IDs, filenames and, where documented, saved number
 Search results, inventory entries, categories and version lists have separate number
 scopes. They are project-bound and expire after 24 hours. An invalid or ambiguous
 selector cancels the whole batch; duplicates are consolidated in first-use order.
+
+## Removing content
+
+```powershell
+modpack remove sodium iris --dry-run
+modpack remove 3 7 --project vanilla-plus
+modpack remove fabric-api --cascade --autoremove --dry-run
+modpack remove sodium --yes
+```
+
+`remove` accepts installed names, stable IDs, filenames and saved inventory
+numbers, including local mods, resource packs and shaders. An invalid or ambiguous
+selector cancels the entire batch. Use `--type mod|resourcepack|shaderpack` to
+disambiguate explicit selectors; it does not restrict dependency expansion.
+
+The command previews the complete plan before confirmation, which defaults to no.
+`--yes` applies without prompting; `--dry-run` only previews. A changed file plan
+is rejected before commit. All changes use the shared transaction and recovery
+engine, including Packwiz index refresh and editorial metadata cleanup.
+
+By default, removing a required dependency fails and lists the affected dependents.
+`--cascade` also removes those dependents, transitively, using the declared
+dependency validator. Optional recommendations do not trigger a cascade.
+
+`--autoremove` also removes automatically installed dependencies left unused by
+this operation, including orphaned cycles. It preserves explicitly installed
+content, local files, pins, shared dependencies and unrelated pre-existing orphans.
+Reachability conservatively retains alternatives and conditional references.
+Automatic cleanup requires complete dependency verification; if metadata is
+incomplete, resolve it or omit `--autoremove`. It is not a standalone global prune.
+
+Requested or cascaded pins require `unpin` first. Unrelated existing conflicts
+remain reported; `--strict` requires a clean resulting graph and complete
+verification. These checks do not prove Minecraft runtime compatibility.
+
+Removing an active resource pack also removes its Default Options reference,
+preserving the remaining priority order. Configuration files, worlds and category
+definitions are retained. Built-in resources cannot be uninstalled separately from
+their owning mod. If a Packwiz-managed artifact exists locally, its hash must match
+the metadata before removal. The previous build is retained; run `modpack build`
+to export the changed pack.
 
 ## Dependency resolution and pins
 

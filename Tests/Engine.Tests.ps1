@@ -36,6 +36,242 @@ InModuleScope ModpackTools {
         }
         return $raw
     }
+    Describe 'Content removal' {
+        BeforeEach {
+            New-EngineFixture
+            Mock Invoke-ModrinthApiRequest { $key = ($PathAndQuery -split '\?')[0]; if (-not $script:FixtureApi.ContainsKey($key)) { throw "Missing fixture $key" }; return $script:FixtureApi[$key] }
+            Mock Get-ModrinthVersionsByIds { @($VersionIds | ForEach-Object { $script:FixtureApi["version/$_"] } | Where-Object { $null -ne $_ }) }
+            Mock Get-MpArtifact { return $script:FixtureArtifacts[$Hash] }
+            Mock Invoke-Packwiz { return @('refreshed') }
+            Mock Resolve-MpCommandProject { $script:FixtureProject }
+        }
+        function Set-RemovalTransitive {
+            param([string[]]$Ids)
+            $metadata = Get-ModpackMetadata $script:FixtureProject
+            $metadata.ContentSchemaVersion = 1; $metadata.Content = @{}
+            foreach ($id in $Ids) { $metadata.Content["modrinth:$id"] = @{ Intent = 'transitive' } }
+            Write-PowerShellDataFileAtomic $metadata (Join-Path $script:FixtureProject.Root '.modpack/metadata.psd1')
+        }
+        It 'previews and removes duplicate selectors once without deleting configs or categories' {
+            [void](Add-FixtureVersion a 1 -Installed)
+            [IO.File]::WriteAllText((Join-Path $script:FixtureProject.Root 'config/a.json'), '{}')
+            $before = Get-MpTreeState $script:FixtureProject.Root
+            $preview = Invoke-MpRemovalOperation $script:FixtureProject @('a','modrinth:a') -DryRun
+            $preview.Result.Changes.Count | Should Be 1
+            @(Get-MpTreeChanges $before (Get-MpTreeState $script:FixtureProject.Root)).Count | Should Be 0
+            $result = Invoke-MpRemovalOperation $script:FixtureProject @('a') -ExpectedChanges $preview.Changes
+            $result.Applied | Should Be $true
+            (Get-ModpackInventory $script:FixtureProject).Mods.Count | Should Be 0
+            (Get-ModpackMetadata $script:FixtureProject).Categories.ContainsKey('performance') | Should Be $true
+            Test-Path (Join-Path $script:FixtureProject.Root 'config/a.json') | Should Be $true
+        }
+        It 'rejects a bad batch without changing any files' {
+            [void](Add-FixtureVersion a 1 -Installed)
+            $before = Get-MpTreeState $script:FixtureProject.Root
+            { Invoke-MpRemovalOperation $script:FixtureProject @('a','missing') } | Should Throw 'not found'
+            @(Get-MpTreeChanges $before (Get-MpTreeState $script:FixtureProject.Root)).Count | Should Be 0
+        }
+        It 'blocks required dependents and cascades through multiple levels' {
+            [void](Add-FixtureVersion a 1 -Installed)
+            [void](Add-FixtureVersion b 1 -Installed -Depends @{ a='*' })
+            [void](Add-FixtureVersion c 1 -Installed -Depends @{ b='*' })
+            { Invoke-MpRemovalOperation $script:FixtureProject @('a') -DryRun } | Should Throw 'dependents'
+            $result = Invoke-MpRemovalOperation $script:FixtureProject @('a') -Cascade -DryRun
+            $result.Result.Changes.Count | Should Be 3
+            @($result.Result.Changes | Where-Object Reason -eq dependent).Count | Should Be 2
+        }
+        It 'accepts explicit dependent batches without cascade' {
+            [void](Add-FixtureVersion a 1 -Installed)
+            [void](Add-FixtureVersion b 1 -Installed -Depends @{ a='*' })
+            (Invoke-MpRemovalOperation $script:FixtureProject @('a','b')).Result.Changes.Count | Should Be 2
+        }
+        It 'blocks direct and cascaded pins' {
+            [void](Add-FixtureVersion a 1 -Installed)
+            [void](Add-FixtureVersion b 1 -Installed -Pinned -Depends @{ a='*' })
+            { Invoke-MpRemovalOperation $script:FixtureProject @('b') } | Should Throw 'pinned'
+            { Invoke-MpRemovalOperation $script:FixtureProject @('a') -Cascade } | Should Throw 'pinned'
+        }
+        It 'removes newly unused dependency cycles but preserves old orphans and explicit content' {
+            [void](Add-FixtureVersion root 1 -Installed -Depends @{ a='*' })
+            [void](Add-FixtureVersion a 1 -Installed -Depends @{ b='*' })
+            [void](Add-FixtureVersion b 1 -Installed -Depends @{ a='*' })
+            [void](Add-FixtureVersion orphan 1 -Installed)
+            [void](Add-FixtureVersion explicit 1 -Installed)
+            Set-RemovalTransitive @('a','b','orphan')
+            $result = Invoke-MpRemovalOperation $script:FixtureProject @('root') -AutoRemove
+            $result.Result.Changes.Count | Should Be 3
+            @((Get-ModpackInventory $script:FixtureProject).Mods.Id | Sort-Object) | Should Be @('modrinth:explicit','modrinth:orphan')
+            (Get-ModpackMetadata $script:FixtureProject).Content.ContainsKey('modrinth:a') | Should Be $false
+        }
+        It 'retains shared dependencies and pinned dependency closures' {
+            [void](Add-FixtureVersion root 1 -Installed -Depends @{ a='*'; pin='*' })
+            [void](Add-FixtureVersion other 1 -Installed -Depends @{ a='*' })
+            [void](Add-FixtureVersion a 1 -Installed)
+            [void](Add-FixtureVersion pin 1 -Installed -Pinned -Depends @{ b='*' })
+            [void](Add-FixtureVersion b 1 -Installed)
+            Set-RemovalTransitive @('a','pin','b')
+            (Invoke-MpRemovalOperation $script:FixtureProject @('root') -AutoRemove).Result.Changes.Count | Should Be 1
+        }
+        It 'does not autoremove without the explicit option' {
+            [void](Add-FixtureVersion root 1 -Installed -Depends @{ a='*' })
+            [void](Add-FixtureVersion a 1 -Installed)
+            Set-RemovalTransitive @('a')
+            (Invoke-MpRemovalOperation $script:FixtureProject @('root')).Result.Changes.Count | Should Be 1
+        }
+        It 'combines cascade and autoremove' {
+            [void](Add-FixtureVersion root 1 -Installed -Depends @{ a='*'; b='*' })
+            [void](Add-FixtureVersion a 1 -Installed)
+            [void](Add-FixtureVersion b 1 -Installed)
+            Set-RemovalTransitive @('a','b')
+            (Invoke-MpRemovalOperation $script:FixtureProject @('a') -Cascade -AutoRemove).Result.Changes.Count | Should Be 3
+        }
+        It 'keeps baseline conflicts unrelated to removal but blocks strict mode' {
+            [void](Add-FixtureVersion root 1 -Installed)
+            [void](Add-FixtureVersion broken 1 -Installed -Depends @{ absent='*' })
+            (Invoke-MpRemovalOperation $script:FixtureProject @('root') -DryRun).Result.Report.Errors.Count | Should BeGreaterThan 0
+            { Invoke-MpRemovalOperation $script:FixtureProject @('root') -Strict -DryRun } | Should Throw 'validation'
+        }
+        It 'refuses speculative autoremove with unavailable declarations' {
+            [void](Add-FixtureVersion a 1 -Installed)
+            [IO.File]::WriteAllText((Join-Path $script:FixtureProject.Root 'mods/unknown.jar'), 'not a jar')
+            { Invoke-MpRemovalOperation $script:FixtureProject @('a') -AutoRemove } | Should Throw 'complete verification'
+            (Invoke-MpRemovalOperation $script:FixtureProject @('a') -DryRun).Result.Changes.Count | Should Be 1
+        }
+        It 'removes local files and active resource references while preserving CRLF and ordering' {
+            [IO.File]::WriteAllText((Join-Path $script:FixtureProject.Root 'resourcepacks/a.zip'), 'local resource')
+            $config = Join-Path $script:FixtureProject.Root 'config/defaultoptions-common.toml'
+            [IO.File]::WriteAllText($config, "# keep`r`ndefaultResourcePacks = [`r`n  `"vanilla`",`r`n  `"file/a.zip`",`r`n  `"builtin/other`",`r`n]`r`nother = true`r`n")
+            Invoke-MpRemovalOperation $script:FixtureProject @('a.zip') | Out-Null
+            Test-Path (Join-Path $script:FixtureProject.Root 'resourcepacks/a.zip') | Should Be $false
+            @(Get-DefaultResourcePackOrder $script:FixtureProject) | Should Be @('builtin/other','vanilla')
+            $text = [IO.File]::ReadAllText($config)
+            $text | Should Match 'other = true'
+            $text | Should Not Match '(?<!\r)\n'
+        }
+        It 'resolves saved inventory numbers and rejects another project reference' {
+            [void](Add-FixtureVersion a 1 -Installed)
+            modpack inventory --colour never 6>$null
+            modpack remove 1 --yes 6>$null
+            (Get-ModpackInventory $script:FixtureProject).Mods.Count | Should Be 0
+            [void](Add-FixtureVersion b 1 -Installed)
+            $cache = Read-ModpackInventoryReferenceCache
+            $cache.ProjectId = 'another-project'
+            Write-Utf8TextFileAtomic (Get-ModpackInventoryCachePath) ($cache | ConvertTo-Json -Depth 6)
+            { modpack remove 1 --yes 6>$null } | Should Throw 'another-project'
+            (Get-ModpackInventory $script:FixtureProject).Mods.Count | Should Be 1
+        }
+        It 'rejects shared artifact ownership rather than deleting a retained file' {
+            [void](Add-FixtureVersion a 1 -Installed)
+            [void](Add-FixtureVersion b 1 -Installed)
+            $path = Join-Path $script:FixtureProject.Root 'mods/b.pw.toml'
+            [IO.File]::WriteAllText($path, [IO.File]::ReadAllText($path).Replace('b-1.jar','a-1.jar'))
+            { Invoke-MpRemovalOperation $script:FixtureProject @('a') } | Should Throw 'shared'
+            (Get-ModpackInventory $script:FixtureProject).Mods.Count | Should Be 2
+        }
+        It 'rejects a changed local Packwiz artifact without mutation' {
+            [void](Add-FixtureVersion a 1 -Installed)
+            [IO.File]::WriteAllText((Join-Path $script:FixtureProject.Root 'mods/a-1.jar'), 'edited')
+            $before = Get-MpTreeState $script:FixtureProject.Root
+            { Invoke-MpRemovalOperation $script:FixtureProject @('a') } | Should Throw 'differs'
+            @(Get-MpTreeChanges $before (Get-MpTreeState $script:FixtureProject.Root)).Count | Should Be 0
+        }
+        It 'rolls deleted content back when a later commit write fails' {
+            [void](Add-FixtureVersion a 1 -Installed)
+            $before = Get-MpTreeState $script:FixtureProject.Root
+            Mock Invoke-Packwiz { [IO.File]::WriteAllText((Join-Path $WorkingDirectory 'z.txt'), 'refresh') }
+            Mock Copy-MpFileAtomic { throw 'injected failure' } -ParameterFilter { $Destination.EndsWith('z.txt') }
+            { Invoke-MpRemovalOperation $script:FixtureProject @('a') } | Should Throw 'injected failure'
+            @(Get-MpTreeChanges $before (Get-MpTreeState $script:FixtureProject.Root)).Count | Should Be 0
+        }
+        It 'requires confirmation and leaves the pack unchanged on cancellation' {
+            [void](Add-FixtureVersion a 1 -Installed)
+            Mock Confirm-MpDoctorAction { $false }
+            $before = Get-MpTreeState $script:FixtureProject.Root
+            modpack remove a --colour never --ascii 6>$null
+            Assert-MockCalled Confirm-MpDoctorAction -Times 1 -Scope It -ParameterFilter { $Default -eq $false }
+            @(Get-MpTreeChanges $before (Get-MpTreeState $script:FixtureProject.Root)).Count | Should Be 0
+        }
+        It 'skips confirmation for dry run and yes and keeps output off the object pipeline' {
+            [void](Add-FixtureVersion a 1 -Installed)
+            Mock Confirm-MpDoctorAction { throw 'must not prompt' }
+            @(modpack remove a --dry-run 6>$null).Count | Should Be 0
+            @(modpack remove a --yes 6>$null).Count | Should Be 0
+            (Get-ModpackInventory $script:FixtureProject).Mods.Count | Should Be 0
+        }
+        It 'honours alternatives and conditional guards instead of blindly cascading reverse edges' {
+            foreach ($id in @('root','a','b','guard')) { [void](Add-FixtureVersion $id 1 -Installed) }
+            $state = Get-MpProjectState $script:FixtureProject -Check
+            $requirement = New-MpRequirement
+            $requirement.Any = @((New-MpRequirement -Target a), (New-MpRequirement -Target b))
+            $state.Nodes['modrinth:root'].Requirements = @($requirement)
+            (New-MpRemovalPlan $script:FixtureProject $state @('a') -Cascade).Changes.Count | Should Be 1
+            $requirement = New-MpRequirement -Target a
+            $requirement.Unless = New-MpRequirement -Target guard
+            $state.Nodes['modrinth:root'].Requirements = @($requirement)
+            (New-MpRemovalPlan $script:FixtureProject $state @('a') -Cascade).Changes.Count | Should Be 1
+            (New-MpRemovalPlan $script:FixtureProject $state @('a','guard') -Cascade).Changes.Count | Should Be 3
+        }
+        It 'recognises alias providers and keeps dependencies needed by local mods' {
+            [void](Add-FixtureVersion root 1 -Installed -Depends @{ alias='*' })
+            [void](Add-FixtureVersion lib 1 -Installed)
+            Set-RemovalTransitive @('lib')
+            $jar = New-FixtureJar 'local.jar' @{ 'fabric.mod.json' = '{"schemaVersion":1,"id":"local","version":"1","depends":{"alias":"*"}}' }
+            Copy-Item $jar (Join-Path $script:FixtureProject.Root 'mods/local.jar')
+            $state = Get-MpProjectState $script:FixtureProject -Check
+            $state.Nodes['modrinth:lib'].Mods[0].Provides['alias'] = '1'
+            (New-MpRemovalPlan $script:FixtureProject $state @('root') -AutoRemove).Changes.Count | Should Be 1
+            (New-MpRemovalPlan $script:FixtureProject $state @('lib') -Cascade).Changes.Count | Should Be 3
+        }
+        It 'does not cascade disabled content or optional recommendations' {
+            [void](Add-FixtureVersion a 1 -Installed)
+            [void](Add-FixtureVersion root 1 -Installed -Depends @{ a='*' })
+            $state = Get-MpProjectState $script:FixtureProject -Check
+            $state.Nodes['modrinth:root'].Enabled = $false
+            (New-MpRemovalPlan $script:FixtureProject $state @('a') -Cascade).Changes.Count | Should Be 1
+            $state.Nodes['modrinth:root'].Enabled = $true
+            $state.Nodes['modrinth:root'].Mods[0].Requirements = @((New-MpRequirement -Target a -Kind recommended))
+            (New-MpRemovalPlan $script:FixtureProject $state @('a') -Cascade).Changes.Count | Should Be 1
+        }
+        It 'uses client and server scopes during cascade' {
+            [void](Add-FixtureVersion a 1 -Installed)
+            [void](Add-FixtureVersion root 1 -Installed)
+            $state = Get-MpProjectState $script:FixtureProject -Check
+            $state.Nodes['modrinth:root'].Item.Side = 'client'
+            $state.Nodes['modrinth:root'].Requirements = @((New-MpRequirement -Target a -Side server))
+            (New-MpRemovalPlan $script:FixtureProject $state @('a') -Cascade).Changes.Count | Should Be 1
+        }
+        It 'removes a verified materialized Packwiz jar as well as its metadata' {
+            $raw = Add-FixtureVersion a 1 -Installed
+            $artifact = $script:FixtureArtifacts[$raw.files[0].hashes.sha512]
+            Copy-Item $artifact (Join-Path $script:FixtureProject.Root 'mods/a-1.jar')
+            Invoke-MpRemovalOperation $script:FixtureProject @('a') | Out-Null
+            Test-Path (Join-Path $script:FixtureProject.Root 'mods/a-1.jar') | Should Be $false
+        }
+        It 'rejects ambiguous names and permits a type-qualified mixed inventory' {
+            [void](Add-FixtureVersion a 1 -Installed)
+            [IO.File]::WriteAllText((Join-Path $script:FixtureProject.Root 'resourcepacks/a.zip'), 'local')
+            { Invoke-MpRemovalOperation $script:FixtureProject @('a') } | Should Throw 'ambiguous'
+            (Invoke-MpRemovalOperation $script:FixtureProject @('a') -Type resourcepack).Result.Changes.Count | Should Be 1
+            (Get-ModpackInventory $script:FixtureProject).Mods.Count | Should Be 1
+        }
+        It 'rejects artifact paths escaping their content directory' {
+            [void](Add-FixtureVersion a 1 -Installed)
+            $path = Join-Path $script:FixtureProject.Root 'mods/a.pw.toml'
+            $text = [IO.File]::ReadAllText($path).Replace('filename = "a-1.jar"','filename = "../pack.toml"')
+            [IO.File]::WriteAllText($path, $text)
+            { Invoke-MpRemovalOperation $script:FixtureProject @('a') } | Should Throw 'escapes'
+            Test-Path (Join-Path $script:FixtureProject.Root 'pack.toml') | Should Be $true
+        }
+        It 'rejects a plan changed while confirmation was pending' {
+            [void](Add-FixtureVersion a 1 -Installed)
+            Mock Confirm-MpDoctorAction {
+                [IO.File]::AppendAllText((Join-Path $script:FixtureProject.Root 'mods/a.pw.toml'), "`n# external change")
+                return $true
+            }
+            { modpack remove a 6>$null } | Should Throw 'plan changed'
+            Test-Path (Join-Path $script:FixtureProject.Root 'mods/a.pw.toml') | Should Be $true
+        }
+    }
     Describe 'Version predicates and loader manifests' {
         BeforeEach { New-EngineFixture }
         It 'checks Fabric comparisons, alternatives, wildcards and prereleases' {

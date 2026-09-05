@@ -60,7 +60,7 @@ function Get-MpCommandCatalog {
                 New-MpHelpItem '--state <state>' 'Filter resource packs by all, active, or inactive.'
                 New-MpHelpItem '--search <text>' 'Keep entries whose searchable fields contain text.'
                 New-MpHelpItem '--unclassified' 'Show only unclassified mods.'
-            ); Notes = @('Displayed entries are numbered for resource, classify, and update. Numbers belong to this project and expire after 24 hours.', 'Do not combine --category with --unclassified.'); Examples = @('modpack inventory --type mod', 'modpack inventory --search Taverns', 'modpack inventory --type resourcepack --state active')
+            ); Notes = @('Displayed entries are numbered for resource, classify, update, and remove. Numbers belong to this project and expire after 24 hours.', 'Do not combine --category with --unclassified.'); Examples = @('modpack inventory --type mod', 'modpack inventory --search Taverns', 'modpack inventory --type resourcepack --state active')
         }
         search = [pscustomobject]@{
             Handler = 'Invoke-MpSearch'; Group = 'CONTENT'; Summary = 'Search compatible Modrinth content'; Description = 'Search Modrinth for content compatible with the selected project.'
@@ -78,6 +78,19 @@ function Get-MpCommandCatalog {
                 New-MpHelpItem '--category <id>' 'Assign an editorial category when adding a mod.'
                 New-MpHelpItem '--project <id>' 'Use this project instead of the active one.'
             ); Notes = @('Search numbers are separate from inventory numbers.', 'Categories apply only to mods.'); Examples = @('modpack add sodium', 'modpack add 2', 'modpack add sodium --category performance --project vp26')
+        }
+        remove = [pscustomobject]@{
+            Handler = 'Invoke-MpRemove'; Group = 'CONTENT'; Summary = 'Remove installed content'; Description = 'Preview and remove installed mods, resource packs and shaders in one checked transaction.'
+            Usage = @('modpack remove <selector...> [options]'); Items = @(
+                New-MpHelpItem '<selector>' 'Installed name, stable ID, filename, or latest inventory number.'
+                New-MpHelpItem '--project <id>' 'Use this project instead of the active one.'
+                New-MpHelpItem '--type <type>' 'Limit explicit selection to mod, resourcepack, or shaderpack.'
+                New-MpHelpItem '--cascade' 'Also remove dependents whose required dependencies would break.'
+                New-MpHelpItem '--autoremove' 'Remove automatic dependencies left unused by this removal; requires complete verification.'
+                New-MpHelpItem '--strict' 'Require a clean resulting graph and complete verification.'
+                New-MpHelpItem '--dry-run' 'Show the plan without changing project files or asking for confirmation.'
+                New-MpHelpItem '--yes' 'Apply the displayed plan without interactive confirmation.'
+            ); Notes = @('Pins block requested and cascade removals. Automatic cleanup preserves pins, local files, explicit items and unrelated old orphans.', 'Configurations, worlds and category definitions are preserved. Active resource packs are removed from Default Options order.', 'Without --yes, confirmation defaults to no. Changed plans are rejected before commit.', '--type restricts explicit selectors; cascade and autoremove may include dependencies of other types.'); Examples = @('modpack remove sodium iris --dry-run', 'modpack remove 3 7 --project vp26', 'modpack remove fabric-api --cascade --autoremove --dry-run')
         }
         classify = [pscustomobject]@{
             Handler = 'Invoke-MpClassify'; Group = 'CONTENT'; Summary = 'Manage mod categories'; Description = 'Define, inspect, remove, and assign editorial categories for mods.'

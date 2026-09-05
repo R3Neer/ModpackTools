@@ -65,6 +65,26 @@ InModuleScope ModpackTools {
             Assert-MockCalled Invoke-ModrinthApiRequest -Times 0 -Scope It
         }
 
+        It 'renders complete remove help through the catalogue without project or network access' {
+            Mock Resolve-MpCommandProject { throw 'Project access is forbidden' }
+            Mock Invoke-ModrinthApiRequest { throw 'Network access is forbidden' }
+            $text = modpack remove --help --colour never --ascii 6>&1 | Out-String
+            foreach ($option in @('--cascade','--autoremove','--strict','--dry-run','--yes','--project','--type')) { $text | Should Match ([regex]::Escape($option)) }
+            $text | Should Match 'ARGUMENTS AND OPTIONS'
+            $text | Should Not Match '\x1b'
+            Assert-MockCalled Resolve-MpCommandProject -Times 0 -Scope It
+            Assert-MockCalled Invoke-ModrinthApiRequest -Times 0 -Scope It
+        }
+
+        It 'renders removal reasons literally using the shared renderer at narrow widths' {
+            $script:MpConsole = New-R3Console -Colour never -Ascii -Width 32 -ThemeExtension (Read-MpThemeExtension)
+            $plan = [pscustomobject]@{ Changes=@([pscustomobject]@{ Before=[pscustomobject]@{Item=[pscustomobject]@{Name='Example [literal]'}}; After=$null; Reason='unused dependency' }) }
+            $text = (Write-MpContentPlan $plan -SkipHealth 6>&1 | ForEach-Object { [string]$_ }) -join ''
+            $text | Should Match 'Example \[literal\]'
+            $text | Should Match 'unused dependency'
+            $text | Should Not Match '\x1b'
+        }
+
         It 'keeps human output out of the object pipeline' {
             @(modpack --help 6>$null).Count | Should Be 0
             @(modpack --version 6>$null).Count | Should Be 0
