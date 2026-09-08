@@ -13,13 +13,18 @@ def data-field [data: any, name: string] {
 
 def invoke-bridge [request: string] {
     # stdout is redirected to a temporary file while stderr stays attached to the
-    # terminal. The JSON envelope is the process contract; LAST_EXIT_CODE is not,
-    # because native status does not reliably escape Nushell expression scopes.
+    # terminal. File redirection preserves the external byte stream, so decode it
+    # explicitly instead of relying on Nushell's implicit UTF-8 coercion.
     let capture_path = ($nu.temp-dir | path join $'modpacktools-((random uuid)).json')
     let stdout = try {
         $request | ^pwsh -NoLogo -NoProfile -File $BRIDGE o> $capture_path
         if ($capture_path | path exists) {
-            open --raw $capture_path
+            let captured = (open --raw $capture_path)
+            if (($captured | describe) == 'binary') {
+                $captured | decode utf-8
+            } else {
+                $captured
+            }
         } else {
             ''
         }
@@ -88,7 +93,7 @@ def unwrap-result [envelope: record] {
 export def --env --wrapped main [...args: string] {
     let request = ({ arguments: $args } | to json)
     let raw = (invoke-bridge $request)
-    let text = ($raw | into string | str trim)
+    let text = ($raw | str trim)
 
     if $text == '' {
         error make { msg: 'ModpackTools bridge returned no JSON data.' }
