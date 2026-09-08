@@ -1,7 +1,7 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$script:ActiveProjectId = $null
+$script:ActiveProjectId = [Environment]::GetEnvironmentVariable('MODPACKTOOLS_PROJECT')
 $script:ModuleRoot = $PSScriptRoot
 $script:ModuleVersion = [string](Import-PowerShellDataFile -LiteralPath (Join-Path $PSScriptRoot 'ModpackTools.psd1')).ModuleVersion
 $script:ConfigHomeOverride = $null
@@ -38,6 +38,7 @@ foreach ($file in @(
     'Private/Installation.ps1'
     'Private/SelfUpdate.ps1'
     'Private/Health.ps1'
+    'Private/MachineOutput.ps1'
     'Public/modpack.ps1'
 )) {
     . (Join-Path $PSScriptRoot $file)
