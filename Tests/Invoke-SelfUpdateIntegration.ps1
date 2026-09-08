@@ -7,7 +7,7 @@ $package = Join-Path $run 'package/ModpackTools'
 $modules = Join-Path $run 'Modules'
 $target = Join-Path $modules 'ModpackTools'
 foreach ($path in @($package,$modules)) { [void][IO.Directory]::CreateDirectory($path) }
-foreach ($name in @('docs','Private','Public','ModpackTools.psd1','ModpackTools.psm1','README.md','LICENSE','theme.toml','dependencies.psd1','Install-ModpackTools.ps1')) {
+foreach ($name in @('docs','Private','Public','Nushell','ModpackTools.psd1','ModpackTools.psm1','README.md','LICENSE','theme.toml','dependencies.psd1','Install-ModpackTools.ps1')) {
     Copy-Item -LiteralPath (Join-Path $source $name) -Destination $package -Recurse
 }
 $releaseVersion = [string](Import-PowerShellDataFile (Join-Path $package 'ModpackTools.psd1')).ModuleVersion
