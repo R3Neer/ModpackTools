@@ -243,8 +243,10 @@ function Show-MpHelp {
             New-MpHelpItem '--update [--check | --yes]' 'Check or update ModpackTools itself. Run modpack --update --help for details.'
             New-MpHelpItem '--colour auto|always|never' 'Control colour; auto follows terminal detection and NO_COLOR.'
             New-MpHelpItem '--ascii' 'Use ASCII symbols for presentation.'
+            New-MpHelpItem '--json' 'Emit a schema-versioned JSON envelope on stdout in addition to the human presentation.'
+            New-MpHelpItem '--no-human' 'Suppress human presentation when --json is enabled. Requires --json.'
         )
-        Notes=@('Project commands accept --project <id>. It overrides the active project for that command.','Run modpack <command> --help for detailed help.')
+        Notes=@('Project commands accept --project <id>. It overrides the active project for that command.','The Nushell adapter enables --json automatically and returns parsed structured values.','Run modpack <command> --help for detailed help.')
     }
     [void](Test-R3HelpCatalogue $view -ExecutableCommands @($catalog.Keys))
     Write-R3Help (Get-MpConsole) $view $Command
