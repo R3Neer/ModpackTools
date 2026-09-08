@@ -25,13 +25,14 @@ def main [] {
     let help_result = (modpack --help --no-human)
     ensure ((($help_result | describe) =~ '^record')) 'Global help did not pass through the wrapped adapter.'
 
-    let failed = try {
+    let failure_message = try {
         modpack definitely-not-a-command --no-human | ignore
-        false
-    } catch {
-        true
+        ''
+    } catch {|err|
+        $err.msg
     }
-    ensure $failed 'A structured ModpackTools error did not become a Nushell error.'
+    ensure ($failure_message | str contains "Command 'definitely-not-a-command' is not recognized") 'The structured ModpackTools error message was lost.'
+    ensure (not ($failure_message | str contains 'Could not run the ModpackTools bridge')) 'A domain error was replaced by a generic bridge failure.'
 
     # Build a minimal project so modpack use can be verified across separate
     # PowerShell bridge processes. Nu keeps the selection in an environment
@@ -106,6 +107,11 @@ def main [] {
             ($item.filename? | default '') == $unicode_resource
         }
     ) 'Non-ASCII bridge data was not preserved as UTF-8.'
+
+    # The same inventory must also succeed in normal interactive mode, rendering
+    # human output on stderr while consuming its machine envelope silently.
+    let visible_inventory = (modpack inventory --type resourcepack --search 'café')
+    ensure ($visible_inventory == null) 'Normal inventory leaked its machine payload.'
 
     rm --recursive --force $fixture_root
     $env.LAST_EXIT_CODE = 0
