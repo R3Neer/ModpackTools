@@ -57,6 +57,7 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
 . (Join-Path $PSScriptRoot 'Private/FileSystem.ps1')
 . (Join-Path $PSScriptRoot 'Private/Errors.ps1')
 . (Join-Path $PSScriptRoot 'Private/Installation.ps1')
+. (Join-Path $PSScriptRoot 'Private/NushellInstallation.ps1')
 $manifest = Import-PowerShellDataFile -LiteralPath (Join-Path $PSScriptRoot 'ModpackTools.psd1')
 $version = [string]$manifest.ModuleVersion
 $destination = Resolve-MpInstallDestination $InstallPath
@@ -83,7 +84,7 @@ $replacementPlaced = $false
 try {
     if ($ExpectedManifestHash -and (Get-FileHash -LiteralPath (Join-Path $destination 'ModpackTools.psd1')).Hash -ne $ExpectedManifestHash) { throw 'Installed version changed while the update was being prepared.' }
     [System.IO.Directory]::CreateDirectory($temporary) | Out-Null
-    foreach ($name in @('docs', 'Private', 'Public', 'ModpackTools.psd1', 'ModpackTools.psm1', 'README.md', 'LICENSE', 'theme.toml', 'dependencies.psd1')) {
+    foreach ($name in @('docs', 'Private', 'Public', 'Nushell', 'ModpackTools.psd1', 'ModpackTools.psm1', 'README.md', 'LICENSE', 'theme.toml', 'dependencies.psd1')) {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $temporary -Recurse -Force
     }
     . (Join-Path $temporary 'Private/Errors.ps1')
@@ -139,6 +140,18 @@ catch {
 finally { $installLock.Dispose() }
 Write-Information "ModpackTools $version installed at $destination" -InformationAction Continue
 Import-Module (Join-Path $destination 'ModpackTools.psd1') -Force
+try {
+    $nuInstall = Install-MpNushellAdapter -ModuleRoot $destination
+    if ($nuInstall.Installed) {
+        Write-Information "Nushell adapter configured in $($nuInstall.ConfigPath)" -InformationAction Continue
+    }
+    else {
+        Write-Information "Nushell adapter was not configured: $($nuInstall.Reason)" -InformationAction Continue
+    }
+}
+catch {
+    Write-Warning "ModpackTools was installed, but the Nushell adapter could not be configured: $($_.Exception.Message)"
+}
 if (-not $SkipDoctor) {
     if ($NonInteractive) { modpack doctor }
     else { modpack doctor --fix }
