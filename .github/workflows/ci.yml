@@ -90,7 +90,7 @@ jobs:
           if not (nu-check --debug --as-module $adapter) {
               error make { msg: 'Nushell adapter failed nu-check.' }
           }
-          let installer = ($env.GITHUB_WORKSPACE | path join 'Install-ModpackTools.nu')
+          let installer = ($env.GITHUB_WORKSPACE | path join 'install-modpack-tools.nu')
           if not (nu-check $installer) {
               error make { msg: 'Nushell installer failed nu-check.' }
           }
@@ -104,7 +104,7 @@ jobs:
       - name: Verify Nushell installer configures Nushell
         shell: nu {0}
         run: |
-          let installer = ($env.GITHUB_WORKSPACE | path join 'Install-ModpackTools.nu')
+          let installer = ($env.GITHUB_WORKSPACE | path join 'install-modpack-tools.nu')
           ^nu $installer --force --non-interactive --skip-doctor
           if $env.LAST_EXIT_CODE != 0 {
               error make { msg: 'The Nushell installer failed.' }
