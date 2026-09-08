@@ -7,7 +7,6 @@ if ([string]::IsNullOrWhiteSpace($requestText)) { throw 'The Nushell bridge rece
 $request = $requestText | ConvertFrom-Json
 $arguments = @($request.arguments | ForEach-Object { [string]$_ })
 if ($arguments -notcontains '--json') { $arguments += '--json' }
-$noHuman = $arguments -contains '--no-human'
 $modulePath = Join-Path (Split-Path -Parent $PSScriptRoot) 'ModpackTools.psd1'
 
 try {
@@ -16,6 +15,8 @@ try {
     exit 0
 }
 catch {
-    if (-not $noHuman) { [Console]::Error.WriteLine($_.Exception.Message) }
+    # modpack --json already emitted the structured failure envelope on stdout.
+    # The Nu wrapper turns that envelope into one native Nu error, so repeating
+    # the PowerShell exception on stderr would duplicate the same diagnostic.
     exit 1
 }
