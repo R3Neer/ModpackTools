@@ -86,10 +86,13 @@ jobs:
       - name: Parse the adapter as a module
         shell: nu {0}
         run: |
-          if not (nu-check --debug --as-module ./Nushell/modpack.nu) {
+          let adapter = ($env.GITHUB_WORKSPACE | path join 'Nushell' 'modpack.nu')
+          if not (nu-check --debug --as-module $adapter) {
               error make { msg: 'Nushell adapter failed nu-check.' }
           }
 
       - name: Validate the Nushell bridge contract
         shell: nu {0}
-        run: nu ./Tests/Nushell.Contract.nu
+        run: |
+          let contract = ($env.GITHUB_WORKSPACE | path join 'Tests' 'Nushell.Contract.nu')
+          nu $contract
