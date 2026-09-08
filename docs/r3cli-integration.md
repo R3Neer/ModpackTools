@@ -24,17 +24,39 @@ are never joined into a single renderer line.
 
 The existing catalogue is projected into R3CLI's `HelpCatalogue` shape without
 creating a second documentation catalogue. Each public invocation constructs its
-own presentation context, removes `--colour` and `--ascii` once, and passes the
-remaining arguments to the original command parser. Help runs before project or
-provider access. Offline version output is a single plain line. Normal version
-output may append an update notification through R3CLI. No JSON mode is added.
+own presentation context, removes global presentation/machine options once, and
+passes the remaining arguments to the original command parser. Help runs before
+project or provider access. Offline version output is a single plain line in the
+normal human-only mode. Normal version output may append an update notification
+through R3CLI.
+
+## Human and machine channels
+
+Machine-readable output is additive. `--json` emits one schema-versioned JSON
+envelope on stdout while retaining the normal R3CLI presentation. In that mode the
+human presentation is routed to stderr so stdout remains valid JSON for native
+callers. `--json --no-human` suppresses the presentation entirely and leaves only
+the JSON envelope. `--no-human` without `--json` is rejected.
+
+Machine DTOs are snapshots of domain objects, not serialized renderer text. The
+contract uses stable lower-case field names and records command identity, arguments,
+success state and structured data. Expected failures produce a matching error
+envelope before the normal terminating PowerShell error is preserved. The Nushell
+bridge consumes that envelope and converts failures into native Nu errors.
+
+The Nushell adapter always requests JSON internally. Human R3CLI output therefore
+remains visible on stderr while the parsed value is returned through the Nushell
+pipeline. Commands such as inventory, search, versions and list unwrap their common
+collection directly; status and other compound results remain records. Human text
+never becomes the returned Nu value and therefore never becomes `$ans.last`.
 
 ## Streams and errors
 
-Presentation uses information stream 6; warnings use stream 3. Neither creates
-success-pipeline objects. `Throw-MpError` retains its namespaced ID, category,
-target and terminating behaviour; R3CLI formats the message without emitting a
-second diagnostic. Unexpected exceptions remain visible.
+Outside JSON mode, presentation uses information stream 6 and warnings use stream
+3. Neither creates success-pipeline objects. In JSON mode a R3CLI sink writes the
+human presentation to stderr instead. `Throw-MpError` retains its namespaced ID,
+category, target and terminating behaviour; R3CLI formats the message without
+emitting a second diagnostic. Unexpected exceptions remain visible.
 
 Removal help is another entry in the same command catalogue. Removal plans pass
 literal names and reasons (requested, dependent, unused dependency) to the shared
@@ -42,12 +64,11 @@ status renderer. File previews use the common transaction summary, and cancellat
 uses an information status. Confirmation follows the existing prompt convention
 with a default of no; `--yes` and `--dry-run` do not prompt.
 
-`--colour always` generates ANSI in the information records. PowerShell's host
-and downstream formatters can remove those sequences according to their own
-`OutputRendering` preference. Inspect `InformationRecord.MessageData` to capture
-the renderer's original text; ModpackTools never changes the global preference.
-Automatic rendering is plain for redirected output. ASCII changes presentation
-symbols, not names or other user-supplied text.
+`--colour always` generates ANSI in human presentation. PowerShell's host and
+downstream formatters can remove those sequences according to their own
+`OutputRendering` preference. In JSON mode R3CLI terminal detection is based on
+stderr, because stdout is reserved for the machine envelope. ASCII changes
+presentation symbols, not names or other user-supplied text.
 
 ## Theme compatibility and installation
 
@@ -63,6 +84,13 @@ theme, back it up and replace it with the source theme. Incomplete/corrupt packa
 fail before project mutations and identify the installer as the recovery path.
 Bootstrap under Windows PowerShell 5.1 uses minimal plain text until PowerShell 7
 and the verified renderer are available.
+
+When Nushell is available on PATH, the installer also writes an idempotent marked
+block to the user's `config.nu` that imports the installed `Nushell/modpack.nu`
+module. The adapter invokes the installed PowerShell module through
+`Invoke-ModpackBridge.ps1`; PowerShell remains the canonical engine and parser.
+The active-project session state crosses child PowerShell processes through the
+`MODPACKTOOLS_PROJECT` environment variable.
 
 ## Updating the dependency
 
@@ -89,6 +117,10 @@ Invoke-Pester -Script ./Tests
 ./Tests/Invoke-PresentationIntegration.ps1 -WorkRoot <scratch-directory>
 ./Tests/Invoke-SelfUpdateIntegration.ps1 -WorkRoot <scratch-directory>
 ```
+
+CI also parses the Nushell adapter with `nu-check --as-module` under Nu 0.115.1 and
+executes the bridge contract. The machine-output Pester tests verify the JSON
+option parser, clean success/error envelopes, DTO snapshots and transaction data.
 
 The integration checks fresh-process help and errors, custom-theme preservation,
 rejection of a corrupt upgrade with the installed bytes unchanged, and redirected
