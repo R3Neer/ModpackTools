@@ -132,14 +132,18 @@ URLs and other selectors as process arguments instead of turning quoting rules i
 an accidental second parser.
 
 The bridge also forces UTF-8 for stdout before emitting the machine envelope. The Nu
-wrapper redirects only bridge stdout to a temporary capture file, leaves stderr
-attached to the terminal so R3CLI remains live and terminal-aware, decodes captured
-bytes explicitly as UTF-8 when Nushell exposes them as `binary`, and then parses the
-JSON.
+wrapper redirects only bridge stdout to a temporary capture file and keeps R3CLI
+presentation on stderr. Because Nushell forwards a child process stderr through its
+own plumbing, the child PowerShell process cannot reliably infer whether the
+original Nu stderr is still attached to a terminal. The adapter therefore sends the
+parent `is-terminal --stderr` result with each bridge request. R3CLI `--colour auto`
+uses that parent-terminal hint, still respects `NO_COLOR` and explicit
+`--colour always|never`, and avoids ANSI when Nu stderr is redirected.
 
-The JSON envelope is authoritative for success and expected failure. The wrapper
-does not compare a valid envelope with `$env.LAST_EXIT_CODE`: Nushell can preserve
-a caller's native exit status across expression scopes, which would make an old
-failure look like a failure of a later successful ModpackTools call. A missing or
-malformed envelope still fails the bridge contract, and an envelope with `ok=false`
-becomes one native Nu `error make`.
+The wrapper decodes captured stdout explicitly as UTF-8 when Nushell exposes it as
+`binary`, then parses the JSON. The JSON envelope is authoritative for success and
+expected failure. The wrapper does not compare a valid envelope with
+`$env.LAST_EXIT_CODE`: Nushell can preserve a caller's native exit status across
+expression scopes, which would make an old failure look like a failure of a later
+successful ModpackTools call. A missing or malformed envelope still fails the
+bridge contract, and an envelope with `ok=false` becomes one native Nu `error make`.
