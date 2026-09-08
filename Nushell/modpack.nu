@@ -115,26 +115,24 @@ def with-active-project [args: list<string>] {
 }
 
 def invoke-bridge [request: string] {
-    # stdout is redirected to a temporary file so stderr remains attached to the
-    # terminal. This preserves live R3CLI output and gives us the actual child exit
-    # code without relying on LAST_EXIT_CODE escaping a Nushell subexpression.
+    # stdout is redirected to a temporary file while stderr stays attached to the
+    # terminal. The JSON envelope is the process contract; LAST_EXIT_CODE is not,
+    # because native status does not reliably escape Nushell expression scopes.
     let capture_path = ($nu.temp-dir | path join $'modpacktools-((random uuid)).json')
-    let result = try {
+    let stdout = try {
         $request | ^pwsh -NoLogo -NoProfile -File $BRIDGE o> $capture_path
-        let exit_code = $env.LAST_EXIT_CODE
-        let stdout = if ($capture_path | path exists) {
+        if ($capture_path | path exists) {
             open --raw $capture_path
         } else {
             ''
         }
-        { stdout: $stdout, exit_code: $exit_code }
     } catch {|err|
         if ($capture_path | path exists) { rm --force $capture_path }
         error make { msg: $'Could not run the ModpackTools bridge: ($err.msg)' }
     }
 
     if ($capture_path | path exists) { rm --force $capture_path }
-    $result
+    $stdout
 }
 
 def unwrap-result [envelope: record] {
@@ -193,12 +191,11 @@ def unwrap-result [envelope: record] {
 export def --env --wrapped main [...args: string] {
     let invocation_args = (with-active-project $args)
     let request = ({ arguments: $invocation_args } | to json)
-    let completed = (invoke-bridge $request)
-    let exit_code = $completed.exit_code
-    let text = ($completed.stdout | into string | str trim)
+    let raw = (invoke-bridge $request)
+    let text = ($raw | into string | str trim)
 
     if $text == '' {
-        error make { msg: $'ModpackTools bridge returned no JSON data; exit code ($exit_code).' }
+        error make { msg: 'ModpackTools bridge returned no JSON data.' }
     }
 
     let envelope = try {
@@ -217,10 +214,6 @@ export def --env --wrapped main [...args: string] {
             (if $category == '' { null } else { $category })
         ] | compact | str join ' · ')
         error make { msg: (if $suffix == '' { $message } else { $'($message) [($suffix)]' }) }
-    }
-
-    if $exit_code != 0 {
-        error make { msg: $'ModpackTools exited with code ($exit_code) after returning a success envelope.' }
     }
 
     if (field $envelope command '') == 'use' {

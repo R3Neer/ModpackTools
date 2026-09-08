@@ -124,10 +124,11 @@ accidental second parser.
 The bridge reserves stdout for the JSON envelope. Human presentation and expected
 diagnostics use stderr. The Nu wrapper redirects only bridge stdout to a temporary
 capture file, leaving stderr attached to the terminal so R3CLI output remains live
-and terminal-aware. The wrapper reads the child exit code immediately after that
-process finishes, avoiding stale `$env.LAST_EXIT_CODE` values from earlier native
-commands.
+and terminal-aware.
 
-A failure envelope becomes one native Nu `error make`, so failed commands cannot
-masquerade as valid pipeline records. A success envelope is still checked against
-the actual bridge exit code as a protocol consistency guard.
+The JSON envelope is authoritative for success and expected failure. The wrapper
+does not compare a valid envelope with `$env.LAST_EXIT_CODE`: Nushell can preserve
+a caller's native exit status across expression scopes, which would make an old
+failure look like a failure of a later successful ModpackTools call. A missing or
+malformed envelope still fails the bridge contract, and an envelope with `ok=false`
+becomes one native Nu `error make`.
