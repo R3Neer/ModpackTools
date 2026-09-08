@@ -72,6 +72,7 @@ InModuleScope ModpackTools {
         }
 
         It 'installs the Nushell config block idempotently without replacing user content' {
+            . (Join-Path $script:ModuleRoot 'Private/NushellInstallation.ps1')
             $config = Join-Path $TestDrive 'config.nu'
             [IO.File]::WriteAllText($config, "# existing user config`n`$env.TEST_SENTINEL = 'keep'`n")
             $modulePath = 'C:\Tools\ModpackTools\Nushell\modpack.nu'
