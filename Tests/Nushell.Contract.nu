@@ -1,4 +1,5 @@
 const ADAPTER = path self ../Nushell/modpack.nu
+const BRIDGE = path self ../Nushell/Invoke-ModpackBridge.ps1
 use $ADAPTER main
 
 def ensure [condition: bool, message: string] {
@@ -33,6 +34,21 @@ def main [] {
     }
     ensure ($failure_message | str contains "Command 'definitely-not-a-command' is not recognized") 'The structured ModpackTools error message was lost.'
     ensure (not ($failure_message | str contains 'Could not run the ModpackTools bridge')) 'A domain error was replaced by a generic bridge failure.'
+
+    # Nushell forwards a child process stderr through a pipe, so PowerShell cannot
+    # infer whether the original Nu stderr is a terminal. The adapter passes that
+    # fact explicitly; auto colour must follow the parent terminal rather than the
+    # bridge process plumbing.
+    let escape = (char escape)
+    let colour_request = ({ arguments: ['--help'], human_stderr_terminal: true } | to json)
+    let coloured = ($colour_request | ^pwsh -NoLogo -NoProfile -File $BRIDGE | complete)
+    ensure ($coloured.exit_code == 0) 'The colour bridge probe failed.'
+    ensure ($coloured.stderr | str contains $escape) 'A terminal parent did not preserve R3CLI colour.'
+
+    let plain_request = ({ arguments: ['--help'], human_stderr_terminal: false } | to json)
+    let plain = ($plain_request | ^pwsh -NoLogo -NoProfile -File $BRIDGE | complete)
+    ensure ($plain.exit_code == 0) 'The redirected bridge probe failed.'
+    ensure (not ($plain.stderr | str contains $escape)) 'A redirected parent unexpectedly received ANSI colour.'
 
     # Build a minimal project so modpack use can be verified across separate
     # PowerShell bridge processes. Nu keeps the selection in an environment
