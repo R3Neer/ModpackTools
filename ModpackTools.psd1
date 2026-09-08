@@ -1,6 +1,6 @@
 @{
     RootModule        = 'ModpackTools.psm1'
-    ModuleVersion     = '3.2.0'
+    ModuleVersion     = '3.3.0'
     GUID              = 'dc256dd6-6b3d-4bc5-aed0-14dad616642b'
     Author            = 'ModpackTools contributors'
     CompanyName       = 'Community'
@@ -13,7 +13,7 @@
     AliasesToExport   = @()
     PrivateData       = @{
         PSData = @{
-            Tags       = @('Minecraft', 'Packwiz', 'Modrinth')
+            Tags       = @('Minecraft', 'Packwiz', 'Modrinth', 'Nushell')
             ProjectUri = 'https://github.com/R3Neer/ModpackTools'
             LicenseUri = 'https://github.com/R3Neer/ModpackTools/blob/main/LICENSE'
         }
