@@ -9,7 +9,9 @@ function Set-MpNushellConfigBlock {
     $begin = '# >>> ModpackTools Nushell >>>'
     $end = '# <<< ModpackTools Nushell <<<'
     $normalized = $ModulePath.Replace('\','/')
-    if ($normalized.Contains("'")) { throw "The Nushell adapter path contains an unsupported apostrophe: $ModulePath" }
+    if ($normalized.Contains("'")) {
+        Throw-MpError -Message 'The Nushell adapter path contains an unsupported apostrophe' -Details $ModulePath -Hint 'install ModpackTools in a path without apostrophes' -ErrorId 'Nushell.InvalidAdapterPath' -Category InvalidArgument -TargetObject $ModulePath
+    }
     $block = "$begin`nuse '$normalized' main`n$end"
     $text = if (Test-Path -LiteralPath $ConfigPath -PathType Leaf) { Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8 } else { '' }
     $pattern = '(?ms)^' + [regex]::Escape($begin) + '.*?^' + [regex]::Escape($end) + '\s*'
@@ -29,7 +31,9 @@ function Install-MpNushellAdapter {
     $modulePath = Join-Path $ModuleRoot 'Nushell/modpack.nu'
     $bridgePath = Join-Path $ModuleRoot 'Nushell/Invoke-ModpackBridge.ps1'
     foreach ($path in @($modulePath,$bridgePath)) {
-        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Nushell adapter file is missing: $path" }
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            Throw-MpError -Message 'A required Nushell adapter file is missing' -Details $path -Hint 'reinstall ModpackTools from a complete package' -ErrorId 'Nushell.AdapterFileMissing' -Category ObjectNotFound -TargetObject $path
+        }
     }
 
     $configPath = Get-MpNushellConfigPath
