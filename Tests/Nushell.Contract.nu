@@ -80,6 +80,9 @@ def main [] {
         '}'
     ] | str join (char nl) | save --force ($project_root | path join '.modpack' 'metadata.psd1')
 
+    let unicode_resource = '§-café.zip'
+    '' | save --force ($project_root | path join 'resourcepacks' $unicode_resource)
+
     modpack config set root $fixture_root --no-human | ignore
     let selected = (modpack use nu-fixture --no-human)
     ensure (($selected.active_project? | default '') == 'nu-fixture') 'modpack use did not return the selected Nu project.'
@@ -93,6 +96,15 @@ def main [] {
 
     let status = (modpack status --no-human)
     ensure (($status.project.id? | default '') == 'nu-fixture') 'A later project command did not inherit the Nu session project.'
+
+    # Exercise non-ASCII data in both directions. The search term travels through
+    # JSON stdin and the matching filename returns through redirected JSON stdout.
+    let unicode_inventory = (modpack inventory --type resourcepack --search 'café' --no-human)
+    ensure (
+        $unicode_inventory | any {|item|
+            ($item.filename? | default '') == $unicode_resource
+        }
+    ) 'Non-ASCII bridge data was not preserved as UTF-8.'
 
     rm --recursive --force $fixture_root
     $env.LAST_EXIT_CODE = 0
