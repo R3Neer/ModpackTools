@@ -55,6 +55,6 @@ try {
     if (-not $failed) { throw 'Expected post-replacement failure did not occur.' }
     $after = @(Get-ChildItem -LiteralPath $target -File -Recurse)
     if ($after.Count -ne $before.Count) { throw 'Rollback changed file count.' }
-    foreach ($file in $after) { if ($before[[IO.Path]::GetRelativePath($target,$_.FullName)] -ne (Get-FileHash $_.FullName).Hash) { throw 'Rollback changed installed bytes.' } }
+    foreach ($file in $after) { if ($before[[IO.Path]::GetRelativePath($target,$file.FullName)] -ne (Get-FileHash $file.FullName).Hash) { throw 'Rollback changed installed bytes.' } }
     [pscustomobject]@{ InstalledModule=$manifestPath; Version=$releaseVersion; UpdateNotice=$true; RealInstaller=$true; ThemePreserved=$true; FreshProcessVerified=$true; PostReplacementRollback=$true }
 } finally { $env:PSModulePath = $savedModulePath }
