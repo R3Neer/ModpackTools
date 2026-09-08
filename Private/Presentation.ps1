@@ -39,6 +39,13 @@ function Read-MpThemeExtension {
     return $extension
 }
 
+function Get-MpHumanOutputIsTerminal {
+    $hint = [Environment]::GetEnvironmentVariable('MODPACKTOOLS_NU_STDERR_TTY', 'Process')
+    if ($hint -eq '1') { return $true }
+    if ($hint -eq '0') { return $false }
+    return -not [Console]::IsErrorRedirected
+}
+
 function Get-MpConsole {
     Assert-MpPresentation
     if (-not $script:MpConsole) { $script:MpConsole = New-R3Console -ThemeExtension (Read-MpThemeExtension) }
@@ -60,8 +67,10 @@ function Initialize-MpConsole {
             $parameters.Sink = { param($Text, $Stream) }
         }
         else {
-            # JSON owns stdout. Human presentation moves to stderr so native callers can parse stdout safely.
-            $parameters.IsTerminal = -not [Console]::IsErrorRedirected
+            # JSON owns stdout. Human presentation moves to stderr, and the Nu
+            # adapter supplies the parent stderr TTY state because the child
+            # PowerShell process otherwise sees Nushell's forwarding pipe.
+            $parameters.IsTerminal = Get-MpHumanOutputIsTerminal
             $parameters.Sink = { param($Text, $Stream) [Console]::Error.WriteLine([string]$Text) }
         }
     }
