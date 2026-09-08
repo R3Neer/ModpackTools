@@ -1,8 +1,30 @@
 # Nushell adapter
 
 ModpackTools keeps PowerShell as its canonical engine and exposes a thin Nushell
-adapter from `Nushell/modpack.nu`. The installer imports this module into the
-user's `config.nu` when Nushell is available on PATH.
+adapter from `Nushell/modpack.nu`. The PowerShell installer imports this module into
+the user's `config.nu` when Nushell is available on PATH. The repository also ships
+`Install-ModpackTools.nu`, so installation can be launched directly from Nushell.
+
+## Installation from Nushell
+
+From a clone or extracted release package:
+
+```nu
+nu ./Install-ModpackTools.nu
+```
+
+The Nu installer forwards to the canonical PowerShell installer and supports the
+same operational switches needed for normal installation:
+
+```nu
+nu ./Install-ModpackTools.nu --force --non-interactive
+nu ./Install-ModpackTools.nu --force --non-interactive --skip-doctor
+nu ./Install-ModpackTools.nu --install-path 'C:\Users\me\Documents\PowerShell\Modules\ModpackTools'
+```
+
+It prefers `pwsh`. On Windows it can fall back to Windows PowerShell so the existing
+bootstrap path can offer to install PowerShell 7 when interactive. Open a new Nu
+session after installation so the new `use ... main` block in `config.nu` is loaded.
 
 ## Behaviour
 
@@ -67,15 +89,30 @@ preserving the envelope schema.
 
 ## Active project
 
-PowerShell keeps `modpack use` state in its process. The Nu wrapper starts a child
-PowerShell process for each call, so session state is bridged through the
-`MODPACKTOOLS_PROJECT` environment variable.
+PowerShell keeps `modpack use` state in its process, while the Nu adapter starts a
+new PowerShell child for each invocation. The adapter therefore owns the Nu-session
+selection explicitly.
 
-`modpack use <id>` first lets PowerShell validate and select the project, then
-updates that environment variable in the current Nu session. Later bridge
-processes inherit it. Closing the Nu session clears the selection, matching the
-original session-scoped behaviour rather than silently creating persistent
-configuration.
+`modpack use <id>` first lets PowerShell validate the project and render the normal
+human result. Only after that succeeds does the adapter store the ID in
+`MODPACKTOOLS_PROJECT` for the current Nu session. For every later command that
+accepts `--project`, the adapter appends `--project <selected-id>` before invoking
+the bridge. It does not inject when the command already has an explicit `--project`
+or when `status`, `inventory`, `build`, or `diff` use their documented positional
+project shorthand.
+
+This means the selection does not depend on a child PowerShell process surviving:
+
+```nu
+modpack use vanilla-plus
+modpack status
+modpack inventory --type mod
+modpack doctor
+```
+
+Each project-aware line is sent to PowerShell with the selected project explicitly.
+Closing the Nu session clears the selection, matching PowerShell's session-scoped
+behaviour rather than silently creating persistent configuration.
 
 ## Bridge boundary
 
@@ -85,5 +122,12 @@ other selectors as process arguments instead of turning quoting rules into an
 accidental second parser.
 
 The bridge reserves stdout for the JSON envelope. Human presentation and expected
-diagnostics use stderr. The Nu wrapper converts a failure envelope into `error
-make`, so failed commands cannot masquerade as valid pipeline records.
+diagnostics use stderr. The Nu wrapper redirects only bridge stdout to a temporary
+capture file, leaving stderr attached to the terminal so R3CLI output remains live
+and terminal-aware. The wrapper reads the child exit code immediately after that
+process finishes, avoiding stale `$env.LAST_EXIT_CODE` values from earlier native
+commands.
+
+A failure envelope becomes one native Nu `error make`, so failed commands cannot
+masquerade as valid pipeline records. A success envelope is still checked against
+the actual bridge exit code as a protocol consistency guard.

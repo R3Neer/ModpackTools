@@ -8,15 +8,17 @@ $request = $requestText | ConvertFrom-Json
 $arguments = @($request.arguments | ForEach-Object { [string]$_ })
 if ($arguments -notcontains '--json') { $arguments += '--json' }
 $modulePath = Join-Path (Split-Path -Parent $PSScriptRoot) 'ModpackTools.psd1'
+$exitCode = 0
 
 try {
     Import-Module -Name $modulePath -Force
     & (Get-Command modpack -Module ModpackTools -ErrorAction Stop) @arguments
-    exit 0
 }
 catch {
     # modpack --json already emitted the structured failure envelope on stdout.
     # The Nu wrapper turns that envelope into one native Nu error, so repeating
     # the PowerShell exception on stderr would duplicate the same diagnostic.
-    exit 1
+    $exitCode = 1
 }
+
+exit $exitCode

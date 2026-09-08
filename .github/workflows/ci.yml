@@ -83,12 +83,16 @@ jobs:
         with:
           version: '0.115.1'
 
-      - name: Parse the adapter as a module
+      - name: Parse the Nushell adapter and installer
         shell: nu {0}
         run: |
           let adapter = ($env.GITHUB_WORKSPACE | path join 'Nushell' 'modpack.nu')
           if not (nu-check --debug --as-module $adapter) {
               error make { msg: 'Nushell adapter failed nu-check.' }
+          }
+          let installer = ($env.GITHUB_WORKSPACE | path join 'Install-ModpackTools.nu')
+          if not (nu-check $installer) {
+              error make { msg: 'Nushell installer failed nu-check.' }
           }
 
       - name: Validate the Nushell bridge contract
@@ -97,18 +101,21 @@ jobs:
           let contract = ($env.GITHUB_WORKSPACE | path join 'Tests' 'Nushell.Contract.nu')
           nu $contract
 
-      - name: Verify installer configures Nushell
-        shell: pwsh
+      - name: Verify Nushell installer configures Nushell
+        shell: nu {0}
         run: |
-          $ErrorActionPreference = 'Stop'
-          ./Install-ModpackTools.ps1 -Force -NonInteractive -SkipDoctor
-          $config = Join-Path $env:APPDATA 'nushell\config.nu'
-          if (-not (Test-Path -LiteralPath $config -PathType Leaf)) {
-              throw 'The installer did not create the Nushell config file.'
+          let installer = ($env.GITHUB_WORKSPACE | path join 'Install-ModpackTools.nu')
+          ^nu $installer --force --non-interactive --skip-doctor
+          if $env.LAST_EXIT_CODE != 0 {
+              error make { msg: 'The Nushell installer failed.' }
           }
-          $text = Get-Content -LiteralPath $config -Raw -Encoding UTF8
-          if ($text -notmatch [regex]::Escape('# >>> ModpackTools Nushell >>>')) {
-              throw 'The installer did not add the ModpackTools Nushell block.'
+          let config = ($env.APPDATA | path join 'nushell' 'config.nu')
+          if not ($config | path exists) {
+              error make { msg: 'The installer did not create the Nushell config file.' }
+          }
+          let text = (open --raw $config)
+          if not ($text | str contains '# >>> ModpackTools Nushell >>>') {
+              error make { msg: 'The installer did not add the ModpackTools Nushell block.' }
           }
 
       - name: Verify installed Nushell command in a fresh process

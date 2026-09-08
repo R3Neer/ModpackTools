@@ -1,6 +1,31 @@
 const MODULE_DIR = path self .
 const BRIDGE = ($MODULE_DIR | path join 'Invoke-ModpackBridge.ps1')
 
+const PROJECT_COMMANDS = [
+    'status'
+    'inventory'
+    'search'
+    'add'
+    'remove'
+    'classify'
+    'resource'
+    'side'
+    'versions'
+    'update'
+    'build'
+    'diff'
+    'doctor'
+    'pin'
+    'unpin'
+]
+
+const POSITIONAL_PROJECT_COMMANDS = [
+    'status'
+    'inventory'
+    'build'
+    'diff'
+]
+
 def field [value: any, name: string, default_value: any = null] {
     if (($value | describe) !~ '^record') { return $default_value }
     let result = ($value | get --optional $name)
@@ -9,6 +34,107 @@ def field [value: any, name: string, default_value: any = null] {
 
 def data-field [data: any, name: string] {
     field $data $name
+}
+
+def find-command [args: list<string>] {
+    mut skip_next = false
+    for entry in ($args | enumerate) {
+        let token = $entry.item
+        if $skip_next {
+            $skip_next = false
+            continue
+        }
+        if $token == '--colour' {
+            $skip_next = true
+            continue
+        }
+        if (
+            $token == '--ascii'
+            or $token == '--json'
+            or $token == '--no-human'
+            or ($token | str starts-with '--colour=')
+        ) {
+            continue
+        }
+        return { index: $entry.index, name: ($token | str downcase) }
+    }
+    null
+}
+
+def has-explicit-project-option [args: list<string>] {
+    $args | any {|token|
+        $token == '--project' or ($token | str starts-with '--project=')
+    }
+}
+
+def has-positional-project [args: list<string>, command_index: int, command: string] {
+    if not ($command in $POSITIONAL_PROJECT_COMMANDS) { return false }
+
+    let value_options = if $command == 'inventory' {
+        ['--project' '--type' '--category' '--side' '--source' '--state' '--search']
+    } else {
+        ['--project']
+    }
+
+    mut skip_next = false
+    for token in ($args | skip ($command_index + 1)) {
+        if $skip_next {
+            $skip_next = false
+            continue
+        }
+
+        if $token == '--colour' {
+            $skip_next = true
+            continue
+        }
+        if $token in $value_options {
+            $skip_next = true
+            continue
+        }
+        if ($token | str starts-with '--') { continue }
+        return true
+    }
+
+    false
+}
+
+def with-active-project [args: list<string>] {
+    let selected = ($env.MODPACKTOOLS_PROJECT? | default '' | into string)
+    if $selected == '' { return $args }
+
+    let command_info = (find-command $args)
+    if $command_info == null { return $args }
+
+    let command = $command_info.name
+    if not ($command in $PROJECT_COMMANDS) { return $args }
+    if ($args | any {|token| $token == '--help' }) { return $args }
+    if (has-explicit-project-option $args) { return $args }
+    if (has-positional-project $args $command_info.index $command) { return $args }
+
+    $args | append '--project' | append $selected
+}
+
+def invoke-bridge [request: string] {
+    # stdout is redirected to a temporary file so stderr remains attached to the
+    # terminal. This preserves live R3CLI output and gives us the actual child exit
+    # code without relying on LAST_EXIT_CODE escaping a Nushell subexpression.
+    let capture_path = ($nu.temp-dir | path join $'modpacktools-((random uuid)).json')
+    let result = try {
+        $request | ^pwsh -NoLogo -NoProfile -File $BRIDGE o> $capture_path
+        let exit_code = $env.LAST_EXIT_CODE
+        let stdout = if ($capture_path | path exists) {
+            open --raw $capture_path
+        } else {
+            ''
+        }
+        { stdout: $stdout, exit_code: $exit_code }
+    } catch {|err|
+        if ($capture_path | path exists) { rm --force $capture_path }
+        error make { msg: $'Could not run the ModpackTools bridge: ($err.msg)' }
+    }
+
+    if ($capture_path | path exists) { rm --force $capture_path }
+    $result
 }
 
 def unwrap-result [envelope: record] {
@@ -65,10 +191,11 @@ def unwrap-result [envelope: record] {
 # PowerShell remains the canonical engine. The bridge reserves stdout for one JSON envelope;
 # R3CLI human output continues on stderr and therefore never contaminates the Nu pipeline.
 export def --env --wrapped main [...args: string] {
-    let request = ({ arguments: $args } | to json)
-    let raw = ($request | ^pwsh -NoLogo -NoProfile -File $BRIDGE)
-    let exit_code = $env.LAST_EXIT_CODE
-    let text = ($raw | into string | str trim)
+    let invocation_args = (with-active-project $args)
+    let request = ({ arguments: $invocation_args } | to json)
+    let completed = (invoke-bridge $request)
+    let exit_code = $completed.exit_code
+    let text = ($completed.stdout | into string | str trim)
 
     if $text == '' {
         error make { msg: $'ModpackTools bridge returned no JSON data; exit code ($exit_code).' }
