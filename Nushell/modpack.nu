@@ -11,6 +11,10 @@ def data-field [data: any, name: string] {
     field $data $name
 }
 
+def wants-machine-output [args: list<string>] {
+    $args | any {|token| $token == '--no-human' }
+}
+
 def invoke-bridge [request: string] {
     # stdout is redirected to a temporary file while stderr stays attached to the
     # terminal. File redirection preserves the external byte stream, so decode it
@@ -88,9 +92,11 @@ def unwrap-result [envelope: record] {
     }
 }
 
-# PowerShell remains the canonical engine. The bridge reserves stdout for one JSON envelope;
-# R3CLI human output continues on stderr and therefore never contaminates the Nu pipeline.
+# PowerShell remains the canonical engine. The bridge always requests one JSON
+# envelope internally. Normal Nu usage consumes that machine payload silently and
+# leaves only R3CLI presentation visible; --no-human exposes the parsed Nu value.
 export def --env --wrapped main [...args: string] {
+    let machine_output = (wants-machine-output $args)
     let request = ({ arguments: $args } | to json)
     let raw = (invoke-bridge $request)
     let text = ($raw | str trim)
@@ -119,16 +125,20 @@ export def --env --wrapped main [...args: string] {
 
     if (field $envelope command '') == 'use' {
         let use_args = (field $envelope arguments [])
-        if ($use_args | any {|token| $token == '--help' }) {
+        if not ($use_args | any {|token| $token == '--help' }) {
+            let active_project = (data-field (field $envelope data {}) active_project)
+            if $active_project != null {
+                $env.MODPACKTOOLS_PROJECT = ($active_project | into string)
+            }
+        }
+
+        if $machine_output {
             return (unwrap-result $envelope)
         }
-
-        let active_project = (data-field (field $envelope data {}) active_project)
-        if $active_project != null {
-            $env.MODPACKTOOLS_PROJECT = ($active_project | into string)
-        }
-        return { active_project: $active_project }
+        return
     }
 
-    unwrap-result $envelope
+    if $machine_output {
+        return (unwrap-result $envelope)
+    }
 }
