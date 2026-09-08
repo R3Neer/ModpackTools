@@ -72,7 +72,7 @@ foreach ($file in Get-ChildItem (Join-Path $source 'Private') -File -Recurse) {
 }
 $brokenSource = Join-Path $run 'broken-source'
 [void][IO.Directory]::CreateDirectory($brokenSource)
-foreach ($name in @('docs','Private','Public','ModpackTools.psd1','ModpackTools.psm1','README.md','LICENSE','theme.toml','dependencies.psd1','Install-ModpackTools.ps1')) {
+foreach ($name in @('docs','Private','Public','Nushell','ModpackTools.psd1','ModpackTools.psm1','README.md','LICENSE','theme.toml','dependencies.psd1','Install-ModpackTools.ps1')) {
     Copy-Item -LiteralPath (Join-Path $source $name) -Destination $brokenSource -Recurse
 }
 [IO.File]::AppendAllText((Join-Path $brokenSource 'Private/vendor/R3CLI/R3CLI.psm1'), 'tamper')
