@@ -47,6 +47,9 @@ function modpack {
         if ($presentation.Json) {
             $captured = @(& $handler @Arguments)
             if ($captured.Count) { Set-MpMachineData raw $captured }
+            if ($key -eq 'use' -and $Arguments -notcontains '--help') {
+                Set-MpMachineData active_project $script:ActiveProjectId
+            }
         }
         else { & $handler @Arguments }
         if ($Arguments -notcontains '--help') { Write-R3Line (Get-MpConsole) }
