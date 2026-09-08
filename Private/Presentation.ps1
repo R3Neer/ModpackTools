@@ -46,23 +46,49 @@ function Get-MpConsole {
 }
 
 function Initialize-MpConsole {
-    param([string]$Colour = 'auto', [switch]$Ascii, $Invocation)
+    param([string]$Colour = 'auto', [switch]$Ascii, $Invocation, [switch]$Json, [switch]$NoHuman)
     Assert-MpPresentation
-    $script:MpConsole = New-R3Console -Colour $Colour -Ascii:$Ascii -ThemeExtension (Read-MpThemeExtension) -Invocation $Invocation
+    $parameters = @{
+        Colour = $Colour
+        Ascii = [bool]$Ascii
+        ThemeExtension = Read-MpThemeExtension
+        Invocation = $Invocation
+    }
+    if ($Json) {
+        if ($NoHuman) {
+            $parameters.Colour = 'never'
+            $parameters.Sink = { param($Text, $Stream) }
+        }
+        else {
+            # JSON owns stdout. Human presentation moves to stderr so native callers can parse stdout safely.
+            $parameters.IsTerminal = -not [Console]::IsErrorRedirected
+            $parameters.Sink = { param($Text, $Stream) [Console]::Error.WriteLine([string]$Text) }
+        }
+    }
+    $script:MpConsole = New-R3Console @parameters
 }
 
 function ConvertFrom-MpPresentationOptions {
     param([object[]]$Tokens)
-    $remaining = [Collections.Generic.List[object]]::new(); $seen = @{}; $colour = 'auto'; $ascii = $false
+    $remaining = [Collections.Generic.List[object]]::new()
+    $seen = @{}
+    $colour = 'auto'
+    $ascii = $false
+    $json = $false
+    $noHuman = $false
     for ($i=0; $i -lt $Tokens.Count; $i++) {
         $token = [string]$Tokens[$i]
-        if ($token -notmatch '^--(colour|ascii)(?:=(.*))?$') { $remaining.Add($Tokens[$i]); continue }
-        $name = $Matches[1]; $inline = if ($Matches.ContainsKey(2)) { $Matches[2] } else { $null }
+        if ($token -notmatch '^--(colour|ascii|json|no-human)(?:=(.*))?$') { $remaining.Add($Tokens[$i]); continue }
+        $name = $Matches[1]
+        $inline = if ($Matches.ContainsKey(2)) { $Matches[2] } else { $null }
         if ($seen.ContainsKey($name)) { Throw-MpError -Message "Option '--$name' is repeated" -Hint "specify --$name once" -ErrorId 'Option.Duplicate' -Category InvalidArgument }
         $seen[$name] = $true
-        if ($name -eq 'ascii') {
-            if ($null -ne $inline) { Throw-MpError -Message "Option '--ascii' does not accept a value" -Hint '--ascii' -ErrorId 'Option.UnexpectedValue' -Category InvalidArgument }
-            $ascii = $true; continue
+        if ($name -in @('ascii','json','no-human')) {
+            if ($null -ne $inline) { Throw-MpError -Message "Option '--$name' does not accept a value" -Hint "--$name" -ErrorId 'Option.UnexpectedValue' -Category InvalidArgument }
+            if ($name -eq 'ascii') { $ascii = $true }
+            elseif ($name -eq 'json') { $json = $true }
+            else { $noHuman = $true }
+            continue
         }
         if ($null -eq $inline) {
             $i++
@@ -72,7 +98,10 @@ function ConvertFrom-MpPresentationOptions {
         if ($inline -notin @('auto','always','never')) { Throw-MpError -Message "Colour mode '$inline' is invalid" -Hint '--colour auto|always|never' -ErrorId 'Option.InvalidColour' -Category InvalidArgument }
         $colour = $inline
     }
-    [pscustomobject]@{ Arguments=@($remaining); Colour=$colour; Ascii=$ascii }
+    if ($noHuman -and -not $json) {
+        Throw-MpError -Message "Option '--no-human' requires '--json'" -Hint '--json --no-human' -ErrorId 'Option.RequiredCombination' -Category InvalidArgument
+    }
+    [pscustomobject]@{ Arguments=@($remaining); Colour=$colour; Ascii=$ascii; Json=$json; NoHuman=$noHuman }
 }
 
 function Write-MpDoctorLine {
