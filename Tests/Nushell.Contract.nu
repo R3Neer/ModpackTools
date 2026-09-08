@@ -7,7 +7,7 @@ def ensure [condition: bool, message: string] {
 
 def main [] {
     # Seed a stale-looking value without letting a failed child terminate this
-    # test process. The adapter must use its own bridge exit code instead.
+    # test process. The structured envelope, not LAST_EXIT_CODE, is authoritative.
     $env.LAST_EXIT_CODE = 7
 
     # Default Nu usage keeps human R3CLI output on stderr while stdout remains
@@ -34,8 +34,8 @@ def main [] {
     ensure $failed 'A structured ModpackTools error did not become a Nushell error.'
 
     # Build a minimal project so modpack use can be verified across separate
-    # PowerShell bridge processes. The next status call has no explicit --project;
-    # the adapter must carry the Nu session selection into that invocation.
+    # PowerShell bridge processes. Nu keeps the selection in an environment
+    # variable, and each child PowerShell imports that inherited session state.
     let fixture_root = ($nu.temp-dir | path join $'modpacktools-nu-((random uuid))')
     let project_root = ($fixture_root | path join 'Nu Fixture')
     mkdir ($project_root | path join '.modpack')
@@ -85,8 +85,14 @@ def main [] {
     ensure (($selected.active_project? | default '') == 'nu-fixture') 'modpack use did not return the selected Nu project.'
     ensure (($env.MODPACKTOOLS_PROJECT? | default '') == 'nu-fixture') 'modpack use did not persist the project in the Nu session.'
 
+    let queried = (modpack use --no-human)
+    ensure (($queried.active_project? | default '') == 'nu-fixture') 'modpack use did not report the inherited Nu session project.'
+
+    modpack use --help --no-human | ignore
+    ensure (($env.MODPACKTOOLS_PROJECT? | default '') == 'nu-fixture') 'modpack use --help changed the active Nu project.'
+
     let status = (modpack status --no-human)
-    ensure (($status.project.id? | default '') == 'nu-fixture') 'A later project command did not reuse the Nu session project.'
+    ensure (($status.project.id? | default '') == 'nu-fixture') 'A later project command did not inherit the Nu session project.'
 
     rm --recursive --force $fixture_root
     $env.LAST_EXIT_CODE = 0
