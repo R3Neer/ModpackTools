@@ -97,7 +97,10 @@ def unwrap-result [envelope: record] {
 # leaves only R3CLI presentation visible; --no-human exposes the parsed Nu value.
 export def --env --wrapped main [...args: string] {
     let machine_output = (wants-machine-output $args)
-    let request = ({ arguments: $args } | to json)
+    let request = ({
+        arguments: $args
+        human_stderr_terminal: (is-terminal --stderr)
+    } | to json)
     let raw = (invoke-bridge $request)
     let text = ($raw | str trim)
 
