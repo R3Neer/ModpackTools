@@ -31,29 +31,37 @@ PowerShell 7 when interactive. Open a new Nu session after installation so the n
 ## Behaviour
 
 The Nu command is still named `modpack` and accepts the same command tokens as the
-PowerShell CLI. The wrapper always enables ModpackTools' machine-readable JSON
-channel internally. PowerShell writes the normal R3CLI presentation to stderr and
-one JSON envelope to stdout; the wrapper parses the envelope and returns a native
-Nushell value.
+PowerShell CLI. The adapter always enables ModpackTools' machine-readable JSON
+channel internally so it can validate success, turn structured failures into Nu
+errors and maintain Nu session state.
 
-Typical commands therefore remain pleasant interactively while also composing as
-structured pipelines:
+That internal JSON is transport, not presentation. In normal Nu usage the adapter
+consumes it silently and only the normal R3CLI output remains visible:
 
 ```nu
-modpack inventory --type mod
+modpack inventory
+modpack search sodium
+modpack doctor
+```
+
+Use `--no-human` when a script or Nushell pipeline actually needs the structured
+machine value. Human presentation is then suppressed and the parsed JSON envelope
+is unwrapped into native Nu records or lists:
+
+```nu
+modpack inventory --type mod --no-human
 | where side == client
 | sort-by name
 
-modpack search sodium
+modpack search sodium --no-human
 | where downloads > 1_000_000
 
-modpack versions sodium
+modpack versions sodium --no-human
 | select number version installed
 ```
 
-The returned value, not the human R3CLI presentation, is the pipeline result and
-therefore the value eligible for `$ans.last` according to the user's Nushell
-configuration.
+The machine value, not the JSON text itself, is the pipeline result. Raw JSON from
+the internal bridge is never printed by the Nu adapter.
 
 ## PowerShell JSON options
 
@@ -64,9 +72,9 @@ modpack inventory --json
 modpack inventory --json --no-human
 ```
 
-`--json` is additive: normal R3CLI presentation remains visible, but moves to
-stderr so stdout is clean JSON. `--no-human` suppresses that presentation and is
-valid only together with `--json`.
+`--json` is additive in PowerShell: normal R3CLI presentation remains visible, but
+moves to stderr so stdout is clean JSON. `--no-human` suppresses that presentation
+and is valid only together with `--json`.
 
 Every machine response is a schema-versioned envelope. Success responses contain
 `ok`, `command`, `arguments`, and `data`. Expected failures contain a structured
@@ -74,14 +82,14 @@ Every machine response is a schema-versioned envelope. Success responses contain
 
 ## Returned Nu shapes
 
-The adapter unwraps the most useful payload for common query commands:
+With `--no-human`, the adapter unwraps the most useful payload for common commands:
 
-- `modpack list` returns a list of project records.
-- `modpack inventory` returns a list of inventory records.
-- `modpack search` returns a list of search-result records.
-- `modpack versions` returns a list of compatible-version records.
-- `modpack classify list` returns a list of category records.
-- `modpack doctor`, `diff`, and `build` return records.
+- `modpack list --no-human` returns a list of project records.
+- `modpack inventory --no-human` returns a list of inventory records.
+- `modpack search ... --no-human` returns a list of search-result records.
+- `modpack versions ... --no-human` returns a list of compatible-version records.
+- `modpack classify list --no-human` returns a list of category records.
+- `modpack doctor --no-human`, `diff --no-human`, and `build --no-human` return records.
 - Mutating commands return their transaction record when one is available.
 - Other commands return the structured `data` record.
 
@@ -104,33 +112,30 @@ PowerShell parser and override the inherited active project for that command.
 ```nu
 modpack use vanilla-plus
 modpack status
-modpack inventory --type mod
+modpack inventory
 modpack doctor
 ```
 
 `modpack use <id>` first lets PowerShell validate the project and return the active
-project in the structured response. Only after that succeeds does the adapter update
-`MODPACKTOOLS_PROJECT`. Help requests do not change the selection. Closing the Nu
-session clears it, matching PowerShell's session-scoped behaviour rather than
-silently creating persistent configuration.
+project in the structured response. The adapter consumes that response internally,
+updates `MODPACKTOOLS_PROJECT`, and does not print the machine record during normal
+interactive use. `modpack use --no-human` exposes the record for automation. Help
+requests do not change the selection. Closing the Nu session clears it, matching
+PowerShell's session-scoped behaviour rather than silently creating persistent
+configuration.
 
 ## Bridge boundary
 
-`Nushell/Invoke-ModpackBridge.ps1` receives an argv array as JSON on stdin. It does
-not build or evaluate a PowerShell command string. This keeps spaces, URLs and
-other selectors as process arguments instead of turning quoting rules into an
-accidental second parser.
+`Nushell/Invoke-ModpackBridge.ps1` receives an argv array as UTF-8 JSON on stdin. It
+does not build or evaluate a PowerShell command string. This keeps spaces, Unicode,
+URLs and other selectors as process arguments instead of turning quoting rules into
+an accidental second parser.
 
-The bridge reserves stdout for the JSON envelope. Human presentation and expected
-diagnostics use stderr. The Nu wrapper redirects only bridge stdout to a temporary
-capture file, leaving stderr attached to the terminal so R3CLI output remains live
-and terminal-aware.
-
-Both sides of the bridge pin machine traffic to UTF-8. PowerShell explicitly uses
-UTF-8 for stdin and stdout, and Nushell explicitly decodes a redirected byte stream
-before parsing JSON. This is required for real project data containing non-ASCII
-names or filenames; Nushell deliberately preserves an external stream as `binary`
-when implicit UTF-8 decoding cannot be guaranteed.
+The bridge also forces UTF-8 for stdout before emitting the machine envelope. The Nu
+wrapper redirects only bridge stdout to a temporary capture file, leaves stderr
+attached to the terminal so R3CLI remains live and terminal-aware, decodes captured
+bytes explicitly as UTF-8 when Nushell exposes them as `binary`, and then parses the
+JSON.
 
 The JSON envelope is authoritative for success and expected failure. The wrapper
 does not compare a valid envelope with `$env.LAST_EXIT_CODE`: Nushell can preserve
