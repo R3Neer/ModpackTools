@@ -10,11 +10,11 @@ def main [] {
     # test process. The structured envelope, not LAST_EXIT_CODE, is authoritative.
     $env.LAST_EXIT_CODE = 7
 
-    # Default Nu usage keeps human R3CLI output on stderr while stdout remains
-    # parseable structured data. This call deliberately does not use --no-human.
+    # Normal interactive-style usage keeps only R3CLI presentation visible. The
+    # internal JSON envelope is consumed by the adapter and must not become a Nu
+    # pipeline value unless machine-only mode is requested explicitly.
     let visible_version = (modpack --version --offline)
-    ensure ((($visible_version | describe) =~ '^record')) 'Visible version output contaminated the Nu pipeline.'
-    ensure (($visible_version.version? | default '') != '') 'Visible version record is missing its version value.'
+    ensure ($visible_version == null) 'Normal Nushell usage leaked its machine payload.'
 
     let quiet_version = (modpack --version --offline --no-human)
     ensure ((($quiet_version | describe) =~ '^record')) 'No-human version did not return a Nushell record.'
@@ -84,9 +84,10 @@ def main [] {
     '' | save --force ($project_root | path join 'resourcepacks' $unicode_resource)
 
     modpack config set root $fixture_root --no-human | ignore
-    let selected = (modpack use nu-fixture --no-human)
-    ensure (($selected.active_project? | default '') == 'nu-fixture') 'modpack use did not return the selected Nu project.'
-    ensure (($env.MODPACKTOOLS_PROJECT? | default '') == 'nu-fixture') 'modpack use did not persist the project in the Nu session.'
+
+    let visible_use = (modpack use nu-fixture)
+    ensure ($visible_use == null) 'Normal modpack use leaked its machine payload.'
+    ensure (($env.MODPACKTOOLS_PROJECT? | default '') == 'nu-fixture') 'Normal modpack use did not persist the project in the Nu session.'
 
     let queried = (modpack use --no-human)
     ensure (($queried.active_project? | default '') == 'nu-fixture') 'modpack use did not report the inherited Nu session project.'
