@@ -73,14 +73,14 @@ InModuleScope ModpackTools {
 
         It 'installs the Nushell config block idempotently without replacing user content' {
             $config = Join-Path $TestDrive 'config.nu'
-            [IO.File]::WriteAllText($config, "# existing user config`n$env.TEST_SENTINEL = 'keep'`n")
+            [IO.File]::WriteAllText($config, "# existing user config`n`$env.TEST_SENTINEL = 'keep'`n")
             $modulePath = 'C:\Tools\ModpackTools\Nushell\modpack.nu'
             Set-MpNushellConfigBlock -ConfigPath $config -ModulePath $modulePath
             Set-MpNushellConfigBlock -ConfigPath $config -ModulePath $modulePath
             $text = Get-Content -LiteralPath $config -Raw -Encoding UTF8
             ([regex]::Matches($text, [regex]::Escape('# >>> ModpackTools Nushell >>>'))).Count | Should Be 1
             ([regex]::Matches($text, [regex]::Escape('# <<< ModpackTools Nushell <<<'))).Count | Should Be 1
-            $text | Should Match [regex]::Escape("$env.TEST_SENTINEL = 'keep'")
+            $text | Should Match [regex]::Escape('$env.TEST_SENTINEL = ''keep''')
             $text | Should Match [regex]::Escape("use 'C:/Tools/ModpackTools/Nushell/modpack.nu' main")
         }
     }
