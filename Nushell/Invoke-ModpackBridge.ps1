@@ -2,6 +2,11 @@
 param()
 
 $ErrorActionPreference = 'Stop'
+$utf8 = [System.Text.UTF8Encoding]::new($false)
+[Console]::InputEncoding = $utf8
+[Console]::OutputEncoding = $utf8
+$OutputEncoding = $utf8
+
 $requestText = [Console]::In.ReadToEnd()
 if ([string]::IsNullOrWhiteSpace($requestText)) { throw 'The Nushell bridge received an empty request.' }
 $request = $requestText | ConvertFrom-Json
