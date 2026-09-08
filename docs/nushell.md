@@ -126,6 +126,12 @@ diagnostics use stderr. The Nu wrapper redirects only bridge stdout to a tempora
 capture file, leaving stderr attached to the terminal so R3CLI output remains live
 and terminal-aware.
 
+Both sides of the bridge pin machine traffic to UTF-8. PowerShell explicitly uses
+UTF-8 for stdin and stdout, and Nushell explicitly decodes a redirected byte stream
+before parsing JSON. This is required for real project data containing non-ASCII
+names or filenames; Nushell deliberately preserves an external stream as `binary`
+when implicit UTF-8 decoding cannot be guaranteed.
+
 The JSON envelope is authoritative for success and expected failure. The wrapper
 does not compare a valid envelope with `$env.LAST_EXIT_CODE`: Nushell can preserve
 a caller's native exit status across expression scopes, which would make an old
