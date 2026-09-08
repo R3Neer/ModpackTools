@@ -62,6 +62,10 @@ function Initialize-MpConsole {
         Invocation = $Invocation
     }
     if ($Json) {
+        # The PowerShell pipeline carries only the machine envelope on stdout.
+        # R3CLI's normal invocation analysis would mistake that transport pipe for
+        # human-output redirection, even though human rendering is on stderr.
+        [void]$parameters.Remove('Invocation')
         if ($NoHuman) {
             $parameters.Colour = 'never'
             $parameters.Sink = { param($Text, $Stream) }
