@@ -31,12 +31,22 @@ function New-BridgeErrorEnvelope {
 $machineOutput = [System.Collections.Generic.List[string]]::new()
 $command = ''
 $arguments = @()
+$terminalHintName = 'MODPACKTOOLS_NU_STDERR_TTY'
+$previousTerminalHint = [Environment]::GetEnvironmentVariable($terminalHintName, 'Process')
 
 try {
     $requestText = [Console]::In.ReadToEnd()
     if ([string]::IsNullOrWhiteSpace($requestText)) { throw 'The Nushell bridge received an empty request.' }
 
     $request = $requestText | ConvertFrom-Json
+    if ($request.PSObject.Properties['human_stderr_terminal']) {
+        [Environment]::SetEnvironmentVariable(
+            $terminalHintName,
+            $(if ([bool]$request.human_stderr_terminal) { '1' } else { '0' }),
+            'Process'
+        )
+    }
+
     $arguments = @($request.arguments | ForEach-Object { [string]$_ })
     if ($arguments -notcontains '--json') { $arguments += '--json' }
 
@@ -54,6 +64,9 @@ catch {
     if ($machineOutput.Count -eq 0) {
         $machineOutput.Add((New-BridgeErrorEnvelope -ErrorRecord $_ -Command $command -Arguments $arguments))
     }
+}
+finally {
+    [Environment]::SetEnvironmentVariable($terminalHintName, $previousTerminalHint, 'Process')
 }
 
 if ($machineOutput.Count -ne 1) {
