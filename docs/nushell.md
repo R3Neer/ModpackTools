@@ -3,28 +3,30 @@
 ModpackTools keeps PowerShell as its canonical engine and exposes a thin Nushell
 adapter from `Nushell/modpack.nu`. The PowerShell installer imports this module into
 the user's `config.nu` when Nushell is available on PATH. The repository also ships
-`Install-ModpackTools.nu`, so installation can be launched directly from Nushell.
+`install-modpack-tools.nu`, so installation can be launched directly from Nushell.
 
 ## Installation from Nushell
 
 From a clone or extracted release package:
 
 ```nu
-nu ./Install-ModpackTools.nu
+nu ./install-modpack-tools.nu
 ```
 
 The Nu installer forwards to the canonical PowerShell installer and supports the
 same operational switches needed for normal installation:
 
 ```nu
-nu ./Install-ModpackTools.nu --force --non-interactive
-nu ./Install-ModpackTools.nu --force --non-interactive --skip-doctor
-nu ./Install-ModpackTools.nu --install-path 'C:\Users\me\Documents\PowerShell\Modules\ModpackTools'
+nu ./install-modpack-tools.nu --force --non-interactive
+nu ./install-modpack-tools.nu --force --non-interactive --skip-doctor
+nu ./install-modpack-tools.nu --install-path 'C:\Users\me\Documents\PowerShell\Modules\ModpackTools'
 ```
 
-It prefers `pwsh`. On Windows it can fall back to Windows PowerShell so the existing
-bootstrap path can offer to install PowerShell 7 when interactive. Open a new Nu
-session after installation so the new `use ... main` block in `config.nu` is loaded.
+The lower-case kebab-case name follows Nushell's recommended convention for
+multi-word command names. The installer prefers `pwsh`. On Windows it can fall back
+to Windows PowerShell so the existing bootstrap path can offer to install
+PowerShell 7 when interactive. Open a new Nu session after installation so the new
+`use ... main` block in `config.nu` is loaded.
 
 ## Behaviour
 
@@ -89,19 +91,15 @@ preserving the envelope schema.
 
 ## Active project
 
-PowerShell keeps `modpack use` state in its process, while the Nu adapter starts a
-new PowerShell child for each invocation. The adapter therefore owns the Nu-session
-selection explicitly.
+PowerShell keeps `modpack use` state inside its process, while the Nu adapter starts
+a new PowerShell child for each invocation. The adapter therefore stores the
+validated selection in the Nu session environment as `MODPACKTOOLS_PROJECT`.
 
-`modpack use <id>` first lets PowerShell validate the project and render the normal
-human result. Only after that succeeds does the adapter store the ID in
-`MODPACKTOOLS_PROJECT` for the current Nu session. For every later command that
-accepts `--project`, the adapter appends `--project <selected-id>` before invoking
-the bridge. It does not inject when the command already has an explicit `--project`
-or when `status`, `inventory`, `build`, or `diff` use their documented positional
-project shorthand.
-
-This means the selection does not depend on a child PowerShell process surviving:
+Each bridge process inherits that environment variable. On import, ModpackTools
+uses it as the initial active project, so later commands do not need to be rewritten
+or given an injected `--project` option. Explicit `--project <id>` and documented
+positional project selectors continue to be interpreted only by the canonical
+PowerShell parser and override the inherited active project for that command.
 
 ```nu
 modpack use vanilla-plus
@@ -110,9 +108,11 @@ modpack inventory --type mod
 modpack doctor
 ```
 
-Each project-aware line is sent to PowerShell with the selected project explicitly.
-Closing the Nu session clears the selection, matching PowerShell's session-scoped
-behaviour rather than silently creating persistent configuration.
+`modpack use <id>` first lets PowerShell validate the project and return the active
+project in the structured response. Only after that succeeds does the adapter update
+`MODPACKTOOLS_PROJECT`. Help requests do not change the selection. Closing the Nu
+session clears it, matching PowerShell's session-scoped behaviour rather than
+silently creating persistent configuration.
 
 ## Bridge boundary
 
