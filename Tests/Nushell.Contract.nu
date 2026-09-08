@@ -6,9 +6,20 @@ def ensure [condition: bool, message: string] {
 }
 
 def main [] {
-    let version = (modpack --version --offline --no-human)
-    ensure ((($version | describe) =~ '^record')) 'Version did not return a Nushell record.'
-    ensure (($version.version? | default '') != '') 'Version record is missing its version value.'
+    # Default Nu usage keeps human R3CLI output on stderr while stdout remains
+    # parseable structured data. This call deliberately does not use --no-human.
+    let visible_version = (modpack --version --offline)
+    ensure ((($visible_version | describe) =~ '^record')) 'Visible version output contaminated the Nu pipeline.'
+    ensure (($visible_version.version? | default '') != '') 'Visible version record is missing its version value.'
+
+    let quiet_version = (modpack --version --offline --no-human)
+    ensure ((($quiet_version | describe) =~ '^record')) 'No-human version did not return a Nushell record.'
+    ensure (($quiet_version.version? | default '') != '') 'No-human version record is missing its version value.'
+
+    # --wrapped must pass --help through to ModpackTools rather than allowing Nu
+    # to replace the canonical command catalogue with generated wrapper help.
+    let help_result = (modpack --help --no-human)
+    ensure ((($help_result | describe) =~ '^record')) 'Global help did not pass through the wrapped adapter.'
 
     let failed = try {
         modpack definitely-not-a-command --no-human | ignore
