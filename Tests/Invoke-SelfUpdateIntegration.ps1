@@ -7,7 +7,7 @@ $package = Join-Path $run 'package/ModpackTools'
 $modules = Join-Path $run 'Modules'
 $target = Join-Path $modules 'ModpackTools'
 foreach ($path in @($package,$modules)) { [void][IO.Directory]::CreateDirectory($path) }
-foreach ($name in @('docs','Private','Public','Nushell','ModpackTools.psd1','ModpackTools.psm1','README.md','LICENSE','theme.toml','dependencies.psd1','Install-ModpackTools.ps1')) {
+foreach ($name in @('docs','Private','Public','Nushell','ModpackTools.psd1','ModpackTools.psm1','README.md','LICENSE','theme.toml','dependencies.psd1','Install-ModpackTools.ps1','install-modpack-tools.nu')) {
     Copy-Item -LiteralPath (Join-Path $source $name) -Destination $package -Recurse
 }
 $releaseVersion = [string](Import-PowerShellDataFile (Join-Path $package 'ModpackTools.psd1')).ModuleVersion
@@ -55,6 +55,6 @@ try {
     if (-not $failed) { throw 'Expected post-replacement failure did not occur.' }
     $after = @(Get-ChildItem -LiteralPath $target -File -Recurse)
     if ($after.Count -ne $before.Count) { throw 'Rollback changed file count.' }
-    foreach ($file in $after) { if ($before[[IO.Path]::GetRelativePath($target,$file.FullName)] -ne (Get-FileHash $file.FullName).Hash) { throw 'Rollback changed installed bytes.' } }
+    foreach ($file in $after) { if ($before[[IO.Path]::GetRelativePath($target,$_.FullName)] -ne (Get-FileHash $_.FullName).Hash) { throw 'Rollback changed installed bytes.' } }
     [pscustomobject]@{ InstalledModule=$manifestPath; Version=$releaseVersion; UpdateNotice=$true; RealInstaller=$true; ThemePreserved=$true; FreshProcessVerified=$true; PostReplacementRollback=$true }
 } finally { $env:PSModulePath = $savedModulePath }
