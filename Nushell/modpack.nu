@@ -1,31 +1,6 @@
 const MODULE_DIR = path self .
 const BRIDGE = ($MODULE_DIR | path join 'Invoke-ModpackBridge.ps1')
 
-const PROJECT_COMMANDS = [
-    'status'
-    'inventory'
-    'search'
-    'add'
-    'remove'
-    'classify'
-    'resource'
-    'side'
-    'versions'
-    'update'
-    'build'
-    'diff'
-    'doctor'
-    'pin'
-    'unpin'
-]
-
-const POSITIONAL_PROJECT_COMMANDS = [
-    'status'
-    'inventory'
-    'build'
-    'diff'
-]
-
 def field [value: any, name: string, default_value: any = null] {
     if (($value | describe) !~ '^record') { return $default_value }
     let result = ($value | get --optional $name)
@@ -34,84 +9,6 @@ def field [value: any, name: string, default_value: any = null] {
 
 def data-field [data: any, name: string] {
     field $data $name
-}
-
-def find-command [args: list<string>] {
-    mut skip_next = false
-    for entry in ($args | enumerate) {
-        let token = $entry.item
-        if $skip_next {
-            $skip_next = false
-            continue
-        }
-        if $token == '--colour' {
-            $skip_next = true
-            continue
-        }
-        if (
-            $token == '--ascii'
-            or $token == '--json'
-            or $token == '--no-human'
-            or ($token | str starts-with '--colour=')
-        ) {
-            continue
-        }
-        return { index: $entry.index, name: ($token | str lowercase) }
-    }
-    null
-}
-
-def has-explicit-project-option [args: list<string>] {
-    $args | any {|token|
-        $token == '--project' or ($token | str starts-with '--project=')
-    }
-}
-
-def has-positional-project [args: list<string>, command_index: int, command: string] {
-    if not ($command in $POSITIONAL_PROJECT_COMMANDS) { return false }
-
-    let value_options = if $command == 'inventory' {
-        ['--project' '--type' '--category' '--side' '--source' '--state' '--search']
-    } else {
-        ['--project']
-    }
-
-    mut skip_next = false
-    for token in ($args | skip ($command_index + 1)) {
-        if $skip_next {
-            $skip_next = false
-            continue
-        }
-
-        if $token == '--colour' {
-            $skip_next = true
-            continue
-        }
-        if $token in $value_options {
-            $skip_next = true
-            continue
-        }
-        if ($token | str starts-with '--') { continue }
-        return true
-    }
-
-    false
-}
-
-def with-active-project [args: list<string>] {
-    let selected = ($env.MODPACKTOOLS_PROJECT? | default '' | into string)
-    if $selected == '' { return $args }
-
-    let command_info = (find-command $args)
-    if $command_info == null { return $args }
-
-    let command = $command_info.name
-    if not ($command in $PROJECT_COMMANDS) { return $args }
-    if ($args | any {|token| $token == '--help' }) { return $args }
-    if (has-explicit-project-option $args) { return $args }
-    if (has-positional-project $args $command_info.index $command) { return $args }
-
-    $args | append '--project' | append $selected
 }
 
 def invoke-bridge [request: string] {
@@ -189,8 +86,7 @@ def unwrap-result [envelope: record] {
 # PowerShell remains the canonical engine. The bridge reserves stdout for one JSON envelope;
 # R3CLI human output continues on stderr and therefore never contaminates the Nu pipeline.
 export def --env --wrapped main [...args: string] {
-    let invocation_args = (with-active-project $args)
-    let request = ({ arguments: $invocation_args } | to json)
+    let request = ({ arguments: $args } | to json)
     let raw = (invoke-bridge $request)
     let text = ($raw | into string | str trim)
 
@@ -218,12 +114,15 @@ export def --env --wrapped main [...args: string] {
 
     if (field $envelope command '') == 'use' {
         let use_args = (field $envelope arguments [])
-        if ($use_args | is-empty) {
-            return { active_project: ($env.MODPACKTOOLS_PROJECT? | default null) }
+        if ($use_args | any {|token| $token == '--help' }) {
+            return (unwrap-result $envelope)
         }
-        let project = ($use_args | first)
-        $env.MODPACKTOOLS_PROJECT = $project
-        return { active_project: $project }
+
+        let active_project = (data-field (field $envelope data {}) active_project)
+        if $active_project != null {
+            $env.MODPACKTOOLS_PROJECT = ($active_project | into string)
+        }
+        return { active_project: $active_project }
     }
 
     unwrap-result $envelope
