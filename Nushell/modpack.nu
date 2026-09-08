@@ -16,6 +16,10 @@ def unwrap-result [envelope: record] {
     let data = (field $envelope data {})
 
     match $command {
+        '--version' => {
+            let version = (data-field $data version)
+            if $version == null { $data } else { $version }
+        }
         'list' => {
             let projects = (data-field $data projects)
             if $projects == null { $data } else { field $projects items [] }
@@ -67,7 +71,7 @@ export def --env --wrapped main [...args: string] {
     let text = ($raw | into string | str trim)
 
     if $text == '' {
-        error make { msg: $'ModpackTools bridge returned no JSON data \(exit code ($exit_code)\).' }
+        error make { msg: $'ModpackTools bridge returned no JSON data; exit code ($exit_code).' }
     }
 
     let envelope = try {
