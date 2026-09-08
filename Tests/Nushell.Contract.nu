@@ -6,10 +6,9 @@ def ensure [condition: bool, message: string] {
 }
 
 def main [] {
-    # Seed a failing native exit code first. The adapter must report the exit code
-    # of its own PowerShell child, not a stale LAST_EXIT_CODE from the caller.
-    ^pwsh -NoLogo -NoProfile -Command 'exit 7'
-    ensure (($env.LAST_EXIT_CODE? | default 0) == 7) 'Could not seed the native exit-code regression fixture.'
+    # Seed a stale-looking value without letting a failed child terminate this
+    # test process. The adapter must use its own bridge exit code instead.
+    $env.LAST_EXIT_CODE = 7
 
     # Default Nu usage keeps human R3CLI output on stderr while stdout remains
     # parseable structured data. This call deliberately does not use --no-human.
@@ -90,5 +89,6 @@ def main [] {
     ensure (($status.project.id? | default '') == 'nu-fixture') 'A later project command did not reuse the Nu session project.'
 
     rm --recursive --force $fixture_root
+    $env.LAST_EXIT_CODE = 0
     print 'Nushell adapter contract passed.'
 }

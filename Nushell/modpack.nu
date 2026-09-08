@@ -56,7 +56,7 @@ def find-command [args: list<string>] {
         ) {
             continue
         }
-        return { index: $entry.index, name: ($token | str downcase) }
+        return { index: $entry.index, name: ($token | str lowercase) }
     }
     null
 }
