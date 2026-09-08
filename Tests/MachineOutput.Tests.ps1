@@ -81,8 +81,8 @@ InModuleScope ModpackTools {
             $text = Get-Content -LiteralPath $config -Raw -Encoding UTF8
             ([regex]::Matches($text, [regex]::Escape('# >>> ModpackTools Nushell >>>'))).Count | Should Be 1
             ([regex]::Matches($text, [regex]::Escape('# <<< ModpackTools Nushell <<<'))).Count | Should Be 1
-            $text | Should Match [regex]::Escape('$env.TEST_SENTINEL = ''keep''')
-            $text | Should Match [regex]::Escape("use 'C:/Tools/ModpackTools/Nushell/modpack.nu' main")
+            $text | Should Match ([regex]::Escape('$env.TEST_SENTINEL = ''keep'''))
+            $text | Should Match ([regex]::Escape("use 'C:/Tools/ModpackTools/Nushell/modpack.nu' main"))
         }
     }
 }
