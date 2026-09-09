@@ -30,10 +30,19 @@ PowerShell 7 when interactive. Open a new Nu session after installation so the n
 
 ## Behaviour
 
-The Nu command is still named `modpack` and accepts the same command tokens as the
-PowerShell CLI. The adapter always enables ModpackTools' machine-readable JSON
-channel internally so it can validate success, turn structured failures into Nu
-errors and maintain Nu session state.
+The Nu command is still named `modpack` and uses the same commands and domain
+semantics as the PowerShell CLI, but the Nu adapter owns option spelling at the shell
+boundary. Nushell accepts lowercase long options such as `--project` and
+`--allow-downgrade`, plus documented one-letter lowercase short options such as
+`-h`. PowerShell-style single-dash words such as `-Project` or `-project`, uppercase
+short options such as `-P`, and uppercase long options such as `--Project` are
+rejected by the Nu adapter before the request reaches PowerShell.
+
+This restriction applies only to the Nushell adapter. The PowerShell CLI keeps its
+own PowerShell invocation semantics. After validating Nu option spelling, the
+adapter always enables ModpackTools' machine-readable JSON channel internally so it
+can validate success, turn structured failures into Nu errors and maintain Nu
+session state.
 
 That internal JSON is transport, not presentation. In normal Nu usage the adapter
 consumes it silently and only the normal R3CLI output remains visible:
