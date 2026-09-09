@@ -38,8 +38,9 @@ def main [] {
     # Nushell forwards a child process stderr through a pipe, so PowerShell cannot
     # infer whether the original Nu stderr is a terminal. The adapter passes that
     # fact explicitly; auto colour must follow the parent terminal rather than the
-    # bridge process plumbing.
-    let escape = (char escape)
+    # bridge process plumbing. Nushell 0.115 accepts \e directly in double-quoted
+    # strings; the old named `char escape` form is no longer valid.
+    let escape = "\e"
     let colour_request = ({ arguments: ['--help'], human_stderr_terminal: true } | to json)
     let coloured = ($colour_request | ^pwsh -NoLogo -NoProfile -File $BRIDGE | complete)
     ensure ($coloured.exit_code == 0) 'The colour bridge probe failed.'
