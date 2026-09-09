@@ -26,6 +26,21 @@ def main [] {
     let help_result = (modpack --help --no-human)
     ensure ((($help_result | describe) =~ '^record')) 'Global help did not pass through the wrapped adapter.'
 
+    # Nushell owns the spelling of options at its boundary. Long options are
+    # lowercase double-dash names and short options are one lowercase letter.
+    # PowerShell-style single-dash words and uppercase spellings must fail before
+    # the request is handed to the PowerShell bridge.
+    for invalid_option in ['-Project' '-project' '-P' '--Project'] {
+        let style_failure = try {
+            modpack inventory $invalid_option placeholder --no-human | ignore
+            ''
+        } catch {|err|
+            $err.msg
+        }
+        ensure ($style_failure | str contains 'Nushell options must use lowercase') $'Nushell accepted invalid option spelling ($invalid_option).'
+        ensure (not ($style_failure | str contains 'Could not run the ModpackTools bridge')) $'Invalid option ($invalid_option) reached the bridge instead of failing in Nu.'
+    }
+
     let failure_message = try {
         modpack definitely-not-a-command --no-human | ignore
         ''
@@ -102,6 +117,10 @@ def main [] {
     '' | save --force ($project_root | path join 'resourcepacks' $unicode_resource)
 
     modpack config set root $fixture_root --no-human | ignore
+
+    # Lowercase double-dash spelling remains valid at the Nu boundary.
+    let explicit_status = (modpack status --project nu-fixture --no-human)
+    ensure (($explicit_status.project.id? | default '') == 'nu-fixture') 'Valid Nushell --project spelling was rejected or changed.'
 
     let visible_use = (modpack use nu-fixture)
     ensure ($visible_use == null) 'Normal modpack use leaked its machine payload.'
