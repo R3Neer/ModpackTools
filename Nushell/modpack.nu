@@ -15,6 +15,36 @@ def wants-machine-output [args: list<string>] {
     $args | any {|token| $token == '--no-human' }
 }
 
+def validate-nu-option-style [args: list<string>] {
+    mut parse_options = true
+
+    for token in $args {
+        if not $parse_options {
+            continue
+        }
+
+        if $token == '--' {
+            $parse_options = false
+            continue
+        }
+
+        if ($token | str starts-with '--') {
+            if $token !~ '^--[a-z][a-z0-9-]*(=.*)?$' {
+                error make {
+                    msg: $"Nushell options must use lowercase '--long-option' or one-letter '-s' syntax. Option '($token)' is not valid Nushell style."
+                }
+            }
+            continue
+        }
+
+        if ($token =~ '^-[A-Za-z]') and ($token !~ '^-[a-z]$') {
+            error make {
+                msg: $"Nushell options must use lowercase '--long-option' or one-letter '-s' syntax. PowerShell-style option '($token)' is not supported by the Nu adapter."
+            }
+        }
+    }
+}
+
 def invoke-bridge [request: string] {
     # stdout is redirected to a temporary file while stderr stays attached to the
     # terminal. File redirection preserves the external byte stream, so decode it
@@ -96,6 +126,7 @@ def unwrap-result [envelope: record] {
 # envelope internally. Normal Nu usage consumes that machine payload silently and
 # leaves only R3CLI presentation visible; --no-human exposes the parsed Nu value.
 export def --env --wrapped main [...args: string] {
+    validate-nu-option-style $args
     let machine_output = (wants-machine-output $args)
     let request = ({
         arguments: $args
