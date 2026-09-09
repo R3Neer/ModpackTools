@@ -32,11 +32,13 @@ PowerShell 7 when interactive. Open a new Nu session after installation so the n
 
 The Nu command is still named `modpack` and uses the same commands and domain
 semantics as the PowerShell CLI, but the Nu adapter owns option spelling at the shell
-boundary. Nushell accepts lowercase long options such as `--project` and
-`--allow-downgrade`, plus documented one-letter lowercase short options such as
-`-h`. PowerShell-style single-dash words such as `-Project` or `-project`, uppercase
-short options such as `-P`, and uppercase long options such as `--Project` are
-rejected by the Nu adapter before the request reaches PowerShell.
+boundary. Nushell long options must use lowercase double-dash spelling such as
+`--project` and `--allow-downgrade`. A single-dash option token is allowed only in
+one-letter lowercase form; ModpackTools does not invent short aliases for long
+options, so a short form works only when that command explicitly defines it.
+PowerShell-style single-dash words such as `-Project` or `-project`, uppercase short
+options such as `-P`, and uppercase long options such as `--Project` are rejected by
+the Nu adapter before the request reaches PowerShell.
 
 This restriction applies only to the Nushell adapter. The PowerShell CLI keeps its
 own PowerShell invocation semantics. After validating Nu option spelling, the
