@@ -4,7 +4,7 @@
 
 ModpackTools is a Windows CLI for managing Minecraft Java modpacks built with [Packwiz](https://packwiz.infra.link/).
 
-PowerShell 7 is the canonical engine. ModpackTools 3.3 also ships a Nushell adapter that exposes the same `modpack` command while returning native structured values to Nu pipelines.
+PowerShell 7 is the canonical engine. ModpackTools 3.3 also ships a Nushell adapter for the same `modpack` command: normal Nu usage keeps the R3CLI human interface, while `--no-human` exposes native structured results for pipelines.
 
 ```text
 project
@@ -37,7 +37,7 @@ ModpackTools can:
 - diagnose environment, project, dependency and build health;
 - apply multi-item changes transactionally with rollback and recovery journals;
 - export validated `.mrpack` files;
-- expose schema-versioned JSON for automation and native Nushell values for structured pipelines.
+- expose schema-versioned JSON for PowerShell automation and native Nushell values through explicit `--no-human` machine mode.
 
 Dependency validation is metadata validation. It does **not** launch Minecraft or prove that a complete runtime will start. Missing or ambiguous evidence is reported as **verification incomplete**. Use `--strict` when incomplete verification must block the operation.
 
@@ -149,7 +149,7 @@ modpack build
 modpack diff
 ```
 
-The same `modpack` syntax is available from Nushell.
+The same command grammar is available from Nushell.
 
 ## Command map
 
@@ -202,9 +202,9 @@ modpack build --project vanilla-plus
 
 An explicit selector applies only to that command and does not replace the session selection.
 
-## Nushell: human output and native values
+## Nushell: one command, two presentation modes
 
-The Nu adapter does not reimplement ModpackTools. It preserves PowerShell as the only parser and domain engine, then uses the machine channel as the shell boundary:
+The Nu adapter does not reimplement ModpackTools. It preserves PowerShell as the only parser and domain engine, then uses the JSON machine channel internally as the shell boundary:
 
 ```text
 Nushell `modpack`
@@ -214,27 +214,37 @@ PowerShell bridge
        │
        ├── R3CLI human output ──> stderr
        │
-       └── JSON envelope ───────> stdout
+       └── JSON envelope ───────> captured transport
                                   │
-                                  ▼
-                         native Nushell value
+                   ┌──────────────┴──────────────┐
+                   ▼                             ▼
+             normal Nu use                --no-human
+             human display              native Nu value
 ```
 
-That keeps interactive presentation and machine data separate:
+Normal interactive usage consumes the transport envelope silently and leaves only the R3CLI presentation visible:
 
 ```nu
-modpack inventory --type mod
+modpack inventory
+modpack search sodium
+modpack doctor
+```
+
+Use `--no-human` when Nu itself should receive the structured result:
+
+```nu
+modpack inventory --type mod --no-human
 | where side == client
 | sort-by name
 
-modpack search sodium
+modpack search sodium --no-human
 | where downloads > 1_000_000
 
-modpack versions sodium
+modpack versions sodium --no-human
 | select number version installed
 ```
 
-The native result is also eligible for `$ans.last` according to the user's Nushell `max_last_result_size` configuration.
+The machine value, not JSON text, is the pipeline result. It is also eligible for `$ans.last` according to the user's Nushell `max_last_result_size` configuration.
 
 The same machine channel is available directly from PowerShell:
 
@@ -243,7 +253,7 @@ modpack inventory --json
 modpack inventory --json --no-human
 ```
 
-`--json` keeps human presentation while emitting one schema-versioned JSON envelope. `--no-human` suppresses presentation and requires `--json`.
+In PowerShell, `--json` keeps human presentation while emitting one schema-versioned JSON envelope. `--no-human` suppresses presentation and is valid only together with `--json`. The Nu adapter handles its internal JSON transport automatically, so Nu users normally request only `--no-human`.
 
 The envelope is authoritative for success and failure. The Nu wrapper does not layer a stale `$env.LAST_EXIT_CODE` interpretation on top of it.
 
@@ -260,6 +270,8 @@ modpack inventory
 ```
 
 An explicit `--project <id>` remains a normal PowerShell argument and overrides the inherited active project for that invocation. Closing Nushell clears the session-local selection.
+
+`modpack use --help` does not change session state. The adapter only updates `MODPACKTOOLS_PROJECT` from an explicit successful `active_project` machine result.
 
 ## Inventory and selectors
 
@@ -387,7 +399,9 @@ MyPack/
 
 R3CLI owns CLI layout, help, symbols, colour and expected-error presentation. ModpackTools owns domain data, command semantics and a small product theme extension.
 
-When `--json` is active, human rendering goes to stderr and machine JSON goes to stdout. Structured output therefore remains parseable without sacrificing interactive feedback.
+When `--json` is active in PowerShell, human rendering goes to stderr and machine JSON goes to stdout. Structured output therefore remains parseable without sacrificing interactive feedback.
+
+The Nu bridge similarly keeps R3CLI presentation on stderr and captures only its JSON transport. It forwards the parent Nu stderr terminal state so `--colour auto` still behaves like an interactive command, while `NO_COLOR`, explicit colour modes and redirected stderr retain their normal meaning.
 
 Expected failures use stable error IDs and actionable hints.
 
@@ -396,8 +410,6 @@ A complete personal theme can be placed at:
 ```text
 %LOCALAPPDATA%\ModpackTools\theme.toml
 ```
-
-`NO_COLOR` and redirected output disable ANSI under automatic colour detection.
 
 See [`docs/r3cli-integration.md`](docs/r3cli-integration.md) and [`docs/error-design.md`](docs/error-design.md).
 
@@ -408,7 +420,8 @@ The README is the operational overview. Detailed contracts live in focused docum
 - [`docs/nushell.md`](docs/nushell.md) — Nushell bridge, session state and returned data;
 - [`docs/dependency-engine.md`](docs/dependency-engine.md) — resolver and transaction policy;
 - [`docs/r3cli-integration.md`](docs/r3cli-integration.md) — presentation-layer boundary and vendoring;
-- [`docs/error-design.md`](docs/error-design.md) — stable expected-error design.
+- [`docs/error-design.md`](docs/error-design.md) — stable expected-error design;
+- [`docs/releases/3.3.0.md`](docs/releases/3.3.0.md) — release-specific 3.3 changes and validation.
 
 Command-specific syntax remains authoritative in generated CLI help:
 
@@ -436,6 +449,10 @@ Open a new Nu session so the `config.nu` import is parsed again.
 
 `modpack use` is session-local. Select it again or use `--project <id>`.
 
+**A Nu pipeline sees no structured rows**
+
+Normal Nu usage is human mode. Add `--no-human` to the `modpack` invocation before piping it to `where`, `select`, `sort-by` or another Nu data command.
+
 **Doctor reports verification incomplete**
 
 Use `modpack doctor --details`. Incomplete evidence is not equivalent to either known failure or proven runtime success.
@@ -453,7 +470,7 @@ Import-Module Pester -RequiredVersion 4.10.1
 Invoke-Pester -Script .\Tests
 ```
 
-CI also validates the Nushell adapter with Nushell 0.115.1, shell bridge behaviour, installation, vendored R3CLI integrity and cross-shell contracts.
+CI also validates the Nushell adapter with Nushell 0.115.1, shell bridge behaviour, installation, UTF-8 machine transport, terminal-colour forwarding, vendored R3CLI integrity and cross-shell contracts.
 
 R3CLI updates are explicit maintainer work. The pinned adapter revision and hashes live in `dependencies.psd1`; see [`docs/r3cli-integration.md`](docs/r3cli-integration.md) for the update procedure.
 
