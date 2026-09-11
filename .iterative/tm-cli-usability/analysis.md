@@ -33,24 +33,25 @@ Risk: `-v` sits near PowerShell's common `-Verbose` parameter. An explicit param
 
 ## A2 — Search without requiring a project
 
-Current behavior is project-bound in three different places:
+Current behavior is project-bound in three places:
 
 1. `Invoke-MpSearch` calls `Resolve-MpCommandProject` unconditionally.
 2. `Invoke-ModrinthSearchRequest` always adds a Minecraft-version facet and, for mods, a loader facet from the project.
-3. `Resolve-ModrinthSearchNumber` rejects the saved reference if the consuming project differs from the project stored in the cache.
+3. `Resolve-ModrinthSearchNumber` rejects a saved reference when its saved project/compatibility context differs from the consuming project.
 
-The third constraint is unnecessary for installation safety. A saved search number ultimately identifies a stable Modrinth project ID. The later add/resolver path already resolves a version against the *actual target project's* Minecraft/loader constraints and dependency policy.
+Only the first two constraints must be relaxed for a project-free search. The third remains useful for searches that were deliberately compatibility-filtered by a project.
 
 Recommended semantics:
 
-- Preserve current convenience when an active project exists: `modpack search query` may use that active project as a compatibility filter.
+- Preserve current convenience when an active project exists: `modpack search query` uses that active project as a compatibility filter.
 - If no active project exists, `modpack search query` performs a global Modrinth search and does not fail merely because there is no project.
 - `--project <id>` continues to force a specific compatibility-filtered search.
-- Search cache entries may keep optional context metadata (`ProjectId`, `MinecraftVersion`, `Loader`) for display/debugging, but that metadata is descriptive, not an ownership lock.
-- Numeric resolution checks only cache existence, age, and number range. It returns the Modrinth identity regardless of which project later consumes it.
-- Compatibility is enforced when the later project operation resolves the Modrinth project.
+- Global search cache entries store null project/compatibility context. Because no project owned that search, their numeric results are portable to a later target project.
+- Project-filtered cache entries keep the existing project/compatibility binding and existing mismatch/change protections.
+- `Resolve-ModrinthSearchNumber` therefore branches on cache context: if `ProjectId` is empty, validate only cache existence/age/range; if `ProjectId` exists, preserve the current project and compatibility checks.
+- Compatibility for a global-search result is enforced later when the actual target project operation resolves a compatible Modrinth version and dependency graph.
 
-This preserves established behavior for sessions that already selected a project while adding the requested project-free use case.
+This is narrower than making every search number globally portable, preserves existing safety/tests, and matches the requested workflow exactly.
 
 ## A3 — Human search output / machine contract
 
@@ -111,33 +112,35 @@ Likely touched files:
 - `Private/MachineOutput.ps1`
 - `Private/Transaction.ps1`
 - `Private/Operations.ps1`
-- `Private/Help.ps1`
-- `README.md` and/or `Private/Packwiz.ps1` documentation text describing number scopes
+- `README.md` and/or help text describing search-number scope
 - new `docs/message-style.md`
 - new focused Pester test file, avoiding unnecessary surgery on the large existing test suite
-- Nushell contract tests if the bridge needs explicit coverage
+- Nushell contract tests only if bridge behavior is not sufficiently covered by PowerShell array-invocation tests
 
 ## A6 — Test strategy
 
-Create a focused `Tests/CliUsability.Tests.ps1` that imports the module internals in the same style as the existing suite and tests:
+Create a focused `Tests/CliUsability.Tests.ps1` and test:
 
 1. `modpack -h` and command-level `-h`.
 2. `modpack -v --offline` and equivalence with `--version --offline`.
 3. `-u` dispatch, using mocks so no network/update is performed.
-4. global search request creation without a project.
-5. search cache creation with null project context.
-6. numeric search reference consumed by a different project without project-mismatch failure.
-7. later project compatibility failure still happens in the resolver when appropriate, proving portability did not bypass validation.
-8. transaction summary wording for applied, preview, and dry-run states.
-9. neutral removal-plan wording.
-10. machine search output with `project = null`.
-
-Add/adjust Nushell contract assertions for `-h/-v/-u` pass-through if current contract fixtures exercise argument syntax.
+4. literal array invocation of `-h/-v/-u` to simulate the Nushell bridge path.
+5. global search request creation without a project.
+6. global search cache creation with null project context.
+7. a numeric reference from that global cache consumed by a later project without project-mismatch failure.
+8. the existing project-filtered mismatch behavior remains intact.
+9. transaction summary wording for applied, preview, and dry-run states.
+10. neutral removal-plan wording.
+11. machine search output with `project = null`.
 
 ## Analysis review 1
 
-Material change found: the first requirements draft said that an omitted `--project` should always mean a global search. That would unnecessarily remove existing active-project filtering. The safer compatible rule is: explicit project first, otherwise active project when available, otherwise global search. Requirements were updated before planning.
+Material change found: omitted `--project` should preserve active-project filtering when available and fall back to global search only when no project exists.
 
 ## Analysis review 2
 
-Re-checked the public entry point, Nushell bridge, search cache/resolver, transaction renderer, content-plan renderer, machine wrapper, batch consumers, self-update output, and other R3CLI call sites. No additional architectural or requirement changes are needed. Analysis is stable for planning.
+A broader portability design initially made every saved search number portable across projects. Review found that this removed an existing safety check unnecessarily. Portability is now limited to project-free/global searches; project-filtered caches remain bound.
+
+## Analysis review 3
+
+Re-checked the entry point, bridge, search cache semantics, transaction renderer, content-plan renderer, machine wrapper, batch consumers, self-update output, and test compatibility under the narrowed design. No further material changes. Analysis is stable for planning.
