@@ -75,9 +75,11 @@ jobs:
         id: package
         if: steps.metadata.outputs.release_exists != 'true'
         shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $version = '${{ steps.metadata.outputs.version }}'
+          $version = $env:RELEASE_VERSION
           $stage = Join-Path $env:RUNNER_TEMP "ModpackTools-$version"
           $verify = Join-Path $env:RUNNER_TEMP "ModpackTools-$version-verify"
           $archive = Join-Path $env:GITHUB_WORKSPACE "ModpackTools-$version.zip"
@@ -125,19 +127,19 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.metadata.outputs.tag }}
+          RELEASE_TITLE: ${{ steps.metadata.outputs.title }}
+          RELEASE_NOTES: ${{ steps.metadata.outputs.notes }}
+          RELEASE_ARCHIVE: ${{ steps.package.outputs.archive }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+          RELEASE_TAG_EXISTS: ${{ steps.metadata.outputs.tag_exists }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $tag = '${{ steps.metadata.outputs.tag }}'
-          $title = '${{ steps.metadata.outputs.title }}'
-          $notes = '${{ steps.metadata.outputs.notes }}'
-          $archive = '${{ steps.package.outputs.archive }}'
-          $sha = '${{ github.event.workflow_run.head_sha }}'
-
-          if ('${{ steps.metadata.outputs.tag_exists }}' -eq 'true') {
-              gh release create $tag $archive --verify-tag --title $title --notes-file $notes
+          if ($env:RELEASE_TAG_EXISTS -eq 'true') {
+              gh release create $env:RELEASE_TAG $env:RELEASE_ARCHIVE --verify-tag --title $env:RELEASE_TITLE --notes-file $env:RELEASE_NOTES
           }
           else {
-              gh release create $tag $archive --target $sha --title $title --notes-file $notes
+              gh release create $env:RELEASE_TAG $env:RELEASE_ARCHIVE --target $env:RELEASE_SHA --title $env:RELEASE_TITLE --notes-file $env:RELEASE_NOTES
           }
           if ($LASTEXITCODE -ne 0) {
               throw "GitHub release publication failed with exit code $LASTEXITCODE."
@@ -146,4 +148,6 @@ jobs:
       - name: Report existing release
         if: steps.metadata.outputs.release_exists == 'true'
         shell: pwsh
-        run: Write-Host "${{ steps.metadata.outputs.tag }} already has a GitHub release; nothing to publish."
+        env:
+          RELEASE_TAG: ${{ steps.metadata.outputs.tag }}
+        run: Write-Host "$env:RELEASE_TAG already has a GitHub release; nothing to publish."
