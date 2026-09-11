@@ -21,10 +21,24 @@ def main [] {
     ensure ((($quiet_version | describe) =~ '^record')) 'No-human version did not return a Nushell record.'
     ensure (($quiet_version.version? | default '') != '') 'No-human version record is missing its version value.'
 
-    # --wrapped must pass --help through to ModpackTools rather than allowing Nu
+    # Short global aliases use the same canonical PowerShell path after crossing
+    # the wrapped Nu boundary.
+    let short_visible_version = (modpack -v --offline)
+    ensure ($short_visible_version == null) 'Short -v leaked its machine payload in normal Nushell usage.'
+    let short_quiet_version = (modpack -v --offline --no-human)
+    ensure ((($short_quiet_version | describe) =~ '^record')) 'Short -v did not reach the version action.'
+    ensure (($short_quiet_version.version? | default '') != '') 'Short -v returned no version value.'
+
+    # --wrapped must pass help through to ModpackTools rather than allowing Nu
     # to replace the canonical command catalogue with generated wrapper help.
     let help_result = (modpack --help --no-human)
     ensure ((($help_result | describe) =~ '^record')) 'Global help did not pass through the wrapped adapter.'
+    let short_help_result = (modpack -h --no-human)
+    ensure ((($short_help_result | describe) =~ '^record')) 'Short -h did not pass through the wrapped adapter.'
+    let command_short_help = (modpack search -h --no-human)
+    ensure ((($command_short_help | describe) =~ '^record')) 'Command-level short -h did not reach canonical command help.'
+    let self_update_short_help = (modpack -u --help --no-human)
+    ensure ((($self_update_short_help | describe) =~ '^record')) 'Short -u did not route to self-update help.'
 
     # Nushell owns the spelling of options at its boundary. Long options are
     # lowercase double-dash names and short options are one lowercase letter.
@@ -131,6 +145,8 @@ def main [] {
 
     modpack use --help --no-human | ignore
     ensure (($env.MODPACKTOOLS_PROJECT? | default '') == 'nu-fixture') 'modpack use --help changed the active Nu project.'
+    modpack use -h --no-human | ignore
+    ensure (($env.MODPACKTOOLS_PROJECT? | default '') == 'nu-fixture') 'modpack use -h changed the active Nu project.'
 
     let status = (modpack status --no-human)
     ensure (($status.project.id? | default '') == 'nu-fixture') 'A later project command did not inherit the Nu session project.'
