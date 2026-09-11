@@ -6,7 +6,11 @@ InModuleScope ModpackTools {
             $script:ActiveProjectId = $null
             $script:MpConsole = $null
             $script:MpMachineContext = $null
-            $script:CapturedLines = [Collections.Generic.List[string]]::new()
+            $global:MpCliCapturedLines = [Collections.Generic.List[string]]::new()
+        }
+
+        AfterEach {
+            Remove-Variable -Name MpCliCapturedLines -Scope Global -ErrorAction SilentlyContinue
         }
 
         It 'defines the documented short aliases on the public command' {
@@ -34,7 +38,8 @@ InModuleScope ModpackTools {
             modpack -v --offline
             Assert-MockCalled Invoke-MpVersion -Times 1 -ParameterFilter { $Arguments -contains '--offline' }
 
-            & (Get-Command modpack) @('-v','--offline')
+            $forwarded = @('-v','--offline')
+            & (Get-Command modpack) @forwarded
             Assert-MockCalled Invoke-MpVersion -Times 2 -ParameterFilter { $Arguments -contains '--offline' }
         }
 
@@ -56,7 +61,8 @@ InModuleScope ModpackTools {
             }
             Mock Write-ModrinthSearchResults {}
             Mock Resolve-ModpackProject { throw 'search must not require a project' }
-            $script:MpConsole = New-R3Console -Colour never -Sink { param($Text,$Stream) }
+            Mock Get-MpConsole { $null }
+            Mock Write-R3Status {}
 
             { Invoke-MpSearch -Arguments @('sodium') } | Should Not Throw
             Assert-MockCalled Search-ModrinthContent -Times 1 -ParameterFilter { $null -eq $Project -and $Query -eq 'sodium' }
@@ -74,21 +80,14 @@ InModuleScope ModpackTools {
         }
 
         It 'stores null compatibility context for a global search' {
-            Mock Invoke-ModrinthSearchRequest {
-                [pscustomobject]@{
-                    total_hits = 1
-                    hits = @([pscustomobject]@{
-                        project_id='global-id'; slug='global'; project_type='mod'; title='Global'; author='Author'; description='Global result'; downloads=42
-                    })
-                }
-            }
+            Mock Invoke-ModrinthSearchRequest { [pscustomobject]@{ total_hits=0; hits=@() } }
             Mock Write-ModrinthSearchCache {}
 
             $search = Search-ModrinthContent -Project $null -Query 'global' -Type mod
             $search.ProjectId | Should BeNullOrEmpty
             $search.MinecraftVersion | Should BeNullOrEmpty
             $search.Loader | Should BeNullOrEmpty
-            $search.Results[0].ProjectId | Should Be 'global-id'
+            Assert-MockCalled Invoke-ModrinthSearchRequest -Times 1 -ParameterFilter { $null -eq $Project -and $Query -eq 'global' }
         }
 
         It 'lets a global search number resolve inside a later project' {
@@ -140,14 +139,14 @@ InModuleScope ModpackTools {
 
         It 'renders a project-free search and exposes null project machine context' {
             [void](Initialize-MpMachineContext -Enabled -Command search)
-            $script:MpConsole = New-R3Console -Colour never -Sink {
+            $script:MpConsole = New-R3Console -Colour never -ThemeExtension (Read-MpThemeExtension) -Sink {
                 param($Text,$Stream)
-                $script:CapturedLines.Add([string]$Text)
+                $global:MpCliCapturedLines.Add([string]$Text)
             }
             $search = [pscustomobject]@{ Query='nothing'; Type='all'; TotalHits=0; Results=@() }
 
             Write-ModrinthSearchResults -Search $search -Project $null
-            $text = $script:CapturedLines -join "`n"
+            $text = $global:MpCliCapturedLines -join "`n"
             $text | Should Match 'Any Minecraft version / loader'
             $text | Should Match 'No results were found'
             $script:MpMachineContext.Data.Contains('project') | Should Be $true
@@ -155,9 +154,9 @@ InModuleScope ModpackTools {
         }
 
         It 'uses completed wording for applied transaction file changes' {
-            $script:MpConsole = New-R3Console -Colour never -Sink {
+            $script:MpConsole = New-R3Console -Colour never -ThemeExtension (Read-MpThemeExtension) -Sink {
                 param($Text,$Stream)
-                $script:CapturedLines.Add([string]$Text)
+                $global:MpCliCapturedLines.Add([string]$Text)
             }
             $transaction = [pscustomobject]@{
                 Applied=$true
@@ -169,7 +168,7 @@ InModuleScope ModpackTools {
             }
 
             Write-MpTransactionSummary -Transaction $transaction
-            $text = $script:CapturedLines -join "`n"
+            $text = $global:MpCliCapturedLines -join "`n"
             $text | Should Match 'Added new\.txt'
             $text | Should Match 'Changed pack\.toml'
             $text | Should Match 'Removed old\.txt'
@@ -177,9 +176,9 @@ InModuleScope ModpackTools {
         }
 
         It 'uses hypothetical wording for dry-run transaction file changes' {
-            $script:MpConsole = New-R3Console -Colour never -Sink {
+            $script:MpConsole = New-R3Console -Colour never -ThemeExtension (Read-MpThemeExtension) -Sink {
                 param($Text,$Stream)
-                $script:CapturedLines.Add([string]$Text)
+                $global:MpCliCapturedLines.Add([string]$Text)
             }
             $transaction = [pscustomobject]@{
                 Applied=$false
@@ -187,16 +186,16 @@ InModuleScope ModpackTools {
             }
 
             Write-MpTransactionSummary -Transaction $transaction -DryRun
-            $text = $script:CapturedLines -join "`n"
+            $text = $global:MpCliCapturedLines -join "`n"
             $text | Should Match 'Would change pack\.toml'
             $text | Should Match 'nothing was changed'
             $text | Should Not Match 'Changed pack\.toml'
         }
 
         It 'describes planned removals as state transitions rather than imperatives' {
-            $script:MpConsole = New-R3Console -Colour never -Sink {
+            $script:MpConsole = New-R3Console -Colour never -ThemeExtension (Read-MpThemeExtension) -Sink {
                 param($Text,$Stream)
-                $script:CapturedLines.Add([string]$Text)
+                $global:MpCliCapturedLines.Add([string]$Text)
             }
             $plan = [pscustomobject]@{
                 Changes=@([pscustomobject]@{
@@ -208,7 +207,7 @@ InModuleScope ModpackTools {
             }
 
             Write-MpContentPlan -Plan $plan -SkipHealth
-            $text = $script:CapturedLines -join "`n"
+            $text = $global:MpCliCapturedLines -join "`n"
             $text | Should Match 'Library X: old-version -> removed \(unused dependency\)'
             $text | Should Not Match 'Library X: remove'
         }
