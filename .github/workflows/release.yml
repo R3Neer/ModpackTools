@@ -58,11 +58,26 @@ jobs:
               throw "Release title '$title' does not contain version $version."
           }
 
-          $null = gh release view $tag --json tagName 2>$null
-          $releaseExists = $LASTEXITCODE -eq 0
+          $headers = @{
+              Accept = 'application/vnd.github+json'
+              Authorization = "Bearer $env:GH_TOKEN"
+              'X-GitHub-Api-Version' = '2022-11-28'
+          }
+          $apiRoot = "https://api.github.com/repos/$env:GITHUB_REPOSITORY"
 
-          git ls-remote --exit-code --tags origin "refs/tags/$tag" *> $null
-          $tagExists = $LASTEXITCODE -eq 0
+          $releaseResponse = Invoke-WebRequest -Uri "$apiRoot/releases/tags/$tag" -Headers $headers -SkipHttpErrorCheck
+          $releaseExists = switch ([int]$releaseResponse.StatusCode) {
+              200 { $true }
+              404 { $false }
+              default { throw "Could not check release $tag: GitHub API returned HTTP $([int]$releaseResponse.StatusCode)." }
+          }
+
+          $tagResponse = Invoke-WebRequest -Uri "$apiRoot/git/ref/tags/$tag" -Headers $headers -SkipHttpErrorCheck
+          $tagExists = switch ([int]$tagResponse.StatusCode) {
+              200 { $true }
+              404 { $false }
+              default { throw "Could not check tag $tag: GitHub API returned HTTP $([int]$tagResponse.StatusCode)." }
+          }
 
           "version=$version" >> $env:GITHUB_OUTPUT
           "tag=$tag" >> $env:GITHUB_OUTPUT
