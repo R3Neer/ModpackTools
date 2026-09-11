@@ -241,6 +241,10 @@ function Get-MpGraphReport {
             foreach ($mod in $node.Mods) { if ($mod.Side -notin @('client','server') -or $mod.Side -eq $side) { $requirements += $mod.Requirements } }
             foreach ($requirement in $requirements) {
                 if ($requirement.Side -in @('client','server') -and $requirement.Side -ne $side) { continue }
+                if ($requirement.Scope -eq 'project' -and (Get-MpPropertyValue $requirement 'Source') -eq 'provider' -and $Nodes.ContainsKey($requirement.Target)) {
+                    $targetSide = [string](Get-MpPropertyValue $Nodes[$requirement.Target].Item 'Side')
+                    if ($targetSide -in @('client','server') -and $targetSide -ne $side) { continue }
+                }
                 $valid = Test-MpRequirement $requirement $active $mods
                 if ($valid -eq $true) { continue }
                 if ($valid -eq $false -and $requirement.Scope -eq 'mod' -and $requirement.Target -and -not $mods.ContainsKey($requirement.Target) -and @($active.Values | Where-Object { $_.Item.Kind -eq 'mod' -and $_.Mods.Count -eq 0 }).Count) { $valid = $null }
