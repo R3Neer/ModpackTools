@@ -1,0 +1,147 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish stable release
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out the tested main commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Read and validate release metadata
+        id: metadata
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $manifest = Import-PowerShellDataFile ./ModpackTools.psd1
+          $version = [string]$manifest.ModuleVersion
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+              throw "ModuleVersion '$version' is not a stable semantic version."
+          }
+
+          $tag = "v$version"
+          $notes = "docs/releases/$version.md"
+          if (-not (Test-Path -LiteralPath $notes -PathType Leaf)) {
+              throw "Release notes are missing: $notes"
+          }
+
+          $firstLine = Get-Content -LiteralPath $notes -Encoding UTF8 -TotalCount 1
+          if ($firstLine -notmatch '^# (.+)$') {
+              throw "The first release-note line must be the GitHub release title."
+          }
+          $title = $Matches[1]
+          if ($title -notmatch [regex]::Escape($version)) {
+              throw "Release title '$title' does not contain version $version."
+          }
+
+          $null = gh release view $tag --json tagName 2>$null
+          $releaseExists = $LASTEXITCODE -eq 0
+
+          git ls-remote --exit-code --tags origin "refs/tags/$tag" *> $null
+          $tagExists = $LASTEXITCODE -eq 0
+
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "title=$title" >> $env:GITHUB_OUTPUT
+          "notes=$notes" >> $env:GITHUB_OUTPUT
+          "release_exists=$($releaseExists.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          "tag_exists=$($tagExists.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
+      - name: Build and verify release archive
+        id: package
+        if: steps.metadata.outputs.release_exists != 'true'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = '${{ steps.metadata.outputs.version }}'
+          $stage = Join-Path $env:RUNNER_TEMP "ModpackTools-$version"
+          $verify = Join-Path $env:RUNNER_TEMP "ModpackTools-$version-verify"
+          $archive = Join-Path $env:GITHUB_WORKSPACE "ModpackTools-$version.zip"
+
+          Remove-Item -LiteralPath $stage,$verify,$archive -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $stage | Out-Null
+
+          $distribution = @(
+              'docs',
+              'Private',
+              'Public',
+              'Nushell',
+              'Install-ModpackTools.ps1',
+              'install-modpack-tools.nu',
+              'ModpackTools.psd1',
+              'ModpackTools.psm1',
+              'README.md',
+              'LICENSE',
+              'theme.toml',
+              'dependencies.psd1'
+          )
+          foreach ($item in $distribution) {
+              if (-not (Test-Path -LiteralPath $item)) {
+                  throw "Required distribution item is missing: $item"
+              }
+              Copy-Item -LiteralPath $item -Destination $stage -Recurse -Force
+          }
+
+          Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $archive -CompressionLevel Optimal
+          Expand-Archive -LiteralPath $archive -DestinationPath $verify -Force
+
+          $packagedManifest = Test-ModuleManifest -Path (Join-Path $verify 'ModpackTools.psd1')
+          if ([version]$packagedManifest.Version -ne [version]$version) {
+              throw "Packaged version $($packagedManifest.Version) does not match $version."
+          }
+          $installers = @(Get-ChildItem -LiteralPath $verify -Filter 'Install-ModpackTools.ps1' -Recurse -File)
+          if ($installers.Count -ne 1) {
+              throw "Release archive must contain exactly one Install-ModpackTools.ps1."
+          }
+
+          "archive=$archive" >> $env:GITHUB_OUTPUT
+
+      - name: Publish GitHub release
+        if: steps.metadata.outputs.release_exists != 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = '${{ steps.metadata.outputs.tag }}'
+          $title = '${{ steps.metadata.outputs.title }}'
+          $notes = '${{ steps.metadata.outputs.notes }}'
+          $archive = '${{ steps.package.outputs.archive }}'
+          $sha = '${{ github.event.workflow_run.head_sha }}'
+
+          if ('${{ steps.metadata.outputs.tag_exists }}' -eq 'true') {
+              gh release create $tag $archive --verify-tag --title $title --notes-file $notes
+          }
+          else {
+              gh release create $tag $archive --target $sha --title $title --notes-file $notes
+          }
+          if ($LASTEXITCODE -ne 0) {
+              throw "GitHub release publication failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Report existing release
+        if: steps.metadata.outputs.release_exists == 'true'
+        shell: pwsh
+        run: Write-Host "${{ steps.metadata.outputs.tag }} already has a GitHub release; nothing to publish."
