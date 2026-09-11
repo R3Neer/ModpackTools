@@ -136,4 +136,8 @@ Add/adjust Nushell contract assertions for `-h/-v/-u` pass-through if current co
 
 ## Analysis review 1
 
-Material change found: the first requirements draft said that an omitted `--project` should always mean a global search. That would unnecessarily remove existing active-project filtering. The safer compatible rule is: explicit project first, otherwise active project when available, otherwise global search. Requirements must be updated before planning.
+Material change found: the first requirements draft said that an omitted `--project` should always mean a global search. That would unnecessarily remove existing active-project filtering. The safer compatible rule is: explicit project first, otherwise active project when available, otherwise global search. Requirements were updated before planning.
+
+## Analysis review 2
+
+Re-checked the public entry point, Nushell bridge, search cache/resolver, transaction renderer, content-plan renderer, machine wrapper, batch consumers, self-update output, and other R3CLI call sites. No additional architectural or requirement changes are needed. Analysis is stable for planning.
