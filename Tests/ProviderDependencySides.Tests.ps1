@@ -147,6 +147,17 @@ InModuleScope ModpackTools {
             @($plan.Report.Errors).Count | Should Be 0
         }
 
+        It 'keeps a both-side provider dependency active on both sides' {
+            $requirement = New-MpRequirement -Target 'modrinth:sharedlib' -Kind required -Scope project -Source provider -SuggestedVersionId 'sharedlib-2'
+            $owner = New-GraphNode 'modrinth:owner' -Requirements @($requirement)
+            $shared = New-GraphNode 'modrinth:sharedlib' -Side both
+            $nodes = @{ 'modrinth:owner' = $owner; 'modrinth:sharedlib' = $shared }
+
+            $report = Get-MpGraphReport $script:ProviderSideProject $nodes
+
+            @($report.Unknown | Where-Object Owner -eq 'modrinth:owner').Count | Should Be 2
+        }
+
         It 'keeps an unresolved provider dependency required until a target exists' {
             $requirement = New-MpRequirement -Target 'modrinth:missing' -Kind required -Scope project -Source provider
             $owner = New-GraphNode 'modrinth:owner' -Requirements @($requirement)
