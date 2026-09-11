@@ -109,7 +109,8 @@ function Write-MpContentPlan {
     param($Plan, [switch]$SkipHealth)
     foreach ($change in $Plan.Changes) {
         if (-not $change.After) {
-            Write-R3Status (Get-MpConsole) info "$($change.Before.Item.Name): remove ($($change.Reason))"
+            $previous = if ($change.Before.VersionId) { $change.Before.VersionId } else { 'installed' }
+            Write-R3Status (Get-MpConsole) info "$($change.Before.Item.Name): $previous -> removed ($($change.Reason))"
             continue
         }
         $previous = if ($change.Before) { $change.Before.VersionId } else { 'not installed' }
