@@ -1,0 +1,30 @@
+name: One-time branch cleanup
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    name: Delete non-main branches
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete non-main branches
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for branch in 'hotfix/provider-dependency-sides' 'tm-cli-usability'; do
+            encoded=${branch//\//%2F}
+            if gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$encoded" >/dev/null 2>&1; then
+              gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$encoded"
+              echo "Deleted $branch"
+            else
+              echo "$branch already absent"
+            fi
+          done
