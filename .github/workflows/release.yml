@@ -51,7 +51,7 @@ jobs:
 
           $firstLine = Get-Content -LiteralPath $notes -Encoding UTF8 -TotalCount 1
           if ($firstLine -notmatch '^# (.+)$') {
-              throw "The first release-note line must be the GitHub release title."
+              throw 'The first release-note line must be the GitHub release title.'
           }
           $title = $Matches[1]
           if ($title -notmatch [regex]::Escape($version)) {
@@ -79,48 +79,12 @@ jobs:
           RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $version = $env:RELEASE_VERSION
-          $stage = Join-Path $env:RUNNER_TEMP "ModpackTools-$version"
-          $verify = Join-Path $env:RUNNER_TEMP "ModpackTools-$version-verify"
-          $archive = Join-Path $env:GITHUB_WORKSPACE "ModpackTools-$version.zip"
-
-          Remove-Item -LiteralPath $stage,$verify,$archive -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Path $stage | Out-Null
-
-          $distribution = @(
-              'docs',
-              'Private',
-              'Public',
-              'Nushell',
-              'Install-ModpackTools.ps1',
-              'install-modpack-tools.nu',
-              'ModpackTools.psd1',
-              'ModpackTools.psm1',
-              'README.md',
-              'LICENSE',
-              'theme.toml',
-              'dependencies.psd1'
-          )
-          foreach ($item in $distribution) {
-              if (-not (Test-Path -LiteralPath $item)) {
-                  throw "Required distribution item is missing: $item"
-              }
-              Copy-Item -LiteralPath $item -Destination $stage -Recurse -Force
+          $archive = Join-Path $env:GITHUB_WORKSPACE "ModpackTools-$env:RELEASE_VERSION.zip"
+          $result = ./scripts/build-release-package.ps1 -OutputPath $archive -ExpectedVersion $env:RELEASE_VERSION
+          if (-not (Test-Path -LiteralPath $result -PathType Leaf)) {
+              throw 'Release package builder produced no archive.'
           }
-
-          Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $archive -CompressionLevel Optimal
-          Expand-Archive -LiteralPath $archive -DestinationPath $verify -Force
-
-          $packagedManifest = Test-ModuleManifest -Path (Join-Path $verify 'ModpackTools.psd1')
-          if ([version]$packagedManifest.Version -ne [version]$version) {
-              throw "Packaged version $($packagedManifest.Version) does not match $version."
-          }
-          $installers = @(Get-ChildItem -LiteralPath $verify -Filter 'Install-ModpackTools.ps1' -Recurse -File)
-          if ($installers.Count -ne 1) {
-              throw "Release archive must contain exactly one Install-ModpackTools.ps1."
-          }
-
-          "archive=$archive" >> $env:GITHUB_OUTPUT
+          "archive=$result" >> $env:GITHUB_OUTPUT
 
       - name: Publish GitHub release
         if: steps.metadata.outputs.release_exists != 'true'
