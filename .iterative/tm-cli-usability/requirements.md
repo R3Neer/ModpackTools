@@ -18,10 +18,10 @@ Status: temporary working document. Delete when the iterative TM cycle is closed
 - A project may still be supplied explicitly with `--project <id>` to request compatibility-filtered search results.
 - To preserve current behavior, an existing active project may still be used as the compatibility filter when `--project` is omitted.
 - When neither an explicit nor an active project exists, search is global on Modrinth except for the requested content type.
-- Search result numbers must remain usable by later project commands, especially `modpack add <number>`.
-- A search result number identifies the Modrinth project returned by the saved search, not the project context in which the search happened.
-- Therefore a saved search must not reject a later target project merely because the search was made globally, with the active project, or explicitly with another project.
+- Search result numbers from a project-free/global search must remain usable by later project commands, especially `modpack add <number>`.
+- A global-search number identifies the Modrinth project returned by the saved search and is not owned by a project that did not exist when the search happened.
 - Compatibility with the actual target project is validated when the later operation resolves/installs that Modrinth project.
+- Search results produced with an explicit or active project may retain the existing project/compatibility binding. This preserves the current safety check for project-filtered searches and avoids relaxing behavior that was not requested.
 - Search cache expiry and out-of-range protections remain in force.
 - Human and machine search output must represent a missing search project cleanly.
 
@@ -58,9 +58,9 @@ The vendored R3CLI presentation library is out of scope unless ModpackTools pass
 - Add regression tests for all short aliases.
 - Add tests proving search works with no project.
 - Add tests proving a number from a global search can be consumed by an add operation in a project.
-- Preserve an explicit-project search test and prove its number is also portable to another project.
+- Preserve the existing rejection for a project-filtered search number consumed by a different project.
 - Add focused tests for completed vs preview transaction wording.
-- Update affected help/docs and Nushell contract tests.
+- Update affected help/docs and Nushell contract tests where necessary.
 - Existing tests must continue to pass.
 - CI must be green before the TM cycle is closed.
 
@@ -73,8 +73,12 @@ The vendored R3CLI presentation library is out of scope unless ModpackTools pass
 
 ## Requirements review 1
 
-Changed R2 to preserve active-project compatibility filtering when one already exists while still allowing truly project-free global search. No other requirement changed.
+Changed R2 to preserve active-project compatibility filtering when one already exists while still allowing truly project-free global search.
 
 ## Requirements review 2
+
+Initially generalized portability to every saved search number. That was broader than requested and would remove an existing safety check. R2/R5 were narrowed: only a project-free search must be portable; project-filtered searches remain bound to their project.
+
+## Requirements review 3
 
 No material changes. Requirements are stable for planning.
