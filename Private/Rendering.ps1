@@ -303,17 +303,23 @@ function Format-MpCompactNumber {
 function Write-ModrinthSearchResults {
     param(
         [Parameter(Mandatory)]$Search,
-        [Parameter(Mandatory)]$Project
+        [AllowNull()]$Project
     )
 
     Write-R3Banner (Get-MpConsole) 'SEARCH · MODRINTH'
     Write-R3KeyValue (Get-MpConsole) 'Query' $Search.Query
-    Write-R3KeyValue (Get-MpConsole) 'Project' "$($Project.Id) · Minecraft $($Project.MinecraftVersion) · $($Project.Loader)"
+    if ($Project) {
+        Write-R3KeyValue (Get-MpConsole) 'Project' "$($Project.Id) · Minecraft $($Project.MinecraftVersion) · $($Project.Loader)"
+    }
+    else {
+        Write-R3KeyValue (Get-MpConsole) 'Compatibility' 'Any Minecraft version / loader'
+    }
     Write-R3KeyValue (Get-MpConsole) 'Type' $Search.Type
     Write-R3KeyValue (Get-MpConsole) 'Found' "$(@($Search.Results).Count) shown · $($Search.TotalHits) total"
     if (@($Search.Results).Count -eq 0) {
         Write-R3Line (Get-MpConsole) @(@{Text=''})
-        Write-R3Status (Get-MpConsole) info 'No compatible results were found.'
+        if ($Project) { Write-R3Status (Get-MpConsole) info 'No compatible results were found.' }
+        else { Write-R3Status (Get-MpConsole) info 'No results were found.' }
         return
     }
 
@@ -337,7 +343,12 @@ function Write-ModrinthSearchResults {
         if ($item.Description) { Write-R3Line (Get-MpConsole) @(@{Text="      "}, @{Text="$($item.Description)";Role='secondary'}) }
     }
     Write-R3Line (Get-MpConsole) @(@{Text=''})
-    Write-R3Status (Get-MpConsole) info 'Install a result with modpack add <number>. You can also use its ID or slug.'
+    if ($Project) {
+        Write-R3Status (Get-MpConsole) info 'Install a result with modpack add <number>. You can also use its ID or slug.'
+    }
+    else {
+        Write-R3Status (Get-MpConsole) info 'Select a project, then install a result with modpack add <number>. IDs and slugs also work.'
+    }
 }
 
 function Write-ModrinthVersionResults {
