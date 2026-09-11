@@ -37,54 +37,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $manifest = Import-PowerShellDataFile ./ModpackTools.psd1
-          $version = [string]$manifest.ModuleVersion
-          if ($version -notmatch '^\d+\.\d+\.\d+$') {
-              throw "ModuleVersion '$version' is not a stable semantic version."
-          }
-
-          $tag = "v$version"
-          $notes = "docs/releases/$version.md"
-          if (-not (Test-Path -LiteralPath $notes -PathType Leaf)) {
-              throw "Release notes are missing: $notes"
-          }
-
-          $firstLine = Get-Content -LiteralPath $notes -Encoding UTF8 -TotalCount 1
-          if ($firstLine -notmatch '^# (.+)$') {
-              throw 'The first release-note line must be the GitHub release title.'
-          }
-          $title = $Matches[1]
-          if ($title -notmatch [regex]::Escape($version)) {
-              throw "Release title '$title' does not contain version $version."
-          }
-
-          $headers = @{
-              Accept = 'application/vnd.github+json'
-              Authorization = "Bearer $env:GH_TOKEN"
-              'X-GitHub-Api-Version' = '2022-11-28'
-          }
-          $apiRoot = "https://api.github.com/repos/$env:GITHUB_REPOSITORY"
-
-          $releaseResponse = Invoke-WebRequest -Uri "$apiRoot/releases/tags/$tag" -Headers $headers -SkipHttpErrorCheck
-          $releaseExists = switch ([int]$releaseResponse.StatusCode) {
-              200 { $true }
-              404 { $false }
-              default { throw "Could not check release $tag: GitHub API returned HTTP $([int]$releaseResponse.StatusCode)." }
-          }
-
-          $tagResponse = Invoke-WebRequest -Uri "$apiRoot/git/ref/tags/$tag" -Headers $headers -SkipHttpErrorCheck
-          $tagExists = switch ([int]$tagResponse.StatusCode) {
-              200 { $true }
-              404 { $false }
-              default { throw "Could not check tag $tag: GitHub API returned HTTP $([int]$tagResponse.StatusCode)." }
-          }
-
-          "version=$version" >> $env:GITHUB_OUTPUT
-          "tag=$tag" >> $env:GITHUB_OUTPUT
-          "title=$title" >> $env:GITHUB_OUTPUT
-          "notes=$notes" >> $env:GITHUB_OUTPUT
-          "release_exists=$($releaseExists.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
-          "tag_exists=$($tagExists.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          $metadata = ./scripts/get-release-metadata.ps1 -Repository $env:GITHUB_REPOSITORY -Token $env:GH_TOKEN -CheckRemote
+          "version=$($metadata.Version)" >> $env:GITHUB_OUTPUT
+          "tag=$($metadata.Tag)" >> $env:GITHUB_OUTPUT
+          "title=$($metadata.Title)" >> $env:GITHUB_OUTPUT
+          "notes=$($metadata.NotesPath)" >> $env:GITHUB_OUTPUT
+          "release_exists=$($metadata.ReleaseExists.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          "tag_exists=$($metadata.TagExists.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
 
       - name: Build and verify release archive
         id: package

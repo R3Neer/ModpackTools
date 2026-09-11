@@ -55,17 +55,9 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $version = [string](Import-PowerShellDataFile ./ModpackTools.psd1).ModuleVersion
-          $notes = "./docs/releases/$version.md"
-          if (-not (Test-Path -LiteralPath $notes -PathType Leaf)) {
-              throw "Release notes are missing: $notes"
-          }
-          $title = Get-Content -LiteralPath $notes -Encoding UTF8 -TotalCount 1
-          if ($title -notmatch '^# .+' -or $title -notmatch [regex]::Escape($version)) {
-              throw "The release-note H1 must contain version $version."
-          }
-          $archive = Join-Path $env:RUNNER_TEMP "ModpackTools-$version.zip"
-          ./scripts/build-release-package.ps1 -OutputPath $archive -ExpectedVersion $version | Out-Null
+          $metadata = ./scripts/get-release-metadata.ps1
+          $archive = Join-Path $env:RUNNER_TEMP "ModpackTools-$($metadata.Version).zip"
+          ./scripts/build-release-package.ps1 -OutputPath $archive -ExpectedVersion $metadata.Version | Out-Null
           if (-not (Test-Path -LiteralPath $archive -PathType Leaf)) {
               throw 'Release package builder produced no archive.'
           }
