@@ -18,20 +18,22 @@ The release workflow treats these files as the release source of truth. Do not c
 3. Bump `ModuleVersion` and add `docs/releases/<version>.md`.
 4. Merge the reviewed branch into `main`.
 5. Let `CI` complete on the merged `main` commit.
-6. After successful CI, `.github/workflows/release.yml` builds and verifies `ModpackTools-<version>.zip`, then creates the `v<version>` tag and GitHub release from that exact tested commit.
+6. After successful CI, `.github/workflows/release.yml` builds the installable ZIP from that exact tested commit and creates the `v<version>` tag and GitHub release.
 
 No stable release is published from a failed CI run.
 
 ## Release archive
 
-The installable ZIP contains the same runtime distribution expected by the installer and self-updater:
+`scripts/build-release-package.ps1` is the single package builder used by both CI and the release workflow. CI runs it before merge, and the release workflow runs the same script again on the tested `main` commit that will be tagged.
+
+The installable ZIP contains the runtime distribution expected by the installer and self-updater:
 
 - `docs/`, `Private/`, `Public/`, and `Nushell/`;
 - both installer entry points;
 - the module manifest and root module;
 - README, licence, theme, and pinned dependency metadata.
 
-The workflow expands the generated archive again, validates the packaged module manifest, checks the version, and requires exactly one `Install-ModpackTools.ps1` before publishing it.
+The builder expands the generated archive again, validates the packaged module manifest and version, requires exactly one `Install-ModpackTools.ps1`, and checks that the Nushell installer is present before returning the archive for publication.
 
 ## Existing tags and releases
 
