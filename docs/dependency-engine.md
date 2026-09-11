@@ -48,6 +48,13 @@ ID, a loader mod ID and a loader version are separate identities. Unknown mod ID
 are never installed by fuzzy name search. Existing local files participate in
 validation but cannot be automatically replaced.
 
+Provider-declared project dependencies inherit the resolved dependency project's
+environment availability. A client-only provider project is required only in the
+client graph, a server-only project only in the server graph, and a project available
+on both sides remains required on both. This normalization applies only to provider
+project relationships; loader-manifest dependencies keep their own declared side
+semantics and are never weakened by provider metadata.
+
 The requested version is fixed; absent an exact request, the newest compatible
 publication is selected. Dependency search backtracks across the affected managed
 projects and handles required cycles. It minimizes changed installed items, then
