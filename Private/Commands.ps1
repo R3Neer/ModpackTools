@@ -65,6 +65,14 @@ function Resolve-MpCommandProject {
     return Resolve-ModpackProject -Id $id
 }
 
+function Resolve-MpSearchProject {
+    param([Parameter(Mandatory)][hashtable]$Options)
+
+    if ($Options.ContainsKey('project')) { return Resolve-ModpackProject -Id ([string]$Options.project) }
+    if ($script:ActiveProjectId) { return Resolve-ModpackProject -Id $script:ActiveProjectId }
+    return $null
+}
+
 function Invoke-MpList {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Show-MpHelp list; return }
@@ -215,7 +223,7 @@ function Invoke-MpSearch {
     if ($Arguments -contains '--help') { Show-MpHelp search; return }
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project', 'type', 'limit')
     Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 100 -Usage 'modpack search <query> [--type <type>] [--limit <1-50>] [--project <id>]'
-    $project = Resolve-MpCommandProject -Options $parsed.Options
+    $project = Resolve-MpSearchProject -Options $parsed.Options
     $type = if ($parsed.Options.ContainsKey('type')) { $parsed.Options.type } else { 'all' }
     $limit = 10
     if ($parsed.Options.ContainsKey('limit') -and (-not [int]::TryParse([string]$parsed.Options.limit, [ref]$limit) -or $limit -lt 1 -or $limit -gt 50)) {

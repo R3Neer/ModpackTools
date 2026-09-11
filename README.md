@@ -89,17 +89,17 @@ The Nu entry point delegates to the canonical installer rather than implementing
 
 ```powershell
 modpack --version
-modpack --version --offline
+modpack -v --offline
 modpack --update --check
-modpack --update
+modpack -u
 modpack --update --yes
 ```
 
-`--version` may announce a newer stable release. Successful checks are cached for 24 hours; `--offline` bypasses both network access and the cache.
+`--version` / `-v` may announce a newer stable release. Successful checks are cached for 24 hours; `--offline` bypasses both network access and the cache.
 
-`modpack --update` previews and verifies the replacement installation before switching to it. A failed post-replacement verification restores the previous installation.
+`modpack --update` / `modpack -u` previews and verifies the replacement installation before switching to it. A failed post-replacement verification restores the previous installation.
 
-`modpack update` is intentionally different: it updates **modpack content**. Self-update is the global `--update` option.
+`modpack update` is intentionally different: it updates **modpack content**. Self-update is the global `--update` / `-u` option.
 
 ## Five-minute workflow
 
@@ -153,7 +153,7 @@ The same command grammar is available from Nushell.
 
 ## Command map
 
-Use `modpack --help` for the generated overview and `modpack <command> --help` for full syntax, notes and examples.
+Use `modpack --help` or `modpack -h` for the generated overview and `modpack <command> --help` or `modpack <command> -h` for full syntax, notes and examples.
 
 | Area | Command | Purpose |
 | --- | --- | --- |
@@ -163,7 +163,7 @@ Use `modpack --help` for the generated overview and `modpack <command> --help` f
 | Projects | `new` | Create a Fabric, Quilt, Forge or NeoForge Packwiz project. |
 | Projects | `init` | Adopt an existing Packwiz project. |
 | Content | `inventory` | Inspect and filter installed content. |
-| Content | `search` | Search compatible Modrinth content. |
+| Content | `search` | Search Modrinth globally or with project compatibility filters. |
 | Content | `add` | Resolve and install one dependency-aware batch. |
 | Content | `versions` | List compatible releases for installed Modrinth content. |
 | Content | `update` | Update selected content or eligible managed content. |
@@ -177,6 +177,7 @@ Use `modpack --help` for the generated overview and `modpack <command> --help` f
 | Health / build | `diff` | Compare current project content with the latest build. |
 | Configuration | `config` | Read or change root and Packwiz configuration. |
 
+Global command aliases are `-h` for `--help`, `-v` for `--version` and `-u` for the self-update `--update` option.
 Global presentation options are `--colour auto|always|never` and `--ascii`.
 Machine-output options are `--json` and `--no-human`.
 
@@ -201,6 +202,8 @@ modpack build --project vanilla-plus
 `status`, `inventory`, `build` and `diff` retain their documented positional shorthand as well.
 
 An explicit selector applies only to that command and does not replace the session selection.
+
+`modpack search` is the exception that can also run without any selected project. With an active or explicit project, results are filtered by that project's Minecraft version and loader. Without one, search is global; its numbered results can later be passed to `modpack add <number>` after a target project is selected, where normal compatibility validation still applies.
 
 ## Nushell: one command, two presentation modes
 
@@ -287,7 +290,7 @@ modpack inventory --check
 
 Supported filters include `--type`, `--category`, `--unclassified`, `--side`, `--source`, `--state` and `--search`.
 
-Commands accept names, stable IDs, filenames and, where documented, saved result numbers. Search results, inventory entries, categories and versions use separate project-bound number scopes. Ambiguous or invalid selectors cancel the complete batch instead of applying a partial interpretation.
+Commands accept names, stable IDs, filenames and, where documented, saved result numbers. Inventory entries, categories, versions and project-filtered search results use separate project-bound number scopes. A search made with no active or explicit project stores a global number scope whose results may be reused later by `add` in a selected project. Ambiguous or invalid selectors cancel the complete batch instead of applying a partial interpretation.
 
 ## Dependency resolution, removal and pins
 
@@ -403,7 +406,7 @@ When `--json` is active in PowerShell, human rendering goes to stderr and machin
 
 The Nu bridge similarly keeps R3CLI presentation on stderr and captures only its JSON transport. It forwards the parent Nu stderr terminal state so `--colour auto` still behaves like an interactive command, while `NO_COLOR`, explicit colour modes and redirected stderr retain their normal meaning.
 
-Expected failures use stable error IDs and actionable hints.
+Expected failures use stable error IDs and actionable hints. First-party human messages distinguish work in progress, planned changes, completed actions and actual user instructions; see [`docs/message-style.md`](docs/message-style.md).
 
 A complete personal theme can be placed at:
 
@@ -421,6 +424,7 @@ The README is the operational overview. Detailed contracts live in focused docum
 - [`docs/dependency-engine.md`](docs/dependency-engine.md) — resolver and transaction policy;
 - [`docs/r3cli-integration.md`](docs/r3cli-integration.md) — presentation-layer boundary and vendoring;
 - [`docs/error-design.md`](docs/error-design.md) — stable expected-error design;
+- [`docs/message-style.md`](docs/message-style.md) — temporal semantics for human-facing status and informational messages;
 - [`docs/releases/3.3.0.md`](docs/releases/3.3.0.md) — release-specific 3.3 changes and validation.
 
 Command-specific syntax remains authoritative in generated CLI help:

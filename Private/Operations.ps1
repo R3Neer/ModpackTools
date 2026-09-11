@@ -109,10 +109,13 @@ function Write-MpContentPlan {
     param($Plan, [switch]$SkipHealth)
     foreach ($change in $Plan.Changes) {
         if (-not $change.After) {
-            Write-R3Status (Get-MpConsole) info "$($change.Before.Item.Name): remove ($($change.Reason))"
+            $beforeVersion = Get-MpPropertyValue $change.Before 'VersionId'
+            $previous = if ($beforeVersion) { [string]$beforeVersion } else { 'installed' }
+            Write-R3Status (Get-MpConsole) info "$($change.Before.Item.Name): $previous -> removed ($($change.Reason))"
             continue
         }
-        $previous = if ($change.Before) { $change.Before.VersionId } else { 'not installed' }
+        $beforeVersion = if ($change.Before) { Get-MpPropertyValue $change.Before 'VersionId' } else { $null }
+        $previous = if (-not $change.Before) { 'not installed' } elseif ($beforeVersion) { [string]$beforeVersion } else { 'installed' }
         Write-R3Status (Get-MpConsole) info "$($change.After.Item.Name): $previous -> $($change.After.VersionId) ($($change.Reason))"
     }
     if (-not $SkipHealth -and $Plan.Report -and $Plan.Report.PSObject.Properties['Errors'] -and $Plan.Report.PSObject.Properties['Unknown'] -and $Plan.Report.PSObject.Properties['Warnings']) {

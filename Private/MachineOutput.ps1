@@ -240,7 +240,7 @@ function Write-ModpackDiff {
 
 $script:MpOriginalWriteModrinthSearchResults = (Get-Item Function:\Write-ModrinthSearchResults).ScriptBlock
 function Write-ModrinthSearchResults {
-    param([Parameter(Mandatory)]$Search, [Parameter(Mandatory)]$Project)
+    param([Parameter(Mandatory)]$Search, [AllowNull()]$Project)
     Set-MpMachineData project (ConvertTo-MpMachineProject $Project)
     Set-MpMachineData search ([ordered]@{
         query = Get-MpMachineProperty $Search 'Query'

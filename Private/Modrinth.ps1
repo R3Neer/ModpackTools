@@ -138,21 +138,23 @@ function ConvertTo-ModrinthProjectType {
 function Invoke-ModrinthSearchRequest {
     param(
         [Parameter(Mandatory)][string]$Query,
-        [Parameter(Mandatory)]$Project,
+        [AllowNull()]$Project,
         [string]$Type = 'all',
         [ValidateRange(1, 50)][int]$Limit = 10
     )
 
     $apiType = ConvertTo-ModrinthProjectType -Type $Type
     $facetGroups = [System.Collections.Generic.List[object]]::new()
-    $facetGroups.Add([string[]]@("versions:$($Project.MinecraftVersion)"))
+    if ($Project) {
+        $facetGroups.Add([string[]]@("versions:$($Project.MinecraftVersion)"))
+    }
     if ($apiType -eq 'all') {
         $facetGroups.Add([string[]]@('project_type:mod', 'project_type:resourcepack', 'project_type:shader'))
     }
     else {
         $facetGroups.Add([string[]]@("project_type:$apiType"))
     }
-    if ($apiType -eq 'mod' -and $Project.Loader) {
+    if ($Project -and $apiType -eq 'mod' -and $Project.Loader) {
         $facetGroups.Add([string[]]@("categories:$($Project.Loader.ToLowerInvariant())"))
     }
 
@@ -193,7 +195,7 @@ function Read-ModrinthSearchCache {
 
 function Search-ModrinthContent {
     param(
-        [Parameter(Mandatory)]$Project,
+        [AllowNull()]$Project,
         [Parameter(Mandatory)][string]$Query,
         [string]$Type = 'all',
         [ValidateRange(1, 50)][int]$Limit = 10
@@ -222,9 +224,9 @@ function Search-ModrinthContent {
         SchemaVersion    = 1
         CreatedUtc       = [datetime]::UtcNow.ToString('o')
         Query            = $Query
-        ProjectId        = $Project.Id
-        MinecraftVersion = $Project.MinecraftVersion
-        Loader           = $Project.Loader
+        ProjectId        = $(if ($Project) { $Project.Id } else { $null })
+        MinecraftVersion = $(if ($Project) { $Project.MinecraftVersion } else { $null })
+        Loader           = $(if ($Project) { $Project.Loader } else { $null })
         Type             = $normalizedType
         TotalHits        = [long]$response.total_hits
         Results          = $results
@@ -245,12 +247,15 @@ function Resolve-ModrinthSearchNumber {
     if (-not (Test-MpCacheTimestamp -CreatedUtc $cache.CreatedUtc)) {
         Throw-MpError -Message 'The saved search has expired' -Hint 'modpack search <query>' -ErrorId 'Search.CacheExpired' -Category InvalidData
     }
-    if (-not ([string]$cache.ProjectId).Equals($Project.Id, [System.StringComparison]::OrdinalIgnoreCase)) {
-        Throw-MpError -Message "The saved search belongs to project '$($cache.ProjectId)', not '$($Project.Id)'" -Hint "modpack search <query> --project $($Project.Id)" -ErrorId 'Search.ProjectMismatch' -Category InvalidData -TargetObject $Selector
-    }
-    if (-not ([string]$cache.MinecraftVersion).Equals([string]$Project.MinecraftVersion, [System.StringComparison]::OrdinalIgnoreCase) -or
-        -not ([string]$cache.Loader).Equals([string]$Project.Loader, [System.StringComparison]::OrdinalIgnoreCase)) {
-        Throw-MpError -Message 'The project compatibility settings changed after the saved search' -Hint 'modpack search <query>' -ErrorId 'Search.CompatibilityChanged' -Category InvalidData
+    $cacheProjectId = [string]$cache.ProjectId
+    if (-not [string]::IsNullOrWhiteSpace($cacheProjectId)) {
+        if (-not $cacheProjectId.Equals($Project.Id, [System.StringComparison]::OrdinalIgnoreCase)) {
+            Throw-MpError -Message "The saved search belongs to project '$($cache.ProjectId)', not '$($Project.Id)'" -Hint "modpack search <query> --project $($Project.Id)" -ErrorId 'Search.ProjectMismatch' -Category InvalidData -TargetObject $Selector
+        }
+        if (-not ([string]$cache.MinecraftVersion).Equals([string]$Project.MinecraftVersion, [System.StringComparison]::OrdinalIgnoreCase) -or
+            -not ([string]$cache.Loader).Equals([string]$Project.Loader, [System.StringComparison]::OrdinalIgnoreCase)) {
+            Throw-MpError -Message 'The project compatibility settings changed after the saved search' -Hint 'modpack search <query>' -ErrorId 'Search.CompatibilityChanged' -Category InvalidData
+        }
     }
     $result = @($cache.Results | Where-Object { [int]$_.Index -eq [int]$Selector })
     if ($result.Count -ne 1) {

@@ -2,13 +2,28 @@ function modpack {
     [CmdletBinding(PositionalBinding = $false)]
     param(
         [Parameter(Position = 0)][AllowEmptyString()][string]$Command = '',
-        [Parameter(Position = 1, ValueFromRemainingArguments)][object[]]$Arguments = @()
+        [Parameter(Position = 1, ValueFromRemainingArguments)][object[]]$Arguments = @(),
+        [Alias('h')][switch]$Help,
+        [Alias('u')][switch]$SelfUpdate,
+        [Alias('v')][switch]$Version
     )
 
     $previousConsole = $script:MpConsole
     $previousMachine = $script:MpMachineContext
     $presentation = $null
     $tokens = @($(if ($PSBoundParameters.ContainsKey('Command')) { $Command })) + @($Arguments)
+    $shortForms = @{ '-h' = '--help'; '-u' = '--update'; '-v' = '--version' }
+    $tokens = @($tokens | ForEach-Object {
+        $token = [string]$_
+        if ($shortForms.ContainsKey($token)) { $shortForms[$token] } else { $_ }
+    })
+    if ($Help) {
+        if ($tokens.Count) { $tokens += '--help' }
+        else { $tokens = @('--help') }
+    }
+    if ($Version) { $tokens = @('--version') + $tokens }
+    if ($SelfUpdate) { $tokens = @('--update') + $tokens }
+
     $jsonRequested = @($tokens | Where-Object { [string]$_ -eq '--json' }).Count -gt 0
     try {
         $presentation = ConvertFrom-MpPresentationOptions $tokens

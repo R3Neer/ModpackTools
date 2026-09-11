@@ -193,11 +193,21 @@ function Invoke-MpProjectTransaction {
 
 function Write-MpTransactionSummary {
     param($Transaction, [switch]$DryRun, [switch]$Preview)
+    $planned = [bool]($DryRun -or $Preview -or -not $Transaction.Applied)
     foreach ($change in $Transaction.Changes) {
-        $action = if (-not $change.Before) { 'Add' } elseif (-not $change.After) { 'Remove' } else { 'Change' }
+        $kind = if (-not $change.Before) { 'add' } elseif (-not $change.After) { 'remove' } else { 'change' }
+        $action = if ($planned) {
+            switch ($kind) { 'add' { 'Would add' }; 'remove' { 'Would remove' }; default { 'Would change' } }
+        }
+        else {
+            switch ($kind) { 'add' { 'Added' }; 'remove' { 'Removed' }; default { 'Changed' } }
+        }
         Write-R3Status (Get-MpConsole) info "$action $($change.Path)"
     }
-    if ($DryRun) { Write-R3Status (Get-MpConsole) info 'Dry run: no project changes applied.' }
-    elseif ($Preview) { Write-R3Status (Get-MpConsole) info "$($Transaction.Changes.Count) file change(s) planned." }
-    else { Write-R3Status (Get-MpConsole) success "$($Transaction.Changes.Count) file change(s) applied." }
+    $count = @($Transaction.Changes).Count
+    if ($DryRun) { Write-R3Status (Get-MpConsole) info "Dry run: $count file change(s) would be applied; nothing was changed." }
+    elseif ($Preview) { Write-R3Status (Get-MpConsole) info "$count file change(s) planned; nothing has been changed." }
+    elseif ($Transaction.Applied) { Write-R3Status (Get-MpConsole) success "$count file change(s) applied." }
+    elseif ($count -eq 0) { Write-R3Status (Get-MpConsole) success 'No file changes were needed.' }
+    else { Write-R3Status (Get-MpConsole) info "$count file change(s) were not applied." }
 }

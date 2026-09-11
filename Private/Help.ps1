@@ -12,7 +12,7 @@ function Get-MpCommandCatalog {
             Usage = @('modpack --update [--yes]', 'modpack --update --check'); Items = @(
                 New-MpHelpItem '--check' 'Query the latest stable release without downloading or installing it.'
                 New-MpHelpItem '--yes' 'Install without interactive confirmation.'
-            ); Notes = @('No project is required. modpack update still updates pack content.', 'ZIP hashes and package identity are checked before installation. A fresh process verifies the installed module.', 'The selected user installation follows PSModulePath; shadowing installations are reported.', 'Open a new PowerShell session after updating.'); Examples = @('modpack --update --check', 'modpack --update', 'modpack --update --yes')
+            ); Notes = @('No project is required. modpack update still updates pack content.', 'ZIP hashes and package identity are checked before installation. A fresh process verifies the installed module.', 'The selected user installation follows PSModulePath; shadowing installations are reported.', 'Open a new PowerShell session after updating.'); Examples = @('modpack --update --check', 'modpack -u --check', 'modpack --update --yes')
         }
         list = [pscustomobject]@{
             Handler = 'Invoke-MpList'; Group = 'PROJECTS'; Summary = 'Show registered projects'; Description = 'Show every registered modpack with its name, ID, and location.'
@@ -70,13 +70,13 @@ function Get-MpCommandCatalog {
             ); Notes = @('Displayed entries are numbered for resource, classify, update, and remove. Numbers belong to this project and expire after 24 hours.', 'Do not combine --category with --unclassified.'); Examples = @('modpack inventory --type mod', 'modpack inventory --search Taverns', 'modpack inventory --type resourcepack --state active')
         }
         search = [pscustomobject]@{
-            Handler = 'Invoke-MpSearch'; Group = 'CONTENT'; Summary = 'Search compatible Modrinth content'; Description = 'Search Modrinth for content compatible with the selected project.'
+            Handler = 'Invoke-MpSearch'; Group = 'CONTENT'; Summary = 'Search Modrinth content'; Description = 'Search Modrinth globally, or filter by Minecraft version and loader when an active or explicit project is available.'
             Usage = @('modpack search <query> [options]'); Items = @(
                 New-MpHelpItem '<query>' 'One or more words to search for.'
                 New-MpHelpItem '--type <type>' 'Limit results to mod, resourcepack, or shaderpack.'
                 New-MpHelpItem '--limit <1-50>' 'Maximum number of results. Default: 10.'
-                New-MpHelpItem '--project <id>' 'Use this project instead of the active one.'
-            ); Notes = @('Results are numbered for add. Numbers belong to this project and expire after 24 hours.'); Examples = @('modpack search sodium', 'modpack search "fresh animations" --type resourcepack', 'modpack search iris --limit 5 --project vp26')
+                New-MpHelpItem '--project <id>' 'Filter results for this project instead of the active project.'
+            ); Notes = @('With no active or explicit project, search is global and its numbered results can be used later with add after selecting a project.', 'When search is filtered by a project, its numbers remain bound to that project. Search numbers expire after 24 hours.'); Examples = @('modpack search sodium', 'modpack search "fresh animations" --type resourcepack', 'modpack search iris --limit 5 --project vp26')
         }
         add = [pscustomobject]@{
             Handler = 'Invoke-MpAdd'; Group = 'CONTENT'; Summary = 'Install content'; Description = 'Resolve and install compatible Modrinth content and its dependencies as one transaction.'
@@ -84,7 +84,7 @@ function Get-MpCommandCatalog {
                 New-MpHelpItem '<selector>' 'Modrinth ID, slug, version URL, or number from the latest search.'
                 New-MpHelpItem '--category <id>' 'Assign an editorial category when adding a mod.'
                 New-MpHelpItem '--project <id>' 'Use this project instead of the active one.'
-            ); Notes = @('Search numbers are separate from inventory numbers.', 'Categories apply only to mods.'); Examples = @('modpack add sodium', 'modpack add 2', 'modpack add sodium --category performance --project vp26')
+            ); Notes = @('Search numbers are separate from inventory numbers.', 'A number from a global search can be used after selecting a target project; a project-filtered search number stays bound to its search project.', 'Categories apply only to mods.'); Examples = @('modpack add sodium', 'modpack add 2', 'modpack add sodium --category performance --project vp26')
         }
         remove = [pscustomobject]@{
             Handler = 'Invoke-MpRemove'; Group = 'CONTENT'; Summary = 'Remove installed content'; Description = 'Preview and remove installed mods, resource packs and shaders in one checked transaction.'
@@ -237,16 +237,17 @@ function Show-MpHelp {
         Product='MODPACKTOOLS'; Version=$script:ModuleVersion
         Description='Manage, inspect, update, and build Packwiz modpacks.'; Invocation='modpack'
         Groups=@('PROJECTS','CONTENT','BUILD AND CONFIGURATION'); Commands=$commands
-        Usage=@('modpack <command> [arguments] [options]','modpack <command> --help','modpack --version')
+        Usage=@('modpack <command> [arguments] [options]','modpack <command> --help | -h','modpack --version | -v')
         GlobalItems=@(
-            New-MpHelpItem '--version [--offline]' 'Print the loaded version and notify about newer releases; --offline skips network and cache.'
-            New-MpHelpItem '--update [--check | --yes]' 'Check or update ModpackTools itself. Run modpack --update --help for details.'
+            New-MpHelpItem '--help, -h' 'Show global help; after a command, show that command help page.'
+            New-MpHelpItem '--version, -v [--offline]' 'Print the loaded version and notify about newer releases; --offline skips network and cache.'
+            New-MpHelpItem '--update, -u [--check | --yes]' 'Check or update ModpackTools itself. Run modpack --update --help for details.'
             New-MpHelpItem '--colour auto|always|never' 'Control colour; auto follows terminal detection and NO_COLOR.'
             New-MpHelpItem '--ascii' 'Use ASCII symbols for presentation.'
             New-MpHelpItem '--json' 'Emit a schema-versioned JSON envelope on stdout in addition to the human presentation.'
             New-MpHelpItem '--no-human' 'Suppress human presentation when --json is enabled. Requires --json.'
         )
-        Notes=@('Project commands accept --project <id>. It overrides the active project for that command.','The Nushell adapter enables --json automatically and returns parsed structured values.','Run modpack <command> --help for detailed help.')
+        Notes=@('Project commands accept --project <id>. It overrides the active project for that command.','The Nushell adapter enables --json automatically and returns parsed structured values.','Run modpack <command> --help or -h for detailed help.')
     }
     [void](Test-R3HelpCatalogue $view -ExecutableCommands @($catalog.Keys))
     Write-R3Help (Get-MpConsole) $view $Command
