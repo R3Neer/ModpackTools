@@ -4,7 +4,7 @@
 
 ModpackTools is a Windows CLI for managing Minecraft Java modpacks built with [Packwiz](https://packwiz.infra.link/).
 
-PowerShell 7 is the canonical engine. ModpackTools 3.3 also ships a Nushell adapter for the same `modpack` command: normal Nu usage keeps the R3CLI human interface, while `--no-human` exposes native structured results for pipelines.
+PowerShell 7 is the canonical engine. ModpackTools also ships a Nushell adapter for the same `modpack` command: normal Nu usage keeps the R3CLI human interface, while `--no-human` exposes native structured results for pipelines.
 
 ```text
 project
@@ -420,12 +420,13 @@ See [`docs/r3cli-integration.md`](docs/r3cli-integration.md) and [`docs/error-de
 
 The README is the operational overview. Detailed contracts live in focused documents:
 
-- [`docs/nushell.md`](docs/nushell.md) — Nushell bridge, session state and returned data;
+- [`docs/nushell.md`](docs/nushell.md) — Nushell bridge, session state, global search and returned data;
 - [`docs/dependency-engine.md`](docs/dependency-engine.md) — resolver and transaction policy;
 - [`docs/r3cli-integration.md`](docs/r3cli-integration.md) — presentation-layer boundary and vendoring;
 - [`docs/error-design.md`](docs/error-design.md) — stable expected-error design;
 - [`docs/message-style.md`](docs/message-style.md) — temporal semantics for human-facing status and informational messages;
-- [`docs/releases/3.3.0.md`](docs/releases/3.3.0.md) — release-specific 3.3 changes and validation.
+- [`docs/releasing.md`](docs/releasing.md) — versioning, packaging and automated stable-release flow;
+- [`docs/releases/3.4.0.md`](docs/releases/3.4.0.md) — release-specific 3.4 changes and validation.
 
 Command-specific syntax remains authoritative in generated CLI help:
 
@@ -475,6 +476,8 @@ Invoke-Pester -Script .\Tests
 ```
 
 CI also validates the Nushell adapter with Nushell 0.115.1, shell bridge behaviour, installation, UTF-8 machine transport, terminal-colour forwarding, vendored R3CLI integrity and cross-shell contracts.
+
+Stable releases are published automatically only after CI succeeds on `main`; see [`docs/releasing.md`](docs/releasing.md) for the version, notes and packaging contract.
 
 R3CLI updates are explicit maintainer work. The pinned adapter revision and hashes live in `dependencies.psd1`; see [`docs/r3cli-integration.md`](docs/r3cli-integration.md) for the update procedure.
 

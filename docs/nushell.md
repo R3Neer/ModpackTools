@@ -136,6 +136,33 @@ requests do not change the selection. Closing the Nu session clears it, matching
 PowerShell's session-scoped behaviour rather than silently creating persistent
 configuration.
 
+## Global search without an active project
+
+`modpack search` is intentionally different from project-bound commands: it can run
+before `modpack use` has selected anything. With no active project and no explicit
+`--project`, ModpackTools omits Minecraft-version and loader compatibility facets and
+returns a global Modrinth result set.
+
+```nu
+modpack search 'Note Block Tuner'
+```
+
+The numbered results from that project-free search are portable. After selecting a
+target project, a result number can be passed to `modpack add <number>`; the normal
+resolver then validates that result against the target project's Minecraft version
+and loader before anything is installed.
+
+```nu
+modpack search 'Note Block Tuner'
+modpack use vanilla-plus
+modpack add 1
+```
+
+A search made while a project is active, or with explicit `--project <id>`, keeps the
+project compatibility filters and produces project-bound references. Those numbers
+cannot silently be reused against another project. The distinction is part of the
+PowerShell domain contract; Nushell only transports it.
+
 ## Bridge boundary
 
 `Nushell/Invoke-ModpackBridge.ps1` receives an argv array as UTF-8 JSON on stdin. It

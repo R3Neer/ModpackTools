@@ -1,0 +1,117 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish stable release
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out the tested main commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Read and validate release metadata
+        id: metadata
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $manifest = Import-PowerShellDataFile ./ModpackTools.psd1
+          $version = [string]$manifest.ModuleVersion
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+              throw "ModuleVersion '$version' is not a stable semantic version."
+          }
+
+          $tag = "v$version"
+          $notes = "docs/releases/$version.md"
+          if (-not (Test-Path -LiteralPath $notes -PathType Leaf)) {
+              throw "Release notes are missing: $notes"
+          }
+
+          $firstLine = Get-Content -LiteralPath $notes -Encoding UTF8 -TotalCount 1
+          if ($firstLine -notmatch '^# (.+)$') {
+              throw 'The first release-note line must be the GitHub release title.'
+          }
+          $title = $Matches[1]
+          if ($title -notmatch [regex]::Escape($version)) {
+              throw "Release title '$title' does not contain version $version."
+          }
+
+          $null = gh release view $tag --json tagName 2>$null
+          $releaseExists = $LASTEXITCODE -eq 0
+
+          git ls-remote --exit-code --tags origin "refs/tags/$tag" *> $null
+          $tagExists = $LASTEXITCODE -eq 0
+
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "title=$title" >> $env:GITHUB_OUTPUT
+          "notes=$notes" >> $env:GITHUB_OUTPUT
+          "release_exists=$($releaseExists.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          "tag_exists=$($tagExists.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
+      - name: Build and verify release archive
+        id: package
+        if: steps.metadata.outputs.release_exists != 'true'
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $env:GITHUB_WORKSPACE "ModpackTools-$env:RELEASE_VERSION.zip"
+          $result = ./scripts/build-release-package.ps1 -OutputPath $archive -ExpectedVersion $env:RELEASE_VERSION
+          if (-not (Test-Path -LiteralPath $result -PathType Leaf)) {
+              throw 'Release package builder produced no archive.'
+          }
+          "archive=$result" >> $env:GITHUB_OUTPUT
+
+      - name: Publish GitHub release
+        if: steps.metadata.outputs.release_exists != 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.metadata.outputs.tag }}
+          RELEASE_TITLE: ${{ steps.metadata.outputs.title }}
+          RELEASE_NOTES: ${{ steps.metadata.outputs.notes }}
+          RELEASE_ARCHIVE: ${{ steps.package.outputs.archive }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+          RELEASE_TAG_EXISTS: ${{ steps.metadata.outputs.tag_exists }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RELEASE_TAG_EXISTS -eq 'true') {
+              gh release create $env:RELEASE_TAG $env:RELEASE_ARCHIVE --verify-tag --title $env:RELEASE_TITLE --notes-file $env:RELEASE_NOTES
+          }
+          else {
+              gh release create $env:RELEASE_TAG $env:RELEASE_ARCHIVE --target $env:RELEASE_SHA --title $env:RELEASE_TITLE --notes-file $env:RELEASE_NOTES
+          }
+          if ($LASTEXITCODE -ne 0) {
+              throw "GitHub release publication failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Report existing release
+        if: steps.metadata.outputs.release_exists == 'true'
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ steps.metadata.outputs.tag }}
+        run: Write-Host "$env:RELEASE_TAG already has a GitHub release; nothing to publish."
