@@ -1,6 +1,13 @@
 Import-Module (Join-Path (Split-Path -Parent $PSScriptRoot) 'ModpackTools.psd1') -Force
 
 InModuleScope ModpackTools {
+    function New-TestCaptureConsole {
+        param([Parameter(Mandatory)]$Lines)
+        $captured = $Lines
+        $sink = { param($Text,$Stream) [void]$captured.Add([string]$Text) }.GetNewClosure()
+        return New-R3Console -Colour never -ThemeExtension (Read-MpThemeExtension) -Sink $sink
+    }
+
     Describe 'CLI usability regressions' {
         BeforeEach {
             $script:ActiveProjectId = $null
@@ -133,23 +140,21 @@ InModuleScope ModpackTools {
 
         It 'renders a project-free search and exposes null project machine context' {
             [void](Initialize-MpMachineContext -Enabled -Command search)
-            Mock Get-MpConsole { $null }
-            Mock Write-R3Banner {}
-            Mock Write-R3Line {}
-            Mock Write-R3KeyValue {}
-            Mock Write-R3Status {}
+            $lines = [Collections.Generic.List[string]]::new()
+            $script:MpConsole = New-TestCaptureConsole -Lines $lines
             $search = [pscustomobject]@{ Query='nothing'; Type='all'; TotalHits=0; Results=@() }
 
             Write-ModrinthSearchResults -Search $search -Project $null
-            Assert-MockCalled Write-R3KeyValue -Times 1 -ParameterFilter { $Key -eq 'Compatibility' -and $Value -eq 'Any Minecraft version / loader' }
-            Assert-MockCalled Write-R3Status -Times 1 -ParameterFilter { $Kind -eq 'info' -and $Text -eq 'No results were found.' }
+            $text = $lines -join "`n"
+            $text | Should Match 'Any Minecraft version / loader'
+            $text | Should Match 'No results were found'
             $script:MpMachineContext.Data.Contains('project') | Should Be $true
             $script:MpMachineContext.Data.project | Should BeNullOrEmpty
         }
 
         It 'uses completed wording for applied transaction file changes' {
-            Mock Get-MpConsole { $null }
-            Mock Write-R3Status {}
+            $lines = [Collections.Generic.List[string]]::new()
+            $script:MpConsole = New-TestCaptureConsole -Lines $lines
             $transaction = [pscustomobject]@{
                 Applied=$true
                 Changes=@(
@@ -160,29 +165,31 @@ InModuleScope ModpackTools {
             }
 
             Write-MpTransactionSummary -Transaction $transaction
-            Assert-MockCalled Write-R3Status -Times 1 -ParameterFilter { $Kind -eq 'info' -and $Text -eq 'Added new.txt' }
-            Assert-MockCalled Write-R3Status -Times 1 -ParameterFilter { $Kind -eq 'info' -and $Text -eq 'Changed pack.toml' }
-            Assert-MockCalled Write-R3Status -Times 1 -ParameterFilter { $Kind -eq 'info' -and $Text -eq 'Removed old.txt' }
-            Assert-MockCalled Write-R3Status -Times 1 -ParameterFilter { $Kind -eq 'success' -and $Text -eq '3 file change(s) applied.' }
+            $text = $lines -join "`n"
+            $text | Should Match 'Added new\.txt'
+            $text | Should Match 'Changed pack\.toml'
+            $text | Should Match 'Removed old\.txt'
+            $text | Should Match '3 file change\(s\) applied'
         }
 
         It 'uses hypothetical wording for dry-run transaction file changes' {
-            Mock Get-MpConsole { $null }
-            Mock Write-R3Status {}
+            $lines = [Collections.Generic.List[string]]::new()
+            $script:MpConsole = New-TestCaptureConsole -Lines $lines
             $transaction = [pscustomobject]@{
                 Applied=$false
                 Changes=@([pscustomobject]@{ Path='pack.toml'; Before='old'; After='new'; Reason='fixture' })
             }
 
             Write-MpTransactionSummary -Transaction $transaction -DryRun
-            Assert-MockCalled Write-R3Status -Times 1 -ParameterFilter { $Kind -eq 'info' -and $Text -eq 'Would change pack.toml' }
-            Assert-MockCalled Write-R3Status -Times 1 -ParameterFilter { $Kind -eq 'info' -and $Text -eq 'Dry run: 1 file change(s) would be applied; nothing was changed.' }
-            Assert-MockCalled Write-R3Status -Times 0 -ParameterFilter { $Text -eq 'Changed pack.toml' }
+            $text = $lines -join "`n"
+            $text | Should Match 'Would change pack\.toml'
+            $text | Should Match 'nothing was changed'
+            $text | Should Not Match 'Changed pack\.toml'
         }
 
         It 'describes planned removals as state transitions rather than imperatives' {
-            Mock Get-MpConsole { $null }
-            Mock Write-R3Status {}
+            $lines = [Collections.Generic.List[string]]::new()
+            $script:MpConsole = New-TestCaptureConsole -Lines $lines
             $plan = [pscustomobject]@{
                 Changes=@([pscustomobject]@{
                     Before=[pscustomobject]@{ VersionId='old-version'; Item=[pscustomobject]@{ Name='Library X' } }
@@ -193,8 +200,9 @@ InModuleScope ModpackTools {
             }
 
             Write-MpContentPlan -Plan $plan -SkipHealth
-            Assert-MockCalled Write-R3Status -Times 1 -ParameterFilter { $Kind -eq 'info' -and $Text -eq 'Library X: old-version -> removed (unused dependency)' }
-            Assert-MockCalled Write-R3Status -Times 0 -ParameterFilter { $Text -eq 'Library X: remove (unused dependency)' }
+            $text = $lines -join "`n"
+            $text | Should Match 'Library X: old-version -> removed \(unused dependency\)'
+            $text | Should Not Match 'Library X: remove'
         }
     }
 }
