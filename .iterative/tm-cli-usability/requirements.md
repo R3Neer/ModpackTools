@@ -16,10 +16,11 @@ Status: temporary working document. Delete when the iterative TM cycle is closed
 
 - `modpack search <query>` must work when no active or explicit project exists.
 - A project may still be supplied explicitly with `--project <id>` to request compatibility-filtered search results.
-- Without a project, search is global on Modrinth except for the requested content type.
+- To preserve current behavior, an existing active project may still be used as the compatibility filter when `--project` is omitted.
+- When neither an explicit nor an active project exists, search is global on Modrinth except for the requested content type.
 - Search result numbers must remain usable by later project commands, especially `modpack add <number>`.
 - A search result number identifies the Modrinth project returned by the saved search, not the project context in which the search happened.
-- Therefore a saved search must not reject a later target project merely because the search was made globally or with another project.
+- Therefore a saved search must not reject a later target project merely because the search was made globally, with the active project, or explicitly with another project.
 - Compatibility with the actual target project is validated when the later operation resolves/installs that Modrinth project.
 - Search cache expiry and out-of-range protections remain in force.
 - Human and machine search output must represent a missing search project cleanly.
@@ -69,3 +70,11 @@ The vendored R3CLI presentation library is out of scope unless ModpackTools pass
 - Review each phase iteratively until a review produces no material change.
 - During implementation review, distinguish defects from legitimate plan changes and update the plan only when the architecture/requirements actually changed.
 - Delete all temporary TM documents before final merge/closure.
+
+## Requirements review 1
+
+Changed R2 to preserve active-project compatibility filtering when one already exists while still allowing truly project-free global search. No other requirement changed.
+
+## Requirements review 2
+
+No material changes. Requirements are stable for planning.
