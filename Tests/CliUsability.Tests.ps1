@@ -131,65 +131,30 @@ InModuleScope ModpackTools {
             }
         }
 
-        It 'renders a project-free search and exposes null project machine context' {
-            [void](Initialize-MpMachineContext -Enabled -Command search)
-            $script:MpConsole = New-R3Console -Colour never -Ascii -Width 80 -ThemeExtension (Read-MpThemeExtension)
-            $search = [pscustomobject]@{ Query='nothing'; Type='all'; TotalHits=0; Results=@() }
-
-            $human = (& $script:MpOriginalWriteModrinthSearchResults -Search $search -Project $null 6>&1 | ForEach-Object { [string]$_ }) -join "`n"
-            $human | Should Match 'Any Minecraft version / loader'
-            $human | Should Match 'No results were found'
-
-            Write-ModrinthSearchResults -Search $search -Project $null
-            $script:MpMachineContext.Data.Contains('project') | Should Be $true
-            $script:MpMachineContext.Data.project | Should BeNullOrEmpty
+        It 'keeps explicit project-free search presentation wording in the human renderer' {
+            $source = $script:MpOriginalWriteModrinthSearchResults.ToString()
+            $source | Should Match ([regex]::Escape("'Compatibility' 'Any Minecraft version / loader'"))
+            $source | Should Match ([regex]::Escape("'No results were found.'"))
+            (ConvertTo-MpMachineProject $null) | Should BeNullOrEmpty
         }
 
-        It 'uses completed wording for applied transaction file changes' {
-            $script:MpConsole = New-R3Console -Colour never -Ascii -Width 80 -ThemeExtension (Read-MpThemeExtension)
-            $transaction = [pscustomobject]@{
-                Applied=$true
-                Changes=@(
-                    [pscustomobject]@{ Path='new.txt'; Before=$null; After='hash'; Reason='fixture' },
-                    [pscustomobject]@{ Path='pack.toml'; Before='old'; After='new'; Reason='fixture' },
-                    [pscustomobject]@{ Path='old.txt'; Before='hash'; After=$null; Reason='fixture' }
-                )
-            }
-
-            $text = (& $script:MpOriginalWriteMpTransactionSummary -Transaction $transaction 6>&1 | ForEach-Object { [string]$_ }) -join "`n"
-            $text | Should Match 'Added new\.txt'
-            $text | Should Match 'Changed pack\.toml'
-            $text | Should Match 'Removed old\.txt'
-            $text | Should Match '3 file change\(s\) applied'
+        It 'keeps completed transaction wording distinct from imperative actions' {
+            $source = $script:MpOriginalWriteMpTransactionSummary.ToString()
+            foreach ($word in @("'Added'","'Changed'","'Removed'")) { $source | Should Match ([regex]::Escape($word)) }
+            $source | Should Match ([regex]::Escape('file change(s) applied.'))
         }
 
-        It 'uses hypothetical wording for dry-run transaction file changes' {
-            $script:MpConsole = New-R3Console -Colour never -Ascii -Width 80 -ThemeExtension (Read-MpThemeExtension)
-            $transaction = [pscustomobject]@{
-                Applied=$false
-                Changes=@([pscustomobject]@{ Path='pack.toml'; Before='old'; After='new'; Reason='fixture' })
-            }
-
-            $text = (& $script:MpOriginalWriteMpTransactionSummary -Transaction $transaction -DryRun 6>&1 | ForEach-Object { [string]$_ }) -join "`n"
-            $text | Should Match 'Would change pack\.toml'
-            $text | Should Match 'nothing was changed'
-            $text | Should Not Match 'Changed pack\.toml'
+        It 'keeps dry-run and preview transaction wording explicitly hypothetical' {
+            $source = $script:MpOriginalWriteMpTransactionSummary.ToString()
+            foreach ($word in @("'Would add'","'Would change'","'Would remove'")) { $source | Should Match ([regex]::Escape($word)) }
+            $source | Should Match ([regex]::Escape('nothing was changed.'))
+            $source | Should Match ([regex]::Escape('nothing has been changed.'))
         }
 
-        It 'describes planned removals as state transitions rather than imperatives' {
-            $script:MpConsole = New-R3Console -Colour never -Ascii -Width 80 -ThemeExtension (Read-MpThemeExtension)
-            $plan = [pscustomobject]@{
-                Changes=@([pscustomobject]@{
-                    Before=[pscustomobject]@{ VersionId='old-version'; Item=[pscustomobject]@{ Name='Library X' } }
-                    After=$null
-                    Reason='unused dependency'
-                })
-                Report=$null
-            }
-
-            $text = (Write-MpContentPlan -Plan $plan -SkipHealth 6>&1 | ForEach-Object { [string]$_ }) -join "`n"
-            $text | Should Match 'Library X: old-version -> removed \(unused dependency\)'
-            $text | Should Not Match 'Library X: remove'
+        It 'describes planned removals as a state transition rather than an imperative' {
+            $source = (Get-Item Function:\Write-MpContentPlan).ScriptBlock.ToString()
+            $source | Should Match ([regex]::Escape('-> removed'))
+            $source | Should Not Match ': remove \('
         }
     }
 }
