@@ -9,6 +9,8 @@ A release is defined by two repository files:
 - `ModpackTools.psd1` supplies the stable semantic version through `ModuleVersion`.
 - `docs/releases/<version>.md` supplies the GitHub release title and body. Its first line must be an H1 containing the version, for example `# ModpackTools 3.4.0 — Global search and clearer CLI feedback`.
 
+`scripts/get-release-metadata.ps1` is the shared validator for those inputs. CI executes it before merge; the release workflow executes the same script again with authenticated GitHub checks to determine whether the version tag or release already exists.
+
 The release workflow treats these files as the release source of truth. Do not create a manual stable release with a version that differs from the manifest.
 
 ## Normal release flow
@@ -18,7 +20,7 @@ The release workflow treats these files as the release source of truth. Do not c
 3. Bump `ModuleVersion` and add `docs/releases/<version>.md`.
 4. Merge the reviewed branch into `main`.
 5. Let `CI` complete on the merged `main` commit.
-6. After successful CI, `.github/workflows/release.yml` builds the installable ZIP from that exact tested commit and creates the `v<version>` tag and GitHub release.
+6. After successful CI, `.github/workflows/release.yml` validates the metadata against GitHub, builds the installable ZIP from that exact tested commit and creates the `v<version>` tag and GitHub release.
 
 No stable release is published from a failed CI run.
 
