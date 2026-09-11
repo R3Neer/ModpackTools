@@ -1,13 +1,6 @@
 Import-Module (Join-Path (Split-Path -Parent $PSScriptRoot) 'ModpackTools.psd1') -Force
 
 InModuleScope ModpackTools {
-    function New-TestCaptureConsole {
-        param([Parameter(Mandatory)]$Lines)
-        $captured = $Lines
-        $sink = { param($Text,$Stream) [void]$captured.Add([string]$Text) }.GetNewClosure()
-        return New-R3Console -Colour never -ThemeExtension (Read-MpThemeExtension) -Sink $sink
-    }
-
     Describe 'CLI usability regressions' {
         BeforeEach {
             $script:ActiveProjectId = $null
@@ -140,21 +133,20 @@ InModuleScope ModpackTools {
 
         It 'renders a project-free search and exposes null project machine context' {
             [void](Initialize-MpMachineContext -Enabled -Command search)
-            $lines = [Collections.Generic.List[string]]::new()
-            $script:MpConsole = New-TestCaptureConsole -Lines $lines
+            $script:MpConsole = New-R3Console -Colour never -Ascii -Width 80 -ThemeExtension (Read-MpThemeExtension)
             $search = [pscustomobject]@{ Query='nothing'; Type='all'; TotalHits=0; Results=@() }
 
+            $human = (& $script:MpOriginalWriteModrinthSearchResults -Search $search -Project $null 6>&1 | ForEach-Object { [string]$_ }) -join "`n"
+            $human | Should Match 'Any Minecraft version / loader'
+            $human | Should Match 'No results were found'
+
             Write-ModrinthSearchResults -Search $search -Project $null
-            $text = $lines -join "`n"
-            $text | Should Match 'Any Minecraft version / loader'
-            $text | Should Match 'No results were found'
             $script:MpMachineContext.Data.Contains('project') | Should Be $true
             $script:MpMachineContext.Data.project | Should BeNullOrEmpty
         }
 
         It 'uses completed wording for applied transaction file changes' {
-            $lines = [Collections.Generic.List[string]]::new()
-            $script:MpConsole = New-TestCaptureConsole -Lines $lines
+            $script:MpConsole = New-R3Console -Colour never -Ascii -Width 80 -ThemeExtension (Read-MpThemeExtension)
             $transaction = [pscustomobject]@{
                 Applied=$true
                 Changes=@(
@@ -164,8 +156,7 @@ InModuleScope ModpackTools {
                 )
             }
 
-            Write-MpTransactionSummary -Transaction $transaction
-            $text = $lines -join "`n"
+            $text = (& $script:MpOriginalWriteMpTransactionSummary -Transaction $transaction 6>&1 | ForEach-Object { [string]$_ }) -join "`n"
             $text | Should Match 'Added new\.txt'
             $text | Should Match 'Changed pack\.toml'
             $text | Should Match 'Removed old\.txt'
@@ -173,23 +164,20 @@ InModuleScope ModpackTools {
         }
 
         It 'uses hypothetical wording for dry-run transaction file changes' {
-            $lines = [Collections.Generic.List[string]]::new()
-            $script:MpConsole = New-TestCaptureConsole -Lines $lines
+            $script:MpConsole = New-R3Console -Colour never -Ascii -Width 80 -ThemeExtension (Read-MpThemeExtension)
             $transaction = [pscustomobject]@{
                 Applied=$false
                 Changes=@([pscustomobject]@{ Path='pack.toml'; Before='old'; After='new'; Reason='fixture' })
             }
 
-            Write-MpTransactionSummary -Transaction $transaction -DryRun
-            $text = $lines -join "`n"
+            $text = (& $script:MpOriginalWriteMpTransactionSummary -Transaction $transaction -DryRun 6>&1 | ForEach-Object { [string]$_ }) -join "`n"
             $text | Should Match 'Would change pack\.toml'
             $text | Should Match 'nothing was changed'
             $text | Should Not Match 'Changed pack\.toml'
         }
 
         It 'describes planned removals as state transitions rather than imperatives' {
-            $lines = [Collections.Generic.List[string]]::new()
-            $script:MpConsole = New-TestCaptureConsole -Lines $lines
+            $script:MpConsole = New-R3Console -Colour never -Ascii -Width 80 -ThemeExtension (Read-MpThemeExtension)
             $plan = [pscustomobject]@{
                 Changes=@([pscustomobject]@{
                     Before=[pscustomobject]@{ VersionId='old-version'; Item=[pscustomobject]@{ Name='Library X' } }
@@ -199,8 +187,7 @@ InModuleScope ModpackTools {
                 Report=$null
             }
 
-            Write-MpContentPlan -Plan $plan -SkipHealth
-            $text = $lines -join "`n"
+            $text = (Write-MpContentPlan -Plan $plan -SkipHealth 6>&1 | ForEach-Object { [string]$_ }) -join "`n"
             $text | Should Match 'Library X: old-version -> removed \(unused dependency\)'
             $text | Should Not Match 'Library X: remove'
         }
