@@ -238,7 +238,7 @@ function Get-MpBuildArtifactDoctorCheck {
     param($Project)
     $status = Get-MpBuildArtifactStatus $Project
     if ($status.State -eq 'missing') {
-        return New-MpDoctorCheck -Section 'BUILD ARTIFACT' -Status info -Label 'Latest .mrpack' -Value 'Not built' -Detail "Run: modpack build --project $($Project.Id)"
+        return New-MpDoctorCheck -Section 'BUILD ARTIFACT' -Status info -Label 'Latest .mrpack' -Value 'Not built' -Detail "Run: modpack -p $($Project.Id) build"
     }
     if ($status.State -eq 'unknown') {
         return New-MpDoctorCheck -Section 'BUILD ARTIFACT' -Status warn -Label 'Latest .mrpack' -Value 'Could not verify' -Detail $status.Error
@@ -251,7 +251,7 @@ function Get-MpBuildArtifactDoctorCheck {
     foreach ($entry in @($status.Changed | Select-Object -First 4)) { $items.Add([pscustomobject]@{ Status='info'; Text="Project changes: $($entry.Path)" }) }
     foreach ($entry in @($status.Removed | Select-Object -First 4)) { $items.Add([pscustomobject]@{ Status='info'; Text="Artifact still contains: $($entry.Path)" }) }
     if ($status.Total -gt $items.Count) { $items.Add([pscustomobject]@{ Status='info'; Text="$($status.Total - $items.Count) additional difference(s)." }) }
-    $items.Add([pscustomobject]@{ Status='warn'; Text="Do not install this artifact. Run: modpack build --project $($Project.Id)" })
+    $items.Add([pscustomobject]@{ Status='warn'; Text="Do not install this artifact. Run: modpack -p $($Project.Id) build" })
     $built = ([datetime]$status.BuiltUtc).ToLocalTime().ToString('yyyy-MM-dd HH:mm:ss')
     return New-MpDoctorCheck -Section 'BUILD ARTIFACT' -Status warn -Label 'Latest .mrpack' -Value 'Stale' -Detail "$([IO.Path]::GetFileName($status.Path)); built $built; $($status.Total) difference(s)." -Items @($items)
 }
@@ -312,11 +312,11 @@ function Get-MpProjectDoctorChecks {
 function Invoke-MpDoctor {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Show-MpHelp doctor; return }
-    $parsed = ConvertFrom-MpOptions $Arguments -ValueOptions @('project') -SwitchOptions @('fix','yes','dry-run','strict','allow-downgrade','details')
-    Assert-PositionalCount $parsed.Positionals -Minimum 0 -Maximum 0 -Usage 'modpack doctor [--project <id>] [--fix] [--yes]'
+    $parsed = ConvertFrom-MpOptions $Arguments -SwitchOptions @('fix','yes','dry-run','strict','allow-downgrade','details')
+    Assert-PositionalCount $parsed.Positionals -Minimum 0 -Maximum 0 -Usage 'modpack doctor [--fix] [--yes]'
     if ($parsed.Options.ContainsKey('yes') -and -not $parsed.Options.ContainsKey('fix')) { Throw-MpError -Message "Option '--yes' requires '--fix'" -Hint 'modpack doctor --fix --yes' -ErrorId 'Option.RequiredCombination' -Category InvalidArgument }
     $project = $null; $projectError = $null
-    if ($parsed.Options.ContainsKey('project') -or $script:ActiveProjectId) {
+    if ($script:CommandProjectId -or $script:ActiveProjectId) {
         try { $project = Resolve-MpCommandProject $parsed.Options } catch { $projectError = $_.Exception.Message }
     }
     $doctorHealth = $null

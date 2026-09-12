@@ -50,14 +50,14 @@ if (@($module.ExportedFunctions.Keys) -join ',' -ne 'modpack') { throw 'Unexpect
 & $module {
     [void](Test-MpR3Package $script:ModuleRoot)
     if ((Get-MpConsole).Theme.heading -ne '#123456') { throw 'Custom theme override was not loaded' }
-    $version = @(modpack --version --offline 6>&1)
+    $version = @(modpack --version 6>&1)
     if ($version.Count -ne 1) { throw 'Version output is not compact' }
-    foreach ($name in (Get-MpCommandCatalog).Keys) { modpack $name --help --ascii --colour never 6>$null }
+    foreach ($name in (Get-MpCommandCatalog).Keys) { modpack $name --help --ascii --color never 6>$null }
     $data = @(modpack --help 6>$null)
     if ($data.Count) { throw 'Presentation polluted the pipeline' }
     $captured = @(& { try { modpack wrong-command } catch { $_ } } 6>&1)
     if ($captured.Count -ne 1 -or $captured[0].FullyQualifiedErrorId -notlike 'ModpackTools.Command.Unknown*') { throw 'Error contract changed' }
-    $plain = @(modpack --help --colour never 6>&1 | ForEach-Object { [string]$_ }) -join "`n"
+    $plain = @(modpack --help --color never 6>&1 | ForEach-Object { [string]$_ }) -join "`n"
     if ($plain.Contains([string][char]27)) { throw 'Plain rendering contains ANSI' }
 }
 '@)

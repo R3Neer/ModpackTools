@@ -34,17 +34,19 @@ InModuleScope ModpackTools {
         }
 
         It 'extracts presentation options once and preserves selector order' {
-            $parsed = ConvertFrom-MpPresentationOptions @('--ascii','add','one','--colour','never','two','--category','performance')
-            $parsed.Arguments | Should Be @('add','one','two','--category','performance')
+            $parsed = ConvertFrom-MpPresentationOptions @('--ascii','content','add','one','--color','never','two','-n','-y','--category','performance','-p','fixture')
+            $parsed.Arguments | Should Be @('content','add','one','two','--dry-run','--yes','--category','performance')
             $parsed.Colour | Should Be never
             $parsed.Ascii | Should Be $true
+            $parsed.Project | Should Be fixture
         }
 
         It 'rejects duplicate and malformed presentation options' {
             { modpack --ascii --help --ascii } | Should Throw 'repeated'
-            { modpack --colour always --help --colour never } | Should Throw 'repeated'
-            { modpack --help --colour invalid } | Should Throw 'invalid'
-            { modpack --colour } | Should Throw 'requires a value'
+            { modpack --color always --help --color never } | Should Throw 'repeated'
+            { modpack --help --color invalid } | Should Throw 'invalid'
+            { modpack --color } | Should Throw 'requires a value'
+            { modpack -p one --help --project two } | Should Throw 'repeated'
             { modpack --ascii=true --help } | Should Throw 'does not accept a value'
         }
 
@@ -57,7 +59,7 @@ InModuleScope ModpackTools {
         It 'renders help without accessing project or provider state' {
             Mock Resolve-MpCommandProject { throw 'Project access is forbidden' }
             Mock Invoke-ModrinthApiRequest { throw 'Network access is forbidden' }
-            $text = modpack add --help --colour never --ascii 6>&1 | Out-String
+            $text = modpack content add --help --color never --ascii 6>&1 | Out-String
             $text | Should Match 'ARGUMENTS AND OPTIONS'
             $text | Should Match '--allow-downgrade'
             $text | Should Not Match '\x1b'
@@ -68,8 +70,8 @@ InModuleScope ModpackTools {
         It 'renders complete remove help through the catalogue without project or network access' {
             Mock Resolve-MpCommandProject { throw 'Project access is forbidden' }
             Mock Invoke-ModrinthApiRequest { throw 'Network access is forbidden' }
-            $text = modpack remove --help --colour never --ascii 6>&1 | Out-String
-            foreach ($option in @('--cascade','--autoremove','--strict','--dry-run','--yes','--project','--type')) { $text | Should Match ([regex]::Escape($option)) }
+            $text = modpack content remove --help --color never --ascii 6>&1 | Out-String
+            foreach ($option in @('--cascade','--autoremove','--strict','--dry-run','--yes','--type')) { $text | Should Match ([regex]::Escape($option)) }
             $text | Should Match 'ARGUMENTS AND OPTIONS'
             $text | Should Not Match '\x1b'
             Assert-MockCalled Resolve-MpCommandProject -Times 0 -Scope It
@@ -87,12 +89,18 @@ InModuleScope ModpackTools {
 
         It 'keeps human output out of the object pipeline' {
             @(modpack --help 6>$null).Count | Should Be 0
-            @(modpack --version --offline 6>$null).Count | Should Be 0
+            @(modpack --version 6>$null).Count | Should Be 0
+        }
+
+        It 'accepts the documented help and version abbreviations as CLI tokens' {
+            $help = modpack -h --color never --ascii 6>&1 | Out-String
+            $help | Should Match 'MODPACKTOOLS'
+            (modpack -V 6>&1 | Out-String).Trim() | Should Be "ModpackTools $script:ModuleVersion"
         }
 
         It 'honours explicit colour and restores the context for the next command' {
-            $coloured = @(modpack --help --colour always 6>&1 | ForEach-Object { [string]$_ }) -join "`n"
-            $plain = @(modpack --help --colour never 6>&1 | ForEach-Object { [string]$_ }) -join "`n"
+            $coloured = @(modpack --help --color always 6>&1 | ForEach-Object { [string]$_ }) -join "`n"
+            $plain = @(modpack --help --color never 6>&1 | ForEach-Object { [string]$_ }) -join "`n"
             $coloured | Should Match '\x1b\['
             $plain | Should Not Match '\x1b'
             $script:MpConsole | Should BeNullOrEmpty
@@ -113,7 +121,7 @@ InModuleScope ModpackTools {
             $saved = $script:R3Module
             try {
                 $script:R3Module = $null
-                { modpack add sodium } | Should Throw 'R3CLI presentation dependency is unavailable'
+                { modpack content add sodium } | Should Throw 'R3CLI presentation dependency is unavailable'
             } finally { $script:R3Module = $saved }
             Assert-MockCalled Invoke-MpAdd -Times 0 -Scope It
         }
@@ -198,7 +206,8 @@ InModuleScope ModpackTools {
             Mock Get-MpProjectDoctorChecks { @() }
             Mock Write-MpDoctorReport {}
 
-            Invoke-MpDoctor @('--project','fixture','--fix')
+            $script:CommandProjectId = 'fixture'
+            Invoke-MpDoctor @('--fix')
 
             Assert-MockCalled Confirm-MpDoctorAction -Times 0 -Scope It
             Assert-MockCalled Invoke-MpContentOperation -Times 1 -Scope It

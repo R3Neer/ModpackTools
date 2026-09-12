@@ -85,21 +85,23 @@ nu ./install-modpack-tools.nu --force --non-interactive --skip-doctor
 
 The Nu entry point delegates to the canonical installer rather than implementing a second installation system. Open a new Nushell session afterward so its import is loaded.
 
+Version 4 deliberately replaces the complete 3.x command vocabulary. There are no
+compatibility aliases: review `modpack --help` before updating scripts.
+
 ### Self-update
 
 ```powershell
 modpack --version
-modpack -v --offline
-modpack --update --check
-modpack -u
-modpack --update --yes
+modpack self-update --check
+modpack self-update
+modpack self-update -y
 ```
 
-`--version` / `-v` may announce a newer stable release. Successful checks are cached for 24 hours; `--offline` bypasses both network access and the cache.
+`--version` / `-V` prints the loaded version locally without network or cache access.
 
-`modpack --update` / `modpack -u` previews and verifies the replacement installation before switching to it. A failed post-replacement verification restores the previous installation.
+`modpack self-update` previews and verifies the replacement installation before switching to it. A failed post-replacement verification restores the previous installation. Use `self-update --check` to query without installing.
 
-`modpack update` is intentionally different: it updates **modpack content**. Self-update is the global `--update` / `-u` option.
+`modpack content update` updates **modpack content**. `self-update` updates the tool.
 
 ## Five-minute workflow
 
@@ -113,37 +115,32 @@ modpack doctor
 Create a project:
 
 ```powershell
-modpack new vanilla-plus --name "Vanilla Plus" --minecraft 1.21.1 --loader fabric
-```
-
-or adopt an existing Packwiz pack:
-
-```powershell
-modpack init existing-pack --path "D:\Minecraft\Existing Pack"
+modpack project create vanilla-plus --name "Vanilla Plus" --minecraft 1.21.1 --loader fabric
+modpack project register existing-pack --path "D:\Minecraft\Existing Pack"
 ```
 
 Select and inspect it:
 
 ```powershell
-modpack use vanilla-plus
-modpack status --full
-modpack inventory
+modpack project use vanilla-plus
+modpack project status
+modpack content list
 modpack doctor
 ```
 
 Preview before mutating:
 
 ```powershell
-modpack search sodium
-modpack add sodium lithium --dry-run
-modpack update --all --dry-run
+modpack content search sodium
+modpack content add sodium lithium -n
+modpack content update --all -n
 ```
 
 Apply and build:
 
 ```powershell
-modpack add sodium lithium
-modpack update --all
+modpack content add sodium lithium
+modpack content update --all
 modpack doctor
 modpack build
 modpack diff
@@ -153,57 +150,62 @@ The same command grammar is available from Nushell.
 
 ## Command map
 
-Use `modpack --help` or `modpack -h` for the generated overview and `modpack <command> --help` or `modpack <command> -h` for full syntax, notes and examples.
+Use `modpack --help` or `modpack -h` for the generated overview and
+`modpack <command> --help` or `modpack <command> -h` for full syntax, notes and examples.
 
-| Area | Command | Purpose |
-| --- | --- | --- |
-| Projects | `list` | List registered projects. |
-| Projects | `use` | Select the active project for the current shell session. |
-| Projects | `status` | Show project configuration and state. |
-| Projects | `new` | Create a Fabric, Quilt, Forge or NeoForge Packwiz project. |
-| Projects | `init` | Adopt an existing Packwiz project. |
-| Content | `inventory` | Inspect and filter installed content. |
-| Content | `search` | Search Modrinth globally or with project compatibility filters. |
-| Content | `add` | Resolve and install one dependency-aware batch. |
-| Content | `versions` | List compatible releases for installed Modrinth content. |
-| Content | `update` | Update selected content or eligible managed content. |
-| Content | `remove` | Remove content with dependency protection and optional cleanup. |
-| Content | `pin` / `unpin` | Block or permit automatic version changes. |
-| Content | `classify` | Manage editorial categories and assignments. |
-| Content | `side` | Set client, host or both distribution metadata. |
-| Content | `resource` | Enable, move or disable resource packs through Default Options. |
-| Health / build | `doctor` | Diagnose and safely repair known issues. |
-| Health / build | `build` | Validate and export a checked `.mrpack`. |
-| Health / build | `diff` | Compare current project content with the latest build. |
-| Configuration | `config` | Read or change root and Packwiz configuration. |
+The normal workflow is:
 
-Global command aliases are `-h` for `--help`, `-v` for `--version` and `-u` for the self-update `--update` option.
-Global presentation options are `--colour auto|always|never` and `--ascii`.
-Machine-output options are `--json` and `--no-human`.
+1. **Inspect:** `project status`, `content list`, `content versions` and `doctor` show the current
+   project and any known or unverifiable requirements.
+2. **Preview:** add `--dry-run` to project mutations and builds to see the complete
+   batch without changing project files.
+3. **Apply:** ModpackTools resolves selectors against one initial view, freezes the
+   plan and commits it as one transaction.
+4. **Check:** run `doctor`; use `--details` for every incomplete requirement or
+   `--strict` when incomplete coverage must fail.
+5. **Build:** `build` validates again, refreshes Packwiz, exports in isolation and
+   verifies the result.
+6. **Compare:** `diff` shows semantic differences between the project and the
+   newest `.mrpack`, ignoring ZIP timestamps and compression details.
 
-## Project selection
-
-`modpack use <id>` selects a project for the current shell session:
+Global `--project <id>` or `-p <id>` selects a project for one command and is
+accepted before or after the command:
 
 ```powershell
-modpack use vanilla-plus
-modpack inventory
-modpack doctor
-```
-
-Every command that operates on an existing project also accepts an explicit `--project <id>`:
-
-```powershell
-modpack inventory --project vanilla-plus --unclassified
+modpack -p vanilla-plus content list --category unclassified
 modpack doctor --project vanilla-plus
-modpack build --project vanilla-plus
+modpack -p vanilla-plus build
 ```
-
-`status`, `inventory`, `build` and `diff` retain their documented positional shorthand as well.
 
 An explicit selector applies only to that command and does not replace the session selection.
 
-`modpack search` is the exception that can also run without any selected project. With an active or explicit project, results are filtered by that project's Minecraft version and loader. Without one, search is global; its numbered results can later be passed to `modpack add <number>` after a target project is selected, where normal compatibility validation still applies.
+| Area | Command | Purpose |
+|---|---|---|
+| Projects | `project list/current/use/status` | Discover, select and inspect projects. |
+| Projects | `project create/register` | Create a new project or register an existing Packwiz project. |
+| Content | `content list/search` | Inspect installed content or search compatible Modrinth content. |
+| Content | `content add/remove` | Install or remove checked transactional batches. |
+| Content | `content versions/update` | List compatible releases and update managed content. |
+| Content | `content pin/unpin` | Prevent or permit automatic version changes. |
+| Content | `category` | Create, list, remove, assign and clear editorial categories. |
+| Content | `mod set-side` | Correct whether mods are distributed to clients, hosts or both. |
+| Content | `resource-pack` | Enable, move or disable resource packs through Default Options. |
+| Build | `doctor` | Diagnose and safely repair the environment or selected project. |
+| Build | `build` | Validate and export a checked `.mrpack`. |
+| Build | `diff` | Compare project content with the latest build. |
+| Configuration | `config` | Read or change the project root and Packwiz executable. |
+| Configuration | `self-update` | Check for or install a stable ModpackTools release. |
+
+Global options are `-h/--help`, `-V/--version`, `-p/--project`,
+`--color auto|always|never` and `--ascii`. Common mutation shorthands are
+`-n/--dry-run` and `-y/--yes`.
+
+Machine-output options are `--json` and `--no-human`.
+
+`modpack content search` can run without a selected project. With a project,
+results are filtered by its Minecraft version and loader. Without one, search is
+global; its numbered results can later be passed to `content add <number>` after
+selecting a target project, where normal compatibility validation still applies.
 
 ## Nushell: one command, two presentation modes
 
@@ -228,22 +230,22 @@ PowerShell bridge
 Normal interactive usage consumes the transport envelope silently and leaves only the R3CLI presentation visible:
 
 ```nu
-modpack inventory
-modpack search sodium
+modpack content list
+modpack content search sodium
 modpack doctor
 ```
 
 Use `--no-human` when Nu itself should receive the structured result:
 
 ```nu
-modpack inventory --type mod --no-human
+modpack content list --type mod --no-human
 | where side == client
 | sort-by name
 
-modpack search sodium --no-human
+modpack content search sodium --no-human
 | where downloads > 1_000_000
 
-modpack versions sodium --no-human
+modpack content versions sodium --no-human
 | select number version installed
 ```
 
@@ -252,8 +254,8 @@ The machine value, not JSON text, is the pipeline result. It is also eligible fo
 The same machine channel is available directly from PowerShell:
 
 ```powershell
-modpack inventory --json
-modpack inventory --json --no-human
+modpack content list --json
+modpack content list --json --no-human
 ```
 
 In PowerShell, `--json` keeps human presentation while emitting one schema-versioned JSON envelope. `--no-human` suppresses presentation and is valid only together with `--json`. The Nu adapter handles its internal JSON transport automatically, so Nu users normally request only `--no-human`.
@@ -264,43 +266,98 @@ See [`docs/nushell.md`](docs/nushell.md) for the adapter contract and returned s
 
 ## Active project across Nushell bridge processes
 
-The Nu adapter stores a successfully validated `modpack use <id>` selection in `MODPACKTOOLS_PROJECT` for the current Nu session. Every short-lived PowerShell bridge process inherits it and imports ModpackTools with that project selected.
+The Nu adapter stores a successfully validated `modpack project use <id>` selection in `MODPACKTOOLS_PROJECT` for the current Nu session. Every short-lived PowerShell bridge process inherits it and imports ModpackTools with that project selected.
 
 ```nu
-modpack use vanilla-plus
-modpack status
-modpack inventory
+modpack project use vanilla-plus
+modpack project status
+modpack content list
 ```
 
 An explicit `--project <id>` remains a normal PowerShell argument and overrides the inherited active project for that invocation. Closing Nushell clears the session-local selection.
 
-`modpack use --help` does not change session state. The adapter only updates `MODPACKTOOLS_PROJECT` from an explicit successful `active_project` machine result.
+`modpack project --help` does not change session state. The adapter only updates `MODPACKTOOLS_PROJECT` from an explicit successful `active_project` machine result.
 
 ## Inventory and selectors
 
 Inventory filters compose:
 
 ```powershell
-modpack inventory --type mod --category performance --side client
-modpack inventory --type resourcepack --state active
-modpack inventory --source local --search graves
-modpack inventory --unclassified
-modpack inventory --check
+modpack content list --type mod --category performance --side client
+modpack content list --type resourcepack --state active
+modpack content list --source local --match graves
+modpack content list --category unclassified
+modpack content list --verify
 ```
 
-Supported filters include `--type`, `--category`, `--unclassified`, `--side`, `--source`, `--state` and `--search`.
+Supported filters include:
 
-Commands accept names, stable IDs, filenames and, where documented, saved result numbers. Inventory entries, categories, versions and project-filtered search results use separate project-bound number scopes. A search made with no active or explicit project stores a global number scope whose results may be reused later by `add` in a selected project. Ambiguous or invalid selectors cancel the complete batch instead of applying a partial interpretation.
+- `--type all|mod|resourcepack|shaderpack`
+- `--category <id|saved-number|unclassified>`
+- `--side client|host|both|unknown`
+- `--source packwiz|local|builtin|missing`
+- `--state all|active|inactive`
+- `--match <text>`
 
-## Dependency resolution, removal and pins
+`content list --verify` downloads missing verification artifacts and refreshes health.
+The default inventory uses local data and valid caches without new downloads.
+
+Commands accept names, stable IDs, filenames and, where documented, saved numbers.
+Search results, inventory entries, categories and version lists have separate number
+scopes. Project-filtered searches and the other lists are project-bound and expire
+after 24 hours; global-search numbers may be reused after selecting a project. An
+invalid or ambiguous selector cancels the whole batch; duplicates are consolidated
+in first-use order.
+
+## Removing content
 
 ```powershell
-modpack add sodium lithium --category performance --dry-run
-modpack update sodium --to 2
-modpack remove sodium iris --dry-run
-modpack remove fabric-api --cascade --autoremove --dry-run
-modpack pin sodium lithium
-modpack unpin sodium
+modpack content remove sodium iris -n
+modpack -p vanilla-plus content remove 3 7
+modpack content remove fabric-api --cascade --autoremove -n
+modpack content remove sodium -y
+```
+
+`content remove` accepts installed names, stable IDs, filenames and saved inventory
+numbers, including local mods, resource packs and shaders. An invalid or ambiguous
+selector cancels the entire batch. Use `--type mod|resourcepack|shaderpack` to
+disambiguate explicit selectors; it does not restrict dependency expansion.
+
+The command previews the complete plan before confirmation, which defaults to no.
+`--yes` applies without prompting; `--dry-run` only previews. A changed file plan
+is rejected before commit. All changes use the shared transaction and recovery
+engine, including Packwiz index refresh and editorial metadata cleanup.
+
+By default, removing a required dependency fails and lists the affected dependents.
+`--cascade` also removes those dependents, transitively, using the declared
+dependency validator. Optional recommendations do not trigger a cascade.
+
+`--autoremove` also removes automatically installed dependencies left unused by
+this operation, including orphaned cycles. It preserves explicitly installed
+content, local files, pins, shared dependencies and unrelated pre-existing orphans.
+Reachability conservatively retains alternatives and conditional references.
+Automatic cleanup requires complete dependency verification; if metadata is
+incomplete, resolve it or omit `--autoremove`. It is not a standalone global prune.
+
+Requested or cascaded pins require `content unpin` first. Unrelated existing conflicts
+remain reported; `--strict` requires a clean resulting graph and complete
+verification. These checks do not prove Minecraft runtime compatibility.
+
+Removing an active resource pack also removes its Default Options reference,
+preserving the remaining priority order. Configuration files, worlds and category
+definitions are retained. Built-in resources cannot be uninstalled separately from
+their owning mod. If a Packwiz-managed artifact exists locally, its hash must match
+the metadata before removal. The previous build is retained; run `modpack build`
+to export the changed pack.
+
+## Dependency resolution and pins
+
+```powershell
+modpack content add sodium lithium --category performance -n
+modpack content update sodium --to 2
+modpack content update --all --type resourcepack
+modpack content pin sodium lithium
+modpack content unpin sodium
 ```
 
 The resolver works on the batch as a whole. It can backtrack across compatible releases, enforce installed constraints, resolve transitive requirements, detect cycles and minimize unnecessary changes.
@@ -329,6 +386,9 @@ commit
 verify / rollback if required
 ```
 
+Content add, update, pin and unpin operations, category and mod metadata batches, resource ordering,
+project repairs and builds use the same transaction layer.
+
 Important guarantees:
 
 - preparation occurs outside the pack;
@@ -344,7 +404,7 @@ Normal OneDrive Files On-Demand directories are supported. Real symlinks, juncti
 
 ```powershell
 modpack doctor
-modpack doctor --project vanilla-plus --details
+modpack -p vanilla-plus doctor --details
 modpack doctor --fix --dry-run
 modpack doctor --fix --yes --allow-downgrade
 modpack build --strict
@@ -365,13 +425,17 @@ modpack build --strict
 When `config/defaultoptions-common.toml` exists, enabled resource-pack order can be edited transactionally:
 
 ```powershell
-modpack resource enable "Fresh Animations" --position 1
-modpack resource move A B C --position 2
-modpack resource disable A B
-modpack add <resource-pack> --enable --position 1
+modpack resource-pack enable "Fresh Animations" --position 1
+modpack resource-pack move A B C --position 2
+modpack resource-pack disable A B
+modpack content add <resource-pack> --enable-at 1
 ```
 
-Position 1 is the highest visible Minecraft priority. Batch moves preserve selector order and avoid duplicate entries.
+Position 1 is the highest visible Minecraft priority. For a batch, selected packs
+are removed first and inserted as one ordered block. `move` requires every selected
+pack to be active; disabling an inactive pack is a no-op. `content add --enable-at
+<n>` installs and activates a resource-pack
+batch at that position in the same transaction.
 
 ## Project model and sources of truth
 
@@ -404,7 +468,7 @@ R3CLI owns CLI layout, help, symbols, colour and expected-error presentation. Mo
 
 When `--json` is active in PowerShell, human rendering goes to stderr and machine JSON goes to stdout. Structured output therefore remains parseable without sacrificing interactive feedback.
 
-The Nu bridge similarly keeps R3CLI presentation on stderr and captures only its JSON transport. It forwards the parent Nu stderr terminal state so `--colour auto` still behaves like an interactive command, while `NO_COLOR`, explicit colour modes and redirected stderr retain their normal meaning.
+The Nu bridge similarly keeps R3CLI presentation on stderr and captures only its JSON transport. It forwards the parent Nu stderr terminal state so `--color auto` still behaves like an interactive command, while `NO_COLOR`, explicit color modes and redirected stderr retain their normal meaning.
 
 Expected failures use stable error IDs and actionable hints. First-party human messages distinguish work in progress, planned changes, completed actions and actual user instructions; see [`docs/message-style.md`](docs/message-style.md).
 
@@ -426,13 +490,13 @@ The README is the operational overview. Detailed contracts live in focused docum
 - [`docs/error-design.md`](docs/error-design.md) — stable expected-error design;
 - [`docs/message-style.md`](docs/message-style.md) — temporal semantics for human-facing status and informational messages;
 - [`docs/releasing.md`](docs/releasing.md) — versioning, packaging and automated stable-release flow;
-- [`docs/releases/3.4.0.md`](docs/releases/3.4.0.md) — release-specific 3.4 changes and validation.
+- [`docs/releases/4.0.0.md`](docs/releases/4.0.0.md) — version 4 vocabulary, breaking changes and validation.
 
 Command-specific syntax remains authoritative in generated CLI help:
 
 ```powershell
 modpack --help
-modpack add --help
+modpack content --help
 modpack doctor --help
 ```
 
@@ -452,7 +516,7 @@ Open a new Nu session so the `config.nu` import is parsed again.
 
 **The active project disappeared**
 
-`modpack use` is session-local. Select it again or use `--project <id>`.
+`modpack project use` is session-local. Select it again or use `--project <id>`/`-p <id>`.
 
 **A Nu pipeline sees no structured rows**
 

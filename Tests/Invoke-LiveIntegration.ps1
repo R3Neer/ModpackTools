@@ -23,10 +23,10 @@ $runRoot = Join-Path ([IO.Path]::GetFullPath($WorkRoot)) ('integration-' + [guid
     Invoke-Packwiz -Arguments @('refresh') -WorkingDirectory $root | Out-Null
     $script:ActiveProjectId = 'fixture'
     $before = Get-MpTreeState $root
-    modpack add lithium sodium --dry-run
+    modpack content add lithium sodium --dry-run
     if (@(Get-MpTreeChanges $before (Get-MpTreeState $root)).Count) { throw 'Dry run changed the project' }
-    modpack add lithium sodium
-    modpack pin lithium
+    modpack content add lithium sodium
+    modpack content pin lithium
     $health = Get-MpProjectHealth $project -Check
     if ($health.Errors.Count) { throw ($health.Errors.Message -join '; ') }
     $build = Build-ModpackProject $project
@@ -42,7 +42,7 @@ $runRoot = Join-Path ([IO.Path]::GetFullPath($WorkRoot)) ('integration-' + [guid
     finally { $archive.Dispose() }
     # Exercise removal through the public CLI and real Packwiz, including a
     # dependency-only installed item and a local owner with actual JAR metadata.
-    modpack unpin lithium
+    modpack content unpin lithium
     $inventory = Get-ModpackInventory $project
     $lithium = @($inventory.Mods | Where-Object Name -eq Lithium)[0]
     $metadata = Get-ModpackMetadata $project
@@ -57,9 +57,9 @@ $runRoot = Join-Path ([IO.Path]::GetFullPath($WorkRoot)) ('integration-' + [guid
     } finally { $owner.Dispose() }
     Invoke-Packwiz -Arguments @('refresh') -WorkingDirectory $root | Out-Null
     $beforeRemove = Get-MpTreeState $root
-    modpack remove removal-owner.jar --autoremove --dry-run
+    modpack content remove removal-owner.jar --autoremove --dry-run
     if (@(Get-MpTreeChanges $beforeRemove (Get-MpTreeState $root)).Count) { throw 'Removal dry run changed the project' }
-    modpack remove removal-owner.jar --autoremove --yes
+    modpack content remove removal-owner.jar --autoremove --yes
     $remaining = Get-ModpackInventory $project
     if ($remaining.Mods.Count -ne 1 -or $remaining.Mods[0].Name -ne 'Sodium' -or [IO.File]::Exists($ownerPath)) { throw 'Autoremove did not preserve only Sodium' }
     $afterRemovalBuild = Build-ModpackProject $project

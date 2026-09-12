@@ -6,6 +6,6 @@ if ($module.Version -ne [version]$ExpectedVersion -or $module.ModuleBase -ne (Sp
 & $module {
     Assert-MpPresentation
     [void](Get-MpConsole)
-    foreach ($command in (Get-MpCommandCatalog).Keys) { modpack $command --help --ascii --colour never 6>$null }
+    foreach ($command in (Get-MpCommandCatalog).Keys) { modpack $command --help --ascii --color never 6>$null }
 }
 Write-Output "Verified ModpackTools $ExpectedVersion at $ModulePath"

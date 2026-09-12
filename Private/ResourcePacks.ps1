@@ -22,7 +22,7 @@ function Assert-ModpackDefaultOptionsInstalled {
 
     $status = Get-ModpackDefaultOptionsStatus -Project $Project -Inventory $Inventory
     if (-not $status.Installed) {
-        Throw-MpError -Message "Default Options is not installed in project '$($Project.Id)', so resource pack activation and order cannot be managed" -Hint "modpack add WEg59z5b --project $($Project.Id)" -ErrorId 'ResourcePack.DefaultOptionsRequired' -Category NotInstalled -TargetObject $Project.Id
+        Throw-MpError -Message "Default Options is not installed in project '$($Project.Id)', so resource pack activation and order cannot be managed" -Hint "modpack -p $($Project.Id) content add WEg59z5b" -ErrorId 'ResourcePack.DefaultOptionsRequired' -Category NotInstalled -TargetObject $Project.Id
     }
     return $status
 }
@@ -57,7 +57,7 @@ function Resolve-ModpackResourcePack {
         return $false
     })
     if ($matches.Count -eq 0) {
-        Throw-MpError -Message "Resource pack '$Selector' was not found" -Hint 'modpack inventory --type resourcepack' -ErrorId 'ResourcePack.NotFound' -Category ObjectNotFound -TargetObject $Selector
+        Throw-MpError -Message "Resource pack '$Selector' was not found" -Hint 'modpack content list --type resourcepack' -ErrorId 'ResourcePack.NotFound' -Category ObjectNotFound -TargetObject $Selector
     }
     if ($matches.Count -gt 1) {
         $names = @($matches | ForEach-Object { "'$($_.Name)' [$($_.DefaultId)]" }) -join ', '
@@ -102,7 +102,7 @@ function Move-ModpackResourcePack {
     [void](Assert-ModpackDefaultOptionsInstalled -Project $Project -Inventory $inventory)
     $target = Resolve-ModpackResourcePack -Inventory $inventory -Selector $Selector
     if (-not $target.Active) {
-        Throw-MpError -Message "Resource pack '$($target.Name)' is disabled and cannot be moved" -Hint "modpack resource enable '$Selector' --position $Position --project $($Project.Id)" -ErrorId 'ResourcePack.NotEnabled' -Category InvalidOperation -TargetObject $Selector
+        Throw-MpError -Message "Resource pack '$($target.Name)' is disabled and cannot be moved" -Hint "modpack -p $($Project.Id) resource-pack enable '$Selector' --position $Position" -ErrorId 'ResourcePack.NotEnabled' -Category InvalidOperation -TargetObject $Selector
     }
     return Enable-ModpackResourcePack -Project $Project -Selector $Selector -Position $Position
 }

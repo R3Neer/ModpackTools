@@ -2,6 +2,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $script:ActiveProjectId = [Environment]::GetEnvironmentVariable('MODPACKTOOLS_PROJECT')
+$script:CommandProjectId = $null
 $script:ModuleRoot = $PSScriptRoot
 $script:ModuleVersion = [string](Import-PowerShellDataFile -LiteralPath (Join-Path $PSScriptRoot 'ModpackTools.psd1')).ModuleVersion
 $script:ConfigHomeOverride = $null

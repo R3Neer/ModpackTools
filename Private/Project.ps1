@@ -77,12 +77,12 @@ function Resolve-ModpackProject {
 
     $effectiveId = if (-not [string]::IsNullOrWhiteSpace($Id)) { $Id } else { $script:ActiveProjectId }
     if ([string]::IsNullOrWhiteSpace($effectiveId)) {
-        Throw-MpError -Message 'No active project is selected' -Hint 'modpack use <id>, or add --project <id> to this command' -ErrorId 'Project.NotSelected' -Category ObjectNotFound
+        Throw-MpError -Message 'No active project is selected' -Hint 'run modpack project use <id>, or add global --project <id>' -ErrorId 'Project.NotSelected' -Category ObjectNotFound
     }
 
     $matches = @(Get-ModpackProjects | Where-Object Id -eq $effectiveId)
     if ($matches.Count -eq 0) {
-        Throw-MpError -Message "Project '$effectiveId' is not registered" -Hint 'modpack list' -ErrorId 'Project.NotFound' -Category ObjectNotFound -TargetObject $effectiveId
+        Throw-MpError -Message "Project '$effectiveId' is not registered" -Hint 'modpack project list' -ErrorId 'Project.NotFound' -Category ObjectNotFound -TargetObject $effectiveId
     }
     return $matches[0]
 }

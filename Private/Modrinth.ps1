@@ -101,7 +101,7 @@ function Read-ModrinthVersionCache {
     $path = Get-ModrinthVersionCachePath
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { return $null }
     try { return Get-Content -Raw -LiteralPath $path -Encoding UTF8 | ConvertFrom-Json }
-    catch { Throw-MpError -Message "Version cache '$path' is invalid" -Hint 'modpack versions <content>' -ErrorId 'Versions.InvalidCache' -Category InvalidData -TargetObject $path }
+    catch { Throw-MpError -Message "Version cache '$path' is invalid" -Hint 'modpack content versions <content>' -ErrorId 'Versions.InvalidCache' -Category InvalidData -TargetObject $path }
 }
 
 function Resolve-ModrinthVersionChoice {
@@ -112,10 +112,10 @@ function Resolve-ModrinthVersionChoice {
         $VersionView
     )
     $view = if ($VersionView) { $VersionView } else { Read-ModrinthVersionCache }
-    if (-not $view) { Throw-MpError -Message "Version '$Selector' cannot be resolved because no version list has been saved" -Hint "modpack versions $($Item.Id)" -ErrorId 'Versions.CacheNotFound' -Category ObjectNotFound -TargetObject $Selector }
-    if (-not (Test-MpCacheTimestamp -CreatedUtc $view.CreatedUtc)) { Throw-MpError -Message 'The saved version list has expired' -Hint "modpack versions $($Item.Id)" -ErrorId 'Versions.CacheExpired' -Category InvalidData }
+    if (-not $view) { Throw-MpError -Message "Version '$Selector' cannot be resolved because no version list has been saved" -Hint "modpack content versions $($Item.Id)" -ErrorId 'Versions.CacheNotFound' -Category ObjectNotFound -TargetObject $Selector }
+    if (-not (Test-MpCacheTimestamp -CreatedUtc $view.CreatedUtc)) { Throw-MpError -Message 'The saved version list has expired' -Hint "modpack content versions $($Item.Id)" -ErrorId 'Versions.CacheExpired' -Category InvalidData }
     if (-not ([string]$view.ProjectId).Equals($Project.Id, [System.StringComparison]::OrdinalIgnoreCase) -or -not ([string]$view.ItemId).Equals($Item.Id, [System.StringComparison]::OrdinalIgnoreCase)) {
-        Throw-MpError -Message "The saved version list belongs to '$($view.ItemName)' in project '$($view.ProjectId)'" -Hint "modpack versions $($Item.Id) --project $($Project.Id)" -ErrorId 'Versions.CacheContextMismatch' -Category InvalidData -TargetObject $Selector
+        Throw-MpError -Message "The saved version list belongs to '$($view.ItemName)' in project '$($view.ProjectId)'" -Hint "modpack -p $($Project.Id) content versions $($Item.Id)" -ErrorId 'Versions.CacheContextMismatch' -Category InvalidData -TargetObject $Selector
     }
     $matches = if ($Selector -match '^[1-9][0-9]*$') {
         @($view.Versions | Where-Object { [int]$_.Index -eq [int]$Selector })
@@ -123,7 +123,7 @@ function Resolve-ModrinthVersionChoice {
     else {
         @($view.Versions | Where-Object { ([string]$_.Id).Equals($Selector, [System.StringComparison]::OrdinalIgnoreCase) -or ([string]$_.VersionNumber).Equals($Selector, [System.StringComparison]::OrdinalIgnoreCase) })
     }
-    if ($matches.Count -eq 0) { Throw-MpError -Message "Compatible version '$Selector' was not found for '$($Item.Name)'" -Hint "modpack versions $($Item.Id)" -ErrorId 'Versions.NotFound' -Category ObjectNotFound -TargetObject $Selector }
+    if ($matches.Count -eq 0) { Throw-MpError -Message "Compatible version '$Selector' was not found for '$($Item.Name)'" -Hint "modpack content versions $($Item.Id)" -ErrorId 'Versions.NotFound' -Category ObjectNotFound -TargetObject $Selector }
     if ($matches.Count -gt 1) { Throw-MpError -Message "Version number '$Selector' identifies more than one Modrinth release" -Details (@($matches | ForEach-Object Id) -join ', ') -Hint 'use the exact version ID or a numbered result' -ErrorId 'Versions.Ambiguous' -Category InvalidArgument -TargetObject $Selector }
     return $matches[0]
 }
@@ -189,7 +189,7 @@ function Read-ModrinthSearchCache {
         return Get-Content -Raw -LiteralPath $path -Encoding UTF8 | ConvertFrom-Json
     }
     catch {
-        Throw-MpError -Message "Search cache '$path' is invalid" -Hint 'modpack search <query>' -ErrorId 'Search.InvalidCache' -Category InvalidData -TargetObject $path
+        Throw-MpError -Message "Search cache '$path' is invalid" -Hint 'modpack content search <query>' -ErrorId 'Search.InvalidCache' -Category InvalidData -TargetObject $path
     }
 }
 
@@ -243,24 +243,24 @@ function Resolve-ModrinthSearchNumber {
 
     if ($Selector -notmatch '^[1-9][0-9]*$') { return $null }
     $cache = Read-ModrinthSearchCache
-    if (-not $cache) { Throw-MpError -Message "Search result number '$Selector' cannot be resolved because there is no saved search" -Hint 'modpack search <query>' -ErrorId 'Search.CacheNotFound' -Category ObjectNotFound -TargetObject $Selector }
+    if (-not $cache) { Throw-MpError -Message "Search result number '$Selector' cannot be resolved because there is no saved search" -Hint 'modpack content search <query>' -ErrorId 'Search.CacheNotFound' -Category ObjectNotFound -TargetObject $Selector }
     if (-not (Test-MpCacheTimestamp -CreatedUtc $cache.CreatedUtc)) {
-        Throw-MpError -Message 'The saved search has expired' -Hint 'modpack search <query>' -ErrorId 'Search.CacheExpired' -Category InvalidData
+        Throw-MpError -Message 'The saved search has expired' -Hint 'modpack content search <query>' -ErrorId 'Search.CacheExpired' -Category InvalidData
     }
     $cacheProjectId = [string]$cache.ProjectId
     if (-not [string]::IsNullOrWhiteSpace($cacheProjectId)) {
         if (-not $cacheProjectId.Equals($Project.Id, [System.StringComparison]::OrdinalIgnoreCase)) {
-            Throw-MpError -Message "The saved search belongs to project '$($cache.ProjectId)', not '$($Project.Id)'" -Hint "modpack search <query> --project $($Project.Id)" -ErrorId 'Search.ProjectMismatch' -Category InvalidData -TargetObject $Selector
+            Throw-MpError -Message "The saved search belongs to project '$($cache.ProjectId)', not '$($Project.Id)'" -Hint "modpack -p $($Project.Id) content search <query>" -ErrorId 'Search.ProjectMismatch' -Category InvalidData -TargetObject $Selector
         }
         if (-not ([string]$cache.MinecraftVersion).Equals([string]$Project.MinecraftVersion, [System.StringComparison]::OrdinalIgnoreCase) -or
             -not ([string]$cache.Loader).Equals([string]$Project.Loader, [System.StringComparison]::OrdinalIgnoreCase)) {
-            Throw-MpError -Message 'The project compatibility settings changed after the saved search' -Hint 'modpack search <query>' -ErrorId 'Search.CompatibilityChanged' -Category InvalidData
+            Throw-MpError -Message 'The project compatibility settings changed after the saved search' -Hint 'modpack content search <query>' -ErrorId 'Search.CompatibilityChanged' -Category InvalidData
         }
     }
     $result = @($cache.Results | Where-Object { [int]$_.Index -eq [int]$Selector })
     if ($result.Count -ne 1) {
         $maximum = @($cache.Results).Count
-        Throw-MpError -Message "Search result number '$Selector' does not exist; available range: 1-$maximum" -Hint 'choose a number shown by the latest modpack search' -ErrorId 'Search.ResultOutOfRange' -Category InvalidArgument -TargetObject $Selector
+        Throw-MpError -Message "Search result number '$Selector' does not exist; available range: 1-$maximum" -Hint 'choose a number shown by the latest modpack content search' -ErrorId 'Search.ResultOutOfRange' -Category InvalidArgument -TargetObject $Selector
     }
     return $result[0]
 }

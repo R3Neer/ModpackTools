@@ -188,15 +188,15 @@ function New-MpContentPlan {
             $versions = @(Get-MpProjectCandidates $context $id)
             if (-not $versions.Count) { Throw-MpError -Message "No compatible version of '$identity' exists" -Hint 'check Minecraft and loader compatibility' -ErrorId 'Versions.NoCompatibleVersion' -Category ObjectNotFound }
             $chosen = if ($urlVersion) { @($versions | Where-Object { $_.id -ceq $urlVersion -or $_.version_number -ceq $urlVersion } | Select-Object -First 1) } else { @($versions[0]) }
-            if (-not $chosen.Count) { Throw-MpError -Message 'The requested URL version is incompatible' -Hint 'modpack versions <selector>' -ErrorId 'Versions.Incompatible' -Category InvalidArgument }
-            if ($nodes.ContainsKey($id) -and $nodes[$id].Pinned -and $nodes[$id].VersionId -cne $chosen[0].id) { Throw-MpError -Message "'$identity' is pinned" -Hint "modpack unpin $id" -ErrorId 'Compatibility.Pinned' -Category InvalidOperation }
+            if (-not $chosen.Count) { Throw-MpError -Message 'The requested URL version is incompatible' -Hint 'modpack content versions <selector>' -ErrorId 'Versions.Incompatible' -Category InvalidArgument }
+            if ($nodes.ContainsKey($id) -and $nodes[$id].Pinned -and $nodes[$id].VersionId -cne $chosen[0].id) { Throw-MpError -Message "'$identity' is pinned" -Hint "modpack content unpin $id" -ErrorId 'Compatibility.Pinned' -Category InvalidOperation }
             $nodes[$id] = Get-MpCandidateNode $context $id $chosen[0]; $context.Roots[$id] = $true
         }
     }
     elseif ($Operation -eq 'update') {
         $targets = if ($All) { @(Get-ModpackUpdateItems $state.Inventory -Type $Type | Where-Object { $_.Source -eq 'packwiz' -and -not $nodes[$_.Id].Pinned }) } else { @(Resolve-ModpackUpdateSelectors $Project $Selectors -Type $Type) }
         foreach ($target in $targets) {
-            if ($nodes[$target.Id].Pinned) { Throw-MpError -Message "'$($target.Name)' is pinned" -Hint "modpack unpin $($target.Id)" -ErrorId 'Compatibility.Pinned' -Category InvalidOperation }
+            if ($nodes[$target.Id].Pinned) { Throw-MpError -Message "'$($target.Name)' is pinned" -Hint "modpack content unpin $($target.Id)" -ErrorId 'Compatibility.Pinned' -Category InvalidOperation }
             if (-not $target.Id.StartsWith('modrinth:')) { continue }
             $versions = @(Get-MpProjectCandidates $context $target.Id)
             if (-not $versions.Count) { Throw-MpError -Message "No compatible version for '$($target.Name)'" -Hint 'check project compatibility' -ErrorId 'Versions.NoCompatibleVersion' -Category ObjectNotFound }
@@ -207,7 +207,7 @@ function New-MpContentPlan {
                     $matches = @($versions | Where-Object id -CEQ $choice.Id)
                 }
                 else { $matches = @($versions | Where-Object { $_.id -ceq $To -or $_.version_number -ceq $To }) }
-                if ($matches.Count -ne 1) { Throw-MpError -Message "Version '$To' is unavailable, incompatible or ambiguous" -Hint 'refresh modpack versions and select an exact version ID' -ErrorId 'Versions.NotFound' -Category InvalidArgument }
+                if ($matches.Count -ne 1) { Throw-MpError -Message "Version '$To' is unavailable, incompatible or ambiguous" -Hint 'refresh modpack content versions and select an exact version ID' -ErrorId 'Versions.NotFound' -Category InvalidArgument }
                 $chosen = $matches[0]
             }
             $nodes[$target.Id] = Get-MpCandidateNode $context $target.Id $chosen; $context.Roots[$target.Id] = $true; $requested += $target.Id

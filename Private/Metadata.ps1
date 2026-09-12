@@ -117,7 +117,7 @@ function Set-ModMetadataCategory {
     $metadata = Get-ModpackMetadata -Project $Project
     $categoryId = $metadata.Categories.Keys | Where-Object { ([string]$_).Equals($Category, [System.StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1
     if (-not $categoryId) {
-        Throw-MpError -Message "Category '$Category' is not defined for project '$($Project.Id)'" -Hint 'modpack classify list' -ErrorId 'Metadata.UnknownCategory' -Category InvalidArgument -TargetObject $Category
+        Throw-MpError -Message "Category '$Category' is not defined for project '$($Project.Id)'" -Hint 'modpack category list' -ErrorId 'Metadata.UnknownCategory' -Category InvalidArgument -TargetObject $Category
     }
     if (-not $metadata.Mods.ContainsKey($ModId)) { $metadata.Mods[$ModId] = @{} }
     $metadata.Mods[$ModId]['Category'] = [string]$categoryId
@@ -186,7 +186,7 @@ function Read-ModpackCategoryCache {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { return $null }
     try { return Get-Content -Raw -LiteralPath $path -Encoding UTF8 | ConvertFrom-Json }
     catch {
-        Throw-MpError -Message "Category reference cache '$path' is invalid" -Hint 'modpack classify list' -ErrorId 'Metadata.InvalidCategoryCache' -Category InvalidData -TargetObject $path
+        Throw-MpError -Message "Category reference cache '$path' is invalid" -Hint 'modpack category list' -ErrorId 'Metadata.InvalidCategoryCache' -Category InvalidData -TargetObject $path
     }
 }
 
@@ -198,32 +198,32 @@ function Resolve-ModpackCategoryId {
     )
     if ($Selector.Equals('unclassified', [System.StringComparison]::OrdinalIgnoreCase)) {
         if ($AllowUnclassified) { return 'unclassified' }
-        Throw-MpError -Message "The 'unclassified' classification cannot be removed" -Hint 'assign affected mods to a category with modpack classify set' -ErrorId 'Metadata.ReservedClassification' -Category InvalidOperation -TargetObject $Selector
+        Throw-MpError -Message "The 'unclassified' classification cannot be removed" -Hint 'assign affected mods with modpack category assign' -ErrorId 'Metadata.ReservedClassification' -Category InvalidOperation -TargetObject $Selector
     }
     $metadata = Get-ModpackMetadata -Project $Project
     if ($Selector -match '^[1-9][0-9]*$') {
         $cache = Read-ModpackCategoryCache
-        if (-not $cache) { Throw-MpError -Message "Category number '$Selector' cannot be resolved because no category list has been saved" -Hint 'modpack classify list' -ErrorId 'Metadata.CategoryCacheNotFound' -Category ObjectNotFound -TargetObject $Selector }
-        if (-not (Test-MpCacheTimestamp -CreatedUtc $cache.CreatedUtc)) { Throw-MpError -Message 'The saved category list has expired' -Hint 'modpack classify list' -ErrorId 'Metadata.CategoryCacheExpired' -Category InvalidData }
+        if (-not $cache) { Throw-MpError -Message "Category number '$Selector' cannot be resolved because no category list has been saved" -Hint 'modpack category list' -ErrorId 'Metadata.CategoryCacheNotFound' -Category ObjectNotFound -TargetObject $Selector }
+        if (-not (Test-MpCacheTimestamp -CreatedUtc $cache.CreatedUtc)) { Throw-MpError -Message 'The saved category list has expired' -Hint 'modpack category list' -ErrorId 'Metadata.CategoryCacheExpired' -Category InvalidData }
         if (-not ([string]$cache.ProjectId).Equals($Project.Id, [System.StringComparison]::OrdinalIgnoreCase)) {
-            Throw-MpError -Message "The saved category list belongs to project '$($cache.ProjectId)', not '$($Project.Id)'" -Hint "modpack classify list --project $($Project.Id)" -ErrorId 'Metadata.CategoryProjectMismatch' -Category InvalidData -TargetObject $Selector
+            Throw-MpError -Message "The saved category list belongs to project '$($cache.ProjectId)', not '$($Project.Id)'" -Hint "modpack -p $($Project.Id) category list" -ErrorId 'Metadata.CategoryProjectMismatch' -Category InvalidData -TargetObject $Selector
         }
         $match = @($cache.Categories | Where-Object { [int]$_.Index -eq [int]$Selector })
         if ($match.Count -ne 1) {
             $maximum = @($cache.Categories).Count
             if ($maximum -eq 0) {
-                Throw-MpError -Message "Category number '$Selector' cannot be resolved because the saved list contains no categories" -Hint 'modpack classify create <id>' -ErrorId 'Metadata.EmptyCategoryCache' -Category ObjectNotFound -TargetObject $Selector
+                Throw-MpError -Message "Category number '$Selector' cannot be resolved because the saved list contains no categories" -Hint 'modpack category create <id>' -ErrorId 'Metadata.EmptyCategoryCache' -Category ObjectNotFound -TargetObject $Selector
             }
-            Throw-MpError -Message "Category number '$Selector' does not exist; available range: 1-$maximum" -Hint 'modpack classify list' -ErrorId 'Metadata.CategoryReferenceOutOfRange' -Category InvalidArgument -TargetObject $Selector
+            Throw-MpError -Message "Category number '$Selector' does not exist; available range: 1-$maximum" -Hint 'modpack category list' -ErrorId 'Metadata.CategoryReferenceOutOfRange' -Category InvalidArgument -TargetObject $Selector
         }
         $Selector = [string]$match[0].Id
         if ($Selector.Equals('unclassified', [System.StringComparison]::OrdinalIgnoreCase)) {
             if ($AllowUnclassified) { return 'unclassified' }
-            Throw-MpError -Message "The 'unclassified' classification cannot be removed" -Hint 'assign affected mods to a category with modpack classify set' -ErrorId 'Metadata.ReservedClassification' -Category InvalidOperation -TargetObject $Selector
+            Throw-MpError -Message "The 'unclassified' classification cannot be removed" -Hint 'assign affected mods with modpack category assign' -ErrorId 'Metadata.ReservedClassification' -Category InvalidOperation -TargetObject $Selector
         }
     }
     $categoryId = $metadata.Categories.Keys | Where-Object { ([string]$_).Equals($Selector, [System.StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1
-    if (-not $categoryId) { Throw-MpError -Message "Category '$Selector' is not defined for project '$($Project.Id)'" -Hint 'modpack classify list' -ErrorId 'Metadata.UnknownCategory' -Category InvalidArgument -TargetObject $Selector }
+    if (-not $categoryId) { Throw-MpError -Message "Category '$Selector' is not defined for project '$($Project.Id)'" -Hint 'modpack category list' -ErrorId 'Metadata.UnknownCategory' -Category InvalidArgument -TargetObject $Selector }
     return [string]$categoryId
 }
 
@@ -238,7 +238,7 @@ function New-ModpackCategory {
     if ($Id -eq 'unclassified') { Throw-MpError -Message "Category ID 'unclassified' is reserved" -Hint 'choose a different category ID' -ErrorId 'Metadata.ReservedCategoryId' -Category InvalidArgument -TargetObject $Id }
     $metadata = Get-ModpackMetadata -Project $Project
     $existing = $metadata.Categories.Keys | Where-Object { ([string]$_).Equals($Id, [System.StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1
-    if ($existing) { Throw-MpError -Message "Category '$Id' already exists in project '$($Project.Id)'" -Hint 'modpack classify list' -ErrorId 'Metadata.CategoryAlreadyExists' -Category ResourceExists -TargetObject $Id }
+    if ($existing) { Throw-MpError -Message "Category '$Id' already exists in project '$($Project.Id)'" -Hint 'modpack category list' -ErrorId 'Metadata.CategoryAlreadyExists' -Category ResourceExists -TargetObject $Id }
     if ([string]::IsNullOrWhiteSpace($Name)) { $Name = $Id.ToUpperInvariant() }
     if ($null -eq $Order) {
         $orders = @($metadata.Categories.Values | ForEach-Object { if ($_.ContainsKey('Order')) { [int]$_.Order } })
@@ -262,7 +262,7 @@ function Remove-ModpackCategory {
         $entry.ContainsKey('Category') -and ([string]$entry.Category).Equals($categoryId, [System.StringComparison]::OrdinalIgnoreCase)
     })
     if ($assigned.Count -and -not $Unclassify) {
-        Throw-MpError -Message "Category '$categoryId' is assigned to $($assigned.Count) mod(s) and cannot be removed safely" -Details (@($assigned | Select-Object -First 8) -join ', ') -Hint "modpack classify remove $categoryId --unclassify" -ErrorId 'Metadata.CategoryInUse' -Category InvalidOperation -TargetObject $categoryId
+        Throw-MpError -Message "Category '$categoryId' is assigned to $($assigned.Count) mod(s) and cannot be removed safely" -Details (@($assigned | Select-Object -First 8) -join ', ') -Hint "modpack category remove $categoryId --clear-assignments" -ErrorId 'Metadata.CategoryInUse' -Category InvalidOperation -TargetObject $categoryId
     }
     foreach ($modId in $assigned) {
         $entry = $metadata.Mods[$modId]
@@ -290,7 +290,7 @@ function Resolve-ModpackModForClassification {
         }
     )
     if ($matches.Count -eq 0) {
-        Throw-MpError -Message "Mod '$Selector' was not found in project '$($Project.Id)'" -Hint 'modpack inventory --type mod' -ErrorId 'Metadata.ModNotFound' -Category ObjectNotFound -TargetObject $Selector
+        Throw-MpError -Message "Mod '$Selector' was not found in project '$($Project.Id)'" -Hint 'modpack content list --type mod' -ErrorId 'Metadata.ModNotFound' -Category ObjectNotFound -TargetObject $Selector
     }
     if ($matches.Count -gt 1) {
         $ids = @($matches | ForEach-Object Id | Sort-Object -Unique) -join ', '

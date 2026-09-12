@@ -83,17 +83,14 @@ function Initialize-MpConsole {
 
 function ConvertFrom-MpPresentationOptions {
     param([object[]]$Tokens)
-    $remaining = [Collections.Generic.List[object]]::new()
-    $seen = @{}
-    $colour = 'auto'
-    $ascii = $false
-    $json = $false
-    $noHuman = $false
+    $remaining = [Collections.Generic.List[object]]::new(); $seen = @{}; $colour = 'auto'; $ascii = $false; $project = $null; $json = $false; $noHuman = $false
     for ($i=0; $i -lt $Tokens.Count; $i++) {
         $token = [string]$Tokens[$i]
-        if ($token -notmatch '^--(colour|ascii|json|no-human)(?:=(.*))?$') { $remaining.Add($Tokens[$i]); continue }
-        $name = $Matches[1]
-        $inline = if ($Matches.ContainsKey(2)) { $Matches[2] } else { $null }
+        $expanded = switch -CaseSensitive ($token) { '-h' {'--help'} '-V' {'--version'} '-n' {'--dry-run'} '-y' {'--yes'} default {$null} }
+        if ($expanded) { $remaining.Add($expanded); continue }
+        if ($token -cnotmatch '^(?:--(color|ascii|project|json|no-human)|(-p))(?:=(.*))?$') { $remaining.Add($Tokens[$i]); continue }
+        $name = if ($Matches[2]) { 'project' } else { $Matches[1] }
+        $inline = if ($Matches.ContainsKey(3)) { $Matches[3] } else { $null }
         if ($seen.ContainsKey($name)) { Throw-MpError -Message "Option '--$name' is repeated" -Hint "specify --$name once" -ErrorId 'Option.Duplicate' -Category InvalidArgument }
         $seen[$name] = $true
         if ($name -in @('ascii','json','no-human')) {
@@ -105,16 +102,21 @@ function ConvertFrom-MpPresentationOptions {
         }
         if ($null -eq $inline) {
             $i++
-            if ($i -ge $Tokens.Count) { Throw-MpError -Message "Option '--colour' requires a value" -Hint '--colour auto|always|never' -ErrorId 'Option.MissingValue' -Category InvalidArgument }
+            if ($i -ge $Tokens.Count) { Throw-MpError -Message "Option '--$name' requires a value" -Hint "--$name <value>" -ErrorId 'Option.MissingValue' -Category InvalidArgument }
             $inline = [string]$Tokens[$i]
         }
-        if ($inline -notin @('auto','always','never')) { Throw-MpError -Message "Colour mode '$inline' is invalid" -Hint '--colour auto|always|never' -ErrorId 'Option.InvalidColour' -Category InvalidArgument }
+        if ($name -eq 'project') {
+            if ([string]::IsNullOrWhiteSpace($inline) -or $inline.StartsWith('-')) { Throw-MpError -Message "Option '--project' requires a project ID" -Hint '--project <id>' -ErrorId 'Option.MissingValue' -Category InvalidArgument }
+            $project = $inline
+            continue
+        }
+        if ($inline -notin @('auto','always','never')) { Throw-MpError -Message "Color mode '$inline' is invalid" -Hint '--color auto|always|never' -ErrorId 'Option.InvalidColor' -Category InvalidArgument }
         $colour = $inline
     }
     if ($noHuman -and -not $json) {
         Throw-MpError -Message "Option '--no-human' requires '--json'" -Hint '--json --no-human' -ErrorId 'Option.RequiredCombination' -Category InvalidArgument
     }
-    [pscustomobject]@{ Arguments=@($remaining); Colour=$colour; Ascii=$ascii; Json=$json; NoHuman=$noHuman }
+    [pscustomobject]@{ Arguments=@($remaining); Colour=$colour; Ascii=$ascii; Project=$project; Json=$json; NoHuman=$noHuman }
 }
 
 function Write-MpDoctorLine {

@@ -170,7 +170,7 @@ function Set-ModpackModSide {
     $normalizedSide = $Side.ToLowerInvariant()
     if ($normalizedSide -eq 'host') { $normalizedSide = 'server' }
     if ($normalizedSide -notin @('client', 'server', 'both')) {
-        Throw-MpError -Message "Side '$Side' is not recognized; allowed values: client, host, both" -Hint 'modpack side set <mod> <client|host|both>' -ErrorId 'Content.InvalidSide' -Category InvalidArgument -TargetObject $Side
+        Throw-MpError -Message "Side '$Side' is not recognized; allowed values: client, host, both" -Hint 'modpack mod set-side <client|host|both> <mod...>' -ErrorId 'Content.InvalidSide' -Category InvalidArgument -TargetObject $Side
     }
 
     $item = Resolve-ModpackModForClassification -Project $Project -Selector $Selector
@@ -293,7 +293,7 @@ function Select-ModpackInventory {
     }
     if ($Category -and $Category -ne 'unclassified' -and -not $Inventory.Metadata.Categories.ContainsKey($Category)) {
         $available = @($Inventory.Metadata.Categories.Keys | Sort-Object) -join ', '
-        Throw-MpError -Message "Category '$Category' is not defined; available categories: $available, unclassified" -Hint 'modpack inventory --type mod' -ErrorId 'Inventory.UnknownCategory' -Category InvalidArgument -TargetObject $Category
+        Throw-MpError -Message "Category '$Category' is not defined; available categories: $available, unclassified" -Hint 'modpack content list --type mod' -ErrorId 'Inventory.UnknownCategory' -Category InvalidArgument -TargetObject $Category
     }
 
     function Test-InventoryCommonFilter {
@@ -419,7 +419,7 @@ function Read-ModpackInventoryReferenceCache {
         return Get-Content -Raw -LiteralPath $path -Encoding UTF8 | ConvertFrom-Json
     }
     catch {
-        Throw-MpError -Message "Inventory reference cache '$path' is invalid" -Hint 'modpack inventory' -ErrorId 'Inventory.InvalidReferenceCache' -Category InvalidData -TargetObject $path
+        Throw-MpError -Message "Inventory reference cache '$path' is invalid" -Hint 'modpack content list' -ErrorId 'Inventory.InvalidReferenceCache' -Category InvalidData -TargetObject $path
     }
 }
 
@@ -434,31 +434,31 @@ function Resolve-ModpackInventoryNumber {
     if ($Selector -notmatch '^[1-9][0-9]*$') { return $null }
     $cache = Read-ModpackInventoryReferenceCache
     if (-not $cache) {
-        Throw-MpError -Message "Inventory reference number '$Selector' cannot be resolved because no inventory has been saved" -Hint 'modpack inventory' -ErrorId 'Inventory.ReferenceCacheNotFound' -Category ObjectNotFound -TargetObject $Selector
+        Throw-MpError -Message "Inventory reference number '$Selector' cannot be resolved because no inventory has been saved" -Hint 'modpack content list' -ErrorId 'Inventory.ReferenceCacheNotFound' -Category ObjectNotFound -TargetObject $Selector
     }
     if ([int]$cache.SchemaVersion -ne 1 -or $null -eq $cache.Results -or [string]::IsNullOrWhiteSpace([string]$cache.ProjectId)) {
-        Throw-MpError -Message 'The saved inventory reference cache has an unsupported or incomplete structure' -Hint 'modpack inventory' -ErrorId 'Inventory.InvalidReferenceCache' -Category InvalidData
+        Throw-MpError -Message 'The saved inventory reference cache has an unsupported or incomplete structure' -Hint 'modpack content list' -ErrorId 'Inventory.InvalidReferenceCache' -Category InvalidData
     }
     if (-not (Test-MpCacheTimestamp -CreatedUtc $cache.CreatedUtc)) {
-        Throw-MpError -Message 'The saved inventory references have expired' -Hint 'modpack inventory' -ErrorId 'Inventory.ReferenceCacheExpired' -Category InvalidData
+        Throw-MpError -Message 'The saved inventory references have expired' -Hint 'modpack content list' -ErrorId 'Inventory.ReferenceCacheExpired' -Category InvalidData
     }
     if (-not ([string]$cache.ProjectId).Equals($Project.Id, [System.StringComparison]::OrdinalIgnoreCase)) {
-        Throw-MpError -Message "The saved inventory belongs to project '$($cache.ProjectId)', not '$($Project.Id)'" -Hint "modpack inventory --project $($Project.Id)" -ErrorId 'Inventory.ReferenceProjectMismatch' -Category InvalidData -TargetObject $Selector
+        Throw-MpError -Message "The saved inventory belongs to project '$($cache.ProjectId)', not '$($Project.Id)'" -Hint "modpack -p $($Project.Id) content list" -ErrorId 'Inventory.ReferenceProjectMismatch' -Category InvalidData -TargetObject $Selector
     }
     $result = @($cache.Results | Where-Object { [int]$_.Index -eq [int]$Selector })
     if ($result.Count -ne 1) {
         $maximum = @($cache.Results).Count
         if ($maximum -eq 0) {
-            Throw-MpError -Message 'The saved inventory view contains no numbered items' -Hint 'modpack inventory without filters, or use broader filters' -ErrorId 'Inventory.ReferenceOutOfRange' -Category InvalidArgument -TargetObject $Selector
+            Throw-MpError -Message 'The saved inventory view contains no numbered items' -Hint 'run modpack content list without filters, or use broader filters' -ErrorId 'Inventory.ReferenceOutOfRange' -Category InvalidArgument -TargetObject $Selector
         }
-        Throw-MpError -Message "Inventory reference number '$Selector' does not exist; available range: 1-$maximum" -Hint 'choose a number shown by the latest modpack inventory' -ErrorId 'Inventory.ReferenceOutOfRange' -Category InvalidArgument -TargetObject $Selector
+        Throw-MpError -Message "Inventory reference number '$Selector' does not exist; available range: 1-$maximum" -Hint 'choose a number shown by the latest modpack content list' -ErrorId 'Inventory.ReferenceOutOfRange' -Category InvalidArgument -TargetObject $Selector
     }
     $item = $result[0]
     if ([string]$item.Kind -notin $AllowedKinds) {
-        Throw-MpError -Message "Inventory reference '$Selector' points to '$($item.Kind)', which is not accepted by this command" -Hint 'choose a compatible number from modpack inventory' -ErrorId 'Inventory.ReferenceKindMismatch' -Category InvalidArgument -TargetObject $Selector
+        Throw-MpError -Message "Inventory reference '$Selector' points to '$($item.Kind)', which is not accepted by this command" -Hint 'choose a compatible number from modpack content list' -ErrorId 'Inventory.ReferenceKindMismatch' -Category InvalidArgument -TargetObject $Selector
     }
     if ($RequirePackwiz -and [string]$item.Source -ne 'packwiz') {
-        Throw-MpError -Message "Inventory reference '$Selector' points to '$($item.Source)' content, which Packwiz cannot update" -Hint 'choose Packwiz-managed content from modpack inventory --source packwiz' -ErrorId 'Inventory.ReferenceNotUpdatable' -Category InvalidOperation -TargetObject $Selector
+        Throw-MpError -Message "Inventory reference '$Selector' points to '$($item.Source)' content, which Packwiz cannot update" -Hint 'choose Packwiz-managed content from modpack content list --source packwiz' -ErrorId 'Inventory.ReferenceNotUpdatable' -Category InvalidOperation -TargetObject $Selector
     }
     return $item
 }

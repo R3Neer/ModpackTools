@@ -39,9 +39,9 @@ try {
             [pscustomobject]@{tag_name="v$v";draft=$false;prerelease=$false;html_url="https://github.com/R3Neer/ModpackTools/releases/tag/v$v";assets=@([pscustomobject]@{name="ModpackTools-$v.zip";browser_download_url="https://github.com/R3Neer/ModpackTools/releases/download/v$v/ModpackTools-$v.zip";digest="sha256:$script:FixtureHash"})}
         }
         function script:Invoke-WebRequest { param($Uri,$OutFile,$TimeoutSec); [IO.File]::Copy($script:FixtureArchive,$OutFile) }
-        $notice = modpack --version --ascii --colour never 6>&1 | Out-String
-        if ($notice -notmatch 'Update available') { throw 'Old installation did not announce the update.' }
-        modpack --update --yes
+        $notice = modpack self-update --check --ascii --color never 6>&1 | Out-String
+        if ($notice -notmatch 'Update available') { throw 'Old installation did not report the update.' }
+        modpack self-update --yes
     } $run $releaseVersion $archive $hash
     if ((Get-FileHash $themePath).Hash -ne $themeHash) { throw 'Self-update changed the custom theme.' }
     [void](Invoke-MpInstallProcess @('-File', (Join-Path $target 'Private/VerifyInstallation.ps1'), '-ModulePath', $manifestPath, '-ExpectedVersion', $releaseVersion))

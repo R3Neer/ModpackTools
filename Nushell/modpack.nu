@@ -37,7 +37,7 @@ def validate-nu-option-style [args: list<string>] {
             continue
         }
 
-        if ($token =~ '^-[A-Za-z]') and ($token !~ '^-[a-z]$') {
+        if ($token =~ '^-[A-Za-z]') and ($token != '-V') and ($token !~ '^-[a-z]$') {
             error make {
                 msg: $"Nushell options must use lowercase '--long-option' or one-letter '-s' syntax. PowerShell-style option '($token)' is not supported by the Nu adapter."
             }
@@ -73,6 +73,8 @@ def invoke-bridge [request: string] {
 
 def unwrap-result [envelope: record] {
     let command = (field $envelope command '')
+    let arguments = (field $envelope arguments [])
+    let operation = ($arguments | get --optional 0 | default '')
     let data = (field $envelope data {})
 
     match $command {
@@ -80,23 +82,33 @@ def unwrap-result [envelope: record] {
             let version = (data-field $data version)
             if $version == null { $data } else { $version }
         }
-        'list' => {
-            let projects = (data-field $data projects)
-            if $projects == null { $data } else { field $projects items [] }
+        'project' => {
+            if $operation == 'list' {
+                let projects = (data-field $data projects)
+                if $projects == null { $data } else { field $projects items [] }
+            } else { $data }
         }
-        'inventory' => {
-            let inventory = (data-field $data inventory)
-            if $inventory == null { $data } else { field $inventory items [] }
+        'content' => {
+            match $operation {
+                'list' => {
+                    let inventory = (data-field $data inventory)
+                    if $inventory == null { $data } else { field $inventory items [] }
+                }
+                'search' => {
+                    let search = (data-field $data search)
+                    if $search == null { $data } else { field $search results [] }
+                }
+                'versions' => {
+                    let versions = (data-field $data versions)
+                    if $versions == null { $data } else { field $versions items [] }
+                }
+                _ => {
+                    let transaction = (data-field $data transaction)
+                    if $transaction == null { $data } else { $transaction }
+                }
+            }
         }
-        'search' => {
-            let search = (data-field $data search)
-            if $search == null { $data } else { field $search results [] }
-        }
-        'versions' => {
-            let versions = (data-field $data versions)
-            if $versions == null { $data } else { field $versions items [] }
-        }
-        'classify' => {
+        'category' => {
             let categories = (data-field $data categories)
             if $categories != null { field $categories items [] } else {
                 let transaction = (data-field $data transaction)
@@ -157,7 +169,7 @@ export def --env --wrapped main [...args: string] {
         error make { msg: (if $suffix == '' { $message } else { $'($message) [($suffix)]' }) }
     }
 
-    if (field $envelope command '') == 'use' {
+    if ((field $envelope command '') == 'project') and (($envelope.arguments | get --optional 0 | default '') == 'use') {
         let use_args = (field $envelope arguments [])
         if not ($use_args | any {|token| $token == '--help' }) {
             let active_project = (data-field (field $envelope data {}) active_project)

@@ -297,7 +297,7 @@ $Loader = "loader-version"
             $second = New-ConventionalPackwizProject -Name 'Second'
             Initialize-ExistingModpackProject -Id duplicate -Path $first | Out-Null
             { Initialize-ExistingModpackProject -Id duplicate -Path $second } | Should Throw 'already registered'
-            { Initialize-ExistingModpackProject -Id duplicate -Path $first } | Should Throw 'already initialized'
+            { Initialize-ExistingModpackProject -Id duplicate -Path $first } | Should Throw 'already registered'
         }
 
         It 'rejects missing Packwiz files, invalid manifests, and conflicting ModpackTools state' {
@@ -333,9 +333,9 @@ $Loader = "loader-version"
 
         It 'is exposed through the public command with the same output contract' {
             $path = New-ConventionalPackwizProject -Name 'Public Init' -Loader neoforge
-            $output = (modpack init public-init --path $path 6>&1 | Out-String)
-            $output | Should Match 'Existing Packwiz project initialized for ModpackTools'
-            $output | Should Match 'Next: modpack use public-init'
+            $output = (modpack project register public-init --path $path 6>&1 | Out-String)
+            $output | Should Match 'Existing Packwiz project registered with ModpackTools'
+            $output | Should Match 'Next: modpack project use public-init'
             $output | Should Match "(`r?`n){2}$"
             (Read-ModpackProject -ProjectRoot $path).Id | Should Be 'public-init'
         }
@@ -397,9 +397,10 @@ $Loader = "loader-version"
             { Write-ModpackDiff -Diff $diff } | Should Not Throw
         }
 
-        It 'rejects the old add mod syntax' {
-            { Invoke-MpAdd @('mod') } | Should Throw "Argument 'mod' is not valid"
-            { Invoke-MpAdd @('mod', 'sodium') } | Should Throw "Argument 'mod' is not valid"
+        It 'rejects removed top-level commands instead of retaining aliases' {
+            foreach ($command in @('inventory','list','use','status','new','init','search','add','remove','versions','update','pin','unpin','classify','resource','side')) {
+                { modpack $command } | Should Throw "Command '$command' is not recognized"
+            }
         }
     }
 
@@ -409,34 +410,34 @@ $Loader = "loader-version"
             [System.IO.Directory]::CreateDirectory($fixtureRoot) | Out-Null
             $projectPath = New-TestModpack $fixtureRoot 'Readme Pack' 'readme'
             $text = Get-ModpackProjectReadmeText -Project (Read-ModpackProject $projectPath)
-            $text | Should Match 'modpack add <slug>'
-            $text | Should Match 'modpack search <query>'
-            $text | Should Match 'modpack add <search-number>'
-            $text | Should Match 'modpack update --all'
-            $text | Should Match 'modpack versions <name\|id\|filename>'
-            $text | Should Match 'modpack side set <mod\|inventory-number>'
+            $text | Should Match 'modpack content add <slug>'
+            $text | Should Match 'modpack content search <query>'
+            $text | Should Match 'modpack content add <search-number>'
+            $text | Should Match 'modpack content update --all'
+            $text | Should Match 'modpack content versions <name\|id\|filename>'
+            $text | Should Match 'modpack mod set-side <client\|host\|both>'
             $text | Should Match 'dependency graph'
             $text | Should Match 'resource packs, and shaders'
             $text | Should Match 'one transaction'
             $text | Should Match 'modpack diff'
-            $text | Should Match 'modpack diff --project readme'
-            $text | Should Match 'Every command that operates on an existing project'
-            $text | Should Match 'modpack resource enable'
-            $text | Should Match 'modpack resource move'
+            $text | Should Match 'modpack -p readme diff'
+            $text | Should Match 'Global `--project <id>` or `-p <id>` selects one project'
+            $text | Should Match 'modpack resource-pack enable'
+            $text | Should Match 'modpack resource-pack move'
             $text | Should Match 'Resource pack activation and ordering require Default Options'
-            $text | Should Match 'modpack update <inventory-number>'
-            $text | Should Match 'modpack classify list'
-            $text | Should Match 'modpack classify create <id>'
-            $text | Should Match 'modpack classify set <name\|id\|filename>'
-            $text | Should Match 'modpack classify remove <category\|number>'
+            $text | Should Match 'modpack content update <inventory-number>'
+            $text | Should Match 'modpack category list'
+            $text | Should Match 'modpack category create <id>'
+            $text | Should Match 'modpack category assign <category\|number>'
+            $text | Should Match 'modpack category remove <category\|number>'
             $text | Should Match 'Search, inventory, version, and category numbers have separate contexts'
             $text | Should Match 'defaultoptions-common.toml'
             $text | Should Match 'modpack --help'
-            $text | Should Match 'modpack inventory --help'
+            $text | Should Match 'modpack content --help'
             $text | Should Match 'modpack --version'
             $text | Should Match 'modpack doctor'
-            $text | Should Match 'modpack new <id>.*fabric\|quilt\|forge\|neoforge'
-            $text | Should Match 'modpack init <id> --path'
+            $text | Should Match 'modpack project create <id>.*fabric\|quilt\|forge\|neoforge'
+            $text | Should Match 'modpack project register <id> --path'
             $text | Should Not Match 'modpack add mod'
         }
     }
@@ -444,8 +445,8 @@ $Loader = "loader-version"
     Describe 'CLI help' {
         It 'uses one catalog for every executable command' {
             $catalog = Get-MpCommandCatalog
-            @($catalog.Keys).Count | Should Be 21
-            @($catalog.Keys) | Should Be @('--update', 'list', 'use', 'status', 'new', 'init', 'inventory', 'search', 'add', 'remove', 'classify', 'resource', 'side', 'versions', 'update', 'build', 'diff', 'doctor', 'config', 'pin', 'unpin')
+            @($catalog.Keys).Count | Should Be 10
+            @($catalog.Keys) | Should Be @('project', 'content', 'category', 'resource-pack', 'mod', 'build', 'diff', 'doctor', 'config', 'self-update')
             foreach ($name in $catalog.Keys) {
                 $catalog[$name].Summary | Should Not BeNullOrEmpty
                 $catalog[$name].Description | Should Not BeNullOrEmpty
@@ -484,7 +485,7 @@ $Loader = "loader-version"
         }
 
         It 'prints the module version through the global version option' {
-            (modpack --version --offline 6>&1 | Out-String).Trim() | Should Be "ModpackTools $script:ModuleVersion"
+            (modpack --version 6>&1 | Out-String).Trim() | Should Be "ModpackTools $script:ModuleVersion"
             { modpack version } | Should Throw "Command 'version' is not recognized"
         }
 
@@ -578,40 +579,34 @@ mod-id = "WEg59z5b"
             (Resolve-ModpackProject -Id 'two').Id | Should Be 'two'
         }
 
-        It 'resolves project commands from --project, a positional ID, or the active session' {
+        It 'resolves project commands from global context or the active session' {
             New-TestModpack $fixtureRoot 'Pack A' 'one' | Out-Null
             New-TestModpack $fixtureRoot 'Pack B' 'two' | Out-Null
             $script:ActiveProjectId = 'one'
             (Resolve-MpCommandProject -Options @{}).Id | Should Be 'one'
-            (Resolve-MpCommandProject -Options @{ project = 'two' }).Id | Should Be 'two'
-            (Resolve-MpCommandProject -Options @{} -PositionalId 'two').Id | Should Be 'two'
-        }
-
-        It 'rejects simultaneous positional and --project IDs' {
-            New-TestModpack $fixtureRoot 'Pack A' 'one' | Out-Null
-            New-TestModpack $fixtureRoot 'Pack B' 'two' | Out-Null
-            { Resolve-MpCommandProject -Options @{ project = 'one' } -PositionalId 'two' } | Should Throw 'both positionally'
+            $script:CommandProjectId = 'two'
+            (Resolve-MpCommandProject -Options @{}).Id | Should Be 'two'
         }
 
         It 'accepts --project in read-only project commands' {
             New-TestModpack $fixtureRoot 'Pack Public' 'public' | Out-Null
-            { Invoke-MpStatus @('--project', 'public') } | Should Not Throw
-            { Invoke-MpInventory @('--project', 'public', '--type', 'mod') } | Should Not Throw
+            { modpack project status --project public } | Should Not Throw
+            { modpack -p public content list --type mod } | Should Not Throw
         }
 
         It 'accepts public commands without additional arguments' {
             New-TestModpack $fixtureRoot 'Pack Public' 'public' | Out-Null
-            { modpack list } | Should Not Throw
+            { modpack project list } | Should Not Throw
         }
     }
 
     Describe 'CLI option diagnostics' {
-        It 'suggests the prefixed inventory filter when -- is omitted' {
-            { Invoke-MpInventory @('search', 'Taverns') } | Should Throw 'Try: --search'
+        It 'suggests the prefixed content filter when -- is omitted' {
+            { Invoke-MpInventory @('match', 'Taverns') } | Should Throw 'Try: --match'
         }
 
         It 'uses the same diagnostic for options in other commands' {
-            { Invoke-MpResource @('enable', 'Pack', 'position', '1') } | Should Throw 'Try: --position'
+            { Invoke-MpResourcePack @('enable', 'Pack', 'position', '1') } | Should Throw 'Try: --position'
             { Invoke-MpAdd @('sodium', 'category', 'performance') } | Should Throw 'Try: --category'
         }
     }
@@ -838,9 +833,10 @@ mod-id = "inventory-id"
             Mock Invoke-MpContentOperation {
                 [pscustomobject]@{ Changes=@(); Applied=$false; Result=[pscustomobject]@{ Changes=@(); Report=[pscustomobject]@{ Issues=@() } } }
             }
-            Invoke-MpAdd @('1', '--project', 'search')
+            $script:CommandProjectId = 'search'
+            Invoke-MpAdd @('1')
             Assert-MockCalled Invoke-MpContentOperation -Times 1 -ParameterFilter { $Operation -eq 'add' -and $Selectors[0] -eq 'modrinth:AANobbMI' }
-            Invoke-MpUpdate @('1', '--project', 'search')
+            Invoke-MpUpdate @('1')
             Assert-MockCalled Invoke-MpContentOperation -Times 1 -ParameterFilter { $Operation -eq 'update' -and $Selectors[0] -eq 'modrinth:inventory-id' }
 
         }
@@ -854,6 +850,7 @@ mod-id = "inventory-id"
             $projectPath = New-TestModpack $fixtureRoot ('Pack-' + [guid]::NewGuid().ToString('N')) $projectId
             $project = Read-ModpackProject $projectPath
             $script:ConfigHomeOverride = Join-Path $TestDrive 'classification-config'
+            $script:CommandProjectId = $project.Id
             Write-PowerShellDataFileAtomic -Path (Get-ModpackToolsConfigPath) -Data @{ Root = $fixtureRoot }
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'mods/sodium.pw.toml'), @'
 name = "Sodium"
@@ -890,13 +887,13 @@ mod-id = "AANobbMI"
             $view = Select-ModpackInventory -Inventory (Get-ModpackInventory -Project $project)
             [void](Set-ModpackInventoryReferences -View $view)
 
-            Invoke-MpClassify @('set', '1', 'performance', '--project', $project.Id)
+            Invoke-MpCategory @('assign', 'performance', '1')
 
             (Get-ModpackMetadata -Project $project).Mods['modrinth:AANobbMI'].Category | Should Be 'performance'
         }
 
         It 'creates a category with explicit presentation metadata' {
-            Invoke-MpClassify @('create', 'world-generation', '--name', 'WORLD GENERATION', '--order', '25', '--project', $project.Id)
+            Invoke-MpCategory @('create', 'world-generation', '--name', 'WORLD GENERATION', '--order', '25')
 
             $metadata = Get-ModpackMetadata -Project $project
             $metadata.Categories['world-generation'].Name | Should Be 'WORLD GENERATION'
@@ -904,7 +901,7 @@ mod-id = "AANobbMI"
         }
 
         It 'appends a category when no order is provided' {
-            Invoke-MpClassify @('create', 'visuals', '--project', $project.Id)
+            Invoke-MpCategory @('create', 'visuals')
 
             $category = (Get-ModpackMetadata -Project $project).Categories['visuals']
             $category.Name | Should Be 'VISUALS'
@@ -912,16 +909,16 @@ mod-id = "AANobbMI"
         }
 
         It 'reserves unclassified for clearing assignments' {
-            { Invoke-MpClassify @('create', 'unclassified', '--project', $project.Id) } | Should Throw "Category ID 'unclassified' is reserved"
+            { Invoke-MpCategory @('create', 'unclassified') } | Should Throw "Category ID 'unclassified' is reserved"
         }
 
         It 'uses inventory numbers for mods and category-list numbers for categories' {
             [void](New-ModpackCategory -Project $project -Id 'visuals' -Name 'VISUALS' -Order 5)
             $inventory = Select-ModpackInventory -Inventory (Get-ModpackInventory -Project $project)
             [void](Set-ModpackInventoryReferences -View $inventory)
-            Invoke-MpClassify @('list', '--project', $project.Id)
+            Invoke-MpCategory @('list')
 
-            Invoke-MpClassify @('set', '1', '1', '--project', $project.Id)
+            Invoke-MpCategory @('assign', '1', '1')
 
             (Get-ModpackMetadata -Project $project).Mods['modrinth:AANobbMI'].Category | Should Be 'visuals'
         }
@@ -929,9 +926,9 @@ mod-id = "AANobbMI"
         It 'uses category-list numbers in the inventory category filter' {
             [void](New-ModpackCategory -Project $project -Id 'visuals' -Name 'VISUALS' -Order 5)
             [void](Set-ModpackModClassification -Project $project -Selector 'Sodium' -Category 'visuals')
-            Invoke-MpClassify @('list', '--project', $project.Id)
+            Invoke-MpCategory @('list')
 
-            { Invoke-MpInventory @('--category', '1', '--project', $project.Id) } | Should Not Throw
+            { Invoke-MpInventory @('--category', '1') } | Should Not Throw
             $references = Read-ModpackInventoryReferenceCache
             @($references.Results).Count | Should Be 1
             $references.Results[0].Selector | Should Be 'modrinth:AANobbMI'
@@ -940,7 +937,7 @@ mod-id = "AANobbMI"
         It 'lists categories through the public command with only the operation argument' {
             Set-ActiveModpackProject -Id $project.Id | Out-Null
 
-            { modpack classify list } | Should Not Throw
+            { modpack category list } | Should Not Throw
             $cache = Read-ModpackCategoryCache
             $cache.ProjectId | Should Be $project.Id
             @($cache.Categories).Count | Should Be 2
@@ -949,16 +946,16 @@ mod-id = "AANobbMI"
 
         It 'resolves the numbered unclassified row for set but never for remove' {
             Set-ActiveModpackProject -Id $project.Id | Out-Null
-            modpack classify list
+            modpack category list
 
             (Resolve-ModpackCategoryId -Project $project -Selector '2' -AllowUnclassified) | Should Be 'unclassified'
-            { Invoke-MpClassify @('remove', '2', '--project', $project.Id) } | Should Throw "The 'unclassified' classification cannot be removed"
+            { Invoke-MpCategory @('remove', '2') } | Should Throw "The 'unclassified' classification cannot be removed"
         }
 
         It 'removes an unused category by its latest category number' {
-            Invoke-MpClassify @('create', 'visuals', '--project', $project.Id)
+            Invoke-MpCategory @('create', 'visuals')
 
-            Invoke-MpClassify @('remove', '2', '--project', $project.Id)
+            Invoke-MpCategory @('remove', '2')
 
             (Get-ModpackMetadata -Project $project).Categories.ContainsKey('visuals') | Should Be $false
         }
@@ -969,18 +966,18 @@ mod-id = "AANobbMI"
             $metadata.Mods['modrinth:AANobbMI'] = @{ Name = 'Fast Renderer'; Category = 'performance' }
             Write-PowerShellDataFileAtomic -Path $metadataPath -Data $metadata
 
-            { Invoke-MpClassify @('remove', 'performance', '--project', $project.Id) } | Should Throw 'cannot be removed safely'
+            { Invoke-MpCategory @('remove', 'performance') } | Should Throw 'cannot be removed safely'
             (Get-ModpackMetadata -Project $project).Categories.ContainsKey('performance') | Should Be $true
 
-            Invoke-MpClassify @('remove', 'performance', '--unclassify', '--project', $project.Id)
+            Invoke-MpCategory @('remove', 'performance', '--clear-assignments')
             $updated = Get-ModpackMetadata -Project $project
             $updated.Categories.ContainsKey('performance') | Should Be $false
             $updated.Mods['modrinth:AANobbMI'].Name | Should Be 'Fast Renderer'
             $updated.Mods['modrinth:AANobbMI'].ContainsKey('Category') | Should Be $false
         }
 
-        It 'rejects the former classify syntax instead of treating it as an alias' {
-            { Invoke-MpClassify @('sodium', 'performance', '--project', $project.Id) } | Should Throw "Classify operation 'sodium' is not recognized"
+        It 'rejects an unknown category operation instead of guessing intent' {
+            { Invoke-MpCategory @('sodium', 'performance') } | Should Throw "Category operation 'sodium' is not recognized"
         }
 
         It 'rejects an unknown category without modifying metadata' {
@@ -1375,7 +1372,8 @@ side = "client"
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'resourcepacks/active.pw.toml'), "name = `"Active Pack`"`nfilename = `"active.zip`"")
             [System.IO.File]::WriteAllText((Join-Path $projectPath 'config/defaultoptions-common.toml'), 'defaultResourcePacks = ["vanilla", "file/active.zip"]')
 
-            Invoke-MpResource @('move', 'Active Pack', '--position', '2', '--project', $project.Id)
+            $script:CommandProjectId = $project.Id
+            Invoke-MpResourcePack @('move', 'Active Pack', '--position', '2')
 
             @(Get-DefaultResourcePackOrder $project) | Should Be @('vanilla', 'file/active.zip')
         }
@@ -1397,7 +1395,8 @@ side = "client"
             $view = Select-ModpackInventory -Inventory (Get-ModpackInventory -Project $project) -Type resourcepack
             [void](Set-ModpackInventoryReferences -View $view)
 
-            Invoke-MpResource @('enable', '2', '--position', '1', '--project', $project.Id)
+            $script:CommandProjectId = $project.Id
+            Invoke-MpResourcePack @('enable', '2', '--position', '1')
 
             @(Get-DefaultResourcePackOrder -Project $project) | Should Be @('file/new.zip', 'file/active.zip')
         }

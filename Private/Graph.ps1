@@ -83,7 +83,7 @@ function ConvertTo-MpNode {
                 $parsed = Get-MpLoaderMetadata $artifact $Project.Loader
                 $mods = $parsed.Mods; foreach ($warning in $parsed.Warnings) { $warnings.Add($warning) }
             }
-            else { $warnings.Add('JAR requirements have not been verified; run inventory --check') }
+            else { $warnings.Add('JAR requirements have not been verified; run content list --verify') }
         }
         catch { $warnings.Add($_.Exception.Message) }
     }

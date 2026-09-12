@@ -14,18 +14,18 @@ def main [] {
     # Normal interactive-style usage keeps only R3CLI presentation visible. The
     # internal JSON envelope is consumed by the adapter and must not become a Nu
     # pipeline value unless machine-only mode is requested explicitly.
-    let visible_version = (modpack --version --offline)
+    let visible_version = (modpack --version)
     ensure ($visible_version == null) 'Normal Nushell usage leaked its machine payload.'
 
-    let quiet_version = (modpack --version --offline --no-human)
+    let quiet_version = (modpack --version --no-human)
     ensure ((($quiet_version | describe) =~ '^record')) 'No-human version did not return a Nushell record.'
     ensure (($quiet_version.version? | default '') != '') 'No-human version record is missing its version value.'
 
     # Short global aliases use the same canonical PowerShell path after crossing
     # the wrapped Nu boundary.
-    let short_visible_version = (modpack -v --offline)
+    let short_visible_version = (modpack -V)
     ensure ($short_visible_version == null) 'Short -v leaked its machine payload in normal Nushell usage.'
-    let short_quiet_version = (modpack -v --offline --no-human)
+    let short_quiet_version = (modpack -V --no-human)
     ensure ((($short_quiet_version | describe) =~ '^record')) 'Short -v did not reach the version action.'
     ensure (($short_quiet_version.version? | default '') != '') 'Short -v returned no version value.'
 
@@ -35,7 +35,7 @@ def main [] {
     ensure ((($help_result | describe) =~ '^record')) 'Global help did not pass through the wrapped adapter.'
     let short_help_result = (modpack -h --no-human)
     ensure ((($short_help_result | describe) =~ '^record')) 'Short -h did not pass through the wrapped adapter.'
-    let command_short_help = (modpack search -h --no-human)
+    let command_short_help = (modpack content -h --no-human)
     ensure ((($command_short_help | describe) =~ '^record')) 'Command-level short -h did not reach canonical command help.'
     let self_update_short_help = (modpack -u --help --no-human)
     ensure ((($self_update_short_help | describe) =~ '^record')) 'Short -u did not route to self-update help.'
@@ -46,7 +46,7 @@ def main [] {
     # the request is handed to the PowerShell bridge.
     for invalid_option in ['-Project' '-project' '-P' '--Project'] {
         let style_failure = try {
-            modpack inventory $invalid_option placeholder --no-human | ignore
+            modpack content list $invalid_option placeholder --no-human | ignore
             ''
         } catch {|err|
             $err.msg
@@ -80,7 +80,7 @@ def main [] {
     ensure ($plain.exit_code == 0) 'The redirected bridge probe failed.'
     ensure (not ($plain.stderr | str contains $escape)) 'A redirected parent unexpectedly received ANSI colour.'
 
-    # Build a minimal project so modpack use can be verified across separate
+    # Build a minimal project so project use can be verified across separate
     # PowerShell bridge processes. Nu keeps the selection in an environment
     # variable, and each child PowerShell imports that inherited session state.
     let fixture_root = ($nu.temp-dir | path join $'modpacktools-nu-((random uuid))')
@@ -133,27 +133,27 @@ def main [] {
     modpack config set root $fixture_root --no-human | ignore
 
     # Lowercase double-dash spelling remains valid at the Nu boundary.
-    let explicit_status = (modpack status --project nu-fixture --no-human)
+    let explicit_status = (modpack project status --project nu-fixture --no-human)
     ensure (($explicit_status.project.id? | default '') == 'nu-fixture') 'Valid Nushell --project spelling was rejected or changed.'
 
-    let visible_use = (modpack use nu-fixture)
-    ensure ($visible_use == null) 'Normal modpack use leaked its machine payload.'
-    ensure (($env.MODPACKTOOLS_PROJECT? | default '') == 'nu-fixture') 'Normal modpack use did not persist the project in the Nu session.'
+    let visible_use = (modpack project use nu-fixture)
+    ensure ($visible_use == null) 'Normal project use leaked its machine payload.'
+    ensure (($env.MODPACKTOOLS_PROJECT? | default '') == 'nu-fixture') 'Project use did not persist the project in the Nu session.'
 
-    let queried = (modpack use --no-human)
-    ensure (($queried.active_project? | default '') == 'nu-fixture') 'modpack use did not report the inherited Nu session project.'
+    let queried = (modpack project current --no-human)
+    ensure (($queried.active_project? | default '') == 'nu-fixture') 'project current did not report the inherited Nu session project.'
 
-    modpack use --help --no-human | ignore
-    ensure (($env.MODPACKTOOLS_PROJECT? | default '') == 'nu-fixture') 'modpack use --help changed the active Nu project.'
-    modpack use -h --no-human | ignore
-    ensure (($env.MODPACKTOOLS_PROJECT? | default '') == 'nu-fixture') 'modpack use -h changed the active Nu project.'
+    modpack project --help --no-human | ignore
+    ensure (($env.MODPACKTOOLS_PROJECT? | default '') == 'nu-fixture') 'project --help changed the active Nu project.'
+    modpack project -h --no-human | ignore
+    ensure (($env.MODPACKTOOLS_PROJECT? | default '') == 'nu-fixture') 'project -h changed the active Nu project.'
 
-    let status = (modpack status --no-human)
+    let status = (modpack project status --no-human)
     ensure (($status.project.id? | default '') == 'nu-fixture') 'A later project command did not inherit the Nu session project.'
 
     # Exercise non-ASCII data in both directions. The search term travels through
     # JSON stdin and the matching filename returns through redirected JSON stdout.
-    let unicode_inventory = (modpack inventory --type resourcepack --search 'café' --no-human)
+    let unicode_inventory = (modpack content list --type resourcepack --match 'café' --no-human)
     ensure (
         $unicode_inventory | any {|item|
             ($item.filename? | default '') == $unicode_resource
@@ -162,7 +162,7 @@ def main [] {
 
     # The same inventory must also succeed in normal interactive mode, rendering
     # human output on stderr while consuming its machine envelope silently.
-    let visible_inventory = (modpack inventory --type resourcepack --search 'café')
+    let visible_inventory = (modpack content list --type resourcepack --match 'café')
     ensure ($visible_inventory == null) 'Normal inventory leaked its machine payload.'
 
     rm --recursive --force $fixture_root

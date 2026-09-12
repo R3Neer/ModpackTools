@@ -57,7 +57,7 @@ function Resolve-MpCommandProject {
         [AllowNull()][AllowEmptyString()][string]$PositionalId
     )
 
-    $optionId = if ($Options.ContainsKey('project')) { [string]$Options.project } else { $null }
+    $optionId = $script:CommandProjectId
     if ($optionId -and $PositionalId) {
         Throw-MpError -Message "The project was specified both positionally and with '--project'" -Hint "remove one of the two project IDs" -ErrorId 'Option.ProjectConflict' -Category InvalidArgument -TargetObject $optionId
     }
@@ -68,54 +68,98 @@ function Resolve-MpCommandProject {
 function Resolve-MpSearchProject {
     param([Parameter(Mandatory)][hashtable]$Options)
 
-    if ($Options.ContainsKey('project')) { return Resolve-ModpackProject -Id ([string]$Options.project) }
+    if ($script:CommandProjectId) { return Resolve-ModpackProject -Id $script:CommandProjectId }
     if ($script:ActiveProjectId) { return Resolve-ModpackProject -Id $script:ActiveProjectId }
     return $null
 }
 
+function Assert-MpNoProjectContext {
+    param([string]$Usage)
+    if ($script:CommandProjectId) {
+        Throw-MpError -Message "Option '--project' is not valid for this operation" -Hint $Usage -ErrorId 'Option.ForbiddenCombination' -Category InvalidArgument -TargetObject $script:CommandProjectId
+    }
+}
+
+function Get-MpDomainArguments {
+    param([string]$Domain, [object[]]$Arguments)
+    if (-not $Arguments.Count) {
+        Throw-MpError -Message "The '$Domain' command requires an operation" -Hint "modpack $Domain --help" -ErrorId 'Command.MissingOperation' -Category InvalidArgument
+    }
+    return [pscustomobject]@{ Operation=([string]$Arguments[0]).ToLowerInvariant(); Remaining=@($Arguments | Select-Object -Skip 1) }
+}
+
+function Invoke-MpProject {
+    param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
+    if ($Arguments -contains '--help') { Show-MpHelp project; return }
+    $domain = Get-MpDomainArguments project $Arguments
+    switch ($domain.Operation) {
+        'list' { Assert-MpNoProjectContext 'modpack project list'; Invoke-MpList -Arguments $domain.Remaining }
+        'current' { Assert-MpNoProjectContext 'modpack project current'; Invoke-MpCurrent -Arguments $domain.Remaining }
+        'use' { Assert-MpNoProjectContext 'modpack project use <id>'; Invoke-MpUse -Arguments $domain.Remaining }
+        'status' { Invoke-MpStatus -Arguments $domain.Remaining }
+        'create' { Assert-MpNoProjectContext 'modpack project create --help'; Invoke-MpNew -Arguments $domain.Remaining }
+        'register' { Assert-MpNoProjectContext 'modpack project register --help'; Invoke-MpInit -Arguments $domain.Remaining }
+        default { Throw-MpError -Message "Project operation '$($domain.Operation)' is not recognized" -Hint 'modpack project --help' -ErrorId 'Project.UnknownOperation' -Category InvalidArgument -TargetObject $domain.Operation }
+    }
+}
+
+function Invoke-MpContent {
+    param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
+    if ($Arguments -contains '--help') { Show-MpHelp content; return }
+    $domain = Get-MpDomainArguments content $Arguments
+    switch ($domain.Operation) {
+        'list' { Invoke-MpInventory -Arguments $domain.Remaining }
+        'search' { Invoke-MpSearch -Arguments $domain.Remaining }
+        'add' { Invoke-MpAdd -Arguments $domain.Remaining }
+        'remove' { Invoke-MpRemove -Arguments $domain.Remaining }
+        'versions' { Invoke-MpVersions -Arguments $domain.Remaining }
+        'update' { Invoke-MpUpdate -Arguments $domain.Remaining }
+        'pin' { Invoke-MpPin -Arguments $domain.Remaining }
+        'unpin' { Invoke-MpUnpin -Arguments $domain.Remaining }
+        default { Throw-MpError -Message "Content operation '$($domain.Operation)' is not recognized" -Hint 'modpack content --help' -ErrorId 'Content.UnknownOperation' -Category InvalidArgument -TargetObject $domain.Operation }
+    }
+}
+
 function Invoke-MpList {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
-    if ($Arguments -contains '--help') { Show-MpHelp list; return }
-    Assert-PositionalCount -Values $Arguments -Minimum 0 -Maximum 0 -Usage 'modpack list'
+    Assert-PositionalCount -Values $Arguments -Minimum 0 -Maximum 0 -Usage 'modpack project list'
     $root = Get-ModpackRoot
     $projects = @(Get-ModpackProjects)
     Write-ModpackList -Projects $projects -Root $root
 }
 
+function Invoke-MpCurrent {
+    param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
+    Assert-PositionalCount -Values $Arguments -Minimum 0 -Maximum 0 -Usage 'modpack project current'
+    Write-R3Banner (Get-MpConsole) 'ACTIVE PROJECT'
+    if ($script:ActiveProjectId) { Write-R3KeyValue (Get-MpConsole) 'ID' $script:ActiveProjectId }
+    else { Write-R3Status (Get-MpConsole) info 'There is no active project in this session.' }
+}
+
 function Invoke-MpUse {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
-    if ($Arguments -contains '--help') { Show-MpHelp use; return }
-    Assert-PositionalCount -Values $Arguments -Minimum 0 -Maximum 1 -Usage 'modpack use [id]'
-    if ($Arguments.Count -eq 0) {
-        Write-R3Banner (Get-MpConsole) 'ACTIVE PROJECT'
-        if ($script:ActiveProjectId) { Write-R3KeyValue (Get-MpConsole) 'ID' $script:ActiveProjectId }
-        else { Write-R3Status (Get-MpConsole) info 'There is no active project in this session.' }
-        return
-    }
+    Assert-PositionalCount -Values $Arguments -Minimum 1 -Maximum 1 -Usage 'modpack project use <id>'
     $project = Set-ActiveModpackProject -Id ([string]$Arguments[0])
     Write-R3Status (Get-MpConsole) success "Active project: $($project.Id) ($($project.DisplayName))"
 }
 
-function Invoke-MpClassify {
+function Invoke-MpCategory {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
-    if ($Arguments -contains '--help') { Show-MpHelp classify; return }
-    if (-not $Arguments.Count) {
-        Throw-MpError -Message 'The classify command requires an operation; allowed values: list, create, remove, set' -Hint 'modpack classify --help' -ErrorId 'Command.MissingOperation' -Category InvalidArgument
-    }
-    $operation = ([string]$Arguments[0]).ToLowerInvariant()
-    $remaining = @($Arguments | Select-Object -Skip 1)
-    switch ($operation) {
+    if ($Arguments -contains '--help') { Show-MpHelp category; return }
+    $domain = Get-MpDomainArguments category $Arguments
+    $remaining = $domain.Remaining
+    switch ($domain.Operation) {
         'list' {
-            $parsed = ConvertFrom-MpOptions -Arguments $remaining -ValueOptions @('project')
-            Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 0 -Usage 'modpack classify list [--project <id>]' -OptionNames @('project')
+            $parsed = ConvertFrom-MpOptions -Arguments $remaining
+            Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 0 -Usage 'modpack category list'
             $project = Resolve-MpCommandProject -Options $parsed.Options
             $view = Get-ModpackCategoryView -Project $project
             Write-ModpackCategoryCache -View $view
             Write-ModpackCategoryList -View $view
         }
         'create' {
-            $parsed = ConvertFrom-MpOptions -Arguments $remaining -ValueOptions @('project', 'name', 'order')
-            Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack classify create <id> [--name <name>] [--order <n>] [--project <id>]' -OptionNames @('project', 'name', 'order')
+            $parsed = ConvertFrom-MpOptions -Arguments $remaining -ValueOptions @('name', 'order')
+            Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack category create <id> [--name <name>] [--order <n>]' -OptionNames @('name', 'order')
             $project = Resolve-MpCommandProject -Options $parsed.Options
             $order = 0
             if ($parsed.Options.ContainsKey('order') -and -not [int]::TryParse([string]$parsed.Options.order, [ref]$order)) {
@@ -130,69 +174,56 @@ function Invoke-MpClassify {
             Write-ModpackCategoryCache -View $view
             Write-ModpackCategoryList -View $view
         }
-        'remove' { Invoke-MpClassifyBatch -Operation remove -Arguments $remaining }
-        'set' { Invoke-MpClassifyBatch -Operation set -Arguments $remaining }
+        'remove' { Invoke-MpCategoryBatch -Operation remove -Arguments $remaining }
+        'assign' { Invoke-MpCategoryBatch -Operation assign -Arguments $remaining }
+        'clear' { Invoke-MpCategoryBatch -Operation clear -Arguments $remaining }
         default {
-            Throw-MpError -Message "Classify operation '$($Arguments[0])' is not recognized; allowed values: list, create, remove, set" -Hint 'modpack classify --help' -ErrorId 'Metadata.UnknownClassificationOperation' -Category InvalidArgument -TargetObject $Arguments[0]
+            Throw-MpError -Message "Category operation '$($domain.Operation)' is not recognized" -Hint 'modpack category --help' -ErrorId 'Metadata.UnknownCategoryOperation' -Category InvalidArgument -TargetObject $domain.Operation
         }
     }
 }
 
 function Invoke-MpStatus {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
-    if ($Arguments -contains '--help') { Show-MpHelp status; return }
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project') -SwitchOptions @('full')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack status [id] [--project <id>] [--full]' -OptionNames @('project', 'full')
-    $id = if ($parsed.Positionals.Count) { $parsed.Positionals[0] } else { $null }
-    $project = Resolve-MpCommandProject -Options $parsed.Options -PositionalId $id
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 0 -Usage 'modpack project status'
+    $project = Resolve-MpCommandProject -Options $parsed.Options
     Assert-ModpackStructure -Project $project
     $inventory = Get-ModpackInventory -Project $project
     Write-ModpackHeader -Project $project -Inventory $inventory
-    if ($parsed.Options.ContainsKey('full')) {
-        $view = Select-ModpackInventory -Inventory $inventory
-        [void](Set-ModpackInventoryReferences -View $view)
-        Write-InventoryView -View $view
-    }
 }
 
 function Invoke-MpInventory {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
-    if ($Arguments -contains '--help') { Show-MpHelp inventory; return }
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments `
-        -ValueOptions @('project', 'type', 'category', 'side', 'source', 'state', 'search') `
-        -SwitchOptions @('unclassified', 'check')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack inventory [id] [--project <id>] [filters]' -OptionNames @('project', 'type', 'category', 'side', 'source', 'state', 'search', 'unclassified')
-    if ($parsed.Options.ContainsKey('unclassified') -and $parsed.Options.ContainsKey('category')) {
-        Throw-MpError -Message "Options '--unclassified' and '--category' cannot be combined" -Hint 'remove one of the two options' -ErrorId 'Option.ForbiddenCombination' -Category InvalidArgument
-    }
-
-    $id = if ($parsed.Positionals.Count) { $parsed.Positionals[0] } else { $null }
-    $project = Resolve-MpCommandProject -Options $parsed.Options -PositionalId $id
+        -ValueOptions @('type', 'category', 'side', 'source', 'state', 'match') `
+        -SwitchOptions @('verify')
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 0 -Usage 'modpack content list [filters]' -OptionNames @('type', 'category', 'side', 'source', 'state', 'match', 'verify')
+    $project = Resolve-MpCommandProject -Options $parsed.Options
     Assert-ModpackStructure -Project $project
     $inventory = Get-ModpackInventory -Project $project
     $parameters = @{ Inventory = $inventory }
-    foreach ($name in @('type', 'category', 'side', 'source', 'state', 'search')) {
+    foreach ($name in @('type', 'category', 'side', 'source', 'state')) {
         if ($parsed.Options.ContainsKey($name)) { $parameters[$name.Substring(0,1).ToUpperInvariant() + $name.Substring(1)] = $parsed.Options[$name] }
     }
+    if ($parsed.Options.ContainsKey('match')) { $parameters.Search = $parsed.Options.match }
     if ($parsed.Options.ContainsKey('category')) {
         $parameters.Category = Resolve-ModpackCategoryId -Project $project -Selector ([string]$parsed.Options.category) -AllowUnclassified
     }
-    if ($parsed.Options.ContainsKey('unclassified')) { $parameters.Category = 'unclassified' }
     $view = Select-ModpackInventory @parameters
     [void](Set-ModpackInventoryReferences -View $view)
 
     Write-ModpackHeader -Project $project -Inventory $inventory
-    Write-MpHealth (Get-MpProjectHealth $project -Check:$parsed.Options.ContainsKey('check'))
+    Write-MpHealth (Get-MpProjectHealth $project -Check:$parsed.Options.ContainsKey('verify'))
     Write-InventoryView -View $view -ShowFilters
 }
 
 function Invoke-MpBuild {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Show-MpHelp build; return }
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project') -SwitchOptions @('no-refresh', 'keep-old', 'open', 'raw-log', 'strict', 'dry-run')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack build [id] [--project <id>] [options]' -OptionNames @('project', 'no-refresh', 'keep-old', 'open', 'raw-log')
-    $id = if ($parsed.Positionals.Count) { $parsed.Positionals[0] } else { $null }
-    $project = Resolve-MpCommandProject -Options $parsed.Options -PositionalId $id
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -SwitchOptions @('no-refresh', 'keep-old', 'open', 'raw-log', 'strict', 'dry-run')
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 0 -Usage 'modpack build [options]' -OptionNames @('no-refresh', 'keep-old', 'open', 'raw-log')
+    $project = Resolve-MpCommandProject -Options $parsed.Options
     Write-R3Status (Get-MpConsole) step "Building $($project.DisplayName)..."
     $build = Build-ModpackProject -Project $project -NoRefresh:$parsed.Options.ContainsKey('no-refresh') -KeepOld:$parsed.Options.ContainsKey('keep-old') -RawLog:$parsed.Options.ContainsKey('raw-log') -Strict:$parsed.Options.ContainsKey('strict') -DryRun:$parsed.Options.ContainsKey('dry-run')
     Write-MpHealth $build.Health
@@ -208,10 +239,9 @@ function Invoke-MpBuild {
 function Invoke-MpDiff {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Show-MpHelp diff; return }
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 1 -Usage 'modpack diff [id] [--project <id>]' -OptionNames @('project')
-    $id = if ($parsed.Positionals.Count) { [string]$parsed.Positionals[0] } else { $null }
-    $project = Resolve-MpCommandProject -Options $parsed.Options -PositionalId $id
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 0 -Maximum 0 -Usage 'modpack diff'
+    $project = Resolve-MpCommandProject -Options $parsed.Options
     Assert-ModpackStructure -Project $project
     Write-R3Status (Get-MpConsole) step "Comparing $($project.DisplayName) with its latest build..."
     $diff = Compare-ModpackBuild -Project $project
@@ -220,9 +250,8 @@ function Invoke-MpDiff {
 
 function Invoke-MpSearch {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
-    if ($Arguments -contains '--help') { Show-MpHelp search; return }
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project', 'type', 'limit')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 100 -Usage 'modpack search <query> [--type <type>] [--limit <1-50>] [--project <id>]'
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('type', 'limit')
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 100 -Usage 'modpack content search <query> [--type <type>] [--limit <1-50>]'
     $project = Resolve-MpSearchProject -Options $parsed.Options
     $type = if ($parsed.Options.ContainsKey('type')) { $parsed.Options.type } else { 'all' }
     $limit = 10
@@ -230,7 +259,7 @@ function Invoke-MpSearch {
         Throw-MpError -Message "Option '--limit' must be an integer from 1 through 50; received '$($parsed.Options.limit)'" -Hint '--limit <1-50>' -ErrorId 'Option.InvalidLimit' -Category InvalidArgument -TargetObject $parsed.Options.limit
     }
     $query = @($parsed.Positionals) -join ' '
-    if ([string]::IsNullOrWhiteSpace($query)) { Throw-MpError -Message 'The search query cannot be empty' -Hint 'modpack search <query>' -ErrorId 'Search.EmptyQuery' -Category InvalidArgument }
+    if ([string]::IsNullOrWhiteSpace($query)) { Throw-MpError -Message 'The search query cannot be empty' -Hint 'modpack content search <query>' -ErrorId 'Search.EmptyQuery' -Category InvalidArgument }
     Write-R3Status (Get-MpConsole) step "Searching Modrinth for '$query'..."
     $search = Search-ModrinthContent -Project $project -Query $query -Type $type -Limit $limit
     Write-ModrinthSearchResults -Search $search -Project $project
@@ -238,9 +267,8 @@ function Invoke-MpSearch {
 
 function Invoke-MpVersions {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
-    if ($Arguments -contains '--help') { Show-MpHelp versions; return }
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack versions <selector> [--project <id>]' -OptionNames @('project')
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack content versions <selector>'
     $project = Resolve-MpCommandProject -Options $parsed.Options
     $rawSelector = [string]$parsed.Positionals[0]
     $reference = Resolve-ModpackInventoryNumber -Selector $rawSelector -Project $project -AllowedKinds @('mod', 'resourcepack', 'shaderpack') -RequirePackwiz
@@ -253,11 +281,10 @@ function Invoke-MpVersions {
 
 function Invoke-MpNew {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
-    if ($Arguments -contains '--help') { Show-MpHelp new; return }
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('name', 'minecraft', 'loader', 'path', 'loader-version', 'pack-version', 'display-version')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack new <id> --name <name> --minecraft <version> --loader <fabric|quilt|forge|neoforge>' -OptionNames @('name', 'minecraft', 'loader', 'path', 'loader-version', 'pack-version', 'display-version')
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack project create <id> --name <name> --minecraft <version> --loader <fabric|quilt|forge|neoforge>' -OptionNames @('name', 'minecraft', 'loader', 'path', 'loader-version', 'pack-version', 'display-version')
     foreach ($required in @('name', 'minecraft', 'loader')) {
-        if (-not $parsed.Options.ContainsKey($required)) { Throw-MpError -Message "Required option '--$required' is missing" -Hint 'modpack new --help' -ErrorId 'Option.Required' -Category InvalidArgument -TargetObject $required }
+        if (-not $parsed.Options.ContainsKey($required)) { Throw-MpError -Message "Required option '--$required' is missing" -Hint 'modpack project --help' -ErrorId 'Option.Required' -Category InvalidArgument -TargetObject $required }
     }
     $parameters = @{
         Id = $parsed.Positionals[0]; Name = $parsed.Options.name; MinecraftVersion = $parsed.Options.minecraft; Loader = $parsed.Options.loader
@@ -273,29 +300,29 @@ function Invoke-MpNew {
 
 function Invoke-MpInit {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
-    if ($Arguments -contains '--help') { Show-MpHelp init; return }
     $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('path', 'display-name', 'display-version', 'output-name')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack init <id> [--path <directory>] [options]' -OptionNames @('path', 'display-name', 'display-version', 'output-name')
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 1 -Maximum 1 -Usage 'modpack project register <id> [--path <directory>] [options]' -OptionNames @('path', 'display-name', 'display-version', 'output-name')
     $parameters = @{ Id = $parsed.Positionals[0] }
     if ($parsed.Options.ContainsKey('path')) { $parameters.Path = $parsed.Options.path }
     if ($parsed.Options.ContainsKey('display-name')) { $parameters.DisplayName = $parsed.Options['display-name'] }
     if ($parsed.Options.ContainsKey('display-version')) { $parameters.DisplayVersion = $parsed.Options['display-version'] }
     if ($parsed.Options.ContainsKey('output-name')) { $parameters.OutputName = $parsed.Options['output-name'] }
     $location = if ($parameters.ContainsKey('Path')) { $parameters.Path } else { (Get-Location).Path }
-    Write-R3Status (Get-MpConsole) step "Initializing Packwiz project '$location' as '$($parsed.Positionals[0])'..."
+    Write-R3Status (Get-MpConsole) step "Registering Packwiz project '$location' as '$($parsed.Positionals[0])'..."
     $result = Initialize-ExistingModpackProject @parameters
     $project = $result.Project
-    Write-R3Status (Get-MpConsole) success 'Existing Packwiz project initialized for ModpackTools.'
+    Write-R3Status (Get-MpConsole) success 'Existing Packwiz project registered with ModpackTools.'
     Write-R3KeyValue (Get-MpConsole) 'ID' $project.Id
     Write-R3KeyValue (Get-MpConsole) 'Minecraft' $project.MinecraftVersion
     Write-R3KeyValue (Get-MpConsole) 'Loader' $(if ($project.LoaderVersion) { "$($project.Loader) $($project.LoaderVersion)" } else { $project.Loader })
     Write-R3KeyValue (Get-MpConsole) 'Root' $project.Root
-    Write-R3Status (Get-MpConsole) info "Created $(@($result.CreatedFiles).Count) file(s). Next: modpack use $($project.Id)"
+    Write-R3Status (Get-MpConsole) info "Created $(@($result.CreatedFiles).Count) file(s). Next: modpack project use $($project.Id)"
 }
 
 function Invoke-MpConfig {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     if ($Arguments -contains '--help') { Show-MpHelp config; return }
+    Assert-MpNoProjectContext 'modpack config --help'
     Assert-PositionalCount -Values $Arguments -Minimum 2 -Maximum 3 -Usage 'modpack config get <root|packwiz> | modpack config set <root|packwiz> <value>'
     $verb = [string]$Arguments[0]
     $name = ([string]$Arguments[1]).ToLowerInvariant()

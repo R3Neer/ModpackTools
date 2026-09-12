@@ -18,7 +18,7 @@ function Set-MpResourceBlock {
         if ($target.DefaultId -notin $ids) { $targets += $target; $ids += $target.DefaultId }
     }
     if ($Operation -eq 'move' -and @($targets | Where-Object { -not $_.Active }).Count) {
-        Throw-MpError -Message 'Every resource pack in a move must already be enabled' -Hint 'use resource enable for disabled packs' -ErrorId 'ResourcePack.NotEnabled' -Category InvalidOperation
+        Throw-MpError -Message 'Every resource pack in a move must already be enabled' -Hint 'use resource-pack enable for disabled packs' -ErrorId 'ResourcePack.NotEnabled' -Category InvalidOperation
     }
     $remaining = @($inventory.ActiveResources | Where-Object { $_.Id -notin $ids } | ForEach-Object Id)
     $ordered = [Collections.Generic.List[string]]::new()
@@ -34,14 +34,14 @@ function Set-MpResourceBlock {
     }
 }
 
-function Invoke-MpResource {
+function Invoke-MpResourcePack {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
-    if ($Arguments -contains '--help') { Show-MpHelp resource; return }
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project','position') -SwitchOptions @('dry-run')
-    Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum ([int]::MaxValue) -Usage 'modpack resource enable|move|disable <selector...> [--position n]'
+    if ($Arguments -contains '--help') { Show-MpHelp resource-pack; return }
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('position') -SwitchOptions @('dry-run')
+    Assert-PositionalCount -Values $parsed.Positionals -Minimum 2 -Maximum ([int]::MaxValue) -Usage 'modpack resource-pack enable|move|disable <selector...> [--position n]'
     $operation = $parsed.Positionals[0].ToLowerInvariant()
     if ($operation -notin @('enable','move','disable')) {
-        Throw-MpError -Message "Unknown resource operation '$operation'" -Hint 'modpack resource --help' -ErrorId 'ResourcePack.UnknownOperation' -Category InvalidArgument
+        Throw-MpError -Message "Unknown resource-pack operation '$operation'" -Hint 'modpack resource-pack --help' -ErrorId 'ResourcePack.UnknownOperation' -Category InvalidArgument
     }
     $position = 0
     if ($operation -ne 'disable') {
@@ -62,17 +62,17 @@ function Invoke-MpResource {
     if (-not $parsed.Options.ContainsKey('dry-run')) { Write-ResourcePackInventory -Inventory (Get-ModpackInventory $project) -HideEmptySections }
 }
 
-function Invoke-MpSide {
+function Invoke-MpMod {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
-    if ($Arguments -contains '--help') { Show-MpHelp side; return }
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project') -SwitchOptions @('dry-run')
-    Assert-PositionalCount $parsed.Positionals -Minimum 3 -Maximum ([int]::MaxValue) -Usage 'modpack side set <mod...> <client|host|both>'
-    if ($parsed.Positionals[0] -ne 'set') {
-        Throw-MpError -Message 'Only side set is supported' -Hint 'modpack side --help' -ErrorId 'Content.UnknownSideOperation' -Category InvalidArgument
+    if ($Arguments -contains '--help') { Show-MpHelp mod; return }
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -SwitchOptions @('dry-run')
+    Assert-PositionalCount $parsed.Positionals -Minimum 3 -Maximum ([int]::MaxValue) -Usage 'modpack mod set-side <client|host|both> <selector...>'
+    if ($parsed.Positionals[0] -ne 'set-side') {
+        Throw-MpError -Message "Mod operation '$($parsed.Positionals[0])' is not recognized" -Hint 'modpack mod --help' -ErrorId 'Content.UnknownModOperation' -Category InvalidArgument
     }
     $project = Resolve-MpCommandProject $parsed.Options
-    $selectors = @(Resolve-MpBatchSelectors $project $parsed.Positionals[1..($parsed.Positionals.Count - 2)])
-    $side = $parsed.Positionals[-1]
+    $side = $parsed.Positionals[1]
+    $selectors = @(Resolve-MpBatchSelectors $project $parsed.Positionals[2..($parsed.Positionals.Count - 1)])
     $transaction = Invoke-MpProjectTransaction $project -DryRun:$parsed.Options.ContainsKey('dry-run') -Prepare {
         param($stage)
         $before = Get-MpProjectState $stage
@@ -86,27 +86,26 @@ function Invoke-MpSide {
     Write-MpTransactionSummary $transaction -DryRun:$parsed.Options.ContainsKey('dry-run')
 }
 
-function Invoke-MpClassifyBatch {
+function Invoke-MpCategoryBatch {
     param([string]$Operation, [object[]]$Arguments)
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project') -SwitchOptions @('dry-run','unclassify')
-    $minimum = if ($Operation -eq 'set') { 2 } else { 1 }
-    Assert-PositionalCount $parsed.Positionals -Minimum $minimum -Maximum ([int]::MaxValue) -Usage "modpack classify $Operation <selectors...>"
-    if ($Operation -eq 'set' -and $parsed.Options.ContainsKey('unclassify')) {
-        Throw-MpError -Message '--unclassify is only valid for classify remove' -Hint 'use category unclassified to clear assignments' -ErrorId 'Option.ForbiddenCombination' -Category InvalidArgument
-    }
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -SwitchOptions @('dry-run','clear-assignments')
+    $minimum = if ($Operation -eq 'assign') { 2 } else { 1 }
+    Assert-PositionalCount $parsed.Positionals -Minimum $minimum -Maximum ([int]::MaxValue) -Usage "modpack category $Operation <selectors...>"
+    if ($Operation -ne 'remove' -and $parsed.Options.ContainsKey('clear-assignments')) { Throw-MpError -Message '--clear-assignments is only valid for category remove' -Hint 'modpack category remove --help' -ErrorId 'Option.ForbiddenCombination' -Category InvalidArgument }
     $project = Resolve-MpCommandProject $parsed.Options
-    if ($Operation -eq 'set') {
-        $category = Resolve-ModpackCategoryId $project $parsed.Positionals[-1] -AllowUnclassified
-        $selectors = @(Resolve-MpBatchSelectors $project $parsed.Positionals[0..($parsed.Positionals.Count - 2)])
+    if ($Operation -eq 'assign') {
+        $category = Resolve-ModpackCategoryId $project $parsed.Positionals[0] -AllowUnclassified
+        $selectors = @(Resolve-MpBatchSelectors $project $parsed.Positionals[1..($parsed.Positionals.Count - 1)])
     }
+    elseif ($Operation -eq 'clear') { $category = 'unclassified'; $selectors = @(Resolve-MpBatchSelectors $project $parsed.Positionals) }
     else { $selectors = @($parsed.Positionals | ForEach-Object { Resolve-ModpackCategoryId $project $_ } | Select-Object -Unique) }
     $transaction = Invoke-MpProjectTransaction $project -DryRun:$parsed.Options.ContainsKey('dry-run') -Prepare {
         param($stage)
-        if ($Operation -eq 'set') {
+        if ($Operation -in @('assign','clear')) {
             $targets = @($selectors | ForEach-Object { Resolve-ModpackModForClassification $stage $_ } | Sort-Object Id -Unique)
             foreach ($target in $targets) { Set-ModpackModClassification $stage $target.Id $category | Out-Null }
         }
-        else { foreach ($selector in $selectors) { Remove-ModpackCategory $stage $selector -Unclassify:$parsed.Options.ContainsKey('unclassify') | Out-Null } }
+        else { foreach ($selector in $selectors) { Remove-ModpackCategory $stage $selector -Unclassify:$parsed.Options.ContainsKey('clear-assignments') | Out-Null } }
     }
     Write-MpTransactionSummary $transaction -DryRun:$parsed.Options.ContainsKey('dry-run')
     if (-not $parsed.Options.ContainsKey('dry-run')) {
@@ -118,9 +117,8 @@ function Invoke-MpClassifyBatch {
 function Invoke-MpPinOperation {
     param([object[]]$Arguments, [bool]$Pinned)
     $command = if ($Pinned) { 'pin' } else { 'unpin' }
-    if ($Arguments -contains '--help') { Show-MpHelp $command; return }
-    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -ValueOptions @('project') -SwitchOptions @('dry-run')
-    Assert-PositionalCount $parsed.Positionals -Minimum 1 -Maximum ([int]::MaxValue) -Usage "modpack $command <selector...>"
+    $parsed = ConvertFrom-MpOptions -Arguments $Arguments -SwitchOptions @('dry-run')
+    Assert-PositionalCount $parsed.Positionals -Minimum 1 -Maximum ([int]::MaxValue) -Usage "modpack content $command <selector...>"
     $project = Resolve-MpCommandProject $parsed.Options
     $selectors = @(Resolve-MpBatchSelectors $project $parsed.Positionals -Kinds @('mod','resourcepack','shaderpack') -RequirePackwiz)
     $transaction = Invoke-MpProjectTransaction $project -DryRun:$parsed.Options.ContainsKey('dry-run') -Prepare {

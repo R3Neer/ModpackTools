@@ -75,70 +75,68 @@ Minecraft Java modpack managed with [Packwiz](https://packwiz.infra.link/) and M
 modpack --help
 modpack --version
 modpack doctor
-modpack use {2}
-modpack status
-modpack inventory
+modpack project use {2}
+modpack project status
+modpack content list
 modpack diff
 modpack build
 ```
 
-`modpack use` selects this project only for the current PowerShell process. Every command that operates on an existing project also accepts `--project <id>`, for example `modpack diff --project {2}`. `status`, `inventory`, `build`, and `diff` retain their positional ID shorthand; specifying both forms at once is rejected.
+`modpack project use` selects this project only for the current PowerShell process. Global `--project <id>` or `-p <id>` selects one project for a single command and is accepted in any position, for example `modpack -p {2} diff`.
 
-Run `modpack <command> --help` for concise command documentation. For example, `modpack inventory --help` explains every filter and the numbered-reference context.
+Run `modpack <command> --help` for concise command documentation. For example, `modpack content --help` explains inventory filters, searches, and numbered references.
 
 Run `modpack doctor` to check PowerShell, Packwiz, configuration, project discovery, Git, and the standard Minecraft Java installation. Git and Minecraft are optional; Packwiz and a valid project root are required for the complete workflow.
 
-## Creating or adopting projects
+## Creating or registering projects
 
-`modpack new` creates Fabric, Quilt, Forge, or NeoForge Packwiz projects. `modpack init` adopts an existing Packwiz project without changing its technical metadata or installed content:
+`project create` creates Fabric, Quilt, Forge, or NeoForge Packwiz projects. `project register` registers an existing Packwiz project without changing its technical metadata or installed content:
 
 ```powershell
-modpack new <id> --name <name> --minecraft <version> --loader <fabric|quilt|forge|neoforge>
-modpack init <id> --path <existing-packwiz-directory>
+modpack project create <id> --name <name> --minecraft <version> --loader <fabric|quilt|forge|neoforge>
+modpack project register <id> --path <existing-packwiz-directory>
 ```
 
-An initialized project must be a direct child of the configured root. Existing README and `.gitignore` files are preserved.
+A registered project must be a direct child of the configured root. Existing README and `.gitignore` files are preserved.
 
 ## Managing content
 
 Search or add Modrinth content. Editorial categories apply only to mods:
 
 ```powershell
-modpack search <query>
-modpack search <query> --type mod
-modpack add <search-number>
-modpack add <slug>
-modpack add <slug> --category <category>
-modpack classify list
-modpack classify create <id> --name <name>
-modpack classify set <name|id|filename> <category|number|unclassified>
-modpack classify remove <category|number> [--unclassify]
-modpack side set <mod|inventory-number> <client|host|both>
-modpack versions <name|id|filename>
-modpack update <name|id|filename> --to <version|number>
-modpack update <name|id|filename...>
-modpack update --all
-modpack update --all --type mod
+modpack content search <query>
+modpack content search <query> --type mod
+modpack content add <search-number>
+modpack content add <slug> --category <category>
+modpack category list
+modpack category create <id> --name <name>
+modpack category assign <category|number> <name|id|filename...>
+modpack category clear <name|id|filename...>
+modpack category remove <category|number> [--clear-assignments]
+modpack mod set-side <client|host|both> <mod|inventory-number...>
+modpack content versions <name|id|filename>
+modpack content update <name|id|filename> --to <version|number>
+modpack content update --all --type mod
 ```
 
 Inspect or filter the current contents:
 
 ```powershell
-modpack inventory --type mod
-modpack inventory --category <category|number>
-modpack inventory --type resourcepack --state inactive
-modpack inventory --search <text>
-modpack update <inventory-number>
+modpack content list --type mod
+modpack content list --category <category|number|unclassified>
+modpack content list --type resourcepack --state inactive
+modpack content list --match <text>
+modpack content update <inventory-number>
 ```
 
-Every displayed inventory item has one global reference number for that filtered view. Use it with `modpack resource`, `modpack side`, `modpack versions`, as the mod argument of `modpack classify set`, or with `modpack update`. References are bound to this project and expire after 24 hours.
+Every displayed inventory item has one global reference number for that filtered view. Use it with `resource-pack`, `mod set-side`, `content versions`, `category assign`, or other content operations. References are bound to this project and expire after 24 hours.
 
 Enable or reposition a resource pack. Position `1` is the highest priority in the Minecraft GUI:
 
 ```powershell
-modpack resource enable <name|id|filename> --position <n>
-modpack resource move <name|id|filename> --position <n>
-modpack resource disable <name|id|filename>
+modpack resource-pack enable <name|id|filename> --position <n>
+modpack resource-pack move <name|id|filename> --position <n>
+modpack resource-pack disable <name|id|filename>
 ```
 
 ## Build workflow
@@ -150,13 +148,13 @@ modpack build
 
 `modpack diff` compares the current project with the newest `.mrpack` in `dist/`. `modpack build` refreshes Packwiz metadata and writes the generated artifact to `dist/`.
 
-`modpack search` queries compatible Modrinth projects and saves the numbered results for 24 hours. `modpack add <number>` installs from that saved list; IDs and slugs remain valid directly. The cache is only a convenience reference and Packwiz remains the technical source of truth.
+`modpack content search` queries compatible Modrinth projects and saves numbered results for 24 hours. `content add <number>` installs from that saved list; IDs and slugs remain valid directly. The cache is only a convenience reference and Packwiz remains the technical source of truth.
 
-Search, inventory, version, and category numbers have separate contexts. `modpack add <number>` uses the latest search; `resource`, `side`, `versions`, update selectors, and the mod argument of `classify set` use the latest inventory; `update --to <number>` uses the latest compatible-version list; the category argument of `classify set` and `classify remove` use the latest `classify list`. The argument position makes the intended list unambiguous.
+Search, inventory, version, and category numbers have separate contexts. `content add <number>` uses the latest search; installed-content operations use the latest inventory; `content update --to <number>` uses the latest compatible-version list; category operations use the latest `category list`.
 
-`modpack classify` defines, lists, removes, and assigns editorial categories. Its final `unclassified` list row can be assigned but never removed. Removing a defined category that is in use requires `--unclassify`. Category definitions and assignments live only in `.modpack/metadata.psd1`; numbered lists are temporary references. Resource pack activation and ordering require Default Options; `modpack resource move` reorders an enabled pack and `disable` removes it from the enabled order without uninstalling it.
+`modpack category` defines, lists, removes, assigns, and clears editorial categories. Removing a defined category that is in use requires `--clear-assignments`. Category definitions and assignments live only in `.modpack/metadata.psd1`; numbered lists are temporary references. Resource pack activation and ordering require Default Options; `resource-pack move` reorders an enabled pack and `disable` removes it from the enabled order without uninstalling it.
 
-`modpack versions` lists compatible Modrinth releases and saves numbered choices. `modpack update` updates Packwiz-managed mods, resource packs, and shaders; `--to` selects an exact release, including an older one. Add and update resolve each batch together against a dependency graph combining provider and native JAR requirements for Fabric, Quilt, Forge and NeoForge. New or affected conflicts block the operation; `--strict` requires complete verification and a clean graph. Multiple selectors form one transaction covering technical files, editorial metadata and Default Options. Use `--dry-run` to preview it and `--allow-downgrade` to permit automatic dependency downgrades. `modpack pin <selector...>` fixes versions and `unpin` releases them; `update --all` skips pinned items. Use `--type mod|resourcepack|shaderpack` to narrow the operation. Local files are never updated. Review the result with `modpack diff` before building.
+`content versions` lists compatible Modrinth releases and saves numbered choices. `content update` updates Packwiz-managed mods, resource packs, and shaders; `--to` selects an exact release, including an older one. Add and update resolve each batch together against a dependency graph combining provider and native JAR requirements for Fabric, Quilt, Forge and NeoForge. New or affected conflicts block the operation; `--strict` requires complete verification and a clean graph. Multiple selectors form one transaction covering technical files, editorial metadata and Default Options. Use `--dry-run` to preview it and `--allow-downgrade` to permit automatic dependency downgrades. `content pin <selector...>` fixes versions and `unpin` releases them; `update --all` skips pinned items. Use `--type mod|resourcepack|shaderpack` to narrow the operation. Local files are never updated. Review the result with `modpack diff` before building.
 
 ## Sources of truth
 
@@ -232,12 +230,12 @@ function Initialize-ExistingModpackProject {
         Throw-MpError -Message "Project ID '$Id' is invalid; allowed characters: lowercase letters, numbers, hyphens" -Hint 'choose an ID such as my-pack' -ErrorId 'Project.InvalidId' -Category InvalidArgument -TargetObject $Id
     }
     if ([string]::IsNullOrWhiteSpace($Path)) {
-        Throw-MpError -Message 'Packwiz project path cannot be empty' -Hint 'modpack init <id> --path <existing-directory>' -ErrorId 'Project.InvalidPath' -Category InvalidArgument -TargetObject $Path
+        Throw-MpError -Message 'Packwiz project path cannot be empty' -Hint 'modpack project register <id> --path <existing-directory>' -ErrorId 'Project.InvalidPath' -Category InvalidArgument -TargetObject $Path
     }
     $root = Get-ModpackRoot
     $projectRoot = [System.IO.Path]::GetFullPath($Path)
     if (-not (Test-Path -LiteralPath $projectRoot -PathType Container)) {
-        Throw-MpError -Message "Packwiz project directory '$projectRoot' does not exist" -Hint 'modpack init <id> --path <existing-directory>' -ErrorId 'Project.PathNotFound' -Category ObjectNotFound -TargetObject $projectRoot
+        Throw-MpError -Message "Packwiz project directory '$projectRoot' does not exist" -Hint 'modpack project register <id> --path <existing-directory>' -ErrorId 'Project.PathNotFound' -Category ObjectNotFound -TargetObject $projectRoot
     }
     $parent = [System.IO.Path]::GetFullPath((Split-Path -Parent $projectRoot)).TrimEnd('\', '/')
     $normalizedRoot = $root.TrimEnd('\', '/')
@@ -252,7 +250,7 @@ function Initialize-ExistingModpackProject {
         Throw-MpError -Message "Path '$modpackDirectory' exists but is not a directory" -Hint 'move the conflicting path, then retry' -ErrorId 'Project.InitializationConflict' -Category ResourceExists -TargetObject $modpackDirectory
     }
     if (Test-Path -LiteralPath $descriptorPath -PathType Leaf) {
-        Throw-MpError -Message "Packwiz project '$projectRoot' is already initialized for ModpackTools" -Hint 'modpack list' -ErrorId 'Project.AlreadyInitialized' -Category ResourceExists -TargetObject $descriptorPath
+        Throw-MpError -Message "Packwiz project '$projectRoot' is already registered with ModpackTools" -Hint 'modpack project list' -ErrorId 'Project.AlreadyInitialized' -Category ResourceExists -TargetObject $descriptorPath
     }
     if (Test-Path -LiteralPath $modpackDirectory) {
         $conflicts = @(Get-ChildItem -LiteralPath $modpackDirectory -Force -ErrorAction Stop)
@@ -268,7 +266,7 @@ function Initialize-ExistingModpackProject {
     $pack = Get-PackTomlData -Path $packPath
     $indexPath = Resolve-PackwizIndexPath -ProjectRoot $projectRoot -IndexFile $pack.IndexFile
     if (-not (Test-Path -LiteralPath $indexPath -PathType Leaf)) {
-        Throw-MpError -Message "Packwiz project '$projectRoot' is incomplete because index '$($pack.IndexFile)' is missing" -Hint 'restore the Packwiz index before initializing ModpackTools' -ErrorId 'Project.IndexNotFound' -Category ObjectNotFound -TargetObject $indexPath
+        Throw-MpError -Message "Packwiz project '$projectRoot' is incomplete because index '$($pack.IndexFile)' is missing" -Hint 'restore the Packwiz index before registering it with ModpackTools' -ErrorId 'Project.IndexNotFound' -Category ObjectNotFound -TargetObject $indexPath
     }
     $missingFields = @(
         if ([string]::IsNullOrWhiteSpace([string]$pack.Name)) { 'name' }
@@ -277,10 +275,10 @@ function Initialize-ExistingModpackProject {
         if ([string]::IsNullOrWhiteSpace([string]$pack.Loader)) { 'versions.<loader>' }
     )
     if ($missingFields.Count -gt 0) {
-        Throw-MpError -Message "Packwiz manifest '$packPath' is missing required data" -Details ($missingFields -join ', ') -Hint 'repair pack.toml before initializing ModpackTools' -ErrorId 'Project.InvalidManifest' -Category InvalidData -TargetObject $packPath
+        Throw-MpError -Message "Packwiz manifest '$packPath' is missing required data" -Details ($missingFields -join ', ') -Hint 'repair pack.toml before registering it with ModpackTools' -ErrorId 'Project.InvalidManifest' -Category InvalidData -TargetObject $packPath
     }
     if (@(Get-ModpackProjects | Where-Object Id -eq $Id).Count -gt 0) {
-        Throw-MpError -Message "Project ID '$Id' is already registered" -Hint 'choose a different project ID or run modpack use <id>' -ErrorId 'Project.AlreadyExists' -Category ResourceExists -TargetObject $Id
+        Throw-MpError -Message "Project ID '$Id' is already registered" -Hint 'choose a different project ID or run modpack project use <id>' -ErrorId 'Project.AlreadyExists' -Category ResourceExists -TargetObject $Id
     }
     if ($PSBoundParameters.ContainsKey('DisplayName') -and [string]::IsNullOrWhiteSpace($DisplayName)) {
         Throw-MpError -Message "Display name cannot be empty" -Hint '--display-name <name>' -ErrorId 'Project.InvalidDisplayName' -Category InvalidArgument -TargetObject $DisplayName
@@ -368,7 +366,7 @@ function New-ModpackProject {
     if ($Id -notmatch '^[a-z][a-z0-9-]*$') { Throw-MpError -Message "Project ID '$Id' is invalid; allowed characters: lowercase letters, numbers, hyphens" -Hint 'choose an ID such as my-pack' -ErrorId 'Project.InvalidId' -Category InvalidArgument -TargetObject $Id }
     $initArguments = @(Get-PackwizInitArguments -Name $Name -MinecraftVersion $MinecraftVersion -PackVersion $PackVersion -Loader $Loader -LoaderVersion $LoaderVersion)
     $root = Get-ModpackRoot
-    if ((Get-ModpackProjects | Where-Object Id -eq $Id)) { Throw-MpError -Message "Project ID '$Id' is already registered" -Hint 'choose a different project ID or run modpack use <id>' -ErrorId 'Project.AlreadyExists' -Category ResourceExists -TargetObject $Id }
+    if ((Get-ModpackProjects | Where-Object Id -eq $Id)) { Throw-MpError -Message "Project ID '$Id' is already registered" -Hint 'choose a different project ID or run modpack project use <id>' -ErrorId 'Project.AlreadyExists' -Category ResourceExists -TargetObject $Id }
     if (-not $DirectoryName) { $DirectoryName = (($Name -replace '[\\/:*?"<>|]', '-').Trim() + "-$MinecraftVersion") }
     if ([System.IO.Path]::IsPathRooted($DirectoryName)) {
         $target = [System.IO.Path]::GetFullPath($DirectoryName)
@@ -423,7 +421,7 @@ function Add-ModpackContent {
     if ($Category) {
         $metadata = Get-ModpackMetadata -Project $Project
         if (-not $metadata.Categories.ContainsKey($Category)) {
-            Throw-MpError -Message "Category '$Category' is not defined for project '$($Project.Id)'" -Hint 'choose a category shown by modpack inventory --type mod' -ErrorId 'Metadata.UnknownCategory' -Category InvalidArgument -TargetObject $Category
+            Throw-MpError -Message "Category '$Category' is not defined for project '$($Project.Id)'" -Hint 'choose a category shown by modpack content list --type mod' -ErrorId 'Metadata.UnknownCategory' -Category InvalidArgument -TargetObject $Category
         }
     }
     $snapshot = Get-PackwizStateSnapshot -Project $Project
@@ -499,7 +497,7 @@ function Resolve-ModpackUpdateSelectors {
             }
         )
         if ($matches.Count -eq 0) {
-            Throw-MpError -Message "Content '$selector' was not found in project '$($Project.Id)'" -Hint 'modpack inventory' -ErrorId 'Content.NotFound' -Category ObjectNotFound -TargetObject $selector
+            Throw-MpError -Message "Content '$selector' was not found in project '$($Project.Id)'" -Hint 'modpack content list' -ErrorId 'Content.NotFound' -Category ObjectNotFound -TargetObject $selector
         }
         if ($matches.Count -gt 1) {
             $ids = @($matches | ForEach-Object { "$($_.Kind):$($_.Id)" } | Sort-Object -Unique) -join ', '
@@ -595,8 +593,8 @@ function Update-ModpackContent {
 
     Assert-ModpackStructure -Project $Project
     if ($All -and $Selectors.Count) { Throw-MpError -Message "Content selectors and '--all' cannot be combined" -Hint 'remove the selectors or --all' -ErrorId 'Option.ForbiddenCombination' -Category InvalidArgument }
-    if ($To -and ($All -or $Selectors.Count -ne 1)) { Throw-MpError -Message "Option '--to' requires exactly one content selector" -Hint 'modpack update <selector> --to <version>' -ErrorId 'Option.VersionTargetConflict' -Category InvalidArgument -TargetObject $To }
-    if (-not $All -and $Selectors.Count -eq 0) { Throw-MpError -Message "The update operation requires at least one selector or '--all'" -Hint 'modpack update --help' -ErrorId 'Command.MissingUpdateTarget' -Category InvalidArgument }
+    if ($To -and ($All -or $Selectors.Count -ne 1)) { Throw-MpError -Message "Option '--to' requires exactly one content selector" -Hint 'modpack content update <selector> --to <version>' -ErrorId 'Option.VersionTargetConflict' -Category InvalidArgument -TargetObject $To }
+    if (-not $All -and $Selectors.Count -eq 0) { Throw-MpError -Message "The update operation requires at least one selector or '--all'" -Hint 'modpack content --help' -ErrorId 'Command.MissingUpdateTarget' -Category InvalidArgument }
     $normalizedType = Resolve-InventoryType -Type $Type
 
     $beforeInventory = Get-ModpackInventory -Project $Project
@@ -608,7 +606,7 @@ function Update-ModpackContent {
     else {
         @(Resolve-ModpackUpdateSelectors -Project $Project -Selectors $Selectors -Type $normalizedType)
     }
-    if ($targets.Count -eq 0) { Throw-MpError -Message "Project '$($Project.Id)' has no matching Packwiz-managed content to update" -Hint 'modpack inventory' -ErrorId 'Content.NoUpdateTargets' -Category ObjectNotFound -TargetObject $Project.Id }
+    if ($targets.Count -eq 0) { Throw-MpError -Message "Project '$($Project.Id)' has no matching Packwiz-managed content to update" -Hint 'modpack content list' -ErrorId 'Content.NoUpdateTargets' -Category ObjectNotFound -TargetObject $Project.Id }
 
     $chosenVersion = $null
     if ($To) {

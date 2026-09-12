@@ -150,14 +150,14 @@ InModuleScope ModpackTools {
         }
         It 'resolves saved inventory numbers and rejects another project reference' {
             [void](Add-FixtureVersion a 1 -Installed)
-            modpack inventory --colour never 6>$null
-            modpack remove 1 --yes 6>$null
+            modpack content list --color never 6>$null
+            modpack content remove 1 --yes 6>$null
             (Get-ModpackInventory $script:FixtureProject).Mods.Count | Should Be 0
             [void](Add-FixtureVersion b 1 -Installed)
             $cache = Read-ModpackInventoryReferenceCache
             $cache.ProjectId = 'another-project'
             Write-Utf8TextFileAtomic (Get-ModpackInventoryCachePath) ($cache | ConvertTo-Json -Depth 6)
-            { modpack remove 1 --yes 6>$null } | Should Throw 'another-project'
+            { modpack content remove 1 --yes 6>$null } | Should Throw 'another-project'
             (Get-ModpackInventory $script:FixtureProject).Mods.Count | Should Be 1
         }
         It 'rejects shared artifact ownership rather than deleting a retained file' {
@@ -187,15 +187,15 @@ InModuleScope ModpackTools {
             [void](Add-FixtureVersion a 1 -Installed)
             Mock Confirm-MpDoctorAction { $false }
             $before = Get-MpTreeState $script:FixtureProject.Root
-            modpack remove a --colour never --ascii 6>$null
+            modpack content remove a --color never --ascii 6>$null
             Assert-MockCalled Confirm-MpDoctorAction -Times 1 -Scope It -ParameterFilter { $Default -eq $false }
             @(Get-MpTreeChanges $before (Get-MpTreeState $script:FixtureProject.Root)).Count | Should Be 0
         }
         It 'skips confirmation for dry run and yes and keeps output off the object pipeline' {
             [void](Add-FixtureVersion a 1 -Installed)
             Mock Confirm-MpDoctorAction { throw 'must not prompt' }
-            @(modpack remove a --dry-run 6>$null).Count | Should Be 0
-            @(modpack remove a --yes 6>$null).Count | Should Be 0
+            @(modpack content remove a --dry-run 6>$null).Count | Should Be 0
+            @(modpack content remove a --yes 6>$null).Count | Should Be 0
             (Get-ModpackInventory $script:FixtureProject).Mods.Count | Should Be 0
         }
         It 'honours alternatives and conditional guards instead of blindly cascading reverse edges' {
@@ -268,7 +268,7 @@ InModuleScope ModpackTools {
                 [IO.File]::AppendAllText((Join-Path $script:FixtureProject.Root 'mods/a.pw.toml'), "`n# external change")
                 return $true
             }
-            { modpack remove a 6>$null } | Should Throw 'plan changed'
+            { modpack content remove a 6>$null } | Should Throw 'plan changed'
             Test-Path (Join-Path $script:FixtureProject.Root 'mods/a.pw.toml') | Should Be $true
         }
     }
@@ -558,21 +558,21 @@ InModuleScope ModpackTools {
         }
         It 'classifies an entire batch and does not change it when another selector is invalid' {
             [void](Add-FixtureVersion a '1' -Installed); [void](Add-FixtureVersion b '1' -Installed)
-            Invoke-MpClassify @('set','a','b','performance')
+            Invoke-MpCategory @('assign','performance','a','b')
             $metadata = Get-ModpackMetadata $script:FixtureProject
             $metadata.Mods['modrinth:a'].Category | Should Be performance
             $metadata.Mods['modrinth:b'].Category | Should Be performance
             $before = Get-MpTreeState $script:FixtureProject.Root
-            { Invoke-MpClassify @('set','a','absent','unclassified') } | Should Throw
+            { Invoke-MpCategory @('assign','unclassified','a','absent') } | Should Throw
             @(Get-MpTreeChanges $before (Get-MpTreeState $script:FixtureProject.Root)).Count | Should Be 0
         }
         It 'changes sides as one dry-runnable batch and preserves CRLF' {
             [void](Add-FixtureVersion a '1' -Installed); [void](Add-FixtureVersion b '1' -Installed)
             $path = Join-Path $script:FixtureProject.Root 'mods/a.pw.toml'
             [IO.File]::WriteAllText($path,([IO.File]::ReadAllText($path).Replace("`n","`r`n")))
-            Invoke-MpSide @('set','a','b','client','--dry-run')
+            Invoke-MpMod @('set-side','client','a','b','--dry-run')
             (Get-TomlString (Get-Content $path -Raw) side) | Should Be both
-            Invoke-MpSide @('set','a','b','client')
+            Invoke-MpMod @('set-side','client','a','b')
             (Get-TomlString (Get-Content $path -Raw) side) | Should Be client
             [IO.File]::ReadAllText($path).Contains("`r`n") | Should Be $true
         }
@@ -581,12 +581,12 @@ InModuleScope ModpackTools {
             $path = Join-Path $script:FixtureProject.Root 'config/defaultoptions-common.toml'
             [IO.File]::WriteAllText($path,'defaultResourcePacks = ["file/c.zip", "file/b.zip", "file/a.zip", "vanilla"]')
             foreach ($name in @('a','b','c','d')) { [IO.File]::WriteAllText((Join-Path $script:FixtureProject.Root "resourcepacks/$name.zip"),'fixture') }
-            Invoke-MpResource @('move','c.zip','a.zip','c.zip','--position','2')
+            Invoke-MpResourcePack @('move','c.zip','a.zip','c.zip','--position','2')
             ((Get-DefaultResourcePackOrder $script:FixtureProject) -join ',') | Should Be 'vanilla,file/c.zip,file/a.zip,file/b.zip'
-            Invoke-MpResource @('enable','d.zip','b.zip','--position','1')
+            Invoke-MpResourcePack @('enable','d.zip','b.zip','--position','1')
             ((Get-DefaultResourcePackOrder $script:FixtureProject) -join ',') | Should Be 'file/d.zip,file/b.zip,vanilla,file/c.zip,file/a.zip'
             $before = [IO.File]::ReadAllText($path)
-            { Invoke-MpResource @('move','a.zip','absent','--position','1') } | Should Throw
+            { Invoke-MpResourcePack @('move','a.zip','absent','--position','1') } | Should Throw
             [IO.File]::ReadAllText($path) | Should Be $before
         }
         It 'pins and unpins managed files without duplicating editorial state' {
@@ -629,7 +629,7 @@ InModuleScope ModpackTools {
             $script:FixtureApi['version/texture-1'].files[0].filename = 'texture.zip'
             $config = Join-Path $script:FixtureProject.Root 'config/defaultoptions-common.toml'
             [IO.File]::WriteAllText($config,'defaultResourcePacks = ["vanilla"]')
-            Invoke-MpAdd @('texture','--enable','--position','1')
+            Invoke-MpAdd @('texture','--enable-at','1')
             (Get-DefaultResourcePackOrder $script:FixtureProject)[0] | Should Be 'file/texture.zip'
             (Get-ModpackInventory $script:FixtureProject).ResourcePacks.Count | Should Be 1
         }

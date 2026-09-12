@@ -136,7 +136,7 @@ jobs:
         shell: nu {0}
         run: |
           let config = ($env.APPDATA | path join 'nushell' 'config.nu')
-          ^nu --config $config -c 'let value = (modpack --version --offline --no-human); if (($value.version? | default "") == "") { error make { msg: "Installed ModpackTools wrapper returned no version." } }'
+          ^nu --config $config -c 'let value = (modpack --version --no-human); if (($value.version? | default "") == "") { error make { msg: "Installed ModpackTools wrapper returned no version." } }'
           if $env.LAST_EXIT_CODE != 0 {
               error make { msg: 'The installed ModpackTools Nushell wrapper failed in a fresh process.' }
           }

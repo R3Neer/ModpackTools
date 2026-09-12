@@ -77,7 +77,7 @@ function Get-MpDefaultOptionsDoctorCheck {
     if ($missingMod.Count) { $detailParts.Add('Missing mod: ' + ($missingMod -join ', ') + '.') }
     if ($missingConfig.Count) { $detailParts.Add('Missing config: ' + ($missingConfig -join ', ') + '.') }
     if ($unreadable.Count) { $detailParts.Add('Could not inspect: ' + ($unreadable -join ', ') + '.') }
-    $detailParts.Add('Required only for modpack resource enable, move, and disable.')
+    $detailParts.Add('Required only for modpack resource-pack enable, move, and disable.')
     $statusName = if ($ready.Count -eq $Projects.Count) { 'pass' } else { 'warn' }
     return New-MpDoctorCheck -Section 'OPTIONAL' -Status $statusName -Label 'Default Options' -Value "$($ready.Count)/$($Projects.Count) projects ready" -Detail ($detailParts -join ' ')
 }

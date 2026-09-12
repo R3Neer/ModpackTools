@@ -171,7 +171,7 @@ function Write-InventoryView {
     }
     $hasReferences = @(Get-ModpackInventoryReferenceItems -View $View | Where-Object { $_.PSObject.Properties['ReferenceNumber'] }).Count -gt 0
     if ($hasReferences) {
-        Write-R3Status (Get-MpConsole) info 'Use these numbers with resource, classify, update, or remove. The add command uses search result numbers.'
+        Write-R3Status (Get-MpConsole) info 'Use these numbers with resource-pack, category, mod, or content operations. Content add uses search result numbers.'
     }
 }
 
@@ -344,10 +344,10 @@ function Write-ModrinthSearchResults {
     }
     Write-R3Line (Get-MpConsole) @(@{Text=''})
     if ($Project) {
-        Write-R3Status (Get-MpConsole) info 'Install a result with modpack add <number>. You can also use its ID or slug.'
+        Write-R3Status (Get-MpConsole) info 'Install a result with modpack content add <number>. You can also use its ID or slug.'
     }
     else {
-        Write-R3Status (Get-MpConsole) info 'Select a project, then install a result with modpack add <number>. IDs and slugs also work.'
+        Write-R3Status (Get-MpConsole) info 'Select a project, then install a result with modpack content add <number>. IDs and slugs also work.'
     }
 }
 
@@ -371,7 +371,7 @@ function Write-ModrinthVersionResults {
         if ($details.Count) { Write-R3Line (Get-MpConsole) @(@{Text="      "}, @{Text="$($details -join ' · ')";Role='secondary'}) }
     }
     Write-R3Line (Get-MpConsole) @(@{Text=''})
-    Write-R3Status (Get-MpConsole) info 'Select one with modpack update <content> --to <number>. Exact version IDs also work.'
+    Write-R3Status (Get-MpConsole) info 'Select one with modpack content update <content> --to <number>. Exact version IDs also work.'
 }
 
 function Write-ModpackCategoryList {
@@ -388,5 +388,5 @@ function Write-ModpackCategoryList {
         Write-R3Line (Get-MpConsole) @(@{Text="$($category.Id) · $mods · $order";Role='secondary'})
     }
     Write-R3Line (Get-MpConsole) @(@{Text=''})
-    Write-R3Status (Get-MpConsole) info 'Use a classification ID or number with classify set. Only defined categories can be removed.'
+    Write-R3Status (Get-MpConsole) info 'Use a category ID or number with category assign. Only defined categories can be removed.'
 }

@@ -6,29 +6,28 @@ freezes a plan, and commits the prepared files. Only `modpack` is exported.
 ## Commands
 
 ```powershell
-modpack add sodium lithium --category performance --dry-run
-modpack add sodium lithium --category performance
-modpack update sodium --allow-downgrade
-modpack update sodium --to <exact-version-id>
-modpack pin sodium lithium
-modpack unpin sodium
-modpack classify set sodium lithium performance
-modpack side set sodium iris client
-modpack classify remove performance visuals --unclassify
-modpack resource disable A B
-modpack resource move C A B --position 2
-modpack add <resource-pack-slug> --enable --position 1
-modpack inventory --check
+modpack content add sodium lithium --category performance --dry-run
+modpack content add sodium lithium --category performance
+modpack content update sodium --allow-downgrade
+modpack content update sodium --to <exact-version-id>
+modpack content pin sodium lithium
+modpack content unpin sodium
+modpack category assign performance sodium lithium
+modpack mod set-side client sodium iris
+modpack category remove performance visuals --clear-assignments
+modpack resource-pack disable A B
+modpack resource-pack move C A B --position 2
+modpack content add <resource-pack-slug> --enable-at 1
+modpack content list --verify
 modpack build --strict
-modpack doctor --project my-pack
-modpack doctor --project my-pack --details
+modpack -p my-pack doctor
+modpack -p my-pack doctor --details
 modpack doctor --fix --dry-run
 modpack doctor --fix --yes --allow-downgrade
 ```
 
-Every project mutation above supports `--dry-run`. Classification supports it for
-`set` and `remove`. Category and side are the last positional argument of their
-respective batch commands. Resolve all numbered selectors before preparing changes;
+Every project mutation above supports `--dry-run`. Category assignment, clearing,
+and removal support it. Category and side precede their selected mods. Resolve all numbered selectors before preparing changes;
 search numbers, inventory numbers and category numbers keep separate scopes.
 
 Resource blocks are removed from the active list before insertion. The requested
@@ -163,7 +162,7 @@ Artifact caches are keyed by declared hash and checked on reuse. Metadata and he
 snapshots expire after 24 hours. Health also depends on a fingerprint of project
 files and the validator revision; stale health is not reused after project changes.
 Normal inventory uses local artifacts and available cache without network calls.
-`inventory --check`, content resolution, build and doctor request verification.
+`content list --verify`, content resolution, build and doctor request verification.
 Downloads and caches may change during a dry run; project files do not.
 
 Run the deterministic suite with PowerShell 7 and Pester 4.10.1:

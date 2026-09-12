@@ -8,19 +8,20 @@ InModuleScope ModpackTools {
         }
 
         It 'extracts JSON presentation flags without changing command argument order' {
-            $parsed = ConvertFrom-MpPresentationOptions @('--json','inventory','one','--no-human','--colour','never','two')
-            $parsed.Arguments | Should Be @('inventory','one','two')
+            $parsed = ConvertFrom-MpPresentationOptions @('--json','content','list','one','--no-human','--color','never','two','-p','fixture')
+            $parsed.Arguments | Should Be @('content','list','one','two')
             $parsed.Json | Should Be $true
             $parsed.NoHuman | Should Be $true
             $parsed.Colour | Should Be never
+            $parsed.Project | Should Be fixture
         }
 
         It 'requires JSON when human presentation is disabled' {
-            { ConvertFrom-MpPresentationOptions @('inventory','--no-human') } | Should Throw "requires '--json'"
+            { ConvertFrom-MpPresentationOptions @('content','list','--no-human') } | Should Throw "requires '--json'"
         }
 
         It 'returns one clean JSON envelope for version in no-human mode' {
-            $output = @(modpack --version --offline --json --no-human)
+            $output = @(modpack --version --json --no-human)
             $output.Count | Should Be 1
             $envelope = $output[0] | ConvertFrom-Json
             $envelope.schema_version | Should Be 1
@@ -44,7 +45,7 @@ InModuleScope ModpackTools {
         }
 
         It 'snapshots list renderer data without changing the human renderer contract' {
-            [void](Initialize-MpMachineContext -Enabled -Command list)
+            [void](Initialize-MpMachineContext -Enabled -Command project -Arguments @('list'))
             $script:MpConsole = New-R3Console -Colour never -Sink { param($Text,$Stream) }
             $projects = @(
                 [pscustomobject]@{ Id='one'; DisplayName='One'; DisplayVersion='1.0'; MinecraftVersion='1.21.1'; Loader='fabric'; LoaderVersion='0.16'; Root='C:\One'; OutputName='One.mrpack' },
@@ -57,7 +58,7 @@ InModuleScope ModpackTools {
         }
 
         It 'snapshots transaction changes independently from human output' {
-            [void](Initialize-MpMachineContext -Enabled -Command add)
+            [void](Initialize-MpMachineContext -Enabled -Command content -Arguments @('add'))
             $script:MpConsole = New-R3Console -Colour never -Sink { param($Text,$Stream) }
             $transaction = [pscustomobject]@{
                 Applied = $true

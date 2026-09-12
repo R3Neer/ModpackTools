@@ -11,18 +11,16 @@ InModuleScope ModpackTools {
             Mock Invoke-RestMethod { $script:SelfRelease }
             Mock Resolve-MpCommandProject { throw 'No project access allowed' }
         }
-        It 'keeps offline version local and exactly one line without reading cache' {
-            @(modpack --version --offline 6>&1).Count | Should Be 1
-            (modpack --version --offline 6>&1 | Out-String).Trim() | Should Be "ModpackTools $script:ModuleVersion"
+        It 'keeps version local and exactly one line without reading cache' {
+            @(modpack --version 6>&1).Count | Should Be 1
+            (modpack --version 6>&1 | Out-String).Trim() | Should Be "ModpackTools $script:ModuleVersion"
             Assert-MockCalled Invoke-RestMethod -Times 0 -Scope It
             Test-Path (Join-Path $script:ConfigHomeOverride 'self-update.json') | Should Be $false
         }
-        It 'announces a newer stable version and caches the response for 24 hours' {
-            $text = modpack --version --ascii --colour never 6>&1 | Out-String
-            $text | Should Match 'Update available: 99.0.0'
-            $text | Should Not Match '\x1b'
-            modpack --version 6>$null
-            Assert-MockCalled Invoke-RestMethod -Times 1 -Scope It -ParameterFilter { $TimeoutSec -eq 3 }
+        It 'does not query for updates while printing the version' {
+            $text = modpack --version --ascii --color never 6>&1 | Out-String
+            $text.Trim() | Should Be "ModpackTools $script:ModuleVersion"
+            Assert-MockCalled Invoke-RestMethod -Times 0 -Scope It
             Assert-MockCalled Resolve-MpCommandProject -Times 0 -Scope It
         }
         It 'refreshes stale cache and forced checks' {
@@ -44,13 +42,13 @@ InModuleScope ModpackTools {
             Mock Invoke-RestMethod { throw 'offline' }
             $text = modpack --version 6>&1 | Out-String
             $text.Trim() | Should Be "ModpackTools $script:ModuleVersion"
-            { modpack --update --check 6>$null } | Should Throw 'Could not check'
+            { modpack self-update --check 6>$null } | Should Throw 'Could not check'
         }
         It 'does not announce equal or older releases' {
             $script:SelfRelease = New-SelfRelease $script:ModuleVersion
             @(modpack --version 6>&1).Count | Should Be 1
             $script:SelfRelease = New-SelfRelease '1.0.0'
-            (modpack --update --check 6>&1 | Out-String) | Should Match 'No newer stable release'
+            (modpack self-update --check 6>&1 | Out-String) | Should Match 'No newer stable release'
         }
         It 'rejects prereleases draft releases foreign URLs and invalid tags' {
             $r = New-SelfRelease; $r.prerelease = $true
@@ -65,8 +63,8 @@ InModuleScope ModpackTools {
         It 'checks without installation and renders help without network' {
             Mock Install-MpSelfUpdate { throw 'No installation allowed' }
             Mock Get-MpSelfUpdateTarget { throw 'No install lookup allowed' }
-            @(modpack --update --check 6>$null).Count | Should Be 0
-            $text = modpack --update --help --ascii --colour never 6>&1 | Out-String
+            @(modpack self-update --check 6>$null).Count | Should Be 0
+            $text = modpack self-update --help --ascii --color never 6>&1 | Out-String
             $text | Should Match 'ARGUMENTS AND OPTIONS'
             $text | Should Match '--check'
             $text | Should Match '--yes'
@@ -74,10 +72,10 @@ InModuleScope ModpackTools {
         }
         It 'rejects unsupported options and combinations' {
             { modpack --version --yes } | Should Throw 'not recognized'
-            { modpack --version foo } | Should Throw 'positional'
-            { modpack --update --offline } | Should Throw 'not recognized'
-            { modpack --update --check --yes } | Should Throw 'Invalid'
-            { modpack --update sodium } | Should Throw 'Invalid'
+            { modpack --version foo } | Should Throw 'does not accept arguments'
+            { modpack self-update --offline } | Should Throw 'not recognized'
+            { modpack self-update --check --yes } | Should Throw 'Invalid'
+            { modpack self-update sodium } | Should Throw 'Invalid'
         }
     }
     Describe 'Self-update application policy' {
@@ -94,18 +92,18 @@ InModuleScope ModpackTools {
         }
         It 'cancels without downloading when confirmation is declined' {
             Mock Confirm-MpDoctorAction { $false }
-            (modpack --update 6>&1 | Out-String) | Should Match 'cancelled'
+            (modpack self-update 6>&1 | Out-String) | Should Match 'cancelled'
             Assert-MockCalled Install-MpSelfUpdate -Times 0 -Scope It
             Assert-MockCalled Confirm-MpDoctorAction -Times 1 -Scope It -ParameterFilter { -not $Default }
         }
         It 'applies yes to the installed target even when running from a newer checkout' {
             Mock Confirm-MpDoctorAction { throw 'No prompt allowed' }
-            @(modpack --update --yes 6>$null).Count | Should Be 0
+            @(modpack self-update --yes 6>$null).Count | Should Be 0
             Assert-MockCalled Install-MpSelfUpdate -Times 1 -Scope It -ParameterFilter { $Target.Path -eq $script:SelfTarget.Path -and $Target.ManifestHash }
         }
         It 'does not reinstall or downgrade an up-to-date target' {
             $script:SelfTarget.Version = [version]'100.0.0'
-            modpack --update --yes 6>$null
+            modpack self-update --yes 6>$null
             Assert-MockCalled Install-MpSelfUpdate -Times 0 -Scope It
         }
     }

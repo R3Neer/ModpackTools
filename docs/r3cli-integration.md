@@ -24,11 +24,10 @@ are never joined into a single renderer line.
 
 The existing catalogue is projected into R3CLI's `HelpCatalogue` shape without
 creating a second documentation catalogue. Each public invocation constructs its
-own presentation context, removes global presentation/machine options once, and
-passes the remaining arguments to the original command parser. Help runs before
-project or provider access. Offline version output is a single plain line in the
-normal human-only mode. Normal version output may append an update notification
-through R3CLI.
+own presentation context, removes `--color`, `--ascii`, global `--project`, and
+machine-output options once, then passes the remaining arguments to the domain
+command parser. Help runs before project or provider access. Version output is a
+single local plain line without network access.
 
 ## Human and machine channels
 
@@ -46,9 +45,10 @@ bridge consumes that envelope and converts failures into native Nu errors.
 
 The Nushell adapter always requests JSON internally. Human R3CLI output therefore
 remains visible on stderr while the parsed value is returned through the Nushell
-pipeline. Commands such as inventory, search, versions and list unwrap their common
-collection directly; status and other compound results remain records. Human text
-never becomes the returned Nu value and therefore never becomes `$ans.last`.
+pipeline. Commands such as `content list`, `content search`, `content versions`,
+and `project list` unwrap their common collection directly; status and other
+compound results remain records. Human text never becomes the returned Nu value
+and therefore never becomes `$ans.last`.
 
 ## Streams and errors
 
@@ -64,7 +64,7 @@ status renderer. File previews use the common transaction summary, and cancellat
 uses an information status. Confirmation follows the existing prompt convention
 with a default of no; `--yes` and `--dry-run` do not prompt.
 
-`--colour always` generates ANSI in human presentation. PowerShell's host and
+`--color always` generates ANSI in human presentation. PowerShell's host and
 downstream formatters can remove those sequences according to their own
 `OutputRendering` preference. In JSON mode R3CLI terminal detection is based on
 stderr, because stdout is reserved for the machine envelope. ASCII changes
@@ -128,12 +128,12 @@ output. It isolates PSModulePath inside child processes so it cannot accidentall
 select or overwrite the user's normal installation. The optional existing live
 Packwiz scenario also accepts `-ModulePath` to verify this installed artifact.
 
-`--update` is an executable entry in the same help catalogue and has a detailed
+`self-update` is an executable entry in the same help catalogue and has a detailed
 help page. Its release check, plan, cancellation and completion use the shared
-renderer. `--version --offline` never reads the update cache or contacts GitHub;
-normal `--version` silently tolerates failed checks, while an explicit update
-check raises a namespaced diagnostic. The first version line reports loaded code,
-which can remain older until a new PowerShell session is opened.
+renderer. `--version` never reads the update cache or contacts GitHub;
+`self-update --check` raises a namespaced diagnostic if its explicit query fails.
+The version line reports loaded code, which can remain older until a new
+PowerShell session is opened.
 
 `Installation.ps1` centralizes user target selection and child-process execution
 for the installer and updater. The installer verifies the newly placed package

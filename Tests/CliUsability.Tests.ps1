@@ -4,15 +4,9 @@ InModuleScope ModpackTools {
     Describe 'CLI usability regressions' {
         BeforeEach {
             $script:ActiveProjectId = $null
+            $script:CommandProjectId = $null
             $script:MpConsole = $null
             $script:MpMachineContext = $null
-        }
-
-        It 'defines the documented short aliases on the public command' {
-            $command = Get-Command modpack
-            $command.Parameters.Help.Aliases | Should Contain 'h'
-            $command.Parameters.SelfUpdate.Aliases | Should Contain 'u'
-            $command.Parameters.Version.Aliases | Should Contain 'v'
         }
 
         It 'routes -h to global and command help' {
@@ -22,32 +16,24 @@ InModuleScope ModpackTools {
             modpack -h
             Assert-MockCalled Show-MpHelp -Times 1 -ParameterFilter { [string]::IsNullOrEmpty($Command) }
 
-            modpack search -h
-            Assert-MockCalled Show-MpHelp -Times 1 -ParameterFilter { $Command -eq 'search' }
+            modpack content -h
+            Assert-MockCalled Show-MpHelp -Times 1 -ParameterFilter { $Command -eq 'content' }
         }
 
-        It 'routes -v and forwarded literal -v to the global version action' {
+        It 'routes -V and a forwarded literal -V to the local version action' {
             Mock Initialize-MpConsole {}
             Mock Invoke-MpVersion {}
 
-            modpack -v --offline
-            Assert-MockCalled Invoke-MpVersion -Times 1 -ParameterFilter { $Arguments -contains '--offline' }
+            modpack -V
+            Assert-MockCalled Invoke-MpVersion -Times 1 -ParameterFilter { -not $Arguments.Count }
 
-            $forwarded = @('-v','--offline')
+            $forwarded = @('-V')
             & (Get-Command modpack) @forwarded
-            Assert-MockCalled Invoke-MpVersion -Times 2 -ParameterFilter { $Arguments -contains '--offline' }
+            Assert-MockCalled Invoke-MpVersion -Times 2 -ParameterFilter { -not $Arguments.Count }
         }
 
-        It 'routes -u to self-update rather than content update' {
-            Mock Initialize-MpConsole {}
-            Mock Invoke-MpSelfUpdate {}
-            Mock Invoke-MpUpdate { throw 'content update must not run' }
-            Mock Write-R3Line {}
-            Mock Get-MpConsole { [pscustomobject]@{} }
-
-            modpack -u --check
-            Assert-MockCalled Invoke-MpSelfUpdate -Times 1 -ParameterFilter { $Arguments -contains '--check' }
-            Assert-MockCalled Invoke-MpUpdate -Times 0
+        It 'does not retain the retired self-update shorthand' {
+            { modpack -u --check } | Should Throw "Command '-u' is not recognized"
         }
 
         It 'allows search with no active or explicit project' {

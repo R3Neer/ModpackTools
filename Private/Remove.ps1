@@ -7,7 +7,7 @@ function Resolve-MpRemovalSelectors {
             $stem = if ($_.MetadataPath) { [IO.Path]::GetFileName($_.MetadataPath) -replace '\.pw\.toml$', '' } else { '' }
             $selector -in @($_.Id, $_.Name, $_.Filename, $stem)
         })
-        if (-not $matches.Count) { Throw-MpError -Message "Content '$selector' was not found" -Hint 'modpack inventory; select a physical installed item' -ErrorId 'Content.NotFound' -Category ObjectNotFound }
+        if (-not $matches.Count) { Throw-MpError -Message "Content '$selector' was not found" -Hint 'run modpack content list and select a physical installed item' -ErrorId 'Content.NotFound' -Category ObjectNotFound }
         if ($matches.Count -gt 1) { Throw-MpError -Message "Content selector '$selector' is ambiguous" -Details ($matches.Id -join ', ') -Hint 'use a stable ID or --type <mod|resourcepack|shaderpack>' -ErrorId 'Content.AmbiguousSelector' -Category InvalidArgument }
         $item = $matches[0]
         if ($item.Source -notin @('packwiz','local')) { Throw-MpError -Message "Content '$selector' is not a removable file" -Hint 'select the owning mod for built-in resources' -ErrorId 'Content.NotRemovable' -Category InvalidOperation }
@@ -88,7 +88,7 @@ function New-MpRemovalPlan {
         }
     }
     foreach ($id in $removed.Keys) {
-        if ($State.Nodes[$id].Pinned) { Throw-MpError -Message "'$($State.Nodes[$id].Item.Name)' is pinned" -Hint "modpack unpin $id" -ErrorId 'Compatibility.Pinned' -Category InvalidOperation }
+        if ($State.Nodes[$id].Pinned) { Throw-MpError -Message "'$($State.Nodes[$id].Item.Name)' is pinned" -Hint "modpack content unpin $id" -ErrorId 'Compatibility.Pinned' -Category InvalidOperation }
     }
     $report = Get-MpGraphReport $Project $remaining
     Assert-MpGraphPolicy $report -Baseline $baseline -Strict:$Strict
@@ -132,7 +132,7 @@ function Set-MpRemovedContent {
         }
         else { $path = Resolve-MpContainedPath $contentRoot $item.Filename }
         if ($protected.ContainsKey($path)) { Throw-MpError -Message "Removal path is owned by retained content" -Details $protected[$path] -Hint 'reconcile shared file ownership before removal' -ErrorId 'Remove.SharedArtifact' -Category InvalidData }
-        if (-not [IO.File]::Exists($path)) { Throw-MpError -Message "Removal target '$($item.Name)' is missing" -Hint 'refresh inventory and retry' -ErrorId 'Content.NotFound' -Category ObjectNotFound }
+        if (-not [IO.File]::Exists($path)) { Throw-MpError -Message "Removal target '$($item.Name)' is missing" -Hint 'refresh content list and retry' -ErrorId 'Content.NotFound' -Category ObjectNotFound }
         [IO.File]::Delete($path)
         foreach ($table in @('Mods','Content')) { if ($metadata.ContainsKey($table)) { [void]$metadata[$table].Remove($item.Id) } }
         if ($item.Kind -eq 'resourcepack') {
@@ -171,9 +171,8 @@ function Invoke-MpRemovalOperation {
 
 function Invoke-MpRemove {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
-    if ($Arguments -contains '--help') { Show-MpHelp remove; return }
-    $parsed = ConvertFrom-MpOptions $Arguments -ValueOptions @('project','type') -SwitchOptions @('cascade','autoremove','strict','dry-run','yes')
-    Assert-PositionalCount $parsed.Positionals -Minimum 1 -Maximum ([int]::MaxValue) -Usage 'modpack remove <selector...> [options]'
+    $parsed = ConvertFrom-MpOptions $Arguments -ValueOptions @('type') -SwitchOptions @('cascade','autoremove','strict','dry-run','yes')
+    Assert-PositionalCount $parsed.Positionals -Minimum 1 -Maximum ([int]::MaxValue) -Usage 'modpack content remove <selector...> [options]'
     $project = Resolve-MpCommandProject $parsed.Options
     $type = if ($parsed.Options.ContainsKey('type')) { Resolve-InventoryType $parsed.Options.type } else { 'all' }
     $kinds = if ($type -eq 'all') { @('mod','resourcepack','shaderpack') } else { @($type) }

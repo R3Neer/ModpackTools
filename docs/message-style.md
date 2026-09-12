@@ -14,7 +14,7 @@ Every status line should fit one of these states before wording is chosen.
 | Planned / preview | Work has not been applied | Explicit conditional/future wording | `Would change pack.toml`, `3 file changes planned; nothing has been changed.` |
 | Completed | Work finished successfully | Past/completed wording | `Changed pack.toml`, `Installed ModpackTools 1.4.0.` |
 | State / diagnosis | Report a fact, not an action | Declarative wording | `Pinned`, `Verification is incomplete.`, `No differences from the latest build.` |
-| User instruction | Tell the user what to do next | Imperative, clearly framed as guidance | `Run modpack doctor.`, `Use modpack add <number>.` |
+| User instruction | Tell the user what to do next | Imperative, clearly framed as guidance | `Run modpack doctor.`, `Use modpack content add <number>.` |
 
 ## 2. Never use an imperative-looking action for completed work
 
@@ -79,7 +79,7 @@ Good:
 
 ```text
 Run modpack doctor after opening a new PowerShell session.
-Use modpack add <number> to install a search result.
+Use modpack content add <number> to install a search result.
 Select a project before using the global search number.
 ```
 

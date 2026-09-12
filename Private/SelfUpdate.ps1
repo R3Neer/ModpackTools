@@ -29,21 +29,15 @@ function Get-MpLatestRelease {
         return $result
     } catch {
         if ($Quiet) { return $null }
-        Throw-MpError -Message 'Could not check for a ModpackTools update' -Details $_.Exception.Message -Hint 'check the connection and retry modpack --update --check' -ErrorId 'SelfUpdate.CheckFailed' -Category ConnectionError
+        Throw-MpError -Message 'Could not check for a ModpackTools update' -Details $_.Exception.Message -Hint 'check the connection and retry modpack self-update --check' -ErrorId 'SelfUpdate.CheckFailed' -Category ConnectionError
     }
 }
 
 function Invoke-MpVersion {
     param([object[]]$Arguments = @())
-    $parsed = ConvertFrom-MpOptions $Arguments -SwitchOptions @('offline')
-    if ($parsed.Positionals.Count) { Throw-MpError -Message 'The global version option does not accept positional arguments' -Hint 'modpack --version [--offline]' -ErrorId 'Command.InvalidArguments' -Category InvalidArgument }
+    $parsed = ConvertFrom-MpOptions $Arguments
+    if ($parsed.Positionals.Count) { Throw-MpError -Message 'The global version option does not accept arguments' -Hint 'modpack --version' -ErrorId 'Command.InvalidArguments' -Category InvalidArgument }
     Write-R3Line (Get-MpConsole) @(@{Text="ModpackTools $script:ModuleVersion"})
-    if (-not $parsed.Options.ContainsKey('offline')) {
-        $release = Get-MpLatestRelease -Quiet
-        if ($release -and [version]$release.Version -gt [version]$script:ModuleVersion) {
-            Write-R3Status (Get-MpConsole) info "Update available: $($release.Version). Run modpack --update."
-        }
-    }
 }
 
 function Get-MpSelfUpdateTarget {
@@ -54,7 +48,7 @@ function Get-MpSelfUpdateTarget {
     # to update the effective module when it resolves outside our writable target.
     $available = @(Get-Module -ListAvailable ModpackTools)
     if ($available.Count -and $available[0].ModuleBase -ne $destination) {
-        Throw-MpError -Message 'Another installation takes precedence over the update target' -Details $available[0].ModuleBase -Hint 'select a user installation in PSModulePath before running --update' -ErrorId 'SelfUpdate.ShadowedInstallation' -Category InvalidOperation
+        Throw-MpError -Message 'Another installation takes precedence over the update target' -Details $available[0].ModuleBase -Hint 'select a user installation in PSModulePath before running self-update' -ErrorId 'SelfUpdate.ShadowedInstallation' -Category InvalidOperation
     }
     $others = @(foreach ($root in @(Get-MpUserModuleRoots)) {
         $copy = Join-Path $root 'ModpackTools'
@@ -108,7 +102,7 @@ function Install-MpSelfUpdate {
         foreach ($line in @($output -split '\r?\n' | Where-Object { $_ })) { Write-R3Line (Get-MpConsole) @(@{ Text=$line }) }
         if ([version](Import-PowerShellDataFile (Join-Path $Target.Path 'ModpackTools.psd1')).ModuleVersion -ne [version]$Release.Version) { Throw-MpError -Message 'The installed version does not match the release' -Hint 'inspect the installer result' -ErrorId 'SelfUpdate.VerificationFailed' }
     } catch {
-        Throw-MpError -Message 'ModpackTools update failed' -Details $_.Exception.Message -Hint 'inspect the error and retry modpack --update' -ErrorId 'SelfUpdate.InstallFailed' -Category OperationStopped
+        Throw-MpError -Message 'ModpackTools update failed' -Details $_.Exception.Message -Hint 'inspect the error and retry modpack self-update' -ErrorId 'SelfUpdate.InstallFailed' -Category OperationStopped
     } finally {
         $safe = Resolve-MpContainedPath (Join-Path (Get-ModpackToolsConfigDirectory) 'self-update') ([IO.Path]::GetFileName($directory))
         if ([IO.Directory]::Exists($safe)) { Remove-Item -LiteralPath $safe -Recurse -Force }
@@ -117,13 +111,14 @@ function Install-MpSelfUpdate {
 
 function Invoke-MpSelfUpdate {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
-    if ($Arguments -contains '--help') { Show-MpHelp '--update'; return }
+    if ($Arguments -contains '--help') { Show-MpHelp 'self-update'; return }
+    Assert-MpNoProjectContext 'modpack self-update --help'
     $parsed = ConvertFrom-MpOptions $Arguments -SwitchOptions @('check','yes')
-    if ($parsed.Positionals.Count -or ($parsed.Options.ContainsKey('check') -and $parsed.Options.ContainsKey('yes'))) { Throw-MpError -Message 'Invalid self-update arguments' -Hint 'modpack --update [--check | --yes]' -ErrorId 'Command.InvalidArguments' -Category InvalidArgument }
+    if ($parsed.Positionals.Count -or ($parsed.Options.ContainsKey('check') -and $parsed.Options.ContainsKey('yes'))) { Throw-MpError -Message 'Invalid self-update arguments' -Hint 'modpack self-update [--check | --yes]' -ErrorId 'Command.InvalidArguments' -Category InvalidArgument }
     $release = Get-MpLatestRelease -Refresh
     if ($parsed.Options.ContainsKey('check')) {
         Write-R3Line (Get-MpConsole) @(@{Text="ModpackTools $script:ModuleVersion"})
-        if ([version]$release.Version -gt [version]$script:ModuleVersion) { Write-R3Status (Get-MpConsole) info "Update available: $($release.Version). Run modpack --update." }
+        if ([version]$release.Version -gt [version]$script:ModuleVersion) { Write-R3Status (Get-MpConsole) info "Update available: $($release.Version). Run modpack self-update." }
         else { Write-R3Status (Get-MpConsole) success 'No newer stable release is available.' }
         Write-R3Line (Get-MpConsole) @(@{Text=$release.Url})
         return
