@@ -37,13 +37,13 @@ def main [] {
     ensure ((($short_help_result | describe) =~ '^record')) 'Short -h did not pass through the wrapped adapter.'
     let command_short_help = (modpack content -h --no-human)
     ensure ((($command_short_help | describe) =~ '^record')) 'Command-level short -h did not reach canonical command help.'
-    let self_update_short_help = (modpack -u --help --no-human)
-    ensure ((($self_update_short_help | describe) =~ '^record')) 'Short -u did not route to self-update help.'
+    let self_update_help = (modpack self-update --help --no-human)
+    ensure ((($self_update_help | describe) =~ '^record')) 'Self-update help did not reach the canonical catalogue.'
 
     # Nushell owns the spelling of options at its boundary. Long options are
-    # lowercase double-dash names and short options are one lowercase letter.
-    # PowerShell-style single-dash words and uppercase spellings must fail before
-    # the request is handed to the PowerShell bridge.
+    # lowercase double-dash names; short options are lowercase except for the
+    # conventional version shorthand -V. PowerShell-style single-dash words and
+    # other uppercase spellings must fail before the request reaches the bridge.
     for invalid_option in ['-Project' '-project' '-P' '--Project'] {
         let style_failure = try {
             modpack content list $invalid_option placeholder --no-human | ignore
