@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param()
+param([string]$RequestPath)
 
 $ErrorActionPreference = 'Stop'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
@@ -35,7 +35,12 @@ $terminalHintName = 'MODPACKTOOLS_NU_STDERR_TTY'
 $previousTerminalHint = [Environment]::GetEnvironmentVariable($terminalHintName, 'Process')
 
 try {
-    $requestText = [Console]::In.ReadToEnd()
+    $requestText = if ($RequestPath) {
+        [IO.File]::ReadAllText([IO.Path]::GetFullPath($RequestPath), $utf8)
+    }
+    else {
+        [Console]::In.ReadToEnd()
+    }
     if ([string]::IsNullOrWhiteSpace($requestText)) { throw 'The Nushell bridge received an empty request.' }
 
     $request = $requestText | ConvertFrom-Json

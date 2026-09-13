@@ -3,6 +3,11 @@ function Get-ModpackToolsConfigDirectory {
         return [System.IO.Path]::GetFullPath($script:ConfigHomeOverride)
     }
 
+    $environmentOverride = [Environment]::GetEnvironmentVariable('MODPACKTOOLS_CONFIG_HOME')
+    if (-not [string]::IsNullOrWhiteSpace($environmentOverride)) {
+        return [System.IO.Path]::GetFullPath($environmentOverride)
+    }
+
     $localApplicationData = [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
     if ([string]::IsNullOrWhiteSpace($localApplicationData)) {
         Throw-MpError -Message "Environment variable 'LOCALAPPDATA' is unavailable, so the configuration location cannot be determined" -Hint 'set LOCALAPPDATA and start a new PowerShell session' -ErrorId 'Configuration.LocalAppDataUnavailable' -Category ResourceUnavailable

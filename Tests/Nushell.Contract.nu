@@ -10,6 +10,8 @@ def main [] {
     # Seed a stale-looking value without letting a failed child terminate this
     # test process. The structured envelope, not LAST_EXIT_CODE, is authoritative.
     $env.LAST_EXIT_CODE = 7
+    let fixture_root = ($nu.temp-dir | path join $'modpacktools-nu-((random uuid))')
+    $env.MODPACKTOOLS_CONFIG_HOME = ($fixture_root | path join 'settings')
 
     # Normal interactive-style usage keeps only R3CLI presentation visible. The
     # internal JSON envelope is consumed by the adapter and must not become a Nu
@@ -39,6 +41,12 @@ def main [] {
     ensure ((($command_short_help | describe) =~ '^record')) 'Command-level short -h did not reach canonical command help.'
     let self_update_help = (modpack self-update --help --no-human)
     ensure ((($self_update_help | describe) =~ '^record')) 'Self-update help did not reach the canonical catalogue.'
+
+    # The adapter transports requests through a file so stdin remains available
+    # to Read-Host for self-update and other confirmation prompts.
+    let adapter_source = (open --raw $ADAPTER)
+    ensure ($adapter_source | str contains '-RequestPath $request_path') 'The Nu adapter does not preserve terminal stdin for confirmations.'
+    ensure (not ($adapter_source | str contains '$request | ^pwsh')) 'The Nu adapter still consumes terminal stdin with its request transport.'
 
     # Nushell owns the spelling of options at its boundary. Long options are
     # lowercase double-dash names; short options are lowercase except for the
@@ -83,7 +91,6 @@ def main [] {
     # Build a minimal project so project use can be verified across separate
     # PowerShell bridge processes. Nu keeps the selection in an environment
     # variable, and each child PowerShell imports that inherited session state.
-    let fixture_root = ($nu.temp-dir | path join $'modpacktools-nu-((random uuid))')
     let project_root = ($fixture_root | path join 'Nu Fixture')
     mkdir ($project_root | path join '.modpack')
     mkdir ($project_root | path join 'mods')

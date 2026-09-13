@@ -46,12 +46,14 @@ def validate-nu-option-style [args: list<string>] {
 }
 
 def invoke-bridge [request: string] {
-    # stdout is redirected to a temporary file while stderr stays attached to the
-    # terminal. File redirection preserves the external byte stream, so decode it
-    # explicitly instead of relying on Nushell's implicit UTF-8 coercion.
+    # Keep stdin attached to the terminal so interactive confirmations inside the
+    # PowerShell engine can wait for an answer. The request and stdout use separate
+    # temporary files; explicit decoding preserves the external UTF-8 byte stream.
+    let request_path = ($nu.temp-dir | path join $'modpacktools-((random uuid)).request.json')
     let capture_path = ($nu.temp-dir | path join $'modpacktools-((random uuid)).json')
+    $request | save --force $request_path
     let stdout = try {
-        $request | ^pwsh -NoLogo -NoProfile -File $BRIDGE o> $capture_path
+        ^pwsh -NoLogo -NoProfile -File $BRIDGE -RequestPath $request_path o> $capture_path
         if ($capture_path | path exists) {
             let captured = (open --raw $capture_path)
             if (($captured | describe) == 'binary') {
@@ -63,10 +65,12 @@ def invoke-bridge [request: string] {
             ''
         }
     } catch {|err|
+        if ($request_path | path exists) { rm --force $request_path }
         if ($capture_path | path exists) { rm --force $capture_path }
         error make { msg: $'Could not run the ModpackTools bridge: ($err.msg)' }
     }
 
+    if ($request_path | path exists) { rm --force $request_path }
     if ($capture_path | path exists) { rm --force $capture_path }
     $stdout
 }

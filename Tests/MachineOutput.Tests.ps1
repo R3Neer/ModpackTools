@@ -85,5 +85,17 @@ InModuleScope ModpackTools {
             $text | Should Match ([regex]::Escape('$env.TEST_SENTINEL = ''keep'''))
             $text | Should Match ([regex]::Escape("use 'C:/Tools/ModpackTools/Nushell/modpack.nu' main"))
         }
+
+        It 'lets the Nushell bridge read a request without consuming stdin' {
+            $requestPath = Join-Path $TestDrive 'bridge-request.json'
+            [IO.File]::WriteAllText($requestPath, '{"arguments":["--version","--no-human"],"human_stderr_terminal":false}')
+            $bridge = Join-Path $script:ModuleRoot 'Nushell/Invoke-ModpackBridge.ps1'
+            $output = @(& pwsh -NoLogo -NoProfile -File $bridge -RequestPath $requestPath)
+            $LASTEXITCODE | Should Be 0
+            $output.Count | Should Be 1
+            $envelope = $output[0] | ConvertFrom-Json
+            $envelope.ok | Should Be $true
+            $envelope.command | Should Be '--version'
+        }
     }
 }

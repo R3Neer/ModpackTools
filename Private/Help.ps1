@@ -3,6 +3,20 @@ function New-MpHelpItem {
     return [pscustomobject]@{ Label = $Label; Description = $Description }
 }
 
+function Get-MpSharedCommandHelpItems {
+    param([Parameter(Mandatory)][string]$Command)
+    $items = [Collections.Generic.List[object]]::new()
+    $items.Add((New-MpHelpItem '-h, --help' 'Show help for this command.'))
+    if ($Command -notin @('config', 'self-update')) {
+        $items.Add((New-MpHelpItem '-p, --project <id>' 'Use this project for project-bound operations.'))
+    }
+    $items.Add((New-MpHelpItem '--color auto|always|never' 'Control color; auto follows terminal detection and NO_COLOR.'))
+    $items.Add((New-MpHelpItem '--ascii' 'Use ASCII symbols for presentation.'))
+    $items.Add((New-MpHelpItem '--json' 'Also emit a schema-versioned JSON envelope on stdout.'))
+    $items.Add((New-MpHelpItem '--no-human' 'Suppress human presentation. Requires --json.'))
+    return @($items)
+}
+
 function Get-MpCommandCatalog {
     if ($script:MpCommandCatalog) { return $script:MpCommandCatalog }
 
@@ -131,7 +145,14 @@ function Show-MpHelp {
     param([string]$Command)
     $catalog = Get-MpCommandCatalog
     if ($Command -and -not $catalog.Contains($Command.ToLowerInvariant())) { Throw-MpError -Message "Command '$Command' does not have a help page" -Hint 'modpack --help' -ErrorId 'Command.UnknownHelpTopic' -Category InvalidArgument }
-    $commands = @(foreach ($name in $catalog.Keys) { $entry=$catalog[$name]; [pscustomobject]@{ Name=$name; Group=$entry.Group; Summary=$entry.Summary; Description=$entry.Description; Usage=$entry.Usage; Items=$entry.Items; Notes=$entry.Notes; Examples=$entry.Examples } })
+    $commands = @(foreach ($name in $catalog.Keys) {
+        $entry=$catalog[$name]
+        [pscustomobject]@{
+            Name=$name; Group=$entry.Group; Summary=$entry.Summary; Description=$entry.Description; Usage=$entry.Usage
+            Items=@($entry.Items) + @(Get-MpSharedCommandHelpItems $name)
+            Notes=$entry.Notes; Examples=$entry.Examples
+        }
+    })
     $view = [pscustomobject]@{
         Product='MODPACKTOOLS'; Version=$script:ModuleVersion; Description='Manage, inspect, update, and build Packwiz modpacks.'; Invocation='modpack'
         Groups=@('PROJECTS','CONTENT','BUILD AND CONFIGURATION'); Commands=$commands

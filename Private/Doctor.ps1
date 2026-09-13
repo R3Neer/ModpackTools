@@ -155,10 +155,15 @@ function Get-MpDoctorReport {
 }
 
 function Confirm-MpDoctorAction {
-    param([Parameter(Mandatory)][string]$Prompt, [bool]$Default = $true, [switch]$Yes)
+    param(
+        [Parameter(Mandatory)][string]$Prompt,
+        [bool]$Default = $true,
+        [switch]$Yes,
+        [scriptblock]$InputReader = { param($Message) Read-Host $Message }
+    )
     if ($Yes) { return $Default }
     $suffix = if ($Default) { '[Y/n]' } else { '[y/N]' }
-    $answer = Read-Host "$Prompt $suffix"
+    $answer = & $InputReader "$Prompt $suffix"
     if ([string]::IsNullOrWhiteSpace($answer)) { return $Default }
     return $answer.Trim().ToLowerInvariant() -in @('y', 'yes')
 }

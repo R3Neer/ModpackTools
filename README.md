@@ -490,6 +490,7 @@ The README is the operational overview. Detailed contracts live in focused docum
 - [`docs/error-design.md`](docs/error-design.md) — stable expected-error design;
 - [`docs/message-style.md`](docs/message-style.md) — temporal semantics for human-facing status and informational messages;
 - [`docs/releasing.md`](docs/releasing.md) — versioning, packaging and automated stable-release flow;
+- [`docs/releases/4.0.1.md`](docs/releases/4.0.1.md) — interactive Nushell confirmations and complete shorthand help.
 - [`docs/releases/4.0.0.md`](docs/releases/4.0.0.md) — version 4 vocabulary, breaking changes and validation.
 
 Command-specific syntax remains authoritative in generated CLI help:

@@ -78,6 +78,18 @@ InModuleScope ModpackTools {
             Assert-MockCalled Invoke-ModrinthApiRequest -Times 0 -Scope It
         }
 
+        It 'shows every supported short option in command help' {
+            $content = modpack content --help --color never --ascii 6>&1 | Out-String
+            $selfUpdate = modpack self-update --help --color never --ascii 6>&1 | Out-String
+            foreach ($label in @('-h, --help', '-p, --project <id>', '-n, --dry-run', '-y, --yes')) {
+                $content | Should Match ([regex]::Escape($label))
+            }
+            foreach ($label in @('-h, --help', '-y, --yes')) {
+                $selfUpdate | Should Match ([regex]::Escape($label))
+            }
+            $selfUpdate | Should Not Match ([regex]::Escape('-p, --project <id>'))
+        }
+
         It 'renders removal reasons literally using the shared renderer at narrow widths' {
             $script:MpConsole = New-R3Console -Colour never -Ascii -Width 32 -ThemeExtension (Read-MpThemeExtension)
             $plan = [pscustomobject]@{ Changes=@([pscustomobject]@{ Before=[pscustomobject]@{Item=[pscustomobject]@{Name='Example [literal]'}}; After=$null; Reason='unused dependency' }) }

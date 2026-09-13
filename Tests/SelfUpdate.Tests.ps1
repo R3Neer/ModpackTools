@@ -90,6 +90,12 @@ InModuleScope ModpackTools {
             Mock Get-MpSelfUpdateTarget { $script:SelfTarget }
             Mock Install-MpSelfUpdate { }
         }
+        It 'reads an explicit interactive answer when --yes is absent' {
+            $script:SeenConfirmationPrompt = $null
+            $reader = { param($Message) $script:SeenConfirmationPrompt = $Message; 'y' }
+            (Confirm-MpDoctorAction -Prompt 'Update ModpackTools?' -Default $false -InputReader $reader) | Should Be $true
+            $script:SeenConfirmationPrompt | Should Be 'Update ModpackTools? [y/N]'
+        }
         It 'cancels without downloading when confirmation is declined' {
             Mock Confirm-MpDoctorAction { $false }
             (modpack self-update 6>&1 | Out-String) | Should Match 'cancelled'
@@ -99,6 +105,12 @@ InModuleScope ModpackTools {
         It 'applies yes to the installed target even when running from a newer checkout' {
             Mock Confirm-MpDoctorAction { throw 'No prompt allowed' }
             @(modpack self-update --yes 6>$null).Count | Should Be 0
+            Assert-MockCalled Install-MpSelfUpdate -Times 1 -Scope It -ParameterFilter { $Target.Path -eq $script:SelfTarget.Path -and $Target.ManifestHash }
+        }
+        It 'accepts -y as the public shorthand for --yes' {
+            Mock Confirm-MpDoctorAction { throw 'No prompt allowed' }
+            @(modpack self-update -y 6>$null).Count | Should Be 0
+            Assert-MockCalled Confirm-MpDoctorAction -Times 0 -Scope It
             Assert-MockCalled Install-MpSelfUpdate -Times 1 -Scope It -ParameterFilter { $Target.Path -eq $script:SelfTarget.Path -and $Target.ManifestHash }
         }
         It 'does not reinstall or downgrade an up-to-date target' {

@@ -69,6 +69,25 @@ minecraft = "1.21.1"
         }
     }
 
+    Describe 'Configuration location' {
+        BeforeEach {
+            $script:PreviousConfigHomeOverride = $script:ConfigHomeOverride
+            $script:PreviousConfigHomeEnvironment = [Environment]::GetEnvironmentVariable('MODPACKTOOLS_CONFIG_HOME')
+            $script:ConfigHomeOverride = $null
+        }
+
+        AfterEach {
+            $script:ConfigHomeOverride = $script:PreviousConfigHomeOverride
+            [Environment]::SetEnvironmentVariable('MODPACKTOOLS_CONFIG_HOME', $script:PreviousConfigHomeEnvironment)
+        }
+
+        It 'supports an isolated configuration directory through the environment' {
+            $isolated = Join-Path $TestDrive 'isolated-config'
+            [Environment]::SetEnvironmentVariable('MODPACKTOOLS_CONFIG_HOME', $isolated)
+            Get-ModpackToolsConfigDirectory | Should Be ([IO.Path]::GetFullPath($isolated))
+        }
+    }
+
     Describe 'Packwiz dependency management' {
         BeforeEach {
             $script:ConfigHomeOverride = Join-Path $TestDrive 'dependency-config'

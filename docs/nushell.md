@@ -47,6 +47,11 @@ adapter always enables ModpackTools' machine-readable JSON channel internally so
 can validate success, turn structured failures into Nu errors and maintain Nu
 session state.
 
+The adapter transports that internal request through a temporary file, leaving
+standard input attached to the terminal. Commands that ask for confirmation, such
+as `modpack self-update`, therefore wait for the answer normally. Pass `-y` or
+`--yes` to confirm without prompting.
+
 That internal JSON is transport, not presentation. In normal Nu usage the adapter
 consumes it silently and only the normal R3CLI output remains visible:
 
