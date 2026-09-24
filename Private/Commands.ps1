@@ -131,7 +131,6 @@ function Invoke-MpList {
 function Invoke-MpCurrent {
     param([Parameter(ValueFromRemainingArguments)][object[]]$Arguments = @())
     Assert-PositionalCount -Values $Arguments -Minimum 0 -Maximum 0 -Usage 'modpack project current'
-    Write-R3Banner (Get-MpConsole) 'ACTIVE PROJECT'
     if ($script:ActiveProjectId) { Write-R3KeyValue (Get-MpConsole) 'ID' $script:ActiveProjectId }
     else { Write-R3Status (Get-MpConsole) info 'There is no active project in this session.' }
 }
@@ -330,7 +329,6 @@ function Invoke-MpConfig {
     switch ($verb.ToLowerInvariant()) {
         'get' {
             if ($Arguments.Count -ne 2) { Throw-MpError -Message "The arguments for 'config get' do not match the expected syntax" -Hint 'modpack config --help' -ErrorId 'Command.InvalidArguments' -Category InvalidArgument }
-            Write-R3Banner (Get-MpConsole) 'CONFIGURATION'
             if ($name -eq 'root') { Write-R3KeyValue (Get-MpConsole) 'root' (Get-ModpackRoot) }
             else {
                 $packwiz = Resolve-MpPackwiz

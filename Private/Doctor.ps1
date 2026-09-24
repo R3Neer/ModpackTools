@@ -201,7 +201,6 @@ function Repair-MpDoctorEnvironment {
 
 function Write-MpDoctorReport {
     param([Parameter(Mandatory)]$Report)
-    Write-R3Banner (Get-MpConsole) 'MODPACKTOOLS · DOCTOR'
     foreach ($section in @('SYSTEM', 'PACKWIZ', 'PROJECT ROOT', 'PROJECT', 'BUILD ARTIFACT', 'OPTIONAL')) {
         $items = @($Report.Checks | Where-Object Section -eq $section)
         if (-not $items.Count) { continue }

@@ -178,7 +178,7 @@ function Write-InventoryView {
 function Write-ModpackHeader {
     param([Parameter(Mandatory)]$Project, [Parameter(Mandatory)]$Inventory)
 
-    Write-R3Banner (Get-MpConsole) "$($Project.DisplayName) $($Project.DisplayVersion)"
+    Write-R3Heading (Get-MpConsole) "$($Project.DisplayName) $($Project.DisplayVersion)"
     $rows = [ordered]@{
         ID        = $Project.Id
         Minecraft = $Project.MinecraftVersion
@@ -196,7 +196,6 @@ function Write-ModpackHeader {
 
 function Write-ModpackList {
     param([Parameter(Mandatory)][array]$Projects, [Parameter(Mandatory)][string]$Root)
-    Write-R3Banner (Get-MpConsole) 'REGISTERED MODPACKS'
     Write-R3Line (Get-MpConsole) @(@{Text="Root: $Root";Role='secondary'})
     Write-R3Line (Get-MpConsole) @(@{Text=''})
     $rows = @(foreach ($project in $Projects) { ,@($project.Id, $project.DisplayName, $project.MinecraftVersion, $project.Loader) })
@@ -215,7 +214,6 @@ function Format-ByteSize {
 function Write-BuildSummary {
     param([Parameter(Mandatory)]$Build)
     $mods = $Build.Inventory.Mods
-    Write-R3Banner (Get-MpConsole) 'BUILD COMPLETE'
     Write-R3Status (Get-MpConsole) success 'Status: successful'
     foreach ($row in ([ordered]@{
         File             = [System.IO.Path]::GetFileName($Build.Path)
@@ -252,7 +250,7 @@ function Write-MpDiffItems {
 
 function Write-ModpackDiff {
     param([Parameter(Mandatory)]$Diff)
-    Write-R3Banner (Get-MpConsole) "DIFF · $($Diff.Project.DisplayName)"
+    Write-R3KeyValue (Get-MpConsole) 'Project' $Diff.Project.DisplayName
     Write-R3KeyValue (Get-MpConsole) 'Baseline' ([System.IO.Path]::GetFileName($Diff.BaselinePath))
     Write-R3KeyValue (Get-MpConsole) 'Built' $Diff.BaselineTime
     if ($Diff.Total -eq 0) {
@@ -270,7 +268,7 @@ function Write-ModpackDiff {
 function Write-ModUpdateSummary {
     param([Parameter(Mandatory)]$Update)
 
-    Write-R3Banner (Get-MpConsole) "UPDATE · $($Update.Project.DisplayName)"
+    Write-R3KeyValue (Get-MpConsole) 'Project' $Update.Project.DisplayName
     if ($Update.PSObject.Properties['Preflight']) {
         Write-R3KeyValue (Get-MpConsole) 'Dependency check' "$($Update.Preflight.Checked) version(s) inspected"
         foreach ($warning in @($Update.Preflight.Warnings)) { Write-R3Status (Get-MpConsole) warning $warning }
@@ -306,7 +304,6 @@ function Write-ModrinthSearchResults {
         [AllowNull()]$Project
     )
 
-    Write-R3Banner (Get-MpConsole) 'SEARCH · MODRINTH'
     Write-R3KeyValue (Get-MpConsole) 'Query' $Search.Query
     if ($Project) {
         Write-R3KeyValue (Get-MpConsole) 'Project' "$($Project.Id) · Minecraft $($Project.MinecraftVersion) · $($Project.Loader)"
@@ -353,7 +350,7 @@ function Write-ModrinthSearchResults {
 
 function Write-ModrinthVersionResults {
     param([Parameter(Mandatory)]$View, [Parameter(Mandatory)]$Project)
-    Write-R3Banner (Get-MpConsole) "VERSIONS · $($View.ItemName)"
+    Write-R3KeyValue (Get-MpConsole) 'Item' $View.ItemName
     Write-R3KeyValue (Get-MpConsole) 'Project' "$($Project.Id) · Minecraft $($Project.MinecraftVersion) · $($Project.Loader)"
     Write-R3KeyValue (Get-MpConsole) 'Type' $View.ItemKind
     Write-R3KeyValue (Get-MpConsole) 'Compatible' @($View.Versions).Count
@@ -376,7 +373,7 @@ function Write-ModrinthVersionResults {
 
 function Write-ModpackCategoryList {
     param([Parameter(Mandatory)]$View)
-    Write-R3Banner (Get-MpConsole) "CATEGORIES · $($View.Project.Id)"
+    Write-R3KeyValue (Get-MpConsole) 'Project' $View.Project.Id
     Write-R3Section (Get-MpConsole) 'CLASSIFICATIONS' @($View.Categories).Count
     $referenceWidth = Get-MpReferenceWidth -Items @($View.Categories)
     foreach ($category in $View.Categories) {
