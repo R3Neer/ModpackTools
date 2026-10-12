@@ -29,9 +29,15 @@ an untested stub must not be described as completed behavior.
 
 - Product code: normal build and focused behavioral/differential tests for the
   added capability, plus formatting/lint appropriate to the touched language.
-- Rust: `cargo fmt --check`, `cargo check --locked`, focused `cargo test --locked`,
-  and `cargo clippy --locked --all-targets -- -D warnings` once the workspace exists.
-  Use the pinned target/configuration; compile in Release before a performance claim.
+- Selected C# core: restore locked dependencies, `dotnet format --verify-no-changes
+  --no-restore`, Release build with nullable/analyzer warnings as errors, focused
+  behavioral tests, and Release Native AOT publish for `win-x64`. Run the added
+  capability against that published executable before committing. Managed-only
+  tests or a JIT build cannot substitute for the native acceptance check.
+- Fail on AOT/trimming warnings; do not suppress a whole assembly to create a green
+  checkpoint. The evaluation established a warning-free Tomlyn syntax API path.
+  Use the pinned SDK. Native publish is mandatory per core capability, not only
+  at release time; wider native contract cases run at command/phase boundaries.
 - Adapter changes: syntax validation, contract cases, and a fresh shell process.
 - Transaction/recovery changes: relevant injected failures and unchanged-original
   checks. These must pass before the checkpoint, not be deferred to a final suite.
