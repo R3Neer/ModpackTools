@@ -3,12 +3,14 @@ using System.Text.Json;
 namespace ModpackTools.Cli;
 
 internal sealed class ProtocolException(string message) : Exception(message);
+internal sealed record InvocationContext(string? ActiveProject);
+internal sealed record NativeRequest(string[] Arguments, InvocationContext? Context);
 
 internal static class RequestReader
 {
     private const int MaximumBytes = 1024 * 1024;
 
-    public static string[] Read(string path)
+    public static NativeRequest Read(string path)
     {
         try
         {
@@ -22,7 +24,7 @@ internal static class RequestReader
         }
     }
 
-    private static string[] ReadValidated(string path)
+    private static NativeRequest ReadValidated(string path)
     {
         using var file = File.OpenRead(path);
         using var buffer = new MemoryStream();
@@ -48,7 +50,7 @@ internal static class RequestReader
         {
             if (!names.Add(property.Name))
                 throw new ProtocolException($"Duplicate request field '{property.Name}'.");
-            if (property.Name is not ("schema_version" or "arguments"))
+            if (property.Name is not ("schema_version" or "arguments" or "context"))
                 throw new ProtocolException($"Unknown request field '{property.Name}'.");
         }
 
@@ -71,6 +73,27 @@ internal static class RequestReader
                 throw new ProtocolException("Request arguments cannot contain NUL.");
             result[index++] = value;
         }
-        return result;
+        InvocationContext? context = null;
+        if (root.TryGetProperty("context", out var snapshot))
+        {
+            if (snapshot.ValueKind != JsonValueKind.Object)
+                throw new ProtocolException("Request context must be an object.");
+            var fields = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var property in snapshot.EnumerateObject())
+            {
+                if (!fields.Add(property.Name))
+                    throw new ProtocolException($"Duplicate context field '{property.Name}'.");
+                if (property.Name != "active_project")
+                    throw new ProtocolException($"Unknown context field '{property.Name}'.");
+            }
+            if (!snapshot.TryGetProperty("active_project", out var active) ||
+                active.ValueKind is not (JsonValueKind.String or JsonValueKind.Null))
+                throw new ProtocolException("Context active_project must be a string or null.");
+            var activeProject = active.GetString();
+            if (activeProject?.Contains('\0') == true)
+                throw new ProtocolException("Context active_project cannot contain NUL.");
+            context = new(activeProject);
+        }
+        return new(result, context);
     }
 }

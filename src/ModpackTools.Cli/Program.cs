@@ -6,13 +6,16 @@ using ModpackTools.Core.Data;
 using ModpackTools.Core.Projects;
 
 Console.OutputEncoding = new UTF8Encoding(false);
+InvocationContext? context = null;
 try
 {
     if (args.Length > 0 && args[0] == "--request-path")
     {
         if (args.Length != 2)
             throw new ProtocolException("Use --request-path <file> without additional arguments.");
-        args = RequestReader.Read(args[1]);
+        var request = RequestReader.Read(args[1]);
+        args = request.Arguments;
+        context = request.Context;
     }
 }
 catch (Exception exception) when (exception is ProtocolException or JsonException or IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
@@ -35,6 +38,19 @@ try
         var version = ProductVersion.Read(commandArguments, options.Project);
         var envelope = new VersionEnvelope(1, true, command, commandArguments, new(version));
         Console.WriteLine(JsonSerializer.Serialize(envelope, WireJsonContext.Default.VersionEnvelope));
+        return 0;
+    }
+    if (command.Equals("project", StringComparison.OrdinalIgnoreCase) &&
+        commandArguments.FirstOrDefault()?.Equals("current", StringComparison.OrdinalIgnoreCase) == true &&
+        !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
+    {
+        if (options.Project is not null)
+            throw new DomainException("Option.ForbiddenCombination", "Option '--project' is not valid for this operation", "modpack project current", target: options.Project);
+        if (commandArguments.Length != 1)
+            throw new DomainException("Command.InvalidArguments", "The command arguments do not match the expected syntax", "modpack project current", targetData: commandArguments.Length == 2 ? new TextTarget(commandArguments[1]) : new TextListTarget(commandArguments.Skip(1).ToArray()));
+        var activeProject = context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject;
+        var envelope = new SessionEnvelope(1, true, command, commandArguments, new(activeProject));
+        Console.WriteLine(JsonSerializer.Serialize(envelope, WireJsonContext.Default.SessionEnvelope));
         return 0;
     }
     if (command.Equals("project", StringComparison.OrdinalIgnoreCase) &&
@@ -73,7 +89,7 @@ catch (Exception exception) when (exception is IOException or UnauthorizedAccess
 }
 
 var failure = FailureEnvelope.Create(command, commandArguments,
-    Failure.From("Core.CapabilityUnavailable", "This native host currently supports version and project list.", "InvalidOperation", null));
+    Failure.From("Core.CapabilityUnavailable", "This native host currently supports version, project list and project current.", "InvalidOperation", null));
 Console.WriteLine(JsonSerializer.Serialize(failure, WireJsonContext.Default.FailureEnvelope));
 return 1;
 
