@@ -155,32 +155,39 @@ successful envelope and empty stderr, so no hypothetical dotted-key limit was ad
   Nu syntax/catalog/version gates pass with PATH empty. Independent review passed
   14 corpus cases, 4 extras and 5 corrupt-theme cases on the first revision;
   a subsequent hardening enforces empty stderr and exact command/operation
-  spelling correlation. Seven independent fake-host transport probes pass;
-  final own-artifact repetition passed 18 cases, and all seven independent
+  spelling correlation. Final own-artifact repetition passed 18 cases, and all seven independent
   fake-host transport probes passed.
 
-- Native project current: typed session snapshot, explicit-null versus absent
+- `dd6745a`: native project current: typed session snapshot, explicit-null versus absent
   context preserved, no configuration/discovery work. Locked restore, verified
   format, Release/AOT without warnings, 25 differential cases, two environment
   fallbacks and 11 invalid contexts passed. Independent review passed 15 baseline
   pairs and 20 context cases. Version/protocol/catalog regressions pass. Public
-  current adapters follow, with PS module state sent explicitly.
+  current adapters are recorded separately below.
 
-- PS current adapter: explicit module snapshot with object parameter preserving
+- `36372d7`: PS current adapter: explicit module snapshot with object parameter preserving
   null versus empty string; native machine path before renderer. Fifteen fresh-shell
   snapshot checks and failure priority pass; version/catalog regressions pass.
   Independent review passed 19 pairs (including legacy use then native current),
   four corrupt-theme cases and two human/help controls. Pester: 250 passed,
   zero failed, 55.92 seconds. Current does not change parent session.
 
-- Nu current adapter: strict nullable session response and explicit environment
+- `3c51e15`: Nu current adapter: strict nullable session response and explicit environment
   snapshot, without parent mutation. Self-contained fresh-shell version/catalog/
   current checks and syntax verification pass. Independent review: 21 corpus
   pairs, four corrupt-theme cases, four final targeted regressions and one human
   current control. Help/leading presentation flags keep their legacy path.
 
-Next reviewed selection boundary: project use, with E04 and PS/Nu parent-state
-ownership documented before implementation.
+- Native project use: pure effective-ID resolution before configuration/discovery,
+  exact selected descriptor ID and session result without parent mutation. Locked
+  restore, format verification, Release/AOT without warnings, 18 differentials
+  and E04 pass. A v11 target [] versus legacy null for missing selector was found,
+  corrected and retested on v12. Independent review passed 33 cases, an additional
+  uppercase descriptor success, two E04 repeats and four protocol/environment
+  controls; fixture hashes unchanged, empty stderr. Protocol/Nu regressions pass.
+
+PS/Nu project-use parent mutation is the next reviewed adapter boundary. Errors
+and malformed transport must leave the existing selection intact.
 
 No inventory, session mutation, resolver, native transaction or installed
 distribution exists yet. Catalog review does not prove their parity or performance.
