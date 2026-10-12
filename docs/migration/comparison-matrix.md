@@ -1,6 +1,8 @@
 # Differential comparison matrix
 
-Status: planned acceptance cases; none has passed against a new core.
+Status: acceptance matrix for the full migration. Completed checkpoints and their
+limited evidence are recorded in implementation-plan.md; this matrix is not a
+claim that every scenario has passed.
 Legacy implementations/tests supply the reference, not an automatic correctness
 oracle for known defects. Run each mutating engine on its own fixture copy.
 

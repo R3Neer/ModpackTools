@@ -156,10 +156,15 @@ successful envelope and empty stderr, so no hypothetical dotted-key limit was ad
   14 corpus cases, 4 extras and 5 corrupt-theme cases on the first revision;
   a subsequent hardening enforces empty stderr and exact command/operation
   spelling correlation. Seven independent fake-host transport probes pass;
-  final own-artifact corpus repetition is still pending at this record.
+  final own-artifact repetition passed 18 cases, and all seven independent
+  fake-host transport probes passed.
 
-Next reviewed contract: typed session snapshot and native project current,
-with parent-shell state ownership and explicit-null versus absent-context semantics.
+- Native project current: typed session snapshot, explicit-null versus absent
+  context preserved, no configuration/discovery work. Locked restore, verified
+  format, Release/AOT without warnings, 25 differential cases, two environment
+  fallbacks and 11 invalid contexts passed. Independent review passed 15 baseline
+  pairs and 20 context cases. Version/protocol/catalog regressions pass. Public
+  current adapters are next, with PS module state sent explicitly.
 
-No inventory, session selection, resolver, native transaction or installed
+No inventory, session mutation, resolver, native transaction or installed
 distribution exists yet. Catalog review does not prove their parity or performance.
