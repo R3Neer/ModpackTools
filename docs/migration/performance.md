@@ -147,3 +147,23 @@ sampling, known OS-cold methodology (or label unavailable), application cache mi
 separation, larger real JAR fixtures, replayed offline resolver/provider data, and
 separate online latency. This design evaluation does not pretend those measurements
 were already completed.
+# First implemented capability: version
+
+Measured 2026-10-12 with product AOT executable (not the diagnostic startup probe),
+PS 7.6.6 and Nu 0.116.2, on the same host described below. Both adapters imported
+once; shell startup excluded. One first/warmup + 21 measured samples per mode,
+legacy first then native, no OS cache eviction, no network and no build running.
+Shared interactive host; reviewers could be performing small independent tests.
+
+| Already-running adapter | Legacy median / p95 ms | Native median / p95 ms |
+|---|---:|---:|
+| PS | 9.48 / 17.72 | 34.02 / 40.72 |
+| Nu | 2143.64 / 2351.35 | 43.77 / 53.77 |
+
+Native Nu median is about 49x faster on this version workload by eliminating the
+PowerShell child/bootstrap path. Already-imported PS version is slower because
+the old version is a tiny in-process operation and native adds process startup.
+Both native adapter p95 values satisfy the 250 ms version gate. These results do
+not establish inventory, resolver, memory or installed-distribution performance.
+Raw samples: benchmarks/native-version-{ps,nu}.json; reproduction scripts:
+benchmarks/Measure-NativeVersion.{ps1,nu}. Pass repository/EXE paths explicitly.

@@ -110,4 +110,13 @@ public behavior/distribution changes are finalized.
   New failures consistently expose array arguments; domain IDs/categories retained.
 
 No inventory, resolver, native transaction or installed distribution exists yet.
-Native version dispatch in Nu is under review; human version still uses legacy.
+- `479c137`: Nu machine version with explicit core selection; fresh-shell tests
+  with PS removed from PATH. Independent reviewer passed 9 differential pairs.
+- `2c00559`: PS machine version before console initialization; fresh-shell tests
+  force console initialization to fail. Independent reviewer passed 16 version
+  cases and 3 cases with a corrupt theme in an isolated module copy.
+
+Human version and non-version commands still use legacy. Core selection currently
+uses explicit `MODPACKTOOLS_CORE_PATH`; this is a development/coexistence seam,
+not the completed installed manifest design. Nu ownership currently requires
+version/-V as first token; leading presentation options remain legacy.
