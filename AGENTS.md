@@ -28,4 +28,3 @@ These instructions govern the migration branch, not the released product.
 - Migration documents, this file, and benchmark-only fixtures must not enter
   `main`. Future integration must selectively replay product commits; merging the
   whole branch would also introduce migration documents through its history.
-

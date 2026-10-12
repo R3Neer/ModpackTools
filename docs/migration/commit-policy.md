@@ -79,4 +79,3 @@ without migration documentation entering `main`, including through commit histor
 Good: version payload + its test; then request validation + its test; then Nu
 version round-trip + fresh-process test. Bad: commit each serializer/helper
 separately; or wait until version, inventory, search, and both adapters are complete.
-
