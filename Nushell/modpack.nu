@@ -75,6 +75,55 @@ def invoke-bridge [request: string] {
     $stdout
 }
 
+def owns-native-version [args: list<string>] {
+    let executable = ($env.MODPACKTOOLS_CORE_PATH? | default '')
+    ($executable != '') and (wants-machine-output $args) and (($args | get --optional 0 | default '') in ['--version' '-V'])
+}
+
+def invoke-native-version [args: list<string>] {
+    let executable = $env.MODPACKTOOLS_CORE_PATH
+    if not ($executable | path exists) {
+        error make { msg: 'The configured ModpackTools native executable does not exist.' }
+    }
+    let native_args = if '--json' in $args { $args } else { $args | append '--json' }
+    let request_path = ($nu.temp-dir | path join $'modpacktools-((random uuid)).native.json')
+    {schema_version: 1, arguments: $native_args} | to json | save --force $request_path
+    let capture = try {
+        ^$executable --request-path $request_path | complete
+    } catch {|err|
+        rm --force $request_path
+        error make { msg: $'Could not run the ModpackTools native executable: ($err.msg)' }
+    }
+    rm --force $request_path
+    if ($capture.stderr | str trim) != '' {
+        error make { msg: $'ModpackTools native transport failed: ($capture.stderr)' }
+    }
+    let result = try { $capture.stdout | from json } catch {
+        error make { msg: 'ModpackTools native executable returned invalid JSON.' }
+    }
+    if (field $result schema_version 0) != 1 {
+        error make { msg: 'ModpackTools native executable returned an unsupported result schema.' }
+    }
+    if (($result | describe) !~ '^record') or ((field $result ok null | describe) != 'bool') or ((field $result command null | describe) != 'string') or ((field $result arguments null | describe) !~ '^list') {
+        error make { msg: 'ModpackTools native executable returned an invalid result envelope.' }
+    }
+    if (field $result ok false) {
+        if ((field (field (field $result data {}) version {}) version null | describe) != 'string') {
+            error make { msg: 'ModpackTools native executable returned an invalid version result.' }
+        }
+    } else {
+        let failure = (field $result error {})
+        if ((field $failure id null | describe) != 'string') or ((field $failure message null | describe) != 'string') or ((field $failure category null | describe) != 'string') {
+            error make { msg: 'ModpackTools native executable returned an invalid error result.' }
+        }
+    }
+    let valid_exit = if (field $result ok false) { $capture.exit_code == 0 } else { $capture.exit_code in [1 2] }
+    if not $valid_exit {
+        error make { msg: 'ModpackTools native exit status disagrees with its result.' }
+    }
+    $capture.stdout
+}
+
 def unwrap-result [envelope: record] {
     let command = (field $envelope command '')
     let arguments = (field $envelope arguments [])
@@ -138,7 +187,7 @@ def unwrap-result [envelope: record] {
     }
 }
 
-# PowerShell remains the canonical engine. The bridge always requests one JSON
+# Unmigrated commands use the PowerShell engine. The bridge always requests one JSON
 # envelope internally. Normal Nu usage consumes that machine payload silently and
 # leaves only R3CLI presentation visible; --no-human exposes the parsed Nu value.
 export def --env --wrapped main [...args: string] {
@@ -148,7 +197,7 @@ export def --env --wrapped main [...args: string] {
         arguments: $args
         human_stderr_terminal: (is-terminal --stderr)
     } | to json)
-    let raw = (invoke-bridge $request)
+    let raw = if (owns-native-version $args) { invoke-native-version $args } else { invoke-bridge $request }
     let text = ($raw | str trim)
 
     if $text == '' {
