@@ -1,6 +1,6 @@
 # Implementation sequence and first checkpoints
 
-Status: planned; no core/adapters have been implemented in this branch.
+Status: implementation in progress; remaining phases are acceptance obligations.
 Each numbered capability below is normally one commit once its stated behavior,
 native build, and focused checks pass. Split only independently usable outcomes;
 merge inseparable support files as described in [commit-policy.md](commit-policy.md).
@@ -99,5 +99,15 @@ public behavior/distribution changes are finalized.
 - Legacy/session/startup/hash baseline and warning-free syntax/Maven AOT probe.
 - Performance gates, documentation boundary, installed-location/update design.
 
-Remaining first action on implementation authorization: Phase 0, capability 1,
-followed immediately by its green native checkpoint commit.
+## Implemented checkpoints
+
+- `2c632d3`: typed native version envelope; warning-free AOT, Release build,
+  format verification, exact JSON/types, manifest-version and transport checks.
+- `e837767`: bounded request protocol; 15 native cases including malformed JSON,
+  duplicate fields, limits and lone-surrogate errors found by white-box review.
+- `5ed3577`: version aliases/options/casing/newline semantics; 18 differential
+  cases. Independent reviewer passed 16 cases with only authorized E01 normalized.
+  New failures consistently expose array arguments; domain IDs/categories retained.
+
+No inventory, resolver, native transaction or installed distribution exists yet.
+Native version dispatch in Nu is under review; human version still uses legacy.

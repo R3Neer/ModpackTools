@@ -1,6 +1,7 @@
 # Hybrid-core migration: branch-only records
 
-Status: design and evaluation; product implementation has not started.
+Status: implementation authorized and started; see capability checkpoints in
+[implementation sequence](implementation-plan.md).
 
 All migration work belongs to `codex/hybrid-core`, forked from
 `025b7f32200484070fe6ec5e5aa1a3ef49c3bfa2` (declared version 4.0.2).
@@ -14,6 +15,8 @@ The separate checkout avoids changing the user's `main` checkout or installation
 4. [Performance evaluation](performance.md): measurements, limits, and targets.
 5. [Decisions](decisions.md): selected architecture, language, dependencies, and scope.
 6. [Implementation sequence](implementation-plan.md): small independently reviewable capabilities.
+7. [Architecture and review](architecture.md): logical boundaries and typed contracts.
+8. [Error improvements](error-improvements.md): explicitly authorized differences.
 
 ## Documentation boundary
 

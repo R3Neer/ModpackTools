@@ -1,8 +1,9 @@
 # Compatibility contract
 
 Baseline: `025b7f32200484070fe6ec5e5aa1a3ef49c3bfa2`, declared 4.0.2.
-Status: design contract; there is no replacement engine yet. Differences below
-are explicit design decisions, not claims of passing differential tests.
+Status: incremental implementation. Completed capabilities are recorded in
+[implementation-plan.md](implementation-plan.md); remaining obligations are gates.
+The user also authorized targeted [error improvements](error-improvements.md).
 
 ## Preserved public behavior
 

@@ -1,6 +1,6 @@
 # Decisions before implementation
 
-Status: selected design, product implementation not authorized yet.
+Status: selected design; implementation authorized on 2026-10-12.
 Evidence date: 2026-10-12. Baseline: `025b7f3` / declared 4.0.2.
 
 ## D01: C# / .NET 10, Native AOT, Windows x64 first
@@ -77,7 +77,7 @@ the legacy distribution is authorized.
 
 Planned projects: `src/ModpackTools.Core` (business logic),
 `src/ModpackTools.Cli` (machine protocol/host), and `tests/compatibility` (fixtures
-and differential runs). Do not create these projects during the current evaluation.
+and differential runs). The user has now authorized creating these projects.
 Keep domain models independent of console, global shell state, and renderer callbacks.
 No background daemon/service initially: one core process per invocation, explicit
 per-process caches, and persisted caches with defined invalidation.
@@ -148,7 +148,7 @@ No public version number/tag/release or external install occurs in this phase.
 Keep 4.0.2 on `main` unchanged. All migration records and evaluation tooling stay
 on `codex/hybrid-core`; do not merge the whole branch into main. Follow the separate
 documentation commits and selective future integration in the commit policy.
-Implementation starts only on later explicit user instruction.
+Implementation was explicitly authorized after evaluation and reviewer design.
 
 ## Readiness versus future validation
 
