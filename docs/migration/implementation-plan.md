@@ -164,7 +164,14 @@ successful envelope and empty stderr, so no hypothetical dotted-key limit was ad
   format, Release/AOT without warnings, 25 differential cases, two environment
   fallbacks and 11 invalid contexts passed. Independent review passed 15 baseline
   pairs and 20 context cases. Version/protocol/catalog regressions pass. Public
-  current adapters are next, with PS module state sent explicitly.
+  current adapters follow, with PS module state sent explicitly.
+
+- PS current adapter: explicit module snapshot with object parameter preserving
+  null versus empty string; native machine path before renderer. Fifteen fresh-shell
+  snapshot checks and failure priority pass; version/catalog regressions pass.
+  Independent review passed 19 pairs (including legacy use then native current),
+  four corrupt-theme cases and two human/help controls. Pester: 250 passed,
+  zero failed, 55.92 seconds. Current does not change parent session.
 
 No inventory, session mutation, resolver, native transaction or installed
 distribution exists yet. Catalog review does not prove their parity or performance.
