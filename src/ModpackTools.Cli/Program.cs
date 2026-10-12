@@ -41,6 +41,27 @@ try
         return 0;
     }
     if (command.Equals("project", StringComparison.OrdinalIgnoreCase) &&
+        commandArguments.FirstOrDefault()?.Equals("use", StringComparison.OrdinalIgnoreCase) == true &&
+        !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
+    {
+        if (options.Project is not null)
+            throw new DomainException("Option.ForbiddenCombination", "Option '--project' is not valid for this operation", "modpack project use <id>", target: options.Project);
+        if (commandArguments.Length != 2)
+            throw new DomainException("Command.InvalidArguments", "The command arguments do not match the expected syntax", "modpack project use <id>", targetData: commandArguments.Length == 1 ? null : new TextListTarget(commandArguments.Skip(1).ToArray()));
+        if (commandArguments[1].Length == 0)
+            throw new DomainException("Project.InvalidSelection", "The project ID cannot be empty", "modpack project use <id>", target: "");
+        var activeProject = context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject;
+        var effectiveId = ProjectSelection.EffectiveId(commandArguments[1], activeProject);
+        var configurationDirectory = Environment.GetEnvironmentVariable("MODPACKTOOLS_CONFIG_HOME");
+        if (string.IsNullOrWhiteSpace(configurationDirectory))
+            configurationDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModpackTools");
+        var catalog = ProjectReader.Discover(ConfigurationReader.ReadRoot(Path.GetFullPath(configurationDirectory)));
+        var selected = ProjectSelection.Find(catalog, effectiveId);
+        var envelope = new SessionEnvelope(1, true, command, commandArguments, new(selected.Id));
+        Console.WriteLine(JsonSerializer.Serialize(envelope, WireJsonContext.Default.SessionEnvelope));
+        return 0;
+    }
+    if (command.Equals("project", StringComparison.OrdinalIgnoreCase) &&
         commandArguments.FirstOrDefault()?.Equals("current", StringComparison.OrdinalIgnoreCase) == true &&
         !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
     {
@@ -89,7 +110,7 @@ catch (Exception exception) when (exception is IOException or UnauthorizedAccess
 }
 
 var failure = FailureEnvelope.Create(command, commandArguments,
-    Failure.From("Core.CapabilityUnavailable", "This native host currently supports version, project list and project current.", "InvalidOperation", null));
+    Failure.From("Core.CapabilityUnavailable", "This native host currently supports version, project list, project current and project use.", "InvalidOperation", null));
 Console.WriteLine(JsonSerializer.Serialize(failure, WireJsonContext.Default.FailureEnvelope));
 return 1;
 
