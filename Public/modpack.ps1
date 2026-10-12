@@ -15,8 +15,11 @@ function modpack {
         $script:CommandProjectId = $presentation.Project
         [void](Initialize-MpMachineContext -Enabled:$presentation.Json -NoHuman:$presentation.NoHuman -Command $Command -Arguments $Arguments)
         $nativePath = [Environment]::GetEnvironmentVariable('MODPACKTOOLS_CORE_PATH')
-        if ($presentation.Json -and $presentation.NoHuman -and $Command -eq '--version' -and -not [string]::IsNullOrWhiteSpace($nativePath)) {
-            $native = Invoke-MpNativeVersion -Executable $nativePath -Arguments $tokens
+        $nativeCapability = if ($Command -eq '--version') { 'version' }
+            elseif ($Command -eq 'project' -and $Arguments.Count -gt 0 -and $Arguments[0] -eq 'list' -and $Arguments -notcontains '--help') { 'project-list' }
+            else { $null }
+        if ($presentation.Json -and $presentation.NoHuman -and $nativeCapability -and -not [string]::IsNullOrWhiteSpace($nativePath)) {
+            $native = Invoke-MpNativeCommand -Executable $nativePath -Arguments $tokens -Capability $nativeCapability
             Write-MpMachineEnvelope $native
             if (-not $native.ok) { Throw-MpNativeFailure $native.error }
             return
