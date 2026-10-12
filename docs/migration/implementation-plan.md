@@ -132,7 +132,7 @@ version/-V as first token; leading presentation options remain legacy.
   full v9 corpus was not rerun. E01-E03 are recorded diagnostic exceptions.
   White-box review closed numeric conversion and parser-recovery findings.
   Release build/AOT publication/format checks were warning-free; protocol/version
-  regressions passed. Project list is not switched in public adapters yet.
+  regressions passed. At this checkpoint, public adapters still used legacy catalogs.
 
 Tomlyn recursion was tested with 5000 nested arrays: before preflight it terminated
 the native process with StackOverflowException. Final resource tests produce a
@@ -140,6 +140,15 @@ structured failure, including malformed strings/delimiters that could otherwise
 hide nesting. Separate valid bracket-string/comment controls pass. Two final native
 probes with 5000 dotted-key segments (root key and table header) completed with one
 successful envelope and empty stderr, so no hypothetical dotted-key limit was added.
+
+- `373a65b`: PS machine project catalogs dispatch before presentation and
+  validate typed nullable project fields using shared native transport. Independent
+  review: 11 machine pairs, 4 corrupt-theme cases and 2 exact human/help pairs.
+  Fresh-shell checks prove no renderer/legacy reader execution. Pester 4.10.1:
+  all 250 passed in 38.16 seconds after rerunning outside the sandbox. The isolated
+  attempt stalled before the first It; an isolated microtrace and an outside CLI
+  run (13 passed in 1.77 seconds) identified an environment-dependent Pester setup
+  problem, not a product regression. Exact registry cause was not asserted.
 
 No inventory, session selection, resolver, native transaction or installed
 distribution exists yet. Catalog review does not prove their parity or performance.
