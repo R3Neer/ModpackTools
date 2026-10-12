@@ -43,3 +43,12 @@ Separating domain data from presentation removes that erroneous failure. Nested
 projects are still excluded, so a nested-only root also returns the empty catalog.
 Black-box comparison records this exception explicitly; it must not normalize it
 away as a supposedly identical result. Root/configuration errors remain errors.
+
+## E04: empty project selection has a domain diagnostic
+
+`project use ''` returns ModpackTools.Project.InvalidSelection, InvalidArgument,
+an empty-string target and a `modpack project use <id>` hint. Legacy leaks a
+mandatory-string parameter-binding failure before project resolution. An explicit
+domain failure makes this diagnosable and stable without changing session state.
+Whitespace-only input remains distinct: it falls back to the active session, as
+legacy does. Null argument tokens are protocol failures, not empty selections.

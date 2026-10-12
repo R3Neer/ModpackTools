@@ -173,5 +173,14 @@ successful envelope and empty stderr, so no hypothetical dotted-key limit was ad
   four corrupt-theme cases and two human/help controls. Pester: 250 passed,
   zero failed, 55.92 seconds. Current does not change parent session.
 
+- Nu current adapter: strict nullable session response and explicit environment
+  snapshot, without parent mutation. Self-contained fresh-shell version/catalog/
+  current checks and syntax verification pass. Independent review: 21 corpus
+  pairs, four corrupt-theme cases, four final targeted regressions and one human
+  current control. Help/leading presentation flags keep their legacy path.
+
+Next reviewed selection boundary: project use, with E04 and PS/Nu parent-state
+ownership documented before implementation.
+
 No inventory, session mutation, resolver, native transaction or installed
 distribution exists yet. Catalog review does not prove their parity or performance.

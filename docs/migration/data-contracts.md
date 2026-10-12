@@ -92,3 +92,21 @@ environment. Native current preserves command spelling and validates forbidden
 --project before extra positional arguments, like PS. Help stays with legacy
 until native human presentation is implemented. No artificial domain service is
 needed just to echo a typed immutable snapshot.
+
+## Project use / selection
+
+`ProjectSelection.EffectiveId(requestedId, activeProject) -> string` computes
+selection without reading configuration: nonblank input wins without trimming;
+otherwise session is used. Empty use input fails with E04 before fallback.
+Missing/whitespace effective selection gives Project.NotSelected before disk IO.
+`ProjectSelection.Find(catalog, effectiveId) -> ProjectContext` performs
+case-insensitive matching, preserving the descriptor ID in the selected result.
+Discovery/duplicate errors precede not-found once a nonblank selection exists.
+
+Use validates forbidden global project then exactly one positional argument.
+Single `--` or unknown option-looking token is a literal ID at this boundary,
+matching the existing operation. It returns only active_project; no project write.
+PS changes module state after validated success. Nu retains its existing
+case-sensitive parent update condition: exactly project/use updates environment,
+other casing still returns success without changing the parent. Help and errors
+leave prior selection intact. A change to that successful quirk is not E04.
