@@ -81,7 +81,7 @@ def owns-native-command [args: list<string>] {
     let command = ($args | get --optional 0 | default '')
     if $command in ['--version' '-V'] { return true }
     let operation = ($args | get --optional 1 | default '')
-    (($command | str lowercase) == 'project') and (($operation | str lowercase) == 'list') and not ($args | any {|token| $token in ['--help' '-h'] })
+    (($command | str lowercase) == 'project') and (($operation | str lowercase) in ['list' 'current']) and not ($args | any {|token| $token in ['--help' '-h'] })
 }
 
 def validate-string-fields [value: any, names: list<string>, nullable: bool = false] {
@@ -106,7 +106,11 @@ def invoke-native-command [args: list<string>] {
     }
     let native_args = if '--json' in $args { $args } else { $args | append '--json' }
     let request_path = ($nu.temp-dir | path join $'modpacktools-((random uuid)).native.json')
-    {schema_version: 1, arguments: $native_args} | to json | save --force $request_path
+    mut request = {schema_version: 1, arguments: $native_args}
+    if (($args.0 | str lowercase) == 'project') and (($args | get --optional 1 | default '' | str lowercase) == 'current') {
+        $request = ($request | insert context {active_project: $env.MODPACKTOOLS_PROJECT?})
+    }
+    $request | to json | save --force $request_path
     let capture = try {
         ^$executable --request-path $request_path | complete
     } catch {|err|
@@ -137,6 +141,11 @@ def invoke-native-command [args: list<string>] {
             if $result.command != '--version' or ((field (field (field $result data {}) version {}) version null | describe) != 'string') {
                 error make { msg: 'ModpackTools native executable returned an invalid version result.' }
             }
+        } else if ($args.1 | str lowercase) == 'current' {
+            if $result.command != $args.0 or ($result.arguments | length) != 1 or $result.arguments.0 != $args.1 {
+                error make { msg: 'ModpackTools native executable returned an invalid session result.' }
+            }
+            validate-string-fields (field $result data {}) ['active_project'] true
         } else {
             let projects = (field (field $result data {}) projects {})
             validate-string-fields $projects ['root']
