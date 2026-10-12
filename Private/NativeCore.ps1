@@ -17,17 +17,17 @@ function Invoke-MpNativeVersion {
         $process = [Diagnostics.Process]::Start($start)
         $stdout = $process.StandardOutput.ReadToEndAsync()
         $stderr = $process.StandardError.ReadToEndAsync()
-        if (-not $process.WaitForExit(30000)) { $process.Kill($true); $process.WaitForExit(); throw 'Native version timed out' }
+        if (-not $process.WaitForExit(30000)) { $process.Kill($true); $process.WaitForExit(); Throw-MpNativeProtocolError 'Native version timed out' }
         $text = $stdout.GetAwaiter().GetResult()
-        if ($stderr.GetAwaiter().GetResult() -cne '' -or ($text.Trim() -split '\r?\n').Count -ne 1) { throw 'Invalid native output transport' }
+        if ($stderr.GetAwaiter().GetResult() -cne '' -or ($text.Trim() -split '\r?\n').Count -ne 1) { Throw-MpNativeProtocolError 'Invalid native output transport' }
         $result = $text | ConvertFrom-Json -Depth 30
-        if (($result.schema_version -isnot [long] -and $result.schema_version -isnot [int]) -or $result.schema_version -ne 1 -or $result.ok -isnot [bool] -or $result.command -isnot [string] -or $result.arguments -isnot [array]) { throw 'Invalid native result envelope' }
-        if (@($result.arguments | Where-Object { $_ -isnot [string] }).Count) { throw 'Invalid native argument types' }
+        if (($result.schema_version -isnot [long] -and $result.schema_version -isnot [int]) -or $result.schema_version -ne 1 -or $result.ok -isnot [bool] -or $result.command -isnot [string] -or $result.arguments -isnot [array]) { Throw-MpNativeProtocolError 'Invalid native result envelope' }
+        if (@($result.arguments | Where-Object { $_ -isnot [string] }).Count) { Throw-MpNativeProtocolError 'Invalid native argument types' }
         if ($result.ok) {
-            if ($process.ExitCode -ne 0 -or $result.command -ine '--version' -or $result.data.version.version -isnot [string] -or $result.PSObject.Properties['error']) { throw 'Invalid native version result' }
+            if ($process.ExitCode -ne 0 -or $result.command -ine '--version' -or $result.data.version.version -isnot [string] -or $result.PSObject.Properties['error']) { Throw-MpNativeProtocolError 'Invalid native version result' }
         } else {
-            if ($process.ExitCode -notin @(1,2) -or $result.error.id -isnot [string] -or $result.error.message -isnot [string] -or $result.error.category -isnot [string]) { throw 'Invalid native error result' }
-            if ($result.PSObject.Properties['data'] -or -not [Enum]::IsDefined([Management.Automation.ErrorCategory], [string]$result.error.category)) { throw 'Invalid native failure category or fields' }
+            if ($process.ExitCode -notin @(1,2) -or $result.error.id -isnot [string] -or $result.error.message -isnot [string] -or $result.error.category -isnot [string]) { Throw-MpNativeProtocolError 'Invalid native error result' }
+            if ($result.PSObject.Properties['data'] -or -not [Enum]::IsDefined([Management.Automation.ErrorCategory], [string]$result.error.category)) { Throw-MpNativeProtocolError 'Invalid native failure category or fields' }
         }
         return $result
     } catch {
@@ -41,12 +41,7 @@ function Invoke-MpNativeVersion {
     }
 }
 
-function Throw-MpNativeFailure {
-    param($Failure)
-    $exception = [InvalidOperationException]::new([string]$Failure.message)
-    $exception.Data['ModpackTools.ExpectedError'] = $true
-    $exception.Data['ModpackTools.ErrorId'] = [string]$Failure.id
-    $exception.Data['ModpackTools.ErrorCategory'] = [int][Management.Automation.ErrorCategory]([string]$Failure.category)
-    $exception.Data['ModpackTools.TargetObject'] = $Failure.target
-    throw $exception
+function Throw-MpNativeProtocolError {
+    param([string]$Message)
+    Throw-MpError -Message $Message -Hint 'verify MODPACKTOOLS_CORE_PATH and the native package' -ErrorId 'Core.ProtocolViolation' -Category InvalidData
 }
