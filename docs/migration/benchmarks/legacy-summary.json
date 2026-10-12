@@ -1,0 +1,98 @@
+{
+  "utc": "2026-10-12T19:37:08.3794373Z",
+  "repository": "C:\\Users\\Usuario\\Desktop\\ReorganizacionPC\\work\\ModpackTools",
+  "project": "D:\\Minecraft\\VanillaPlus-26.2",
+  "pwsh": "7.6.6",
+  "nu": "0.116.2",
+  "samples": 21,
+  "process_summary": [
+    {
+      "name": "startup",
+      "n": 21,
+      "first_ms": 429.4137,
+      "median_ms": 368.4587,
+      "p95_ms": 434.9534,
+      "max_peak_mib": null
+    },
+    {
+      "name": "import",
+      "n": 21,
+      "first_ms": 2189.7884,
+      "median_ms": 909.9176,
+      "p95_ms": 1347.394,
+      "max_peak_mib": null
+    },
+    {
+      "name": "version",
+      "n": 21,
+      "first_ms": 1461.9621,
+      "median_ms": 1281.0276,
+      "p95_ms": 2306.8048,
+      "max_peak_mib": null
+    },
+    {
+      "name": "bridge-version",
+      "n": 21,
+      "first_ms": 1279.8324,
+      "median_ms": 1143.6928,
+      "p95_ms": 1365.217,
+      "max_peak_mib": null
+    },
+    {
+      "name": "bridge-inventory",
+      "n": 21,
+      "first_ms": 7278.3701,
+      "median_ms": 3983.5413,
+      "p95_ms": 7254.0156,
+      "max_peak_mib": null
+    },
+    {
+      "name": "nu-version",
+      "n": 21,
+      "first_ms": 3058.7897,
+      "median_ms": 2810.4939,
+      "p95_ms": 3521.0011,
+      "max_peak_mib": null
+    },
+    {
+      "name": "nu-inventory",
+      "n": 21,
+      "first_ms": 5308.1627,
+      "median_ms": 5364.7654,
+      "p95_ms": 5746.7377,
+      "max_peak_mib": null
+    }
+  ],
+  "phase_summary": [
+    {
+      "name": "inventory",
+      "n": 6,
+      "first_ms": 478.2231,
+      "median_ms": 319.0221,
+      "p95_ms": 322.1478
+    },
+    {
+      "name": "tree-hash",
+      "n": 6,
+      "first_ms": 136.1902,
+      "median_ms": 113.2301,
+      "p95_ms": 118.3804
+    },
+    {
+      "name": "health-cache-miss",
+      "n": 6,
+      "first_ms": 1391.0287,
+      "median_ms": 1002.0713,
+      "p95_ms": 1126.4997
+    },
+    {
+      "name": "health-cache-hit",
+      "n": 6,
+      "first_ms": 153.3653,
+      "median_ms": 144.7164,
+      "p95_ms": 165.9588
+    }
+  ],
+  "raw_path": "C:\\Users\\Usuario\\Desktop\\ReorganizacionPC\\assessment\\run-c8956343e211422e921f126b19aece25\\raw.json",
+  "note": "Sequential exploratory samples; OS cache not evicted; first run is not guaranteed disk-cold. Some earlier samples overlapped diagnostic compiler work. Post-exit memory zero observations are unavailable, not zero; raw preserved. No network verification."
+}

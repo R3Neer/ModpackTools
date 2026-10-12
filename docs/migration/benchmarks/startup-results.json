@@ -1,0 +1,609 @@
+{
+  "utc": "2026-10-12T19:49:46.5749947Z",
+  "samples": 31,
+  "summary": [
+    {
+      "language": "rust",
+      "n": 31,
+      "first_ms": 58.618,
+      "median_ms": 33.0,
+      "p95_ms": 42.8527,
+      "max_peak_mib": null
+    },
+    {
+      "language": "go",
+      "n": 31,
+      "first_ms": 46.5075,
+      "median_ms": 33.7018,
+      "p95_ms": 42.7182,
+      "max_peak_mib": null
+    },
+    {
+      "language": "dotnet_aot",
+      "n": 31,
+      "first_ms": 46.0606,
+      "median_ms": 39.2183,
+      "p95_ms": 44.5618,
+      "max_peak_mib": null
+    }
+  ],
+  "raw": [
+    {
+      "language": "rust",
+      "sample": 0,
+      "wall_ms": 58.618,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 0,
+      "wall_ms": 46.5075,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 0,
+      "wall_ms": 46.0606,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 1,
+      "wall_ms": 36.5999,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 1,
+      "wall_ms": 34.012,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 1,
+      "wall_ms": 38.1372,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 2,
+      "wall_ms": 30.5113,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 2,
+      "wall_ms": 33.7706,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 2,
+      "wall_ms": 40.482,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 3,
+      "wall_ms": 32.2538,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 3,
+      "wall_ms": 36.1809,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 3,
+      "wall_ms": 40.7564,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 4,
+      "wall_ms": 38.6834,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 4,
+      "wall_ms": 32.0554,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 4,
+      "wall_ms": 37.4357,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 5,
+      "wall_ms": 34.8996,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 5,
+      "wall_ms": 35.6331,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 5,
+      "wall_ms": 39.5055,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 6,
+      "wall_ms": 38.0111,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 6,
+      "wall_ms": 32.1909,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 6,
+      "wall_ms": 39.2183,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 7,
+      "wall_ms": 35.5006,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 7,
+      "wall_ms": 35.5308,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 7,
+      "wall_ms": 41.483,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 8,
+      "wall_ms": 36.7419,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 8,
+      "wall_ms": 37.7489,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 8,
+      "wall_ms": 39.6794,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 9,
+      "wall_ms": 32.5818,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 9,
+      "wall_ms": 34.3345,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 9,
+      "wall_ms": 38.9391,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 10,
+      "wall_ms": 28.9271,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 10,
+      "wall_ms": 37.7919,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 10,
+      "wall_ms": 37.7786,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 11,
+      "wall_ms": 33.7113,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 11,
+      "wall_ms": 33.7018,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 11,
+      "wall_ms": 41.7574,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 12,
+      "wall_ms": 30.8568,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 12,
+      "wall_ms": 31.9523,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 12,
+      "wall_ms": 36.9702,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 13,
+      "wall_ms": 32.5055,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 13,
+      "wall_ms": 32.648,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 13,
+      "wall_ms": 36.147,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 14,
+      "wall_ms": 32.548,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 14,
+      "wall_ms": 34.3429,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 14,
+      "wall_ms": 38.7001,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 15,
+      "wall_ms": 32.4588,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 15,
+      "wall_ms": 50.695,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 15,
+      "wall_ms": 46.8887,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 16,
+      "wall_ms": 54.4962,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 16,
+      "wall_ms": 32.1917,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 16,
+      "wall_ms": 35.9312,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 17,
+      "wall_ms": 33.371,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 17,
+      "wall_ms": 35.4507,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 17,
+      "wall_ms": 43.9823,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 18,
+      "wall_ms": 30.9412,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 18,
+      "wall_ms": 30.292,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 18,
+      "wall_ms": 36.2509,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 19,
+      "wall_ms": 33.114,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 19,
+      "wall_ms": 33.5925,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 19,
+      "wall_ms": 37.0637,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 20,
+      "wall_ms": 32.6913,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 20,
+      "wall_ms": 32.2905,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 20,
+      "wall_ms": 35.6465,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 21,
+      "wall_ms": 33.3759,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 21,
+      "wall_ms": 33.4477,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 21,
+      "wall_ms": 42.082,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 22,
+      "wall_ms": 29.2968,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 22,
+      "wall_ms": 33.5294,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 22,
+      "wall_ms": 37.029,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 23,
+      "wall_ms": 30.6242,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 23,
+      "wall_ms": 32.3341,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 23,
+      "wall_ms": 36.7039,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 24,
+      "wall_ms": 32.4046,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 24,
+      "wall_ms": 42.7182,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 24,
+      "wall_ms": 42.2268,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 25,
+      "wall_ms": 33.865,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 25,
+      "wall_ms": 35.1822,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 25,
+      "wall_ms": 37.2132,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 26,
+      "wall_ms": 33.0,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 26,
+      "wall_ms": 33.5112,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 26,
+      "wall_ms": 44.5618,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 27,
+      "wall_ms": 32.7002,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 27,
+      "wall_ms": 33.8655,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 27,
+      "wall_ms": 42.3859,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 28,
+      "wall_ms": 31.0047,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 28,
+      "wall_ms": 32.2731,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 28,
+      "wall_ms": 37.6772,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 29,
+      "wall_ms": 36.6092,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 29,
+      "wall_ms": 32.8783,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 29,
+      "wall_ms": 40.382,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 30,
+      "wall_ms": 34.9973,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 30,
+      "wall_ms": 32.461,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 30,
+      "wall_ms": 42.0475,
+      "peak_bytes": null
+    },
+    {
+      "language": "rust",
+      "sample": 31,
+      "wall_ms": 42.8527,
+      "peak_bytes": null
+    },
+    {
+      "language": "go",
+      "sample": 31,
+      "wall_ms": 37.6598,
+      "peak_bytes": null
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 31,
+      "wall_ms": 40.9709,
+      "peak_bytes": null
+    }
+  ],
+  "note": "Only a fixed JSON write; no product implementation. C# is Native AOT Release win-x64. Interleaved warm OS-cache samples; not evidence of resolver/inventory performance. Post-exit peak memory unavailable is recorded as null."
+}
