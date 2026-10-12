@@ -4,9 +4,9 @@ These instructions govern the migration branch, not the released product.
 
 - Work only on `codex/hybrid-core` in its isolated checkout. Do not edit, commit,
   merge, install, release, or push to `main` as part of this migration.
-- The current user-authorized phase is evaluation, measurements, and migration
-  documentation. Do not implement product functionality until the user explicitly
-  authorizes implementation. Diagnostic benchmark fixtures are not product code.
+- The user authorized implementation and two independent reviewers on 2026-10-12.
+  Implement the agreed migration with native checkpoints; diagnostic fixtures
+  remain distinct from product functionality.
 - Read `docs/migration/commit-policy.md` and `docs/migration/decisions.md` before
   implementation. Follow the compatibility contract and comparison matrix.
 - Commit a coherent, newly working capability immediately after its applicable
