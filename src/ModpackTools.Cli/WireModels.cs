@@ -5,7 +5,10 @@ namespace ModpackTools.Cli;
 
 internal sealed record VersionData(VersionInfo Version);
 internal sealed record VersionEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, VersionData Data);
-internal sealed record FailureEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, Failure Error);
+internal sealed record FailureEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, Failure Error)
+{
+    public static FailureEnvelope Create(string command, string[] arguments, Failure error) => new(1, false, command, arguments, error);
+}
 internal sealed record Failure(string Id, string Message, string Category, string? Target);
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower)]

@@ -15,20 +15,39 @@ try
 }
 catch (Exception exception) when (exception is ProtocolException or JsonException or IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
 {
-    var invalid = new FailureEnvelope(1, false, "", [],
+    var invalid = FailureEnvelope.Create("", [],
         new("Core.InvalidRequest", exception.Message, "InvalidData", null));
     Console.WriteLine(JsonSerializer.Serialize(invalid, WireJsonContext.Default.FailureEnvelope));
     return 2;
 }
 
-if (args is ["--version"])
+var command = "";
+string[] commandArguments = [];
+try
 {
-    var envelope = new VersionEnvelope(1, true, "--version", [], new(ProductVersion.Current));
-    Console.WriteLine(JsonSerializer.Serialize(envelope, WireJsonContext.Default.VersionEnvelope));
-    return 0;
+    var options = PresentationOptions.Parse(args);
+    command = options.Arguments.FirstOrDefault() ?? "";
+    commandArguments = options.Arguments.Skip(1).ToArray();
+    if (command.Equals("--version", StringComparison.OrdinalIgnoreCase))
+    {
+        var version = ProductVersion.Read(commandArguments, options.Project);
+        var envelope = new VersionEnvelope(1, true, command, commandArguments, new(version));
+        Console.WriteLine(JsonSerializer.Serialize(envelope, WireJsonContext.Default.VersionEnvelope));
+        return 0;
+    }
+}
+catch (DomainException exception)
+{
+    var message = exception.Message.Trim();
+    if (!message.EndsWith('.') && !message.EndsWith('!') && !message.EndsWith('?')) message += ".";
+    message += Environment.NewLine + "Try: " + exception.Hint;
+    var domainError = FailureEnvelope.Create(command, commandArguments,
+        new(exception.Id, message, exception.Category, exception.Target));
+    Console.WriteLine(JsonSerializer.Serialize(domainError, WireJsonContext.Default.FailureEnvelope));
+    return 1;
 }
 
-var failure = new FailureEnvelope(1, false, args.FirstOrDefault() ?? "", args.Skip(1).ToArray(),
+var failure = FailureEnvelope.Create(command, commandArguments,
     new("Core.CapabilityUnavailable", "This native host currently supports --version only.", "InvalidOperation", null));
 Console.WriteLine(JsonSerializer.Serialize(failure, WireJsonContext.Default.FailureEnvelope));
 return 1;
