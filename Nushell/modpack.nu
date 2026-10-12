@@ -75,12 +75,31 @@ def invoke-bridge [request: string] {
     $stdout
 }
 
-def owns-native-version [args: list<string>] {
+def owns-native-command [args: list<string>] {
     let executable = ($env.MODPACKTOOLS_CORE_PATH? | default '')
-    ($executable != '') and (wants-machine-output $args) and (($args | get --optional 0 | default '') in ['--version' '-V'])
+    if ($executable == '') or not (wants-machine-output $args) { return false }
+    let command = ($args | get --optional 0 | default '')
+    if $command in ['--version' '-V'] { return true }
+    let operation = ($args | get --optional 1 | default '')
+    (($command | str lowercase) == 'project') and (($operation | str lowercase) == 'list') and not ($args | any {|token| $token in ['--help' '-h'] })
 }
 
-def invoke-native-version [args: list<string>] {
+def validate-string-fields [value: any, names: list<string>, nullable: bool = false] {
+    if (($value | describe) !~ '^record') {
+        error make { msg: 'ModpackTools native executable returned an invalid record.' }
+    }
+    for name in $names {
+        if not ($name in ($value | columns)) {
+            error make { msg: $'ModpackTools native executable omitted field ($name).' }
+        }
+        let item = ($value | get $name)
+        if ($item != null or not $nullable) and (($item | describe) != 'string') {
+            error make { msg: $'ModpackTools native executable returned an invalid field ($name).' }
+        }
+    }
+}
+
+def invoke-native-command [args: list<string>] {
     let executable = $env.MODPACKTOOLS_CORE_PATH
     if not ($executable | path exists) {
         error make { msg: 'The configured ModpackTools native executable does not exist.' }
@@ -95,25 +114,46 @@ def invoke-native-version [args: list<string>] {
         error make { msg: $'Could not run the ModpackTools native executable: ($err.msg)' }
     }
     rm --force $request_path
-    if ($capture.stderr | str trim) != '' {
+    if $capture.stderr != '' {
         error make { msg: $'ModpackTools native transport failed: ($capture.stderr)' }
     }
     let result = try { $capture.stdout | from json } catch {
         error make { msg: 'ModpackTools native executable returned invalid JSON.' }
     }
-    if (field $result schema_version 0) != 1 {
+    if ((field $result schema_version 0 | describe) != 'int') or (field $result schema_version 0) != 1 {
         error make { msg: 'ModpackTools native executable returned an unsupported result schema.' }
     }
     if (($result | describe) !~ '^record') or ((field $result ok null | describe) != 'bool') or ((field $result command null | describe) != 'string') or ((field $result arguments null | describe) !~ '^list') {
         error make { msg: 'ModpackTools native executable returned an invalid result envelope.' }
     }
+    if ($result.arguments | any {|token| ($token | describe) != 'string' }) {
+        error make { msg: 'ModpackTools native executable returned invalid argument types.' }
+    }
     if (field $result ok false) {
-        if ((field (field (field $result data {}) version {}) version null | describe) != 'string') {
-            error make { msg: 'ModpackTools native executable returned an invalid version result.' }
+        if 'error' in ($result | columns) {
+            error make { msg: 'ModpackTools native executable returned contradictory success fields.' }
+        }
+        if ($args | get 0) in ['--version' '-V'] {
+            if $result.command != '--version' or ((field (field (field $result data {}) version {}) version null | describe) != 'string') {
+                error make { msg: 'ModpackTools native executable returned an invalid version result.' }
+            }
+        } else {
+            let projects = (field (field $result data {}) projects {})
+            validate-string-fields $projects ['root']
+            if $result.command != $args.0 or ($result.arguments | length) != 1 or $result.arguments.0 != $args.1 or ((field $projects items null | describe) !~ '^(list|table)') {
+                error make { msg: 'ModpackTools native executable returned an invalid project catalog.' }
+            }
+            for item in $projects.items {
+                validate-string-fields $item ['id' 'root' 'output_name']
+                validate-string-fields $item ['name' 'version' 'minecraft' 'loader' 'loader_version'] true
+            }
         }
     } else {
+        if 'data' in ($result | columns) {
+            error make { msg: 'ModpackTools native executable returned contradictory failure fields.' }
+        }
         let failure = (field $result error {})
-        if ((field $failure id null | describe) != 'string') or ((field $failure message null | describe) != 'string') or ((field $failure category null | describe) != 'string') {
+        if (($failure | describe) !~ '^record') or not ('target' in ($failure | columns)) or ((field $failure id null | describe) != 'string') or ((field $failure message null | describe) != 'string') or ((field $failure category null | describe) != 'string') {
             error make { msg: 'ModpackTools native executable returned an invalid error result.' }
         }
     }
@@ -197,7 +237,7 @@ export def --env --wrapped main [...args: string] {
         arguments: $args
         human_stderr_terminal: (is-terminal --stderr)
     } | to json)
-    let raw = if (owns-native-version $args) { invoke-native-version $args } else { invoke-bridge $request }
+    let raw = if (owns-native-command $args) { invoke-native-command $args } else { invoke-bridge $request }
     let text = ($raw | str trim)
 
     if $text == '' {
