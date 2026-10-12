@@ -109,7 +109,6 @@ public behavior/distribution changes are finalized.
   cases. Independent reviewer passed 16 cases with only authorized E01 normalized.
   New failures consistently expose array arguments; domain IDs/categories retained.
 
-No inventory, resolver, native transaction or installed distribution exists yet.
 - `479c137`: Nu machine version with explicit core selection; fresh-shell tests
   with PS removed from PATH. Independent reviewer passed 9 differential pairs.
 - `2c00559`: PS machine version before console initialization; fresh-shell tests
@@ -120,3 +119,27 @@ Human version and non-version commands still use legacy. Core selection currentl
 uses explicit `MODPACKTOOLS_CORE_PATH`; this is a development/coexistence seam,
 not the completed installed manifest design. Nu ownership currently requires
 version/-V as first token; leading presentation options remain legacy.
+
+- `1a438f0`: data-only PSD1 reader with immutable typed literals, resource limits
+  and no PowerShell execution. Independent black-box corpus: 35 fixtures, including
+  19 exact successful comparisons, real file copies and explicit rejections.
+- `d3c2280`: PS native transport diagnostics use shared expected-error helpers;
+  the pinned Pester 4.10.1 suite passed all 250 tests after correction.
+- `36f3b3b`: native `project list` with bounded PSD1/TOML readers, typed project
+  catalog and preserved nullable/numeric/duplicate target semantics. 21 native
+  differential cases and 7 explicit error/empty/resource cases passed. Independent
+  black-box corpus: 61 cases on v6, then 12 targeted final regressions on v9;
+  full v9 corpus was not rerun. E01-E03 are recorded diagnostic exceptions.
+  White-box review closed numeric conversion and parser-recovery findings.
+  Release build/AOT publication/format checks were warning-free; protocol/version
+  regressions passed. Project list is not switched in public adapters yet.
+
+Tomlyn recursion was tested with 5000 nested arrays: before preflight it terminated
+the native process with StackOverflowException. Final resource tests produce a
+structured failure, including malformed strings/delimiters that could otherwise
+hide nesting. Separate valid bracket-string/comment controls pass. Two final native
+probes with 5000 dotted-key segments (root key and table header) completed with one
+successful envelope and empty stderr, so no hypothetical dotted-key limit was added.
+
+No inventory, session selection, resolver, native transaction or installed
+distribution exists yet. Catalog review does not prove their parity or performance.
