@@ -150,5 +150,16 @@ successful envelope and empty stderr, so no hypothetical dotted-key limit was ad
   run (13 passed in 1.77 seconds) identified an environment-dependent Pester setup
   problem, not a product regression. Exact registry cause was not asserted.
 
+- `852bc4c`: Nu machine project catalogs bypass PowerShell with strict typed
+  envelopes, nullable fields and case-sensitive legacy unwrapping. Fresh-shell
+  Nu syntax/catalog/version gates pass with PATH empty. Independent review passed
+  14 corpus cases, 4 extras and 5 corrupt-theme cases on the first revision;
+  a subsequent hardening enforces empty stderr and exact command/operation
+  spelling correlation. Seven independent fake-host transport probes pass;
+  final own-artifact corpus repetition is still pending at this record.
+
+Next reviewed contract: typed session snapshot and native project current,
+with parent-shell state ownership and explicit-null versus absent-context semantics.
+
 No inventory, session selection, resolver, native transaction or installed
 distribution exists yet. Catalog review does not prove their parity or performance.

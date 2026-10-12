@@ -29,8 +29,9 @@ added just to fill the diagram. Domain never depends on CLI, console or PS state
 the public success envelope. Separate success/failure DTOs preserve absent fields
 and explicit null error targets. Source-generated JSON metadata is required.
 
-Internal request v1: object with exactly `schema_version` (integer 1) and
-`arguments` (array of strings). Unknown/duplicate fields, null/non-string arguments,
+Internal request v1: object with required `schema_version` (integer 1) and
+`arguments` (array of strings), and optional typed session `context` described in
+[data-contracts.md](data-contracts.md). Unknown/duplicate fields, null/non-string arguments,
 NUL, unsupported schema and invalid UTF-8/JSON fail with native exit 2. Maximum
 request size is 1 MiB, nesting 16 and argument count 1024. UTF-8 BOM accepted.
 Invocation: `modpacktools --request-path <file>`, with no additional host arguments.

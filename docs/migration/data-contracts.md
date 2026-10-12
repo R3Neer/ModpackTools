@@ -71,3 +71,24 @@ are insufficient: a native probe with 5000 nested arrays terminated Tomlyn with
 StackOverflowException. Such inputs now produce Project.InvalidManifest rather
 than terminating the process. The scanner only imposes resource limits; Tomlyn
 remains the syntax validator. Long bracket-containing strings are not deep arrays.
+
+## Session snapshot / project current
+
+`InvocationContext(string? ActiveProject)` is a session snapshot, not persistent
+configuration. `project current` returns `data.active_project` unchanged, including
+null, empty, whitespace and stale IDs. It performs no config/discovery validation.
+The adapter owns changes to its parent session; a child process cannot change it.
+
+The internal schema-1 request gains optional `context`, an object with exactly the
+required `active_project` field (string or null). Absent context reads the direct
+host's MODPACKTOOLS_PROJECT environment; present null active_project suppresses
+that fallback. Context itself cannot be null. Unknown/duplicate nested fields,
+wrong types, NUL and invalid Unicode are protocol errors. Existing byte/depth and
+argument limits apply. This additive request field leaves old producers valid.
+
+PS must send its actual script:ActiveProjectId, including null: legacy project use
+updates module state without changing the environment. Nu sends its own session
+environment. Native current preserves command spelling and validates forbidden
+--project before extra positional arguments, like PS. Help stays with legacy
+until native human presentation is implemented. No artificial domain service is
+needed just to echo a typed immutable snapshot.
