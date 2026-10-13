@@ -4,6 +4,46 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Text.Json;
 
+if (args.FirstOrDefault() == "--inspect-psd-lookup")
+{
+    try
+    {
+        if (args.Length is not (3 or 5) || args.Length == 5 && args[3] != "--culture") throw new ArgumentException("Use --inspect-psd-lookup <file> <query-paths-json-array> [--culture value].");
+        if (args.Length == 5) CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(args[4]);
+        var imported = PsdReader.Parse(File.ReadAllText(args[1]));
+        using var queries = JsonDocument.Parse(args[2], new JsonDocumentOptions { MaxDepth = 16 });
+        using var bytes = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(bytes))
+        {
+            writer.WriteStartArray();
+            foreach (var path in queries.RootElement.EnumerateArray())
+            {
+                PsdValue current = imported;
+                var found = true;
+                foreach (var key in path.EnumerateArray())
+                {
+                    if (current is PsdTable objectValue && key.ValueKind == JsonValueKind.String && objectValue.Entries.TryGetValue(key.GetString()!, out var field)) current = field;
+                    else if (current is PsdArray array && key.TryGetInt32(out var index) && index >= 0 && index < array.Items.Length) current = array.Items[index];
+                    else { found = false; break; }
+                }
+                writer.WriteStartObject();
+                writer.WriteBoolean("found", found);
+                writer.WritePropertyName("value");
+                if (found) WriteData(writer, current); else writer.WriteNullValue();
+                writer.WriteEndObject();
+            }
+            writer.WriteEndArray();
+        }
+        Console.OpenStandardOutput().Write(bytes.GetBuffer(), 0, checked((int)bytes.Length));
+        return 0;
+    }
+    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or FormatException or InvalidOperationException or JsonException)
+    {
+        ManagedInspection.WriteFailure("Core.InputReadFailed", exception.Message, "InvalidData", null, "check PSD1 lookup inspection input", null);
+        return 2;
+    }
+}
+
 if (args.FirstOrDefault() == "--inspect-managed") return ManagedInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-local-zips") return LocalZipInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-jar-display") return JarDisplayInspection.Run(args);
@@ -96,8 +136,8 @@ foreach (var source in invalid)
 }
 var arrays = PsdReader.Parse("@{A=@(1,@(2,3));B=@(@(1,2),@(3,4));C=@(@(1,2));D=\"`u{41}`u{1F600}\"}");
 var distinctKeys = PsdReader.Parse("@{First=@{'é'=1};Second=@{'e\u0301'=2};'ß'=1;'ss'=2;'MOD'=1;'ＭＯＤ'=2}");
-if (distinctKeys.Entries.Count != 6 || ((PsdTable)distinctKeys.Entries["First"]).Entries.ContainsKey("e\u0301"))
-    throw new InvalidOperationException("Import validation changed runtime key lookup or independent table scopes");
+if (distinctKeys.Entries.Count != 6 || !((PsdTable)distinctKeys.Entries["First"]).Entries.ContainsKey("e\u0301"))
+    throw new InvalidOperationException("Imported lookup or independent table scopes changed");
 if (arrays.Entries["A"] is not PsdArray a || a.Items.Length != 2 || a.Items[1] is not PsdArray { Items.Length: 2 } ||
     arrays.Entries["B"] is not PsdArray b || b.Items.Length != 2 || b.Items.Any(item => item is not PsdArray { Items.Length: 2 }) ||
     arrays.Entries["C"] is not PsdArray c || c.Items.Length != 2 || c.Items[0] is not PsdNumber { Literal: "1" } ||
@@ -206,5 +246,6 @@ if (!numbered.Mods.Select(row => row.Number).SequenceEqual(new int?[] { 7, 6, 7,
 UpdateTargetContracts.Verify(rawSnapshot);
 BatchSelectorContracts.Verify();
 ClassificationTargetContracts.Verify(rawSnapshot);
+ImportedLookupContracts.Verify();
 Console.WriteLine($"PSD1 native contracts passed: {invalid.Length + 7 + limits.Length} rejected inputs, typed literals, nested arrays, bounded numeric extraction, immutable classification/reference/alias identities, {args.Length} files");
 return 0;

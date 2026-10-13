@@ -9,6 +9,7 @@ namespace ModpackTools.Core.Data;
 public sealed partial class PsdReader
 {
     private readonly string source;
+    private readonly StringComparer importedComparer = StringComparer.CurrentCultureIgnoreCase;
     private int position;
     private int nodes;
 
@@ -71,15 +72,15 @@ public sealed partial class PsdReader
 
     private PsdTable ReadTable(int depth)
     {
-        var entries = ImmutableDictionary.CreateBuilder<string, PsdValue>(StringComparer.OrdinalIgnoreCase);
-        // Import validation uses linguistic equality; runtime table lookup remains ordinal.
-        var importedKeys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+        var entries = ImmutableDictionary.CreateBuilder<string, PsdValue>(importedComparer);
+        // Literal syntax rejects ordinal duplicates before safe-value import.
+        var syntacticKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         while (true)
         {
             SkipTrivia();
             if (Take("}")) return new(entries.ToImmutable());
             var key = position < source.Length && source[position] is '\'' or '"' ? ReadString() : ReadKey();
-            if (!importedKeys.Add(key)) throw Error($"Duplicate data key '{key}'");
+            if (!syntacticKeys.Add(key)) throw Error($"Duplicate data key '{key}'");
             SkipTrivia();
             if (!Take("=")) throw Error("Expected '=' after data key");
             SkipTrivia();
