@@ -215,3 +215,16 @@ selection and true's help coercion. Use/current regression checks pass.
 
 No inventory, resolver, native transaction or installed
 distribution exists yet. Catalog review does not prove their parity or performance.
+
+- `2b619f5`: visible System-only projects are included; Hidden and System+Hidden
+  invalid projects remain excluded without parsing. Locked restore, format,
+  Release/NativeAOT without warnings, four differentials, protocol and Nu
+  regressions pass. Independent reviewer reproduced v12's exclusion and passed
+  v13's four cases with unchanged hashes and directory/file attributes.
+
+Next reviewed inventory checkpoint: the complete managed-content reader alone,
+then local/editorial/resource-order composition into RawInventorySnapshot. Native
+inspection tests make each internal capability observable without partial public
+content-list success. Independent baseline corpus prepared before code: 35 fixtures,
+including 29 successful reads and six interpreter binding failures recorded for
+E05/structured diagnostics. No new managed reader has been executed yet.

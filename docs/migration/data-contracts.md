@@ -130,3 +130,37 @@ array in ErrorRecord). Core stays string-only; no PowerShell object conversion i
 introduced into domain logic. NotFound and forbidden-context targets remain strings.
 PowerShell's existing boolean comparison makes a true positional value match the
 help token; preserve that fallback rather than treating it as a successful ID.
+
+## Managed Packwiz content / first inventory checkpoint
+
+`ManagedContentReader.Read(ProjectContext) -> ImmutableArray<ManagedContentItem>`
+reads mods/resourcepacks/shaderpacks metadata, with a closed ContentKind and
+immutable id/name/filename/side/version-id/metadata-path/pinned fields. Side remains
+open text. No local artifacts, editorial metadata, filtering, numbered references,
+health, cache, providers, presentation or writes are implied by this checkpoint.
+The native test-only host exposes --inspect-managed <project-root>; public content
+list remains legacy until its complete read-only flow is implemented.
+
+Preserve duplicate IDs and discovery order. Enumerate matched files in each folder
+by CurrentCultureIgnoreCase, then recurse depth-first in provider directory order.
+Skip Hidden, include System-only, skip directory links while allowing cloud reparse
+points without a link target. A live traversal probe confirmed that direct .NET
+recursive enumeration uses a different traversal order. The pinned
+[PowerShell provider source](https://raw.githubusercontent.com/PowerShell/PowerShell/v7.6.6/src/System.Management.Automation/namespaces/FileSystemProvider.cs)
+confirms its sorting, recursion and hidden/link policies.
+
+Parse each TOML once through bounded syntax nodes. Exact unquoted section headers
+identify update.modrinth/update.curseforge; quoted or array-table headers remain
+unselected. Modrinth string mod-id wins, then nonempty CurseForge string project-id,
+then packwiz: plus lowercase normalized metadata-relative path. Numeric provider
+IDs remain unselected. Missing/empty name uses metadata filename stem; side is
+lowercased or unknown. Only Modrinth update.version supplies VersionId. Pin is a
+root lowercase true with an unindented pin key. Filename/version null versus empty
+remain distinct under E05.
+
+Existing per-file limits apply. Aggregate reader budget: 64 MiB actual metadata
+bytes, 100000 matched files and 100000 visited directories per invocation. Exceeding
+the budget produces Content.ReadLimitExceeded with LimitsExceeded/path/hint before
+unbounded collection or parsing. Enumeration failures follow legacy skip behavior;
+selected-file read/parse failures are structured Content.InvalidMetadata. No mtime
+shortcut or weakened transaction fingerprint is introduced.

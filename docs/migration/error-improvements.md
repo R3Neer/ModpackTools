@@ -52,3 +52,13 @@ mandatory-string parameter-binding failure before project resolution. An explici
 domain failure makes this diagnosable and stable without changing session state.
 Whitespace-only input remains distinct: it falls back to the active session, as
 legacy does. Null argument tokens are protocol failures, not empty selections.
+
+## E05: valid empty TOML basic strings remain data
+
+The legacy mandatory string decoder leaks a parameter-binding failure on valid
+empty basic strings. Native reads them as empty strings: name, provider ID and side
+apply their existing fallback rules; filename and version ID retain empty rather
+than null. This is a field-specific exception, not general null/empty normalization.
+It also makes shared project string extraction handle valid empty values directly.
+Zero-byte managed metadata remains invalid and produces Content.InvalidMetadata
+with a repair hint, like the existing structured empty-project-manifest policy.
