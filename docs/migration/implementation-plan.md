@@ -304,7 +304,11 @@ pass. Independent black-box review passes 55 cases (47 success/eight E07); white
 review passes seven extra successes/three failures and the ownership checks.
 It additionally recommends collapsing a projected singleton field group for typed
 metadata constructed in memory, a shape outside current literal parser fixtures.
-Handle that separately before expanding the pure API's callers.
+`72e097a` closes that recommendation separately: a singleton projected field group
+collapses to its scalar value, matching the actual module's programmatic nested
+array case. Native assertion, 17-success/four-error classification regression and
+15 protocol cases pass; all-project format, Release and Native AOT are warning-free.
+White-box source and native assertion close the general typed contract.
 
 Next checkpoint: resource-order reading and
 composition into RawInventorySnapshot. Native inspection tests make each internal
