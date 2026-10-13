@@ -14,6 +14,7 @@ if (args.FirstOrDefault() == "--inspect-resource-order") return ResourceOrderIns
 if (args.FirstOrDefault() == "--inspect-resource-view") return ResourceViewInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-inventory") return FullInventoryInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-selected-inventory") return SelectionInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-categories") return CategoryInspection.Run(args);
 
 // Test-only transport peer: arbitrary replies exercise adapter validation before
 // any parent session mutation. This mode is never part of the shipping CLI.
