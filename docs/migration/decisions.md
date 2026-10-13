@@ -69,6 +69,30 @@ or reflection-based object serialization in the core.
 Initially reuse the existing checked Tomlyn artifact at build time, referenced
 statically. Do not load that DLL dynamically from an installed source directory.
 Its compiled code belongs in the published native artifact; package its license.
+
+### Cache decoder refinement, 2026-10-13
+
+Use the installed Newtonsoft.Json 13.0.4 token reader for legacy reference-cache
+syntax/date recognition, statically linked into AOT. Pin assembly SHA-256
+2B6FDDE54CC2D2E9277D458A42FDF9FCA30FC4299652E97144A31C90FEC91829,
+product revision 4e13299d4b0ec96bd4df9954ef646bd2d1b5bf2a and its MIT notice.
+It is a build input, never loaded from a PowerShell installation at runtime.
+JsonTextReader and primitive JsonTextWriter Date-constructor conversion published
+and executed with zero AOT/trimming warnings in isolated probes. No JsonSerializer,
+reflection-based object conversion or PowerShell hosting is used.
+
+The Newtonsoft JToken graph probe produced IL2104/IL3053 warnings and is rejected,
+without suppressions or a JIT fallback. A separate probe confirms explicit built-in
+System.Text.Json.Nodes primitive factories/value extraction publish warning-free.
+Use this bounded temporary decoder representation, then owned JsonElement plus
+typed deferred fields. Public DTO serialization remains source-generated. Date
+tokens retain typed metadata; original strings are never guessed into dates later.
+
+This replaces a growing handwritten JSON dialect/date clone that introduced
+successful-behavior mismatches. The existing parser reproduces its 380-character
+integer limit before BigInteger conversion. Actual byte/depth/normalization/token/
+node limits remain ours. The temporary graph is not a domain inventory or a
+general object adapter. Only the demonstrated safe token API subset is authorized.
 Any move to a newer parser or package changes the dependency baseline and requires
 separate C11/C12/round-trip evidence. Preserve `dependencies.psd1` until replacing
 the legacy distribution is authorized.

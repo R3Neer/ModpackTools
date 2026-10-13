@@ -595,7 +595,7 @@ Whitespace/BOM-only input is empty. Byte/depth/normalized-output bounds are a
 resource prelude, not legacy semantic checks. Results quota is checked during Read
 only if Results can be projected; a missing/member failure remains deferred for
 Resolve, while a quota can precede schema/expiry errors. Check normalized output
-before each append, including quoted-token control-character expansion. The byte
+before stream writes, including quoted-token control-character expansion. The byte
 budget is not a peak-memory claim: decoding, normalization and the owned JSON
 representation coexist. The small-workload memory gate still requires measurement.
 
@@ -603,11 +603,26 @@ Validate the complete decoded tree for empty/case-conflicting property names;
 exact duplicate properties keep their last value. Preserve comments, trailing
 commas, single-quoted strings, unquoted property names, undefined/null, nonfinite
 numbers and the legacy hexadecimal/octal/leading-dot numeric forms demonstrated
-by independent probes. A small lexical normalization feeds System.Text.Json; no
-PowerShell or reflection-based JSON runtime is embedded. Nonfinite JSON values
+by independent probes. Statically pinned Newtonsoft token decoding feeds explicitly
+constructed standard-library JSON nodes and then System.Text.Json; no PowerShell,
+Newtonsoft JToken graph or reflection serializer is embedded. Nonfinite JSON values
 have their legacy observable string serialization, with compatible scalar casts.
 Retain unknown fields, original arrays/objects and date auto-conversion in returned
 data and consumer string projections. Do not narrow caches to generated writer DTOs.
+Keep typed date-token metadata, including Microsoft/ISO/constructor forms and
+local/UTC/unspecified kinds. Preserve original string tokens literally; no second
+permissive date parser guesses their type. Comment-only input is null. Unknown
+constructors reproduce legacy omission, preserving duplicate replacement and
+case/empty-key validation. Root constructors remain invalid as in the baseline.
+
+Additional decoder bounds are four Mi lexical UTF-16 units per token and one
+million allocated JSON values/containers (property names and end tokens excluded).
+Check token length while reading, before the library builds an oversized string;
+check value count before allocation. Inspector --max-cache-token-chars and
+--max-cache-nodes expose these positive limits. Normalized output is ASCII JSON,
+so counted UTF-8 bytes equal normalized characters. Check output before stream
+writes; a single pending token is separately bounded. Read through a byte-budget
+stream, avoiding extra input byte arrays and whole UTF-16 normalization strings.
 
 `ReferenceCacheResolver.Resolve(snapshot, selector, projectId, nowUtc,
 allowedKinds, requirePackwiz) -> CachedReference?` is pure. The caller provides
@@ -630,7 +645,8 @@ Compatibility accessors expose typed conversions computed only when needed and
 retain missing/null/invalid distinctions. Cache visited header projections, not
 six eager slots per unvisited row. Snapshot owns one cloned JSON root; row views
 share it while scanning, and only the selected row is cloned for the returned
-CachedReference, avoiding retention of a large snapshot by later consumers.
+CachedReference, copying only its date metadata and avoiding retention of a large
+snapshot by later consumers.
 It offers string-field access for consumers and full extensible row data. JSON
 stays at this extensible boundary, not the domain's general inventory models.
 

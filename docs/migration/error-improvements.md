@@ -183,11 +183,12 @@ and the existing modpack content list regeneration hint. Keep all existing domai
 errors and their validation priority. An unused missing Source or Selector does
 not fail a valid lookup. Supported successful legacy coercions and nonstandard
 JSON forms are preserved; E15 does not authorize silently narrowing the reader.
-Positive byte/depth/occurrence/normalized-output limits protect decoding/lookup and abort with
+Positive byte/depth/occurrence/normalized-output/token/node limits protect decoding/lookup and abort with
 Inventory.ReferenceCacheReadLimitExceeded / LimitsExceeded / cache path. Invalid
 policy fails before IO. This changes errors and introduces explicit resource bounds,
 without repairing, writing, omitting rows or returning partial success.
 Known JSON/read InvalidReferenceCache diagnostics remain unchanged; added details
 identify formerly raw field/cast failures. Resource limits can precede semantic
 schema/expiry checks. The normalization quota counts UTF-16 code units before
-append, preventing control-character escaping from creating unbounded expansion.
+stream delivery, preventing unbounded normalized output. Separately cap lexical
+token length before parsing and temporary JSON value/container allocation count.
