@@ -243,3 +243,33 @@ do not impose an arbitrary archive-size failure.
 Primary references: [PKWARE ZIP specification](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT),
 [pinned .NET 10.0.8 archive implementation](https://raw.githubusercontent.com/dotnet/runtime/v10.0.8/src/libraries/System.IO.Compression/src/System/IO/Compression/ZipArchive.cs),
 and [Fabric display fields](https://docs.fabricmc.net/develop/loader/fabric-mod-json).
+
+## Local JAR discovery / next checkpoint
+
+`LocalJarReader.Read(ProjectContext, ImmutableArray<ManagedContentItem>,
+LocalJarReadLimits?) -> ImmutableArray<LocalModObservation>` composes local content
+records with typed archive read status/diagnostic. Observe *.jar in mods recursively,
+preserving the existing DFS/culture ordering, Hidden/System/link policies and
+explicit selected-root behavior. Do not consult managed resources/shaders at this
+boundary. The test host --inspect-local-jars <project-root> projects eight existing
+raw local fields plus status/diagnostic; there is no public inventory dispatch.
+
+Build a set of physical paths relative to mods from each managed Mod item's
+metadata parent and Filename. Use Path.Join rather than child-root replacement,
+retaining Join-Path's leading-slash/drive-looking child semantics. Normalize path
+separators and use InvariantCultureIgnoreCase for exclusion. Duplicate basenames
+in different directories remain distinct. Null/empty filenames retain their
+existing association behavior; do not invent missing filenames. Each candidate
+that remains gets local:mods/<lowercase normalized relative path> and a relative
+Filename, with Name/Side from the bounded JAR display reader. Preserve uncertainty
+in a separate observation instead of fabricating managed version/pin fields.
+
+Default limits: 100000 matched files and 100000 visited directories, counted before
+known-file exclusion, and 64 MiB actual decompressed metadata across candidate
+JARs. Per-archive limits still apply and retain Limited observations. An aggregate
+limit aborts with Content.ReadLimitExceeded / LimitsExceeded and a path/hint before
+any partial successful result. A byte observer at the archive IO boundary accounts
+for actual reads; it is not a renderer callback or a second ZIP implementation.
+The inspector's managed-mod read has its own existing budget; a future complete
+inventory invocation must explicitly compose its budgets. No archive assets are
+expanded, hashes weakened, caches persisted or files written by this checkpoint.
