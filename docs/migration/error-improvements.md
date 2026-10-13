@@ -145,3 +145,23 @@ E09 projection correction: singleton ResourcePacks wrappers retain member enumer
 including failure when Name contributes no values. Direct-table empty Name remains
 successful empty text; singleton wrapped empty Name is an actual StrictMode failure.
 Mod binding uses a different initial wrapper collapse and must remain unchanged.
+## E13: stable ordering for equal inventory row names
+
+Inventory row Name ordering is current-culture/case-insensitive, preserving input
+order among equal names. This explicitly differs from legacy Sort-Object Name,
+which is unstable: [one(Name=Same), two(Name=Same), local(Name=local)] becomes
+[local, two, one], while -Stable and the native core produce [local, one, two].
+Adding/removing an unrelated differently named row must not swap equal-name rows
+and their visible reference assignments. The change applies to raw mods/shaders,
+inactive resources and Name-sorted reference groups; active resource ID order and
+category Order/Name/Key ordering remain governed by their existing contracts.
+It preserves every row and original spelling, including equal-name rows with
+otherwise different paths, pins, sides or versions. It is an intentional successful
+ordering/reference-number difference for ties, not blanket equality of snapshots.
+
+Comparison harnesses retain original unmodified captures and identify affected
+cases explicitly. For those cases only, derive a separate expected result from
+the same PowerShell logic with its named row sorts made -Stable in memory. Compare
+full ordered trees against that expectation; do not drop metadata paths, numbers,
+fields, rows or sort the output after the fact to hide a mismatch. Non-tie cases
+must still match the original baseline exactly. No baseline repository is edited.

@@ -544,3 +544,8 @@ persistent-cache validation/application is a separate capability and acceptance 
 Native programmatic identity controls must distinguish equal records from repeated
 identical objects and preserve the unclassified duplication, null category and
 empty filename cases in addition to full file-based differential fixtures.
+Inventory Name-sort clarification: the native stable Name ordering described above
+is deliberate E13, rather than an assertion that legacy Sort-Object is stable.
+Distinct-name ordering remains identical; equal-name rows retain their incoming
+order and therefore may have different reference numbers from the unstable legacy
+result. The pure assignment identity/occurrence rules themselves are unchanged.
