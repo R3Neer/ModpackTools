@@ -634,3 +634,30 @@ links and full SHA256 content hashing. dist belongs to transaction snapshots eve
 though the health fingerprint excludes it. Independent analysis found the old
 cultural Sort-Object -Unique can omit changes between ordinally distinct paths;
 the next contract must explicitly repair that safety defect rather than reproduce it.
+
+Protected source infrastructure completed asbd1b11a. Frozen owned snapshots hash all
+included file bytes, retain hidden/system/dist, preserve Git/link/root-file semantics
+and impose bounded counts/full paths/actual bytes. Complete changes correct cultural
+unique and Keys-member shadowing losses under E24; E25 stabilizes health identity and
+provides a distinct length-framed full-source plan identity. E26/E27 prevent partial
+read results and actual case-insensitive filesystem aliases. Three-project locked
+restore/format/Release/Native AOT passes warning-free. Host v61 SHA256:
+18D909635FA0F34EDD1FFAB5231F6C9A7A378002A686F3C08FB7594BB044F806;
+CLI v68 SHA256:4B2447424FDB7D257F47F346723C57DB1A9007B164668E99C5BF240ADE1CE85E.
+Own23 source/hash/encoding/quota/IO controls,15 protocol cases and native assertions
+pass. Blind67 complete tree/change/hash/policy/link/case-sensitive-filesystem controls
+pass with three unchanged fixture audits. White independent framing/culture/delta/
+encoding, all four quotas, junction/hardlink and ownership probes pass. A provisional
+blind comparator itself used shadowed .Keys; fixed enumeration and a deliberate bad
+hash negative control precede the full unchanged-expectation rerun. Failed evidence
+is retained. Actual file symlink creation was unavailable due administrator privilege;
+cloud-placeholder creation was unavailable too. Neither is claimed runtime tested.
+No atomic multi-file snapshot, transaction ownership, mutation or new speed claim.
+
+Health/declaration prerequisites next need version ordering and then range evaluation.
+Compare-MpVersion's general mode is deliberately SemVer-like rather than a standard
+SemVer parser; Maven already has a reusable C# algorithm. Original129 blind pairs and
+48 white General/Maven comparisons reveal nonunit signed integers, invariant cultural
+equality shortcuts, null binding and distinct lazy/eager numeric failure priorities.
+These contracts and E28/E29 are fixed before implementation. Range/provider/health
+evaluation remains separate; public content commands still use PowerShell.

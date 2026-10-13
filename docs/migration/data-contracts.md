@@ -1009,7 +1009,7 @@ The diagnostic-only --empty-categories true flag substitutes an initialized empt
 typed view after the normal read-only prelude, to compare the separate programmatic
 empty-array writer contract. This is a test-host producer, not public CLI behavior.
 
-## Strong source snapshots, changes and fingerprints / next checkpoint
+## Strong source snapshots, changes and fingerprints / completed checkpoint
 
 This is one protected-source infrastructure unit: an owned file-hash snapshot,
 complete change detection and identities derived from that snapshot. It does not
@@ -1057,9 +1057,9 @@ filter only root dist/* using captured current-culture-ignore-case prefix semant
 sort remaining paths culturally then ordinally, join path=UPPERHASH with LF/no final
 LF, append |validator=3, and return lowercase SHA256 of replacement-fallback UTF8.
 Keep Turkish and ignorable-character matching. E25 stabilizes cultural sort ties,
-which may invalidate an old health cache but must never omit a path. This slice
-also retains actual paths named Keys rather than using the legacy shadowed member,
-so those old incomplete fingerprints change under E25 as well. This slice
+which may invalidate an old health cache but must never omit a path. Retain actual
+paths named Keys rather than using the legacy shadowed member, so those old
+incomplete fingerprints change under E25 as well. This slice
 hashes the complete tree first; future health-only scans can avoid dist byte reads
 while still checking links, and cannot substitute for a protected full snapshot.
 
@@ -1089,3 +1089,50 @@ Compare actual old tree/link/hash cases, hidden/system/Git/dist/root-file behavi
 same-length/same-mtime content edits, ordinary changes and explicit E24/E25 cases.
 Exercise all exact/over resource limits, policy prelude, IO failure without partial
 results, closed handles, unchanged fixtures and full versus health fingerprint scope.
+
+## General and Maven version ordering / next checkpoint
+
+`VersionOrdering.Compare(string? left, string? right, VersionScheme scheme=General,
+VersionComparisonLimits? limits=null) -> int?` is pure. Null strings bind to empty,
+matching the original string parameters. Preserve the complete signed integer,
+including CompareOrdinal results such as -25/32/133; null means ordering is unknown.
+Validate the scheme and positive policy, bound each input's text, then use the legacy
+case-sensitive INVARIANT CULTURAL equality shortcut, not ordinal equality. Canonical
+accents, ignorable characters and Arabic/ASCII digit aliases can therefore compare
+equal even when their text is unsupported or numeric parsing would otherwise fail.
+Do not trim, normalize or impose a standards-compliant SemVer/System.Version parser.
+
+General syntax is the exact existing numeric-component/prerelease/build pattern,
+including Unicode decimal-digit recognition, an explicitly present empty prerelease,
+empty prerelease components, arbitrary build metadata and the single-final-LF anchor.
+Unsupported distinct text returns null. Compare numeric components lazily left then
+right at each index, padding missing components with zero and stopping immediately
+on a difference. Preserve arbitrary-precision integers, release above prerelease,
+numeric prerelease below textual, ordinal textual comparison and component-count
+ties. Do not eagerly parse a later unused malformed numeric component. E28 maps
+actual required numeric parse failures; it does not turn them into unknown/success.
+
+Maven reuses the existing Private/MavenVersion.cs algorithm through nullable/style
+adaptation and explicit resource guards. Preserve invariant lowercasing, BigInteger
+numbers, qualifier aliases/order/unknown raw ordinal keys, numeric/text transitions,
+nested lists, zero/trailing-empty normalization and full signed results. After the
+wrapper equality shortcut, parse all left then all right before comparison; Maven
+must still fail on a late invalid numeric component that General can skip.
+No runtime PowerShell/Add-Type, CLR version parser or new package is introduced.
+
+Default limits are16Ki UTF16 units per input,4096 digits per consumed number,
+4096 constructed Maven items per input including the root list, and Maven depth64
+including root. MaximumDepth is hard-bounded to1..64 even with explicit overrides,
+protecting recursive comparison; all other limits must be positive. Whole-text quota
+precedes equality, an explicit resource prelude. Numeric limits apply only when a
+number is actually consumed; item/depth guards precede allocation. E29 covers policy
+and quota failures. No candidate lookup, range matching, graph resolution or IO.
+
+Test-only --inspect-compare-version <left-json-string-or-null>
+<right-json-string-or-null> [--maven bool] [--culture name]
+[--max-version-chars n] [--max-version-digits n] [--max-version-items n]
+[--max-version-depth n] emits the complete integer or null, buffering failures.
+Compare original Generic/Maven results, equality aliases, nonunit signed values,
+null binding, qualifier aliases, zero/nested lists, newline/build semantics and lazy
+versus eager failures. Test exact/over text/numeric/item/depth bounds, invalid-policy
+prelude and hard depth override rejection. Ranges are a separate later capability.

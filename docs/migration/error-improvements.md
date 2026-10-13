@@ -312,3 +312,21 @@ target and the existing spelling in details. Legacy hash-table overwrites can lo
 one path; copying into a case-insensitive stage can also merge distinct directories.
 Fail before returning a usable protected snapshot. Cultural equivalence alone is
 not a collision: distinct accent/ligature paths remain protected and compared by E24.
+
+## E28: numeric version-comparison failures become contextual diagnostics
+
+Version.InvalidNumericComparison/InvalidData replaces actual consumed numeric parse
+failures, with Left/Right argument target, parser details and a declared-version/
+scheme repair hint. Preserve equality shortcuts, General lazy component access and
+Maven left-then-right eager parsing. Do not validate unused later General components
+or silently convert former failures into unknown/healthy comparisons.
+
+## E29: version-comparison resource policies and limits
+
+Version.InvalidComparisonPolicy/InvalidArgument identifies nonpositive quotas or a
+Maven MaximumDepth outside1..64 before comparison. Version.ComparisonLimitExceeded/
+LimitsExceeded identifies Left/Right and the consumed text/numeric/item/depth quota
+in details, with an explicit-quota/input-reduction hint. Whole-text resource bounds
+precede equality; numeric bounds only run for consumed numbers. Guard Maven item
+and depth allocation before it happens, retaining a hard recursion bound even when
+other policies are increased. No partial integer or invented unknown result.
