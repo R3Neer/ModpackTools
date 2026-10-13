@@ -881,6 +881,6 @@ coherent status during a race is an explicit refinement, not a stress-test claim
 `AssertInstalled(DefaultOptionsState, projectId)` returns that state unchanged or
 raises the original ResourcePack.DefaultOptionsRequired/NotInstalled/projectId
 diagnostic and install hint. It does not require Ready/ConfigPresent. No writes.
-Test-only --inspect-default-options <root> [--assert-installed true|false] validates
+Test-only --inspect-default-options <root> [--assert-installed true|false] [--culture name] validates
 grammar before full project/inventory IO, then writes Pascal Installed, ConfigPresent,
 Ready, Mod (complete common lowercase physical fields or null), and ConfigPath.
