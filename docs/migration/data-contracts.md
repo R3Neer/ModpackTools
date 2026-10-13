@@ -323,3 +323,32 @@ values separately from display text. Test-only JSON keeps its existing R-format
 transport; JSON rendering must not substitute display strings for finite numbers.
 Validate native project catalog display/targets, signed extremes, leading zeros
 and large integer work bounds before committing this shared correction.
+
+## Mod editorial classification / next checkpoint
+
+`ModClassification.Apply(ImmutableArray<InventoryItem>, EditorialMetadata)` is a
+pure immutable transformation: no filesystem, renderer, cache or shell dependency.
+InventoryItem carries physical identity/kind/name/filename/side/source, nullable
+version/metadata path/pin/category/invalid category. Managed pins are true/false;
+local pins are absent (null), with public defaulting deferred to its mapper.
+Non-mod rows remain unchanged. Duplicate IDs each receive their matching override;
+input order, all other fields and the metadata source remain unchanged.
+
+For present Name/Side keys, cast the value with the typed PSD1 compatibility
+projection; present null becomes empty and still overrides. Category membership
+is OrdinalIgnoreCase, preserving requested spelling. Missing or invalid categories
+become unclassified; InvalidCategory distinguishes absent from an invalid empty
+request. Tables stringify as System.Collections.Hashtable, arrays join positions
+with spaces, nested arrays stringify as System.Object[], and numbers use the
+completed bounded display conversion. Never trim or drop null positions.
+
+Retain successful table-array entries: singleton table wrappers support optional
+keys; multiple immediate tables require every Name/Side/Category key. Project each
+field group by flattening array values once, retaining null sentinels and omitting
+empty-array positions. This reproduces successful legacy member enumeration at a
+typed boundary without executing methods from metadata. Mixed/nested entries and
+missing keys that fail the existing implementation receive E07 diagnostics.
+Only overrides for IDs actually encountered are inspected; unrelated malformed
+entries remain untouched. Test-only --inspect-classified-mods <root> composes
+editorial read, managed mods, local discovery and pure classification, preserving
+raw discovery order and field presence. It does not switch public content list.

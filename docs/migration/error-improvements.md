@@ -84,3 +84,13 @@ even when the legacy unbounded reader succeeded. Standard JSON coercions, suppor
 comments/trailing commas and Unicode replacement remain compatible. Unsupported
 nonstandard JSON syntax is unreadable with a diagnostic. This does not authorize
 general success normalization or use a permissive decoder for request protocol.
+
+## E07: invalid mod overrides have an actionable domain error
+
+Replace actual method/property/null runtime failures while applying an encountered
+mod override with Metadata.InvalidOverride / InvalidData, the affected mod ID as
+target and a repair hint. Abort without a partial successful result. Retain all
+supported table and table-array successes, including optional singleton keys and
+multi-table field projections; do not broadly reject every non-table entry.
+Falsey entries keep their existing ignored behavior. Overrides for absent mod IDs
+are not eagerly validated. No metadata is rewritten by this read-only operation.
