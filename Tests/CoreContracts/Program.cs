@@ -68,6 +68,7 @@ if (args.FirstOrDefault() == "--inspect-category-view") return CategoryListInspe
 if (args.FirstOrDefault() == "--inspect-write-category-cache") return CategoryCacheWriteInspection.Run(args);
 if (args.FirstOrDefault() is "--inspect-source-tree" or "--inspect-source-changes" or "--inspect-text-hash") return SourceInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-compare-version") return VersionOrderingInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-version-range") return VersionRangeInspection.Run(args);
 
 // Test-only transport peer: arbitrary replies exercise adapter validation before
 // any parent session mutation. This mode is never part of the shipping CLI.
@@ -260,6 +261,7 @@ CategoryListContracts.Verify(rawSnapshot);
 CategoryCacheWriteContracts.Verify(rawSnapshot);
 SourceTreeContracts.Verify();
 VersionOrderingContracts.Verify();
+VersionRangeContracts.Verify();
 ImportedLookupContracts.Verify();
 Console.WriteLine($"PSD1 native contracts passed: {invalid.Length + 7 + limits.Length} rejected inputs, typed literals, nested arrays, bounded numeric extraction, immutable classification/reference/alias identities, {args.Length} files");
 return 0;

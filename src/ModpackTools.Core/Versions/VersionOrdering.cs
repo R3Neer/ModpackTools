@@ -17,14 +17,7 @@ public static partial class VersionOrdering
         VersionComparisonLimits? limits = null)
     {
         if (scheme is not (VersionScheme.General or VersionScheme.Maven)) throw new ArgumentOutOfRangeException(nameof(scheme));
-        limits ??= new();
-        var invalid = limits.MaximumTextCharacters <= 0 ? nameof(limits.MaximumTextCharacters)
-            : limits.MaximumNumericDigits <= 0 ? nameof(limits.MaximumNumericDigits)
-            : limits.MaximumItems <= 0 ? nameof(limits.MaximumItems)
-            : limits.MaximumDepth is < 1 or > 64 ? nameof(limits.MaximumDepth) : null;
-        if (invalid is not null)
-            throw new DomainException("Version.InvalidComparisonPolicy", "Version-comparison limits are invalid",
-                "use positive comparison quotas and a Maven depth between 1 and 64", target: invalid);
+        limits = Validate(limits);
         left ??= "";
         right ??= "";
         var culture = CultureInfo.CurrentCulture;
@@ -34,6 +27,24 @@ public static partial class VersionOrdering
         bScope.Text(right);
         if (string.Equals(left, right, StringComparison.InvariantCulture)) return 0;
         if (scheme == VersionScheme.Maven) return MavenOrdering.Compare(left, right, aScope, bScope);
+        return General(left, right, aScope, bScope);
+    }
+
+    internal static VersionComparisonLimits Validate(VersionComparisonLimits? limits)
+    {
+        limits ??= new();
+        var invalid = limits.MaximumTextCharacters <= 0 ? nameof(limits.MaximumTextCharacters)
+            : limits.MaximumNumericDigits <= 0 ? nameof(limits.MaximumNumericDigits)
+            : limits.MaximumItems <= 0 ? nameof(limits.MaximumItems)
+            : limits.MaximumDepth is < 1 or > 64 ? nameof(limits.MaximumDepth) : null;
+        if (invalid is not null)
+            throw new DomainException("Version.InvalidComparisonPolicy", "Version-comparison limits are invalid",
+                "use positive comparison quotas and a Maven depth between 1 and 64", target: invalid);
+        return limits;
+    }
+
+    private static int? General(string left, string right, VersionScope aScope, VersionScope bScope)
+    {
         var a = Syntax().Match(left);
         var b = Syntax().Match(right);
         if (!a.Success || !b.Success) return null;
