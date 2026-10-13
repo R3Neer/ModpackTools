@@ -661,3 +661,27 @@ SemVer parser; Maven already has a reusable C# algorithm. Original129 blind pair
 equality shortcuts, null binding and distinct lazy/eager numeric failure priorities.
 These contracts and E28/E29 are fixed before implementation. Range/provider/health
 evaluation remains separate; public content commands still use PowerShell.
+
+Version ordering completed as8f60748. Pure General/Maven comparison retains exact
+signed integers and unknown General syntax, invariant cultural equality, null
+binding and lazy/eager numeric priorities. Span scans avoid unconsumed General
+Split arrays; closed Maven nodes and hard depth1..64 bound recursive comparison.
+E28/E29 contextualize actual numeric errors and explicit resource failures without
+inventing unknown results. Three-project locked restore/format/Release and both
+win-x64 Native AOT publications pass without warnings. Host v62 SHA256:
+B3F6BA966EBB3F40791463D1B8ABBBC6E4952848EDA044BF908B89AFE0786A28;
+CLI v69 SHA256:F3642E433E5C07066E81C8AED13AEE2823E3484F875694DB5209F7FEA2440BDE.
+Own106 comparison/policy/grammar cases,15 protocol cases and native assertions pass.
+Blind158 cases preserve129 original captures plus25 quota/policy and4 grammar
+controls; white48 original outcomes plus18 architecture/limit controls and default
+native assertions pass. Native stderr is empty, original baselines remain intact.
+Managed preflights are separate: default atomic-fixture rename restrictions required
+approved execution outside the sandbox; an overlapping publish removed a managed
+apphost during a preliminary harness run. Neither failed preflight is acceptance
+evidence. The complete own harness subsequently passed against the frozen native host.
+
+Range analysis now has167 original captures (72true/38false/45unknown/12raw errors)
+plus50 object-property lowering probes. A closed typed Text/Any/All/Unknown boundary
+will keep loader-data coercion outside evaluation, preserve tri-state short circuits
+and avoid standard-range substitutions. This remains analysis, not implemented range
+matching. Public content dispatch, providers and dependency health remain PowerShell.
