@@ -1008,3 +1008,71 @@ exclusive handle reopening, reader compatibility and unchanged source fixtures.
 The diagnostic-only --empty-categories true flag substitutes an initialized empty
 typed view after the normal read-only prelude, to compare the separate programmatic
 empty-array writer contract. This is a test-host producer, not public CLI behavior.
+
+## Strong source snapshots, changes and fingerprints / next checkpoint
+
+This is one protected-source infrastructure unit: an owned file-hash snapshot,
+complete change detection and identities derived from that snapshot. It does not
+apply changes, acquire transaction ownership, journal, recover or evaluate providers.
+
+`SourceTree.Read(root, SourceTreeReadLimits?) -> SourceTreeSnapshot` owns an immutable
+OrdinalIgnoreCase relative-path to uppercase SHA256 map plus absolute Root. Include
+hidden/system files, arbitrary nested files and dist. Skip every entry named .git
+using InvariantCultureIgnoreCase, before inspecting its link or counting quotas;
+this includes the legacy ignorable-character spelling. Check a root link before any
+entry exclusions. Reject actual root/file/directory links and junctions with the
+original Transaction.LinkedPath/InvalidOperation/null-target diagnostic. Readable
+cloud placeholders with no link target and ordinary hardlinks remain regular inputs.
+An existing file root produces the legacy '.' key; a regular file root named .git
+produces an empty map, while a directory root named .git still enumerates its children.
+Empty directories have no file-hash entry. No timestamp/length shortcut is allowed.
+
+Stream each file in64KiB chunks under FileShare.Read; count actual bytes before
+hashing each chunk and close every handle on every outcome. Positive default limits
+are100,000 files,100,000 directories,1TiB actual aggregate bytes and8Mi UTF16 code
+units of aggregate full paths. Count included root/directories/files after .git
+exclusion; root directories count once, file roots count only as files. Full-path
+characters include each retained root/directory/file, bounding pending directory
+paths as well as snapshot keys. Validate policy before root IO. E26 provides policy,
+quota and fail-closed IO diagnostics; never return a partial/null-hash snapshot.
+E27 rejects actual ordinal-ignore-case path collisions, including directories on a
+case-sensitive filesystem, rather than collapsing protected paths. This preserves
+ordinary Windows cases and explicitly strengthens previously lossy edge cases.
+The scan is a sequence of observations, not an atomic multi-file filesystem snapshot.
+
+`SourceTreeChanges.Compare(before, after, culture?) -> ImmutableArray<SourceChange>`
+compares owned snapshots; a separate pure immutable-map overload accepts nullable
+hash strings for legacy helper comparisons. Require initialized inputs. Build the
+path union with OrdinalIgnoreCase uniqueness, retaining the first before spelling,
+then sort with captured cultural-ignore-case order and ordinal ties. Compare hashes
+ordinally/case-sensitively; missing and null remain equivalent as in the helper.
+Emit full PascalCase Path/Before/After, including nulls. E24 retains all culturally
+equivalent but ordinally distinct paths; the old Sort-Object -Unique can hide a real
+change, so reproducing it would violate external-edit/rollback requirements.
+
+`SourceFingerprint.Health(snapshot, culture?)` preserves the legacy v3 text formula:
+filter only root dist/* using captured current-culture-ignore-case prefix semantics,
+sort remaining paths culturally then ordinally, join path=UPPERHASH with LF/no final
+LF, append |validator=3, and return lowercase SHA256 of replacement-fallback UTF8.
+Keep Turkish and ignorable-character matching. E25 stabilizes cultural sort ties,
+which may invalidate an old health cache but must never omit a path. This slice
+hashes the complete tree first; future health-only scans can avoid dist byte reads
+while still checking links, and cannot substitute for a protected full snapshot.
+
+`SourceFingerprint.All(snapshot)` is a new culture-independent plan identity,
+including dist and all retained paths sorted ordinally. Its canonical binary payload
+starts with ASCII ModpackTools/source-snapshot/v1 plus NUL; each entry has a four-byte
+big-endian UTF16-unit path length, raw two-byte big-endian UTF16 code units and the
+32 digest bytes. This length framing preserves exact code units without ambiguous
+separators or replacement fallback. Bind project/root identity separately: identical
+source trees at different staging roots must compare equally. `TextHash.Compute`
+preserves the existing lowercase SHA256/replacement-UTF8 primitive, including empty
+text and malformed surrogate controls; use streaming encoding/incremental hashing.
+
+Test-only tree inspection exposes full paths/hashes and both fingerprints; changes
+inspection consumes explicit immutable hash maps; text-hash inspection consumes
+UTF16-unit arrays so malformed surrogate tests do not depend on JSON string decoding.
+Compare actual old tree/link/hash cases, hidden/system/Git/dist/root-file behavior,
+same-length/same-mtime content edits, ordinary changes and explicit E24/E25 cases.
+Exercise all exact/over resource limits, policy prelude, IO failure without partial
+results, closed handles, unchanged fixtures and full versus health fingerprint scope.

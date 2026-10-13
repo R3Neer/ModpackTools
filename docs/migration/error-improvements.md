@@ -270,3 +270,40 @@ replacement failures, absolute path, details and a configuration-access/category
 retry hint. Preserve previous bytes and clean only the owned temporary. When cleanup
 also fails, retain the primary diagnostic and add cleanup context. These regenerable
 cache errors do not imply durable project transactions or crash recovery.
+
+## E24: source changes retain culturally equivalent distinct paths
+
+Use OrdinalIgnoreCase path uniqueness and captured cultural ordering plus ordinal
+ties. Legacy Sort-Object -Unique can discard an ordinally distinct Unicode path,
+causing a real change to disappear. Emit every actual change instead of reproducing
+that safety defect. Preserve missing/null equivalence, hash case-sensitive comparison,
+ordinary path casing and full Path/Before/After values. This is an explicit successful
+result correction required for complete external-edit detection, not an error-only
+formatting change.
+
+## E25: deterministic fingerprint ties and a distinct full-source identity
+
+Keep all paths in the legacy health fingerprint and stabilize cultural sort ties
+ordinally. Old tied-order cache hashes may change; regeneration is appropriate.
+Retain legacy root-dist filtering/culture, exact v3 payload and UTF8 fallback.
+Use a separately framed culture-independent full-tree fingerprint for future bound
+plans, with root identity separate. Do not substitute a filtered health identity
+for transaction source protection or claim the new full identity matches old hashes.
+
+## E26: bounded, fail-closed source reads
+
+Source.InvalidTreeReadPolicy/InvalidArgument identifies invalid positive quotas
+before IO. Source.TreeReadLimitExceeded/LimitsExceeded identifies the absolute root
+with the exceeded limit/context. Source.TreeReadFailed identifies actual failed IO
+with absolute offending path/details and a source-access repair hint; missing paths
+use ObjectNotFound, other IO uses ReadError. No partial map or null digest is returned.
+Original Transaction.LinkedPath behavior remains separate and unchanged.
+
+## E27: source path collisions cannot erase protected files
+
+Transaction.PathCollision/InvalidOperation rejects actual ordinal-ignore-case aliases
+among retained files/directories on case-sensitive filesystems, with relative-path
+target and the existing spelling in details. Legacy hash-table overwrites can lose
+one path; copying into a case-insensitive stage can also merge distinct directories.
+Fail before returning a usable protected snapshot. Cultural equivalence alone is
+not a collision: distinct accent/ligature paths remain protected and compared by E24.
