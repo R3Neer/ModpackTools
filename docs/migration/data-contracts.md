@@ -195,3 +195,10 @@ The default matched-file budget is 100000 across both directories, consumed befo
 known-file exclusion. Exceeding it gives Content.ReadLimitExceeded / LimitsExceeded
 with file path and a hint. Enumeration failures retain legacy skip behavior. No
 archive expansion, filesystem mutation, editorial overrides or health is implied.
+
+The managed reader also offers a closed ContentKind overload sharing its existing
+implementation. The local-ZIP inspector reads managed resources and shaders only;
+unrelated malformed mod metadata does not affect this boundary. Separate per-kind
+inspection calls each have their own managed budget; the all-kinds production read
+retains a single aggregate budget. LocalZipReader receives observations directly
+and never invokes a managed reader itself.

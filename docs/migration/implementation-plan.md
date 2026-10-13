@@ -236,7 +236,16 @@ metadata probe completed in 112 ms rather than exceeding 10 seconds. This is a
 diagnostic regression measurement, not an inventory benchmark or performance-gate
 claim. Real cloud placeholders were not tested.
 
-Next checkpoint: local JAR/ZIP discovery and metadata, then editorial/resource-order
+Local resource/shader ZIP discovery completed: seven own differentials and two
+exact/over budget cases pass, along with managed-reader/protocol/PSD1 regressions.
+Independent review passes 24 frozen fixtures and six boundaries, including Unicode
+suppression, Hidden selected root directories, invalid ZIP contents, .zip's empty
+name and invalid unrelated mod metadata. White-box checks confirm the kind boundary,
+no archive opening, counting before suppression and exclusive-handle reopening.
+Locked restore, format for all three projects, Release and Native AOT publish pass
+without warnings. Inspection remains test-only, not a partial public command.
+
+Next checkpoint: local JAR discovery and metadata, then editorial/resource-order
 composition into RawInventorySnapshot. Native inspection tests make each internal
 capability observable without partial public content-list success. Public content
 list still uses the legacy engine.
