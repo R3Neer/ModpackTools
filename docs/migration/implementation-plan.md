@@ -366,3 +366,10 @@ locked restore/format/Release/Native AOT, 25 rejection assertions and scope/look
 controls, 24 own editorial pairs, raw inventory and 15 protocol regressions pass.
 Black-box 86 invocations (34 key/scope cases plus 52 editorial regressions) and
 white-box ten independent pairs close the guard; fixtures remain intact.
+`602244a`: pure ordered category definitions completed. Direct-table versus member
+projection, optional/default fields, Int32 rounding/limits and all-category validation
+retain legacy behavior. E11 improves actual failures and E12 stabilizes priority/name
+ties. Warning-free locked restore/format/Release/Native AOT, own twelve successes/
+seven E11 cases plus ordering/empty controls, native assertions and 15 protocol cases
+pass. Independent black-box 71 cases (42 successes, 25 E11, four invalid imports)
+and white-box 22 pairs plus deterministic tie controls pass with unchanged fixtures.

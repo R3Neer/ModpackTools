@@ -510,3 +510,37 @@ key rewriting or deduplication is allowed. Throw PsdParseException on the second
 key; existing project/editorial callers map it to their structured invalid-file
 errors under E02. Supported noncolliding keys retain spelling and both entries.
 Native rejection assertions and full differential editorial cases are required.
+## Pure inventory reference assignment / next checkpoint
+
+`InventoryReferences.Assign(InventorySelection) -> NumberedInventorySelection`
+returns the unchanged Selection, ordered CategoryDefinitions, typed numbered
+physical/active wrappers and immutable InventoryReference rows. References contain
+one-based Index, Id, ContentKind, Name, non-null Filename, typed InventorySource and
+Selector. Physical row numbers are nullable because programmatic unknown/null
+categories receive no reference in legacy; active rows are always numbered.
+
+Read every category definition after selection, even for an empty/mod-free view.
+Reference sequence is category definitions in their established order, mods matching
+each key by InvariantCultureIgnoreCase sorted stably by current-culture Name, then
+an additional similarly sorted unclassified group, active resource order, inactive
+Name order and shader Name order. Preserve duplicate row occurrences and explicitly
+defined unclassified categories: those rows are referenced again in the additional
+group. Do not deduplicate by ID, record value equality or filename. Group/index
+mods once by cultural category and sort each group once instead of rescanning every
+mod for every definition. Null categories remain unreferenced rather than failing.
+
+Each occurrence produces a cache reference row. Visible row number is the last
+assignment to that original object identity, matching Add-Member -Force; equal-valued
+distinct objects keep distinct assignments. Use ReferenceEqualityComparer internally,
+never expose arbitrary object keys at the public typed boundary. Numbered wrappers
+retain original immutable item instances and original selected group ordering.
+For resourcepack rows use nonempty Filename as Selector; all other rows use Id.
+Null Filename becomes empty only in reference-cache projection, not in original rows.
+
+No configuration resolution, timestamp, fingerprint, cache write, health inspection
+or public dispatch occurs. Test-only --inspect-numbered-inventory <root> accepts the
+same selection flags and emits numbered raw groups plus reference rows. Actual
+persistent-cache validation/application is a separate capability and acceptance gate.
+Native programmatic identity controls must distinguish equal records from repeated
+identical objects and preserve the unclassified duplication, null category and
+empty filename cases in addition to full file-based differential fixtures.
