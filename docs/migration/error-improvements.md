@@ -240,3 +240,22 @@ index/Id/reserved/metadata order, null-versus-empty Categories, ignored SchemaVe
 and successful legacy coercions. Reader resource bounds use
 Metadata.CategoryCacheReadLimitExceeded/LimitsExceeded; invalid policy is a separate
 InvalidArgument diagnostic before IO. No fallback, cache rewrite or eager Id checks.
+
+## E21: malformed category-list editorial assignments
+
+Wrap actual ContainsKey/member-projection failures while counting editorial Mods
+entries as Metadata.InvalidCategoryAssignment/InvalidData, editorial mod-key target,
+details and a repair hint for the matching Mods entry. Validate this count stage only
+when at least one category is defined, before Name/Order and physical inventory IO.
+Do not apply ModClassification's falsey-entry bypass, silently discard orphan entries,
+or substitute physical counts. Existing metadata/definition/inventory errors retain
+their stage and established diagnostics.
+
+## E22: deterministic category-list diagnostics and cultural ties
+
+Inspect editorial assignment keys and definition keys ordinally for a reproducible
+first malformed-entry target where legacy Hashtable enumeration was unspecified.
+Keep successful category-list sorting by Order, cultural Name and cultural Id;
+use ordinal Id only as the final cultural tie-break. This is separate from E12's
+inventory-reference category ordering. No ordinary z/ä order change, category
+deduplication or change to appended unclassified rows is authorized by this rule.

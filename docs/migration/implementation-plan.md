@@ -557,3 +557,28 @@ Blind72 status/assert calls and white6 full-status pairs plus5 grammar/full-read
 priority controls pass with unchanged fixtures. Historical warm Turkish regex
 captures remain separate from explicitly declared fresh-process expectations.
 No config/source writes, installation check by JAR existence or public dispatch.
+
+Category-cache reading and category-ID resolution completed as bdc920c. Category
+schema remains unused; timestamp/project/index/Id priorities, ordinal keys, reserved
+bypass and null-versus-empty row semantics remain distinct from inventory. Shared
+bounded file decoding retains owned JSON/date metadata and all six limits. E20
+provides context only for actual raw consumption failures. Three-project locked
+restore/format/Release/Native AOT passes without warnings. Host v58 SHA256:
+ACB926909AC290AB1F984C999EF3B82E4A912084C8B3FC89F4097BE61AEB361A;
+CLI v65 SHA256:A92E1CA38F009D3AE320352A711F9863E2C25FE43BECC310EBCB869C0C6FECFF.
+Own89 category controls,226 inventory comparisons,15 protocol cases and native
+assertions pass. Blind164 category controls,395 inventory comparisons plus10
+threshold probes and white19 category plus14 shared-consumer cases pass. Eight
+blind fixture integrity manifests remain true; handles close and stderr stays empty.
+Managed preflights are separate from this native acceptance. An initial build command
+used an unintended empty dependency-cache path; it was stopped and rerun against
+the prepared workspace cache with the same locked versions, and its owned scratch
+directory was removed. No successful checkpoint relies on that aborted restore.
+
+Next capability is category-list projection, separate from category-cache writes.
+Original34 blind captures and9 white focused oracles show editorial counts differ
+from physical counts, count errors precede definition/inventory errors, and category
+list Id ordering is cultural rather than inventory-reference ordinal. Prepare counts
+and definitions before physical IO, compose immutable numbered rows afterward, and
+reuse one validated metadata snapshot. E21/E22 and the coherent observation refinement
+are specified before implementation; public dispatch remains PowerShell.

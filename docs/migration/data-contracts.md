@@ -885,7 +885,7 @@ Test-only --inspect-default-options <root> [--assert-installed true|false] [--cu
 grammar before full project/inventory IO, then writes Pascal Installed, ConfigPresent,
 Ready, Mod (complete common lowercase physical fields or null), and ConfigPath.
 
-## Category cache and ID resolution / next checkpoint
+## Category cache and ID resolution / completed checkpoint
 
 `CategorySelector.Resolve(EditorialMetadata metadata, CachedCategorySnapshot? cache,
 string selector, string projectId, DateTimeOffset nowUtc, bool allowUnclassified=false)
@@ -925,3 +925,43 @@ Test-only --inspect-read-category-cache <configuration-directory> and
 support --now-utc, --allow-unclassified and the existing six reader-limit options.
 Own and independent comparisons cover full read values, exact returned strings,
 validation priorities/consumer casts/quota boundaries/unchanged fixtures/closed handles.
+
+## Category list projection / next checkpoint
+
+`CategoryList.Prepare(EditorialMetadata) -> ImmutableArray<EditorialCategory>`
+prepares immutable Id/Name/Order/ModCount rows before any physical inventory IO.
+When definitions are nonempty, inspect every editorial Mods entry once, project its
+Category through the established member-enumeration/string rules, and accumulate
+one count per editorial entry using OrdinalIgnoreCase. Missing Category is ignored;
+scalar/null/unsupported entries still fail even if unused by physical inventory.
+With no definitions, do not inspect editorial assignments in this stage. Count
+validation precedes Name/Order validation. Orphan assignments count; duplicated
+physical IDs do not increase editorial counts. Wrapped/multi-table fields retain
+their original coercions and failures. E21 supplies a contextual assignment error.
+
+Extract definition Name/Order with existing bounded conversion and E11 diagnostics,
+but sort category-list rows by Order, current-culture-ignore-case Name, then
+current-culture-ignore-case Id. Do not reuse the inventory-reference category sort:
+its ordinal Id rule changes ordinary category-list ordering (same Name/Order,
+IDs z and ä). E22 adds ordinal ties and deterministic invalid-entry diagnostics;
+it does not replace the cultural successful ordering.
+
+`CategoryList.Compose(ProjectContext, ImmutableArray<EditorialCategory>,
+ImmutableArray<InventoryItem> mods) -> CategoryListView` is pure. Always append a
+canonical unclassified row with null Order, IsUnclassified=true, and a physical
+occurrence count using invariant-ignore-case equality. Keep a separately defined
+unclassified category, including its independent editorial count. Number all rows
+one-based after sorting/appending; DefinedCategoryCount excludes only the appended
+row. Defined rows omit IsUnclassified in the comparison representation.
+
+The filesystem facade reads metadata, prepares editorial rows, reads the complete
+inventory with that same validated immutable metadata, then composes the view.
+Thus editorial count/definition errors precede physical inventory failures. Using
+one metadata snapshot instead of legacy's second read is an explicit coherent
+observation refinement under concurrent edits, not a transaction guarantee. Keep
+the original public InventoryReader.Read behavior and add only an internal supplied-
+metadata path. No health/provider/cache persistence/rendering belongs to this slice.
+Test-only --inspect-category-view <root> [--culture name] emits full PascalCase rows,
+DefinedCategoryCount and a documented common project projection. Compare original
+successes, E21/E11 failures, cultural sorting, duplicate unclassified rows, editorial
+versus physical counts, no-definition bypass and earlier-error priorities.
