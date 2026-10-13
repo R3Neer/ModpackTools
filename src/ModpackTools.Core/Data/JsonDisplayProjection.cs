@@ -131,7 +131,7 @@ internal static class JsonDisplayProjection
         DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date)
         ? date.ToString(CultureInfo.InvariantCulture) : value;
 
-    private static Dictionary<string, JsonElement> Properties(JsonElement value)
+    internal static Dictionary<string, JsonElement> Properties(JsonElement value)
     {
         var result = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
         foreach (var property in value.EnumerateObject())
@@ -144,7 +144,7 @@ internal static class JsonDisplayProjection
         return result;
     }
 
-    private static string DecodedString(JsonElement value)
+    internal static string DecodedString(JsonElement value)
     {
         try { return value.GetString()!; }
         catch (InvalidOperationException) { return DecodeRawString(value.GetRawText()); }
