@@ -9,7 +9,19 @@ public sealed record LocalZipReadLimits(int MaximumFiles = 100000);
 public static class LocalZipReader
 {
     public static ImmutableArray<LocalContentItem> Read(ProjectContext project,
-        ImmutableArray<ManagedContentItem> knownItems, LocalZipReadLimits? limits = null)
+        ImmutableArray<ManagedContentItem> knownItems, LocalZipReadLimits? limits = null) =>
+        Read(project, knownItems, [("resourcepacks", ContentKind.ResourcePack), ("shaderpacks", ContentKind.ShaderPack)], limits);
+
+    public static ImmutableArray<LocalContentItem> Read(ProjectContext project,
+        ImmutableArray<ManagedContentItem> knownItems, ContentKind kind, LocalZipReadLimits? limits = null) =>
+        Read(project, knownItems, [(kind switch
+        {
+            ContentKind.ResourcePack => "resourcepacks", ContentKind.ShaderPack => "shaderpacks",
+            _ => throw new ArgumentOutOfRangeException(nameof(kind))
+        }, kind)], limits);
+
+    private static ImmutableArray<LocalContentItem> Read(ProjectContext project,
+        ImmutableArray<ManagedContentItem> knownItems, (string Directory, ContentKind Kind)[] locations, LocalZipReadLimits? limits)
     {
         var maximum = (limits ?? new()).MaximumFiles;
         if (maximum < 1) throw new ArgumentOutOfRangeException(nameof(limits), "Reader budgets must be positive.");
@@ -21,8 +33,6 @@ public static class LocalZipReader
                     "reduce the local content count or split the project before retrying", "LimitsExceeded", file.FullName);
         }
         var result = ImmutableArray.CreateBuilder<LocalContentItem>();
-        (string Directory, ContentKind Kind)[] locations =
-            [("resourcepacks", ContentKind.ResourcePack), ("shaderpacks", ContentKind.ShaderPack)];
         foreach (var (directory, kind) in locations)
         {
             var path = Path.Combine(project.Root, directory);

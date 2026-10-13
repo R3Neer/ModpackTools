@@ -11,6 +11,7 @@ if (args.FirstOrDefault() == "--inspect-local-jars") return LocalJarInspection.R
 if (args.FirstOrDefault() == "--inspect-editorial") return EditorialInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-classified-mods") return ClassificationInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-resource-order") return ResourceOrderInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-resource-view") return ResourceViewInspection.Run(args);
 
 // Test-only transport peer: arbitrary replies exercise adapter validation before
 // any parent session mutation. This mode is never part of the shipping CLI.
@@ -148,5 +149,15 @@ var programmaticMods = new PsdTable(editorial.Mods.Entries.SetItem("modrinth:x",
 var projected = ModClassification.Apply([original], editorial with { Mods = programmaticMods });
 if (projected[0].Name != "A B" || projected[0].Side != "client server" || projected[0].InvalidCategory != "qol qol")
     throw new InvalidOperationException("Singleton projected field group did not collapse to its scalar value");
+var resource = original with { Kind = ContentKind.ResourcePack, Filename = "A.zip", Name = "Technical" };
+var localResource = InventoryItem.From(new LocalContentItem("local:z", ContentKind.ResourcePack, "Z", "z.zip", "client"));
+ImmutableArray<InventoryItem> physicalResources = [resource, resource with { Filename = "a.zip", Name = "Other" }, localResource];
+var activeMetadata = editorial with { ResourcePacks = PsdReader.Parse("@{'file/a.zip'=@{Name='Display'}}") };
+var resourceView = ResourcePackActivation.Compose(physicalResources, ["FILE/a.zip", "file/missing.zip", "vanilla", "FILE/a.zip", "file/"], activeMetadata);
+if (resourceView.Active[0].Name != "Display" || resourceView.Active[0].Source != ActiveResourceSource.Packwiz ||
+    resourceView.Active[1].Source != ActiveResourceSource.Missing || resourceView.Active[2].Source != ActiveResourceSource.Builtin ||
+    resourceView.Active[4].Filename != "" || resourceView.Active[4].Name != "file/" || resourceView.Active[4].Priority != 5 ||
+    resourceView.Inactive.Length != 1 || resourceView.Inactive[0] != localResource || resource.Name != "Technical")
+    throw new InvalidOperationException("Resource activation order, source, exclusion or immutability failed");
 Console.WriteLine($"PSD1 native contracts passed: {invalid.Length + 7 + limits.Length} rejected inputs, typed literals, nested arrays, bounded numeric extraction, immutable classification, {args.Length} files");
 return 0;

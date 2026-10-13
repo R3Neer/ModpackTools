@@ -14,42 +14,23 @@ public static class ModClassification
             var updated = item with { Category = "unclassified", InvalidCategory = null };
             if (metadata.Mods.Entries.TryGetValue(item.Id, out var entry) && Truthy(entry))
             {
-                var fields = Fields(entry, item.Id);
-                if (fields.TryGetValue("Name", out var name)) updated = updated with { Name = Display(name) };
-                if (fields.TryGetValue("Side", out var side)) updated = updated with { Side = Display(side) };
-                if (fields.TryGetValue("Category", out var category))
+                try
                 {
-                    var requested = Display(category);
-                    updated = metadata.Categories.Entries.ContainsKey(requested)
-                        ? updated with { Category = requested }
-                        : updated with { InvalidCategory = requested };
+                    if (EditorialProjection.TryField(entry, "Name", out var name)) updated = updated with { Name = EditorialProjection.Display(name) };
+                    if (EditorialProjection.TryField(entry, "Side", out var side)) updated = updated with { Side = EditorialProjection.Display(side) };
+                    if (EditorialProjection.TryField(entry, "Category", out var category))
+                    {
+                        var requested = EditorialProjection.Display(category);
+                        updated = metadata.Categories.Entries.ContainsKey(requested)
+                            ? updated with { Category = requested }
+                            : updated with { InvalidCategory = requested };
+                    }
                 }
+                catch (FormatException) { throw Invalid(item.Id); }
             }
             result.Add(updated);
         }
         return result.MoveToImmutable();
-    }
-
-    private static IReadOnlyDictionary<string, PsdValue> Fields(PsdValue entry, string id)
-    {
-        if (entry is PsdTable table) return table.Entries;
-        if (entry is PsdArray { Items.Length: 1 } single && single.Items[0] is PsdTable wrapped) return wrapped.Entries;
-        if (entry is PsdArray array && array.Items.All(value => value is PsdTable))
-        {
-            var fields = ImmutableDictionary.CreateBuilder<string, PsdValue>(StringComparer.OrdinalIgnoreCase);
-            foreach (var key in new[] { "Name", "Side", "Category" })
-            {
-                var values = ImmutableArray.CreateBuilder<PsdValue>();
-                foreach (var child in array.Items.Cast<PsdTable>())
-                {
-                    if (!child.Entries.TryGetValue(key, out var value)) throw Invalid(id);
-                    if (value is PsdArray group) values.AddRange(group.Items); else values.Add(value);
-                }
-                fields.Add(key, values.Count == 1 ? values[0] : new PsdArray(values.ToImmutable()));
-            }
-            return fields.ToImmutable();
-        }
-        throw Invalid(id);
     }
 
     private static DomainException Invalid(string id) => new("Metadata.InvalidOverride",
@@ -70,10 +51,4 @@ public static class ModClassification
         };
     }
 
-    private static string Display(PsdValue value) => value switch
-    {
-        PsdArray array => string.Join(" ", array.Items.Select(item => item is PsdArray ? "System.Object[]" : Display(item))),
-        PsdTable => "System.Collections.Hashtable",
-        _ => DataScalars.String(value)
-    };
 }

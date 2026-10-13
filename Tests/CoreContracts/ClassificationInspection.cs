@@ -20,24 +20,7 @@ internal static class ClassificationInspection
             using var writer = new Utf8JsonWriter(Console.OpenStandardOutput());
             writer.WriteStartArray();
             foreach (var item in classified)
-            {
-                writer.WriteStartObject();
-                writer.WriteString("id", item.Id);
-                writer.WriteString("kind", "mod");
-                writer.WriteString("name", item.Name);
-                writer.WriteString("filename", item.Filename);
-                writer.WriteString("side", item.Side);
-                writer.WriteString("source", item.Source == ContentSource.Packwiz ? "packwiz" : "local");
-                writer.WriteString("metadata_path", item.MetadataPath);
-                writer.WriteString("category", item.Category);
-                writer.WriteString("invalid_category", item.InvalidCategory);
-                if (item.Source == ContentSource.Packwiz)
-                {
-                    writer.WriteString("version_id", item.VersionId);
-                    writer.WriteBoolean("pinned", item.Pinned!.Value);
-                }
-                writer.WriteEndObject();
-            }
+                InventoryInspection.WritePhysical(writer, item);
             writer.WriteEndArray();
             return 0;
         }
