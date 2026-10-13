@@ -4,6 +4,7 @@ using System.Text.Json;
 
 if (args.FirstOrDefault() == "--inspect-managed") return ManagedInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-local-zips") return LocalZipInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-jar-display") return JarDisplayInspection.Run(args);
 
 // Test-only transport peer: arbitrary replies exercise adapter validation before
 // any parent session mutation. This mode is never part of the shipping CLI.
