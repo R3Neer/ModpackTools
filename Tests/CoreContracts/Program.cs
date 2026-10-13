@@ -2,6 +2,8 @@ using ModpackTools.Core.Data;
 using System.Globalization;
 using System.Text.Json;
 
+if (args.FirstOrDefault() == "--inspect-managed") return ManagedInspection.Run(args);
+
 // Test-only transport peer: arbitrary replies exercise adapter validation before
 // any parent session mutation. This mode is never part of the shipping CLI.
 if (args is ["--request-path", _] && Environment.GetEnvironmentVariable("MODPACKTOOLS_TEST_RESPONSE_PATH") is { } responsePath)

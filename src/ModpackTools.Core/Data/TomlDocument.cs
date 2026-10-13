@@ -1,42 +1,99 @@
+using System.Text.RegularExpressions;
 using Tomlyn;
-using Tomlyn.Syntax;
 
 namespace ModpackTools.Core.Data;
 
-internal sealed class TomlDocument
+internal sealed partial class TomlDocument
 {
     private readonly string source;
-    public DocumentSyntax Syntax { get; }
+    private readonly Dictionary<string, (int Start, int Length)> windows = new(StringComparer.Ordinal);
+    private const string FieldStart = "^\\s*";
+    private const string FieldEnd = "\\s*=\\s*\"(?<value>(?:\\\\.|[^\"\\\\])*)\"\\s*(?:#.*)?$";
 
     public TomlDocument(string text)
     {
         source = text;
         TomlInputLimits.Validate(text);
-        Syntax = Toml.Parse(text);
-        if (Syntax.HasErrors) throw new FormatException(Syntax.Diagnostics.ToString());
+        var syntax = Toml.Parse(text);
+        if (syntax.HasErrors) throw new FormatException(syntax.Diagnostics.ToString());
+        windows.Add("", Window(0));
+        // Published fields are a lexical projection, including apparent headers
+        // inside valid multiline strings. The AST validates data, not this contract.
+        foreach (Match header in SectionHeader().Matches(text))
+        {
+            var section = header.Groups["section"].Value;
+            windows.TryAdd(section, Window(header.Index + header.Length));
+        }
     }
 
     public string? String(string key, string section = "")
     {
-        var values = section.Length == 0 ? Syntax.KeyValues : Syntax.Tables.FirstOrDefault(table => IsLegacySection(table, section))?.Items;
-        if (values is null) return null;
-        // Preserve the published Packwiz reader's accepted field spelling/string form.
-        // Parsing still validates the whole document; no reflective model conversion.
-        var pair = values.FirstOrDefault(pair => IsBareKey(pair.Key, key));
-        return pair?.Value is StringValueSyntax value && value.Token?.Text is { } token &&
-            token.StartsWith('"') && !token.StartsWith("\"\"\"", StringComparison.Ordinal) ? value.Value : null;
+        if (!windows.TryGetValue(section, out var window)) return null;
+        var pattern = key switch
+        {
+            "name" => Name(),
+            "version" => Version(),
+            "filename" => Filename(),
+            "side" => Side(),
+            "mod-id" => ModId(),
+            "project-id" => ProjectId(),
+            "file" => File(),
+            "minecraft" => Minecraft(),
+            "fabric" => Fabric(),
+            "quilt" => Quilt(),
+            "neoforge" => NeoForge(),
+            "forge" => Forge(),
+            _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown compatibility field")
+        };
+        var match = pattern.Match(source, window.Start, window.Length);
+        if (!match.Success) return null;
+        try { return Regex.Unescape(match.Groups["value"].Value); }
+        catch (ArgumentException exception) { throw new FormatException("The string escape is unsupported by the compatibility decoder.", exception); }
     }
 
-    private bool IsLegacySection(TableSyntaxBase table, string section)
+    public bool RootPin()
     {
-        if (!IsBareKey(table.Name, section) || table.OpenBracket is null || table.CloseBracket is null) return false;
-        var start = table.OpenBracket.Span.End.Offset + 1;
-        var end = table.CloseBracket.Span.Start.Offset;
-        if (source[start..end] != section) return false;
-        var lineEnd = source.IndexOf('\n', end);
-        return lineEnd >= 0 && string.IsNullOrWhiteSpace(source[(end + 1)..lineEnd]);
+        var window = windows[""];
+        return Pin().Match(source, window.Start, window.Length).Success;
     }
 
-    private static bool IsBareKey(KeySyntax? key, string expected) =>
-        key is { Key: BareKeySyntax bare } && !key.DotKeys.Any() && bare.Key?.Text == expected;
+    private (int Start, int Length) Window(int start)
+    {
+        var boundary = SectionBoundary().Match(source, start);
+        return (start, (boundary.Success ? boundary.Index : source.Length) - start);
+    }
+
+    [GeneratedRegex(@"^\s*\[", RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    private static partial Regex SectionBoundary();
+
+    [GeneratedRegex(@"^\s*\[(?<section>[^\]\r\n]+)\]\s*\r?\n", RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    private static partial Regex SectionHeader();
+
+    [GeneratedRegex(FieldStart + "name" + FieldEnd, RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    private static partial Regex Name();
+    [GeneratedRegex(FieldStart + "version" + FieldEnd, RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    private static partial Regex Version();
+    [GeneratedRegex(FieldStart + "filename" + FieldEnd, RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    private static partial Regex Filename();
+    [GeneratedRegex(FieldStart + "side" + FieldEnd, RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    private static partial Regex Side();
+    [GeneratedRegex(FieldStart + "mod-id" + FieldEnd, RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    private static partial Regex ModId();
+    [GeneratedRegex(FieldStart + "project-id" + FieldEnd, RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    private static partial Regex ProjectId();
+    [GeneratedRegex(FieldStart + "file" + FieldEnd, RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    private static partial Regex File();
+    [GeneratedRegex(FieldStart + "minecraft" + FieldEnd, RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    private static partial Regex Minecraft();
+    [GeneratedRegex(FieldStart + "fabric" + FieldEnd, RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    private static partial Regex Fabric();
+    [GeneratedRegex(FieldStart + "quilt" + FieldEnd, RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    private static partial Regex Quilt();
+    [GeneratedRegex(FieldStart + "neoforge" + FieldEnd, RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    private static partial Regex NeoForge();
+    [GeneratedRegex(FieldStart + "forge" + FieldEnd, RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    private static partial Regex Forge();
+
+    [GeneratedRegex(@"^pin[ \t]*=[ \t]*true[ \t]*(?:#.*)?\r?$", RegexOptions.Multiline | RegexOptions.NonBacktracking)]
+    private static partial Regex Pin();
 }

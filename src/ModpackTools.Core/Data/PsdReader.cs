@@ -140,8 +140,16 @@ public sealed partial class PsdReader
                 }
                 character = escaped switch
                 {
-                    '0' => '\0', 'a' => '\a', 'b' => '\b', 'e' => '\x1b', 'f' => '\f',
-                    'n' => '\n', 'r' => '\r', 't' => '\t', 'v' => '\v', _ => escaped
+                    '0' => '\0',
+                    'a' => '\a',
+                    'b' => '\b',
+                    'e' => '\x1b',
+                    'f' => '\f',
+                    'n' => '\n',
+                    'r' => '\r',
+                    't' => '\t',
+                    'v' => '\v',
+                    _ => escaped
                 };
             }
             result.Append(character);
