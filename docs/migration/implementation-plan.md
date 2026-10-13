@@ -320,7 +320,18 @@ Independent black-box review passes 52 cases (38 successes, five Unclosed errors
 six E08 errors and three policy controls); white-box passes nine extra successes,
 two errors and quota/adversarial controls. No public inventory switch yet.
 
-Next checkpoint: resource activation and
+Pure resource activation completed. Immutable active rows preserve ID order,
+duplicates, one-based priorities and builtin/missing/physical source distinctions.
+First-wins filename indexing and active filename sets use InvariantCultureIgnoreCase;
+inactive Name sorting is stable/current-culture. Active-only editorial names reuse
+the shared typed projection, with an ordinal per-ID cache and E09 failure handling.
+Resource-only ZIP discovery ignores unrelated kinds. Warning-free Native AOT and
+all-project format/build, own seven successes/six E09 cases/isolation, classification,
+ZIP, native invariants and 15 protocol regressions pass. Independent black-box 54
+cases and white-box seven additional successes/five E09 cases, isolation and cache/
+immutability controls pass. This remains internal rather than a public inventory.
+
+Next checkpoint: full read-only
 composition into RawInventorySnapshot. Native inspection tests make each internal
 capability observable without partial public content-list success. Public content
 list still uses the legacy engine.
