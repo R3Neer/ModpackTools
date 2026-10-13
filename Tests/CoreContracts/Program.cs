@@ -139,5 +139,13 @@ if (original.Name != "Original" || original.Category != null || classified[0].Na
     classified[1].Filename != "two.jar" || classified[1].Name != "Override" || classified[2] != shader ||
     !ModClassification.Apply(classified, editorial).SequenceEqual(classified))
     throw new InvalidOperationException("Classification immutability, field retention or idempotence failed");
+var grouped = PsdReader.Parse("@{First=@{Side='client';Category='qol'};Second=@{Name=@();Side='server';Category='qol'}}");
+var firstGroup = (PsdTable)grouped.Entries["First"];
+firstGroup = firstGroup with { Entries = firstGroup.Entries.Add("Name", new PsdArray([new PsdArray([new PsdString("A"), new PsdString("B")])])) };
+var programmaticMods = new PsdTable(editorial.Mods.Entries.SetItem("modrinth:x",
+    new PsdArray([firstGroup, grouped.Entries["Second"]])));
+var projected = ModClassification.Apply([original], editorial with { Mods = programmaticMods });
+if (projected[0].Name != "A B" || projected[0].Side != "client server" || projected[0].InvalidCategory != "qol qol")
+    throw new InvalidOperationException("Singleton projected field group did not collapse to its scalar value");
 Console.WriteLine($"PSD1 native contracts passed: {invalid.Length + 7 + limits.Length} rejected inputs, typed literals, nested arrays, bounded numeric extraction, immutable classification, {args.Length} files");
 return 0;

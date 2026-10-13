@@ -45,7 +45,7 @@ public static class ModClassification
                     if (!child.Entries.TryGetValue(key, out var value)) throw Invalid(id);
                     if (value is PsdArray group) values.AddRange(group.Items); else values.Add(value);
                 }
-                fields.Add(key, new PsdArray(values.ToImmutable()));
+                fields.Add(key, values.Count == 1 ? values[0] : new PsdArray(values.ToImmutable()));
             }
             return fields.ToImmutable();
         }
