@@ -406,3 +406,29 @@ projection with mod classification; do not create another dynamic evaluator.
 Test-only --inspect-resource-view <root> composes managed resource/local ZIP reads,
 editorial metadata and order, emitting raw resources/active/inactive arrays. It does
 not read mods/shaders, alter activation or switch public content list.
+
+## Complete raw inventory snapshot / next checkpoint
+
+`InventoryReader.Read(ProjectContext, InventoryReadLimits?) -> RawInventorySnapshot`
+composes immutable Project/EditorialMetadata/Mods/Resources/ResourcePackView/Shaders
+and local JAR observations. Preserve the legacy read/error priority: editorial,
+managed mods, local JARs, mod classification, managed resources, local resource
+ZIPs, managed shaders, local shader ZIPs, configured order, activation, final sorts.
+Mods/shaders sort stably by CurrentCultureIgnoreCase Name. Resources and JAR
+observations keep discovery order; the resource view never mutates physical rows.
+
+One managed byte/file/directory budget spans all three kind reads; one local ZIP
+matched-file budget spans resources/shaders. Local JAR aggregate/decompression and
+per-archive policies remain separate, with actual bytes including failed JSON.
+Validate every supplied policy before inventory IO, including absent/excluded
+kinds. Internal budget-sharing overloads belong to readers; no public callbacks,
+renderer or shell dependencies. Archive observations retain original physical
+Item identity; future health consumers must not align them to sorted/classified
+Mods by index or by ID alone because duplicate IDs are retained.
+
+Test-only --inspect-inventory <root> emits project (eight public fields plus
+index_file/index_path), normalized metadata, raw mods/resources/active/inactive/
+shaders and native archive observations separately. The latter are read-status
+evidence, not a complete health result. Optional managed/local/ZIP/order quota
+flags support exact/over aggregate checks. No filters, references, persistent
+cache, public command switch or project mutation is part of this checkpoint.
