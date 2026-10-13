@@ -113,3 +113,12 @@ matching legacy; they are not ignored as in mod classification. Preserve support
 empty-table, optional singleton and multi-table Name successes. Unencountered
 editorial IDs remain unvalidated. Abort before a partial successful resource view;
 there are no filesystem effects.
+
+## E10: deterministic category names in unknown-category diagnostics
+
+Retain Inventory.UnknownCategory ID/category/target and the complete available-key
+list. Sort keys by the existing current-culture comparison, with an ordinal tie
+break for distinct keys that collate equally (such as composed/decomposed Unicode).
+This stabilizes diagnostic wording across dictionary enumeration orders. It changes
+only the error's informational list; category membership, row filtering and future
+numbered references do not acquire a new comparison or ordering rule here.

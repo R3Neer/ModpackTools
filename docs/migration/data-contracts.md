@@ -432,3 +432,32 @@ shaders and native archive observations separately. The latter are read-status
 evidence, not a complete health result. Optional managed/local/ZIP/order quota
 flags support exact/over aggregate checks. No filters, references, persistent
 cache, public command switch or project mutation is part of this checkpoint.
+
+## Pure inventory selection / next checkpoint
+
+`InventorySelector.Select(RawInventorySnapshot, RawInventoryQuery) -> InventorySelection`
+returns immutable project/metadata views, selected mods/active/inactive/shader rows,
+included ContentKind array, ordered filter labels and total matches. Query fields
+are request strings: Type/State default to all, optional Category/Side/Source/Match
+are absent by default. Explicit null Type/State binds to empty and fails, matching
+the PowerShell string parameter boundary. Validate inside Select after snapshot
+construction; public command integration must retain read-before-filter priority.
+
+Preserve aliases and comparison semantics: type switch, side/source/state choice
+membership and row category/side/source comparisons use InvariantCultureIgnoreCase.
+Host maps to server; its label is host. Metadata category lookup is OrdinalIgnoreCase,
+with cultural unclassified exemption. Match is an OrdinalIgnoreCase substring over
+Name + space + Id + space + Filename (null becomes empty), not regex or wildcard.
+Do not trim input. Empty optional filters are absent; whitespace is present.
+
+Validation priority is type, side, source, state, mod/type conflict, mod/state
+conflict, state/type conflict, unknown category. Retain domain IDs, categories,
+targets and hints. Mod-only filters force type mod; state forces resourcepack;
+source alone does not force a type. Preserve group ordering and labels in the
+existing type/category/side/source/state/search order, including search= for the
+public --match flag and raw lowercased source/state spellings. Included types are
+always a typed collection, matching the public mapper's array normalization.
+
+Test-only --inspect-selected-inventory <root> [--type/--category/--side/--source/
+--state/--match value] emits raw groups, included_types, filters and total_matches.
+It does not assign references, cache data, inspect health or change public dispatch.
