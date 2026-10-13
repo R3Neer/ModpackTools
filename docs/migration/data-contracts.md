@@ -1180,3 +1180,20 @@ including inactive members; this explicit input-resource prelude does not parse
 semantic text/numbers or replace visited evaluation priorities. E30/E31 cover new
 range policies/limits and actual bound conversion failures. Existing E28/E29 apply
 to consumed version comparisons. No invented healthy result on failure.
+
+Wildcard/initial caret/tilde bound conversion also checks the comparison policy's
+MaximumNumericDigits before numeric allocation, using E30 with that property as
+target; it applies only to the actually converted bound component. Evaluation text
+guard precedes Trim. A match-all range need not consume or validate version text.
+Diagnostic --inspect-version-range <version-json-string-or-null> <range-json>
+accepts --maven/--culture, --max-range-chars/nodes/comparisons/depth,
+--max-declaration-nodes/depth and the four --max-version-* comparison flags.
+Diagnostic JSON is bounded to1Mi characters per argument/depth16 version/depth128
+declaration; domain lowering then imposes depth64. Closed flag grammar precedes
+declaration decoding, then evaluation. Emits bool/null or a buffered structured error.
+Declaration Read accepts an explicit immutable member StringComparer, default
+Ordinal for original ConvertFrom-Json -AsHashtable case-sensitive ordered tables.
+Literal PS hashtables have a different comparer; diagnostic
+--member-case-insensitive true models that declared input origin. ANY is unknown
+under the JSON default and matches any only with the appropriate source comparer.
+This does not change the comparator used for versions or the Any/All truth table.
