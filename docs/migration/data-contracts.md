@@ -471,8 +471,7 @@ when its field is absent; a present null becomes empty, arrays use the existing
 editorial display projection and tables retain their PowerShell display spelling.
 Order defaults to 1000 only when absent. Present null becomes zero, boolean maps
 to 0/1, scalar strings/numbers preserve the existing bounded Int32 conversion,
-including midpoint-to-even rounding. Arrays/tables as Order are failures, including
-singleton arrays; do not unwrap them into successful numbers.
+including midpoint-to-even rounding. Arrays/tables as Order on a direct table are failures, including singleton arrays.
 
 Category entries reuse the typed table-field projection with no truthy guard.
 Supported singleton table wrappers retain their behavior. Multi-table Name fields
@@ -489,3 +488,12 @@ linguistic key comparison and no implicit reserved-category rewrite. This orderi
 will be shared by reference assignment and presentation rather than reimplemented
 by adapters. No files/cache, timestamps, reference numbers or public dispatch are
 changed in this checkpoint. Test-only --inspect-categories <root> emits definitions.
+Member-projection clarification: categories and active ResourcePacks perform direct
+entry lookup, so even a singleton array of tables enumerates each requested field
+once, omits empty array contributions and collapses a single produced value.
+Explicit null counts as one produced value. No produced values fails StrictMode;
+it does not become a successful null. Therefore wrapped Order=@(1) succeeds as 1,
+while direct-table Order=@(1) fails; wrapped empty Name/Order fails, whereas direct
+Name=@() displays empty. Mod override binding first collapses a singleton table
+wrapper and retains direct-table field behavior. Keep these two input boundaries
+explicit instead of changing the shared literal model or unwrapping every array.

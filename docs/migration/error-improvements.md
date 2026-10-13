@@ -141,3 +141,7 @@ legacy numbering can be preserved for that ambiguous input. Deterministic orderi
 prevents regenerated references from drifting without content changes. This is a
 limited successful-order change, not an error-format change. Ordinary category and
 row ordering remains unchanged; keys that collate equally are retained separately.
+E09 projection correction: singleton ResourcePacks wrappers retain member enumeration,
+including failure when Name contributes no values. Direct-table empty Name remains
+successful empty text; singleton wrapped empty Name is an actual StrictMode failure.
+Mod binding uses a different initial wrapper collapse and must remain unchanged.
