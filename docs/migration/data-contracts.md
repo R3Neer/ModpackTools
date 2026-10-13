@@ -172,3 +172,26 @@ the budget produces Content.ReadLimitExceeded with LimitsExceeded/path/hint befo
 unbounded collection or parsing. Enumeration failures follow legacy skip behavior;
 selected-file read/parse failures are structured Content.InvalidMetadata. No mtime
 shortcut or weakened transaction fingerprint is introduced.
+
+## Local resource/shader ZIP discovery / next checkpoint
+
+`LocalZipReader.Read(ProjectContext, ImmutableArray<ManagedContentItem>,
+LocalZipReadLimits?) -> ImmutableArray<LocalContentItem>` produces immutable
+id/kind/name/filename/side records, without fabricating managed version/pin fields.
+Only resourcepacks and shaderpacks are included here; JAR metadata is a subsequent
+capability. Enumerate immediate *.zip files, skip Hidden, include System-only and
+retain provider filename ordering. Do not open ZIPs: invalid archive contents do
+not change filename-based discovery. Missing directories produce empty results.
+
+Exclude filenames known to managed items of the matching kind using the legacy
+case-insensitive string comparison. Preserve its use of Filename alone even when
+the corresponding metadata resides in a subdirectory; do not silently correct
+path association. IDs use local:<directory>/<lowercase filename>, names use the
+filename without extension. Resource side is client; shader side is unknown.
+Test projection adds source=local, metadata_path=null and category=null, matching
+the existing raw getter. There is no public command dispatch yet.
+
+The default matched-file budget is 100000 across both directories, consumed before
+known-file exclusion. Exceeding it gives Content.ReadLimitExceeded / LimitsExceeded
+with file path and a hint. Enumeration failures retain legacy skip behavior. No
+archive expansion, filesystem mutation, editorial overrides or health is implied.
