@@ -72,8 +72,8 @@ internal static class ManagedInspection
             case null: writer.WriteNullValue(); break;
             case TextTarget text: writer.WriteStringValue(text.Value); break;
             case NumberTarget number: writer.WriteNumberValue(number.Value); break;
-            case DecimalTarget number: writer.WriteNumberValue(number.Value); break;
-            case FloatingTarget number: writer.WriteNumberValue(number.Value); break;
+            case DecimalTarget number: WriteFractional(writer, number.Value.ToString(CultureInfo.InvariantCulture)); break;
+            case FloatingTarget number: WriteFractional(writer, number.Value.ToString("R", CultureInfo.InvariantCulture)); break;
             case BooleanTarget flag: writer.WriteBooleanValue(flag.Value); break;
             case TextListTarget values:
                 writer.WriteStartArray();
@@ -85,4 +85,7 @@ internal static class ManagedInspection
         writer.WriteEndObject();
         writer.WriteEndObject();
     }
+
+    private static void WriteFractional(Utf8JsonWriter writer, string text) =>
+        writer.WriteRawValue(text.IndexOfAny(['.', 'e', 'E']) >= 0 ? text : text + ".0");
 }

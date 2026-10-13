@@ -6,7 +6,14 @@ namespace ModpackTools.Core.Inventory;
 
 public sealed record LocalModObservation(LocalContentItem Item, ArtifactReadStatus Status, string? Diagnostic);
 public sealed record LocalJarReadLimits(long MaximumMetadataBytes = 64 * 1024 * 1024,
-    int MaximumFiles = 100000, int MaximumDirectories = 100000, ArchiveReadLimits? Archive = null);
+    int MaximumFiles = 100000, int MaximumDirectories = 100000, ArchiveReadLimits? Archive = null)
+{
+    internal void Validate()
+    {
+        ReadBudget.Validate(new(MaximumMetadataBytes, MaximumFiles, MaximumDirectories));
+        (Archive ?? new()).Validate();
+    }
+}
 
 public static class LocalJarReader
 {

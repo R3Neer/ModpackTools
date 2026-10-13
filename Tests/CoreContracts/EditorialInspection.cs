@@ -32,7 +32,7 @@ internal static class EditorialInspection
         }
     }
 
-    private static void WriteData(Utf8JsonWriter writer, PsdValue value)
+    internal static void WriteData(Utf8JsonWriter writer, PsdValue value)
     {
         switch (value)
         {

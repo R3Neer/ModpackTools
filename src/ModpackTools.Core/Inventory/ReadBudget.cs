@@ -10,10 +10,15 @@ internal sealed class ReadBudget
 
     public ReadBudget(ManagedReadLimits limits, string scope = "managed-content")
     {
-        if (limits.MaximumBytes < 1 || limits.MaximumFiles < 1 || limits.MaximumDirectories < 1)
-            throw new ArgumentOutOfRangeException(nameof(limits), "Reader budgets must be positive.");
+        Validate(limits);
         this.limits = limits;
         this.scope = scope;
+    }
+
+    public static void Validate(ManagedReadLimits limits)
+    {
+        if (limits.MaximumBytes < 1 || limits.MaximumFiles < 1 || limits.MaximumDirectories < 1)
+            throw new ArgumentOutOfRangeException(nameof(limits), "Reader budgets must be positive.");
     }
 
     public void File(string path)

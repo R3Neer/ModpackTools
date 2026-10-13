@@ -5,14 +5,21 @@ using ModpackTools.Core.Projects;
 
 namespace ModpackTools.Core.Inventory;
 
-public sealed record ResourceOrderReadLimits(int MaximumItems = 100000);
+public sealed record ResourceOrderReadLimits(int MaximumItems = 100000)
+{
+    internal void Validate()
+    {
+        if (MaximumItems < 1) throw new ArgumentOutOfRangeException("limits", "Reader budgets must be positive.");
+    }
+}
 
 public static partial class ResourcePackOrderReader
 {
     public static ImmutableArray<string> Read(ProjectContext project, ResourceOrderReadLimits? limits = null)
     {
-        var maximum = (limits ?? new()).MaximumItems;
-        if (maximum < 1) throw new ArgumentOutOfRangeException(nameof(limits), "Reader budgets must be positive.");
+        var policy = limits ?? new();
+        policy.Validate();
+        var maximum = policy.MaximumItems;
         var path = Path.Combine(project.Root, "config", "defaultoptions-common.toml");
         if (!File.Exists(path)) return [];
         try

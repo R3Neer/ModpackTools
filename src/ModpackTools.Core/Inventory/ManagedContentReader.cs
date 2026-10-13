@@ -7,19 +7,21 @@ namespace ModpackTools.Core.Inventory;
 public static class ManagedContentReader
 {
     public static ImmutableArray<ManagedContentItem> Read(ProjectContext project, ManagedReadLimits? limits = null) =>
-        Read(project, [("mods", ContentKind.Mod), ("resourcepacks", ContentKind.ResourcePack), ("shaderpacks", ContentKind.ShaderPack)], limits);
+        Read(project, [("mods", ContentKind.Mod), ("resourcepacks", ContentKind.ResourcePack), ("shaderpacks", ContentKind.ShaderPack)], new ReadBudget(limits ?? new()));
 
     public static ImmutableArray<ManagedContentItem> Read(ProjectContext project, ContentKind kind, ManagedReadLimits? limits = null) =>
+        Read(project, kind, new ReadBudget(limits ?? new()));
+
+    internal static ImmutableArray<ManagedContentItem> Read(ProjectContext project, ContentKind kind, ReadBudget budget) =>
         Read(project, [(kind switch
         {
             ContentKind.Mod => "mods", ContentKind.ResourcePack => "resourcepacks", ContentKind.ShaderPack => "shaderpacks",
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
-        }, kind)], limits);
+        }, kind)], budget);
 
     private static ImmutableArray<ManagedContentItem> Read(ProjectContext project,
-        (string Directory, ContentKind Kind)[] locations, ManagedReadLimits? limits)
+        (string Directory, ContentKind Kind)[] locations, ReadBudget budget)
     {
-        var budget = new ReadBudget(limits ?? new());
         var items = ImmutableArray.CreateBuilder<ManagedContentItem>();
         foreach (var (directory, kind) in locations)
             foreach (var file in ContentFiles.Enumerate(Path.Combine(project.Root, directory), budget))

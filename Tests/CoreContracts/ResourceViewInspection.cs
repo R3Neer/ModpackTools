@@ -23,25 +23,7 @@ internal static class ResourceViewInspection
             foreach (var item in resources) InventoryInspection.WritePhysical(writer, item);
             writer.WriteEndArray();
             writer.WriteStartArray("active");
-            foreach (var item in view.Active)
-            {
-                writer.WriteStartObject();
-                writer.WriteString("id", item.Id);
-                writer.WriteString("kind", "resourcepack");
-                writer.WriteString("name", item.Name);
-                writer.WriteString("filename", item.Filename);
-                writer.WriteString("source", item.Source switch
-                {
-                    ActiveResourceSource.Packwiz => "packwiz",
-                    ActiveResourceSource.Local => "local",
-                    ActiveResourceSource.Builtin => "builtin",
-                    ActiveResourceSource.Missing => "missing",
-                    _ => throw new ArgumentException("Unknown active resource source.")
-                });
-                writer.WriteBoolean("enabled", true);
-                writer.WriteNumber("priority", item.Priority);
-                writer.WriteEndObject();
-            }
+            foreach (var item in view.Active) WriteActive(writer, item);
             writer.WriteEndArray();
             writer.WriteStartArray("inactive");
             foreach (var item in view.Inactive) InventoryInspection.WritePhysical(writer, item);
@@ -60,5 +42,25 @@ internal static class ResourceViewInspection
                 "check resource-view inspection arguments and input access permissions", null);
             return 2;
         }
+    }
+
+    internal static void WriteActive(Utf8JsonWriter writer, ActiveResource item)
+    {
+        writer.WriteStartObject();
+        writer.WriteString("id", item.Id);
+        writer.WriteString("kind", "resourcepack");
+        writer.WriteString("name", item.Name);
+        writer.WriteString("filename", item.Filename);
+        writer.WriteString("source", item.Source switch
+        {
+            ActiveResourceSource.Packwiz => "packwiz",
+            ActiveResourceSource.Local => "local",
+            ActiveResourceSource.Builtin => "builtin",
+            ActiveResourceSource.Missing => "missing",
+            _ => throw new ArgumentException("Unknown active resource source.")
+        });
+        writer.WriteBoolean("enabled", true);
+        writer.WriteNumber("priority", item.Priority);
+        writer.WriteEndObject();
     }
 }

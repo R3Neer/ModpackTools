@@ -12,6 +12,7 @@ if (args.FirstOrDefault() == "--inspect-editorial") return EditorialInspection.R
 if (args.FirstOrDefault() == "--inspect-classified-mods") return ClassificationInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-resource-order") return ResourceOrderInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-resource-view") return ResourceViewInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-inventory") return FullInventoryInspection.Run(args);
 
 // Test-only transport peer: arbitrary replies exercise adapter validation before
 // any parent session mutation. This mode is never part of the shipping CLI.
