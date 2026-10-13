@@ -14,7 +14,7 @@ Import-Module $ModulePath -Force
  param($root)
  try {
   $metadata=Get-ModpackMetadata -Project ([pscustomobject]@{Root=$root})
-  $items=@(foreach($key in $metadata.Categories.Keys){$value=$metadata.Categories[$key];[ordered]@{key=[string]$key;name=$(if($value.ContainsKey('Name')){[string]$value.Name}else{([string]$key).ToUpperInvariant()});order=$(if($value.ContainsKey('Order')){[int]$value.Order}else{1000})}})|Sort-Object order,name
+  $items=@(foreach($key in $metadata.Categories.Keys){$value=$metadata.Categories[$key];[pscustomobject][ordered]@{key=[string]$key;name=$(if($value.ContainsKey('Name')){[string]$value.Name}else{([string]$key).ToUpperInvariant()});order=$(if($value.ContainsKey('Order')){[int]$value.Order}else{1000})}})|Sort-Object order,name
   ConvertTo-Json -InputObject @($items) -Depth 20 -Compress
  }catch{ConvertTo-Json -InputObject @{failure=$true;message=$_.Exception.Message} -Compress}
 } $RootPath
@@ -29,6 +29,11 @@ Import-Module $ModulePath -Force
   if($b.failure){if($new.Exit -ne 1 -or $n.error.id -cne 'ModpackTools.Metadata.InvalidCategoryDefinition' -or $n.error.category -cne 'InvalidData' -or $n.error.target -cne 'qol'){throw "Category E11 mismatch $definition $($new.Stdout)"};$failure++}
   else {if($new.Exit -ne 0 -or (ConvertTo-Json -InputObject @($b) -Compress) -cne (ConvertTo-Json -InputObject @($n) -Compress)){throw "Category mismatch $definition $($old.Stdout) $($new.Stdout)"};$success++}
  }
+ [IO.File]::WriteAllText($path,"@{Categories=@{z=@{Name='Zulu';Order=1};a=@{Name='Alpha';Order=1};b=@{Name='Before';Order=0}}}")
+ $old=Invoke-NativeTestProcess (Get-Command pwsh).Source @('-NoProfile','-File',$runner,'-ModulePath',(Join-Path $LegacyRoot 'ModpackTools.psd1'),'-RootPath',$fixture)
+ $new=Invoke-NativeTestProcess $Executable @('--inspect-categories',$fixture)
+ if($old.Exit -ne 0 -or $new.Exit -ne 0 -or $new.Stderr -cne '' -or (($old.Stdout|ConvertFrom-Json)|ConvertTo-Json -Compress) -cne (($new.Stdout|ConvertFrom-Json)|ConvertTo-Json -Compress)){throw 'Multi-category baseline sorting mismatch'}
+ $success++
  [IO.File]::WriteAllText($path,"@{Categories=@{z=@{Name='same';Order=1};a=@{Name='same';Order=1};b=@{Name='Before';Order=0}}}")
  $new=Invoke-NativeTestProcess $Executable @('--inspect-categories',$fixture)
  if($new.Exit -ne 0 -or (($new.Stdout|ConvertFrom-Json).key -join ',') -cne 'b,a,z'){throw 'Deterministic category ordering failed'}
