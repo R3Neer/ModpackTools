@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Numerics;
 using System.Text.Json;
 using ModpackTools.Core;
 using ModpackTools.Core.Data;
@@ -57,11 +56,7 @@ internal static class EditorialInspection
                     writer.WriteRawValue(decimalInteger.ToString(CultureInfo.InvariantCulture) + ".0");
                 else
                 {
-                    // PowerShell converts overflowing integer tokens through BigInteger,
-                    // whose double conversion differs from parsing a floating token.
-                    var floating = number.Literal.IndexOfAny(['.', 'e', 'E']) < 0
-                        ? (double)BigInteger.Parse(number.Literal, CultureInfo.InvariantCulture)
-                        : double.Parse(number.Literal, CultureInfo.InvariantCulture);
+                    var floating = PsdNumbers.Floating(number.Literal);
                     var formatted = floating.ToString("R", CultureInfo.InvariantCulture);
                     if (!double.IsFinite(floating)) writer.WriteStringValue(formatted);
                     else writer.WriteRawValue(formatted.IndexOfAny(['.', 'E', 'e']) >= 0 ? formatted : formatted + ".0");

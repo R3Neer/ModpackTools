@@ -35,6 +35,17 @@ try {
     [IO.File]::WriteAllText((Join-Path $edgeRoot 'pack.toml'), '[index]')
     [IO.File]::WriteAllText($edgeDescriptor, "@{SchemaVersion=1;Id='edge'}")
     Assert-ProjectCase @('project','list')
+    foreach($number in @('1.234567891234567','1.0000000000000002','1234567891234567.0','99999999999999999999999999999999','-99999999999999999999999999999999')) {
+        [IO.File]::WriteAllText($edgeDescriptor, "@{SchemaVersion=1;Id='edge';DisplayName=$number;DisplayVersion=$number;OutputName=$number}")
+        Assert-ProjectCase @('project','list')
+        [IO.File]::WriteAllText($edgeDescriptor, "@{SchemaVersion=1;Id=$number}")
+        Assert-ProjectCase @('project','list')
+    }
+    foreach($number in @(('9'*309),('9'*310),('-'+('9'*309)))) {
+        [IO.File]::WriteAllText($edgeDescriptor, "@{SchemaVersion=1;Id='edge';DisplayName=$number}")
+        $overflowLiteral=Invoke-NativeTestProcess $Executable @('project','list','--json','--no-human')
+        if($overflowLiteral.Exit -ne 1 -or ($overflowLiteral.Stdout|ConvertFrom-Json).error.id -cne 'ModpackTools.Project.InvalidDescriptor' -or $overflowLiteral.Stderr -cne ''){throw 'Non-importable integer became project success'}
+    }
     [IO.File]::WriteAllText($edgeDescriptor, "@{SchemaVersion=1;Id='edge';DisplayName=`$null;DisplayVersion=`$null;OutputName=`$null}")
     Assert-ProjectCase @('project','list')
     [IO.File]::WriteAllText($edgeDescriptor, "@{SchemaVersion=1;Id='edge';DisplayName=1.5;DisplayVersion=1e3}")
@@ -80,7 +91,7 @@ try {
     $emptyCatalog=Invoke-NativeTestProcess $Executable @('project','list','--json','--no-human')
     $emptyResult=$emptyCatalog.Stdout|ConvertFrom-Json
     if($emptyCatalog.Exit -ne 0 -or -not $emptyResult.ok -or $emptyResult.data.projects.items -isnot [array] -or $emptyResult.data.projects.items.Count -ne 0 -or $emptyCatalog.Stderr -cne ''){throw 'Empty catalog was not a valid typed result'}
-    'Native project catalog: 21 differential cases and 7 explicit error/empty/limit cases passed'
+    'Native project catalog: 31 differential cases and 10 explicit error/empty/limit cases passed'
 } finally {
     $env:MODPACKTOOLS_CONFIG_HOME=$previous
     # Resolved unique fixture root, created by this harness only.

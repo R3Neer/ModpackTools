@@ -9,7 +9,7 @@ internal static class DataScalars
         PsdString text => text.Value,
         PsdNull => "",
         PsdBoolean flag => flag.Value.ToString(),
-        PsdNumber number => NumberString(number.Literal),
+        PsdNumber number => PsdNumbers.Display(number.Literal),
         _ => throw new FormatException("Expected a scalar data value.")
     };
 
@@ -19,7 +19,7 @@ internal static class DataScalars
         PsdNull => 0,
         PsdNumber number when IsFloating(number.Literal) => Convert.ToInt32(double.Parse(number.Literal, CultureInfo.InvariantCulture)),
         PsdNumber number when decimal.TryParse(number.Literal, CultureInfo.InvariantCulture, out var integer) => Convert.ToInt32(integer),
-        PsdNumber number => Convert.ToInt32(double.Parse(number.Literal, CultureInfo.InvariantCulture)),
+        PsdNumber number => Convert.ToInt32(PsdNumbers.Floating(number.Literal)),
         PsdString text => StringInteger(text.Value),
         _ => throw new FormatException("Expected an integer data value.")
     };
@@ -31,15 +31,11 @@ internal static class DataScalars
         PsdBoolean flag => new BooleanTarget(flag.Value),
         PsdNumber number when long.TryParse(number.Literal, CultureInfo.InvariantCulture, out var integer) => new NumberTarget(integer),
         PsdNumber number when !IsFloating(number.Literal) && decimal.TryParse(number.Literal, CultureInfo.InvariantCulture, out var integer) => new DecimalTarget(integer),
-        PsdNumber number => FloatingDiagnostic(double.Parse(number.Literal, CultureInfo.InvariantCulture)),
+        PsdNumber number => FloatingDiagnostic(PsdNumbers.Floating(number.Literal)),
         _ => new TextTarget(String(value))
     };
 
     private static bool IsFloating(string literal) => literal.IndexOfAny(['.', 'e', 'E']) >= 0;
-
-    private static string NumberString(string literal) => !IsFloating(literal) && decimal.TryParse(literal, CultureInfo.InvariantCulture, out var integer)
-        ? integer.ToString(CultureInfo.InvariantCulture)
-        : double.Parse(literal, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture);
 
     private static DiagnosticTarget FloatingDiagnostic(double value) => double.IsFinite(value)
         ? new FloatingTarget(value)

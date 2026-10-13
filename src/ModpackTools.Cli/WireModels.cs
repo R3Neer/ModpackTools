@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using System.Text.Json;
+using System.Globalization;
 using ModpackTools.Core;
 using ModpackTools.Core.Projects;
 
@@ -26,13 +27,19 @@ internal sealed record Failure(string Id, string Message, string Category, JsonE
     {
         TextTarget text => JsonSerializer.SerializeToElement(text.Value, WireJsonContext.Default.String),
         NumberTarget number => JsonSerializer.SerializeToElement(number.Value, WireJsonContext.Default.Int64),
-        DecimalTarget number => JsonSerializer.SerializeToElement(number.Value, WireJsonContext.Default.Decimal),
-        FloatingTarget number => JsonSerializer.SerializeToElement(number.Value, WireJsonContext.Default.Double),
+        DecimalTarget number => FractionalNumber(number.Value.ToString(CultureInfo.InvariantCulture)),
+        FloatingTarget number => FractionalNumber(number.Value.ToString("R", CultureInfo.InvariantCulture)),
         BooleanTarget flag => JsonSerializer.SerializeToElement(flag.Value, WireJsonContext.Default.Boolean),
         TextListTarget items => JsonSerializer.SerializeToElement(items.Values, WireJsonContext.Default.StringArray),
         null => JsonSerializer.SerializeToElement((string?)null, WireJsonContext.Default.String),
         _ => throw new InvalidOperationException("Unknown diagnostic target")
     });
+
+    private static JsonElement FractionalNumber(string text)
+    {
+        using var document = JsonDocument.Parse(text.IndexOfAny(['.', 'e', 'E']) >= 0 ? text : text + ".0");
+        return document.RootElement.Clone();
+    }
 }
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower)]

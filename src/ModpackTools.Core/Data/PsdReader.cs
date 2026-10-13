@@ -59,6 +59,10 @@ public sealed partial class PsdReader
         if (token.Equals("$null", StringComparison.OrdinalIgnoreCase)) return new PsdNull();
         if (NumberLiteral().IsMatch(token))
         {
+            if (token.IndexOfAny(['.', 'e', 'E']) < 0 &&
+                !decimal.TryParse(token, CultureInfo.InvariantCulture, out _) &&
+                !double.IsFinite(PsdNumbers.Floating(token)))
+                throw Error("Integer literal exceeds the supported numeric range");
             // Keep the literal: extraction, not parsing, chooses numeric range.
             return new PsdNumber(token);
         }

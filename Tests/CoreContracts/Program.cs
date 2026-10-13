@@ -108,5 +108,20 @@ foreach (var source in limits)
     catch (PsdParseException) { continue; }
     throw new InvalidOperationException("Unsupported key or parser limit not enforced");
 }
-Console.WriteLine($"PSD1 native contracts passed: {invalid.Length + 7 + limits.Length} rejected inputs, typed literals, nested arrays, {args.Length} files");
+if (PsdNumbers.Floating("99999999999999999999999999999999") != 9.999999999999999E31 ||
+    PsdNumbers.Display("1.234567891234567") != "1.23456789123457" ||
+    PsdNumbers.Display("1.0000000000000002") != "1" ||
+    PsdNumbers.Display("79228162514264337593543950335") != "79228162514264337593543950335" ||
+    !double.IsPositiveInfinity(PsdNumbers.Floating(new string('9', 1000000))) ||
+    !double.IsNegativeInfinity(PsdNumbers.Floating("-" + new string('9', 310))) ||
+    PsdNumbers.Floating(new string('0', 1000000) + "1") != 1 ||
+    PsdNumbers.Floating("1" + new string('0', 308)) != (double)System.Numerics.BigInteger.Pow(10, 308))
+    throw new InvalidOperationException("Bounded PSD1 numeric conversion mismatch");
+foreach (var literal in new[] { new string('9', 309), new string('9', 310), "-" + new string('9', 309) })
+{
+    try { PsdReader.Parse("@{Value=" + literal + "}"); }
+    catch (PsdParseException) { continue; }
+    throw new InvalidOperationException("Non-importable overflowing integer was accepted");
+}
+Console.WriteLine($"PSD1 native contracts passed: {invalid.Length + 7 + limits.Length} rejected inputs, typed literals, nested arrays, bounded numeric extraction, {args.Length} files");
 return 0;
