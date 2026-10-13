@@ -64,6 +64,7 @@ if (args.FirstOrDefault() == "--inspect-classification-targets") return Classifi
 if (args.FirstOrDefault() == "--inspect-resource-targets") return ResourceTargetInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-default-options") return DefaultOptionsInspection.Run(args);
 if (args.FirstOrDefault() is "--inspect-read-category-cache" or "--inspect-category-id") return CategoryCacheInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-category-view") return CategoryListInspection.Run(args);
 
 // Test-only transport peer: arbitrary replies exercise adapter validation before
 // any parent session mutation. This mode is never part of the shipping CLI.
@@ -252,6 +253,7 @@ ClassificationTargetContracts.Verify(rawSnapshot);
 ResourceTargetContracts.Verify(rawSnapshot);
 DefaultOptionsContracts.Verify();
 CategorySelectorContracts.Verify();
+CategoryListContracts.Verify(rawSnapshot);
 ImportedLookupContracts.Verify();
 Console.WriteLine($"PSD1 native contracts passed: {invalid.Length + 7 + limits.Length} rejected inputs, typed literals, nested arrays, bounded numeric extraction, immutable classification/reference/alias identities, {args.Length} files");
 return 0;

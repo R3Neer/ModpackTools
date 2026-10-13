@@ -13,6 +13,12 @@ public sealed record RawInventorySnapshot(ProjectContext Project, EditorialMetad
 public static class InventoryReader
 {
     public static RawInventorySnapshot Read(ProjectContext project, InventoryReadLimits? limits = null)
+        => ReadCore(project, null, limits);
+
+    internal static RawInventorySnapshot Read(ProjectContext project, EditorialMetadata metadata, InventoryReadLimits? limits)
+        => ReadCore(project, metadata, limits);
+
+    private static RawInventorySnapshot ReadCore(ProjectContext project, EditorialMetadata? suppliedMetadata, InventoryReadLimits? limits)
     {
         limits ??= new();
         var managedBudget = new ReadBudget(limits.Managed ?? new());
@@ -22,7 +28,7 @@ public static class InventoryReader
         var orderPolicy = limits.ResourceOrder ?? new();
         orderPolicy.Validate();
 
-        var metadata = EditorialMetadataReader.Read(project);
+        var metadata = suppliedMetadata ?? EditorialMetadataReader.Read(project);
         var managedMods = ManagedContentReader.Read(project, ContentKind.Mod, managedBudget);
         var observations = LocalJarReader.Read(project, managedMods, localPolicy);
         var mods = ModClassification.Apply(managedMods.Select(InventoryItem.From)
