@@ -18,6 +18,7 @@ if (args.FirstOrDefault() == "--inspect-categories") return CategoryInspection.R
 if (args.FirstOrDefault() == "--inspect-numbered-inventory") return NumberingInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-write-reference-cache") return CacheWriteInspection.Run(args);
 if (args.FirstOrDefault() is "--inspect-read-reference-cache" or "--inspect-resolve-reference") return CacheReadInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-update-targets") return UpdateTargetInspection.Run(args);
 
 // Test-only transport peer: arbitrary replies exercise adapter validation before
 // any parent session mutation. This mode is never part of the shipping CLI.
@@ -200,5 +201,6 @@ if (!numbered.Mods.Select(row => row.Number).SequenceEqual(new int?[] { 7, 6, 7,
     !ReferenceEquals(numbered.Mods[0].Item, identityA) || !ReferenceEquals(numbered.Mods[1].Item, identityB) ||
     !ReferenceEquals(numbered.Selection, identitySelection) || identityA != identityB || ReferenceEquals(identityA, identityB))
     throw new InvalidOperationException("Reference occurrence, object identity, null category or original-row retention failed");
-Console.WriteLine($"PSD1 native contracts passed: {invalid.Length + 7 + limits.Length} rejected inputs, typed literals, nested arrays, bounded numeric extraction, immutable classification and reference identities, {args.Length} files");
+UpdateTargetContracts.Verify(rawSnapshot);
+Console.WriteLine($"PSD1 native contracts passed: {invalid.Length + 7 + limits.Length} rejected inputs, typed literals, nested arrays, bounded numeric extraction, immutable classification/reference/alias identities, {args.Length} files");
 return 0;

@@ -67,7 +67,7 @@ public static class InventorySelector
 
     private static Normalized Normalize(EditorialMetadata metadata, RawInventoryQuery query)
     {
-        var type = Type(query.Type ?? "");
+        var type = NormalizeType(query.Type ?? "");
         var side = (query.Side ?? "").ToLowerInvariant();
         if (Culture.Equals(side, "host")) side = "server";
         if (side.Length != 0 && !new[] { "client", "server", "both", "unknown" }.Contains(side, Culture))
@@ -110,7 +110,7 @@ public static class InventorySelector
         return new(type, side.Length == 0 ? null : side, source, state, labels.ToImmutable());
     }
 
-    private static InventoryType Type(string value)
+    internal static InventoryType NormalizeType(string value)
     {
         if (Culture.Equals(value, "all")) return InventoryType.All;
         if (new[] { "mod", "mods" }.Contains(value, Culture)) return InventoryType.Mod;
