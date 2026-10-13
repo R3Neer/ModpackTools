@@ -509,3 +509,17 @@ outside build inputs while a separate parser correction is validated and committ
 SafeValues7.6.6 and fresh probes distinguish captured CurrentCultureIgnoreCase import
 lookup from ordinal literal lookup; lexical duplicate guards remain ordinal. Native
 v55/v62 will validate the import correction alone; resource work resumes afterward.
+
+Imported-table correction completed as a separate native checkpoint. Capture
+CurrentCultureIgnoreCase per PsdReader instance/root/nested/array table, with ordinal
+syntax duplicate guards and unchanged programmatic comparers. Three-project locked
+restore/format/Release/Native AOT is warning-free. Host v55 SHA256:
+6B7C482631465414B335FAD9575D259ECDCF2B0B894219A1A0ACE561046528AB;
+CLI v62 SHA256:465D57E6178A1B85793C239CAC57BFD96499780585F9A2D1400AB3EF5CC57025.
+Own12 culture comparisons,24 editorial cases plus malformed input, resource view9
+successes/8 improved errors/kind isolation,59 quoted integer pairs, classification19
+successes/6 improved errors, raw inventory4 snapshots/4 quotas/5 policies,27 selection
+cases, public projects31+10 cases,15 protocol cases and native captured-culture/
+programmatic assertions pass. Blind77 imported/publicRoot/resource-view controls and
+white12 import pairs plus native assertions pass with unchanged fixtures. Resource
+work resumes separately; v54 stays failed evidence, not a completed checkpoint.
