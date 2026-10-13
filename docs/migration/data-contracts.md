@@ -202,3 +202,44 @@ unrelated malformed mod metadata does not affect this boundary. Separate per-kin
 inspection calls each have their own managed budget; the all-kinds production read
 retains a single aggregate budget. LocalZipReader receives observations directly
 and never invokes a managed reader itself.
+
+## Single-JAR display metadata / next checkpoint
+
+`JarDisplayReader.Read(path, ArchiveReadLimits?) -> ArtifactDisplayMetadata`
+returns immutable Name/Side plus a closed ReadStatus (Read, Missing, Unreadable,
+Limited) and nullable Diagnostic. This capability reads only display metadata;
+it does not discover local mods, evaluate dependencies, execute mods or compute
+health. The test-only host is --inspect-jar-display <path>, projecting
+name/side/status/diagnostic. Optional limits are --max-entry-bytes,
+--max-central-bytes and --max-entries. Ordinary display results, including optional
+metadata failures, exit zero with one JSON object and no stderr.
+
+Read only the exact ordinal fabric.mod.json entry; duplicate entry names select
+the first one, matching ZipArchive.GetEntry. Keep filename-stem/unknown fallbacks
+for missing or unreadable archives/manifests. Preserve the getter's StrictMode
+ordering: missing name prevents environment inspection; an applied name survives
+a later missing-environment failure. Present null or empty environment means both;
+client/server/* and arbitrary text retain the existing side mapping.
+
+Preserve supported legacy JSON display coercions at an isolated typed projection
+boundary: case-insensitive fields, exact duplicate-key last values, case-conflict
+or empty-key failures, scalar/array/object stringification, ISO date conversion,
+comments/trailing commas, root-array projection and BOM/invalid-byte behavior.
+Business records remain strings/enums; no PowerShell runtime or dynamic objects
+enter Core. JSON parser depth is bounded at 1024, retaining the captured unrelated
+64/65/128-depth fixtures. Unsupported nonstandard JSON syntax remains unreadable
+with a diagnostic, not an unannounced new interpretation.
+
+Defaults: 4 MiB actual decompressed metadata, 64 MiB actual central-directory header
+and variable-field bytes, 100000 entries. Use a small structural preflight over the
+same FileStream before BCL archive materialization, with overflow-safe offsets and
+EOCD/ZIP64 interpretation matching the BCL candidate. Validate actual header spans
+and counts; declared sizes alone are insufficient. Use BCL descompression, never a
+replacement ZIP extractor, and never expand unrelated assets. A exceeded read
+budget returns Limited plus fallback/diagnostic; unreadable inputs retain an
+explicit status rather than being reported as proven healthy. Large assets alone
+do not impose an arbitrary archive-size failure.
+
+Primary references: [PKWARE ZIP specification](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT),
+[pinned .NET 10.0.8 archive implementation](https://raw.githubusercontent.com/dotnet/runtime/v10.0.8/src/libraries/System.IO.Compression/src/System/IO/Compression/ZipArchive.cs),
+and [Fabric display fields](https://docs.fabricmc.net/develop/loader/fabric-mod-json).
