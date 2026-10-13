@@ -271,7 +271,19 @@ Archive policy validation is shared and runs before empty/excluded early returns
 Locked restore, all-project format, Release/Native AOT and relevant reader/protocol
 regressions pass without warnings. This still does not switch public content list.
 
-Next checkpoint: editorial metadata and resource-order
+`d79bdde`: editorial metadata reader completed. Missing files/sections normalize
+only in memory; immutable source data preserves unknown values and key spelling.
+Validation priority and type-sensitive scalar/array intent-schema behavior match
+the supported literal baseline. Locked restore, all-project format, warning-free
+Release/Native AOT, 19 own differential cases, malformed-data diagnostics, PSD1
+contracts and 15 protocol cases pass. Independent black-box review passes 52
+cases with exact numerical comparisons and unchanged fixture hashes/attributes.
+White-box review closes seven numerical controls and architecture/resource checks.
+The buffered test inspector preserves Int64/Decimal/Double transport, including
+overflowing integer conversion through BigInteger; Core retains literal nodes.
+No public inventory route changes in this checkpoint.
+
+Next checkpoint: editorial classification and resource-order
 composition into RawInventorySnapshot. Native inspection tests make each internal
 capability observable without partial public content-list success. Public content
 list still uses the legacy engine.
