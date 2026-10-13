@@ -68,3 +68,19 @@ than null. This is a field-specific exception, not general null/empty normalizat
 It also makes shared project string extraction handle valid empty values directly.
 Zero-byte managed metadata remains invalid and produces Content.InvalidMetadata
 with a repair hint, like the existing structured empty-project-manifest policy.
+
+## E06: optional JAR display failures retain typed uncertainty
+
+Unreadable/missing fabric.mod.json retains the legacy Name/Side fallback, including
+an already applied Name when environment lookup subsequently fails. Add a typed
+Read/Missing/Unreadable/Limited status and a nullable diagnostic for later consumers;
+no stderr or metadata exception escapes the optional display reader. Missing means
+an absent exact entry in an otherwise readable archive; unavailable/corrupt archives
+are Unreadable. These extra fields are native observations, not claims of health.
+
+Actual archive-entry/central-directory/decompressed-byte budgets are explicit new
+limits. Over budget produces Limited and filename/unknown fallback with diagnostic,
+even when the legacy unbounded reader succeeded. Standard JSON coercions, supported
+comments/trailing commas and Unicode replacement remain compatible. Unsupported
+nonstandard JSON syntax is unreadable with a diagnostic. This does not authorize
+general success normalization or use a permissive decoder for request protocol.

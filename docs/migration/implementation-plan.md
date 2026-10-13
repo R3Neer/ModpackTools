@@ -245,7 +245,21 @@ no archive opening, counting before suppression and exclusive-handle reopening.
 Locked restore, format for all three projects, Release and Native AOT publish pass
 without warnings. Inspection remains test-only, not a partial public command.
 
-Next checkpoint: local JAR discovery and metadata, then editorial/resource-order
+Single-JAR display metadata completed with bounded structural ZIP preflight and
+typed optional-read statuses. Locked restore, all-project format, Release and Native
+AOT passed without warnings. Eleven own differentials plus exact/over quotas,
+missing/corrupt metadata, Unicode, exclusive reopening and one-million-digit
+integer regression pass; managed/local-ZIP/PSD1/protocol regressions pass.
+Independent black-box review passes 80 frozen cases, seven quotas and four integer
+controls. White-box review passes ten structural/ZIP64 probes and targeted Unicode
+checks. It found and closed an uncaught InvalidDataException, invalid-surrogate
+key identity differences and BigInteger CPU amplification before the checkpoint.
+The million-digit diagnostic changed from exceeding ten seconds to 57-270 ms in
+review probes; these are regression observations, not an inventory benchmark.
+The typed display projection isolates legacy coercions from business records;
+request decoding remains strict. Native CLI still does not expose inventory.
+
+Next checkpoint: local JAR discovery and managed-path exclusion, then editorial/resource-order
 composition into RawInventorySnapshot. Native inspection tests make each internal
 capability observable without partial public content-list success. Public content
 list still uses the legacy engine.

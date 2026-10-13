@@ -235,7 +235,7 @@ and variable-field bytes, 100000 entries. Use a small structural preflight over 
 same FileStream before BCL archive materialization, with overflow-safe offsets and
 EOCD/ZIP64 interpretation matching the BCL candidate. Validate actual header spans
 and counts; declared sizes alone are insufficient. Use BCL descompression, never a
-replacement ZIP extractor, and never expand unrelated assets. A exceeded read
+replacement ZIP extractor, and never expand unrelated assets. An exceeded read
 budget returns Limited plus fallback/diagnostic; unreadable inputs retain an
 explicit status rather than being reported as proven healthy. Large assets alone
 do not impose an arbitrary archive-size failure.
