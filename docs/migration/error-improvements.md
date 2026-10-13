@@ -165,3 +165,12 @@ the same PowerShell logic with its named row sorts made -Stable in memory. Compa
 full ordered trees against that expectation; do not drop metadata paths, numbers,
 fields, rows or sort the output after the fact to hide a mismatch. Non-tie cases
 must still match the original baseline exactly. No baseline repository is edited.
+## E14: reference-cache persistence failures identify the cache path
+
+A positive serialized-byte quota aborts with Inventory.ReferenceCacheWriteLimitExceeded
+/ LimitsExceeded, the final cache path and a narrower-view hint. IO, access or
+replacement failures become Inventory.ReferenceCacheWriteFailed / WriteError with
+path, details and a rerun/permission hint. Preserve the old complete cache and source
+pack; do not return a successful inventory with an unusable newly written cache.
+Temporary cleanup is limited to this invocation's same-directory file. Cache
+replacement does not stand in for the later durable source-transaction protocol.

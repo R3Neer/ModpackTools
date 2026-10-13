@@ -549,3 +549,34 @@ is deliberate E13, rather than an assertion that legacy Sort-Object is stable.
 Distinct-name ordering remains identical; equal-name rows retain their incoming
 order and therefore may have different reference numbers from the unstable legacy
 result. The pure assignment identity/occurrence rules themselves are unchanged.
+## Atomic inventory reference-cache persistence / next checkpoint
+
+`InventoryReferenceCache.Write(configurationDirectory, NumberedInventorySelection,
+DateTimeOffset createdUtc, ReferenceCacheWriteLimits?) -> ReferenceCacheWriteResult`
+serializes the existing version-1 cache at configurationDirectory/last-inventory.json.
+The explicit timestamp makes persistence deterministic in tests; the caller provides
+current UTC in production. Write SchemaVersion=1, CreatedUtc as UTC DateTime O text
+with Z and seven fractional digits, ProjectId and Results array. Each result has
+Index, Id, Kind, Name, Filename, Source and Selector with existing PascalCase names;
+kind/source are the established lowercase strings. Preserve reference occurrence
+order, empty arrays, original text and empty Filename. Emit UTF-8 without BOM.
+JSON whitespace is not part of the private cache format; compare parsed full data.
+
+Resolve the configuration directory to an absolute path. Validate a positive default
+64 MiB serialized-byte budget before creating directories or temporary files. Use
+a unique temporary file in the same directory and stream JSON through a byte-budget
+wrapper; count actual output bytes before delivering each write. Close/flush all
+handles before a single overwrite move. The old cache remains untouched until the
+complete new representation is written; remove only this invocation's temporary
+file on failure. Return success only after replacement. Concurrent writers are
+last-completed-writer wins, with no mixed/truncated successful file. This cache is
+regenerable and does not claim a durable project transaction or crash journal.
+
+E14 identifies quota and IO/write failures at the cache path with a rerun/repair
+hint. No partial success, source-pack mutation, health evaluation or public dispatch
+change. Test-only --inspect-write-reference-cache <root> <configuration-directory>
+accepts selection flags, optional --created-utc timestamp and --max-cache-bytes.
+Return path and reference count only; inspect the actual resulting file separately.
+Test fresh/replacement/empty/Unicode/duplicate caches against the legacy cache reader,
+exact/over budgets, invalid policy before effects, locked destination preservation,
+cleanup and handle release. Cache decoding/number resolution is a separate checkpoint.
