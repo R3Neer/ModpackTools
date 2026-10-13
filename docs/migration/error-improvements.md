@@ -259,3 +259,14 @@ Keep successful category-list sorting by Order, cultural Name and cultural Id;
 use ordinal Id only as the final cultural tie-break. This is separate from E12's
 inventory-reference category ordering. No ordinary z/ä order change, category
 deduplication or change to appended unclassified rows is authorized by this rule.
+
+## E23: category-reference cache write diagnostics
+
+Metadata.InvalidCategoryCacheWritePolicy/InvalidArgument identifies a nonpositive
+byte quota before configuration effects. Metadata.CategoryCacheWriteLimitExceeded/
+LimitsExceeded identifies the absolute cache path when actual serialized UTF8 bytes
+exceed quota. Metadata.CategoryCacheWriteFailed/WriteError reports IO/permission/
+replacement failures, absolute path, details and a configuration-access/category-list
+retry hint. Preserve previous bytes and clean only the owned temporary. When cleanup
+also fails, retain the primary diagnostic and add cleanup context. These regenerable
+cache errors do not imply durable project transactions or crash recovery.

@@ -582,3 +582,26 @@ list Id ordering is cultural rather than inventory-reference ordinal. Prepare co
 and definitions before physical IO, compose immutable numbered rows afterward, and
 reuse one validated metadata snapshot. E21/E22 and the coherent observation refinement
 are specified before implementation; public dispatch remains PowerShell.
+
+Category-list projection completed as9718822. Separate immutable editorial
+preparation and physical composition preserve orphan assignment counts, physical
+occurrences, duplicate defined/appended unclassified rows, cultural Id ordering and
+one-based category references. E21 contextualizes raw assignment failures; E22
+stabilizes diagnostic keys without replacing ordinary cultural sorting. One metadata
+snapshot is an explicit coherent-observation refinement. Three-project locked
+restore/format/Release/Native AOT passes warning-free. Host v59 SHA256:
+575E35752E025EA92074407BEEC7BDCFB4C6CF63773DB16F01D8CBC7974A899D;
+CLI v66 SHA256:A21185F04CA4D91C85225C030C3BA07F0A6DE4ED9B408595708F040B9AD2E147.
+Own26 category controls,4 full inventory snapshots/priorities,4 quotas/5 policies,
+7 numbering views/no-cache-write,15 protocol cases and native assertions pass.
+Blind41 category controls plus28 original/4 explicitly E13-stable numbering cases
+pass; four original E13 tie differences remain saved and are not marked identical.
+White9 original oracles/3 stage controls/native assertions pass. Six blind integrity
+manifests remain true. The malformed unrelated TOML line physical-stage control uses
+the already declared E02 strict-reader refinement, not a legacy parity claim.
+
+Next checkpoint persists category references atomically from the typed view, with
+fixed-clock full-file comparisons and reader/resolver compatibility. Extract only
+the existing inventory writer's bounded atomic file mechanics, then run its complete
+writer regression before acceptance. Category writes remain outside source-pack
+transactions/public dispatch, with E23 diagnostics specified before implementation.

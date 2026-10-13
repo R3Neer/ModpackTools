@@ -926,7 +926,7 @@ support --now-utc, --allow-unclassified and the existing six reader-limit option
 Own and independent comparisons cover full read values, exact returned strings,
 validation priorities/consumer casts/quota boundaries/unchanged fixtures/closed handles.
 
-## Category list projection / next checkpoint
+## Category list projection / completed checkpoint
 
 `CategoryList.Prepare(EditorialMetadata) -> ImmutableArray<EditorialCategory>`
 prepares immutable Id/Name/Order/ModCount rows before any physical inventory IO.
@@ -965,3 +965,43 @@ Test-only --inspect-category-view <root> [--culture name] emits full PascalCase 
 DefinedCategoryCount and a documented common project projection. Compare original
 successes, E21/E11 failures, cultural sorting, duplicate unclassified rows, editorial
 versus physical counts, no-definition bypass and earlier-error priorities.
+
+The common Project comparison keys are Id, Root, DisplayName, DisplayVersion,
+OutputName, MinecraftVersion, Loader, LoaderVersion and IndexFile. Keep full original
+Project captures separately; do not claim serialization of its private descriptor/
+pack properties. Defined category rows have five fields; the appended row has six.
+
+## Atomic category-reference cache persistence / next checkpoint
+
+`CategoryReferenceCache.Write(configurationDirectory, CategoryListView,
+DateTimeOffset createdUtc, ReferenceCacheWriteLimits?) -> ReferenceCacheWriteResult`
+consumes the completed typed view, without re-reading metadata/inventory. At
+last-categories.json write SchemaVersion=1, UTC DateTime O CreatedUtc (Z/seven digits),
+ProjectId and Categories array; each occurrence contains only Index (the supplied
+ReferenceNumber), Id and Name. Preserve text, row order, duplicate IDs/unclassified,
+and supplied reference numbers. Do not renumber, sort or serialize Order/count/flags.
+Initialized empty programmatic arrays are valid and produce Categories=[]; default
+arrays are caller errors before effects. The production view normally contains the
+appended unclassified row. JSON whitespace is not part of this private cache format.
+
+Use the existing positive default64MiB actual serialized-byte quota. Validate policy
+and initialized input before effects, resolve absolute directory/path, create only
+an invocation-owned CreateNew same-directory temporary, stream UTF8 without BOM and
+close writer/stream before overwrite replacement. Preserve the old cache on quota,
+locked-destination and IO failures; clean only the temporary owned by this invocation.
+Concurrent writes are last-completed-whole-file wins, not a project transaction.
+E23 identifies category write policy, quota and IO failures with contextual path.
+Extract the existing inventory writer's internal atomic bounded JSON-file mechanics
+with injected closed error factories. Retain its validation,16Ki pending flush sites,
+byte accounting, replacement/cleanup and diagnostics; run its27 blind writer controls
+plus own atomic-failure suite. No stronger durability/peak-memory claim is introduced.
+
+Test-only --inspect-write-category-cache <root> <configuration-directory>
+[--created-utc timestamp] [--max-cache-bytes n] reads a category view and returns
+path/count after successful persistence. Validate inspector grammar before project
+IO; writer policy is validated after this read-only view prelude, before config
+effects. Compare actual full files to the legacy writer at a fixed clock and have
+the old reader/resolver consume every category number with AllowUnclassified.
+Cover fresh/replacement/Unicode/duplicates/empty snapshots, exact/over budgets,
+invalid policy without directories, locked replacement, unrelated temporaries,
+exclusive handle reopening, reader compatibility and unchanged source fixtures.
