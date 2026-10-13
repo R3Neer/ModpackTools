@@ -459,3 +459,16 @@ pass. Black-box58 original pairs +8 grammar controls and white-box10 independent
 pairs +two priority/grammar controls pass with intact fixtures. Native assertions
 cover synthetic identity/LF/E16 cases separately; blind file-based coverage does not
 claim them. Earlier managed preflight was followed by the required native gates.
+
+`6bf8f76`: cached Selector text resolves without cloning a complete selected row or
+walking unrelated date metadata. Full-row callers still own their clone. Null means
+nonnumeric input; stored null/empty is a real empty string. Shared row selection
+retains all earlier validation priorities. Three-project locked restore, formatting,
+Release and Native AOT publish complete without warnings. Host v51 SHA256:
+96136933F3BABC13175FA1926B8481DA2DFBCB17FD0D547213267409113C995A;
+CLI v58 SHA256:7E7365BEFDBEA11388FB90D0A7EB63C53C27B25DFAF5207123A36B850C0E9060.
+Own226 differential/consumer cases, native invariants and15 protocol cases pass.
+Independent black-box395 plus10 threshold calls and white-box14 text/priority pairs
+pass with unchanged fixtures. No public dispatch or timing improvement claim.
+Next batch contract deliberately fixes one cache generation and buffers failures;
+root absence and invalid-element transport priorities are documented separately.

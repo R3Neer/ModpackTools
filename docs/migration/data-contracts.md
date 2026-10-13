@@ -735,7 +735,7 @@ Compare aliases/cross-kind ambiguity/local rejection/dedup/error priority and fu
 rows against original PS, keeping intentional diagnostic ties separate. Validate
 programmatic repeated/equal-row identity and culture distinctions natively.
 
-## Cached selector text / next infrastructure checkpoint
+## Cached selector text / completed infrastructure checkpoint
 
 `ReferenceCacheResolver.ResolveSelector(snapshot, selector, projectId, nowUtc, policy)
 -> string?` and the equivalent directory facade expose the concrete Selector string
@@ -754,3 +754,41 @@ All complete decoder validation remains; unused fields are not newly validated.
 The inspector's exact --string-field Selector path exercises this API. Other fields
 and full-row paths retain ownership and behavior. Differential consumer/date cases
 and the complete existing cache corpus guard the extraction before any batch wiring.
+
+## Batch selector composition / next checkpoint
+
+`BatchSelectorResolver.Resolve(ImmutableArray<string> selectors,
+CachedInventorySnapshot? snapshot, string projectId, DateTimeOffset nowUtc,
+ReferenceLookupPolicy? policy = null) -> ImmutableArray<string>` is pure. Its directory
+facade reads one owned cache snapshot lazily at the first numeric selector. Default
+policy allows only mod, without requiring Packwiz; explicit null/empty AllowedKinds
+remain distinct from an omitted policy. Clock, snapshot and policy are fixed for
+one invocation. All-literal and empty batches neither read cache nor validate its
+read limits. Repeated identical numeric inputs may reuse their resolved text inside
+this invocation. No process-wide memoization, eager numeric index or inventory IO.
+
+Inputs are validated immutable arrays with zero through1024 nonempty strings;
+default arrays, null/empty elements and larger arrays are caller grammar errors
+before cache IO. Empty helper batch succeeds[]; whitespace is a valid literal.
+The legacy helper also accepts omitted/null root Selectors as empty; typed callers
+represent that absence explicitly as an empty array. Test JSON transport requires
+an actual array, rather than implicitly converting malformed root values. This
+transport decision is not a change to public command grammar.
+
+Resolve each numeric selector with the existing complete lookup/cast priorities;
+retain literal selectors directly. Deduplicate the resulting strings using
+OrdinalIgnoreCase, preserving first spelling and order. A stored null/empty Selector
+maps to a valid empty output string; it must never fall back to the numeric input.
+Buffer the entire result before returning or writing, so a failure emits no partial
+selection. Existing domain errors and E15 remain. Legacy ['1',null] with no cache
+fails on reference1 before null binding; the new transport validates all argument
+elements first, an explicit grammar priority change, not E15.
+
+The fixed per-invocation cache is an intentional concurrency refinement: legacy
+rereads for every number and can mix cache generations during a concurrent write.
+One batch now resolves against one generation; the next invocation sees replacements.
+This does not bind a mutation plan or replace strong source fingerprint checks.
+Independent baseline69 cases plus three separately retained prelude probes establish
+casting/order/dedup/failure behavior. Test-only --inspect-batch-selectors
+<configuration-directory> <project-id> <selectors-json-array> supports --now-utc,
+--allowed-kinds, --require-packwiz and the existing six reader-limit options.
