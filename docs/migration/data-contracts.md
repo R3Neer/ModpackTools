@@ -122,9 +122,11 @@ for Command.InvalidArguments; this presentation detail does not enter Core.
 Successful native response headers must match the parsed request exactly before
 any session update. Malformed responses and mismatched exits preserve prior state.
 
-PS can receive typed positional objects rather than lexical strings. Its adapter
-validates the native echo against canonical string tokens, then restores original
-parsed positional values in public arguments. InvalidArguments targets preserve
+PS can receive typed positional objects rather than lexical strings. Its existing
+machine context already canonicalizes public arguments as strings, so the adapter
+must retain those string arguments. InvalidArguments targets preserve
 original positional value types and legacy cardinality (null/scalar/array in JSON,
 array in ErrorRecord). Core stays string-only; no PowerShell object conversion is
 introduced into domain logic. NotFound and forbidden-context targets remain strings.
+PowerShell's existing boolean comparison makes a true positional value match the
+help token; preserve that fallback rather than treating it as a successful ID.
