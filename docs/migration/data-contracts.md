@@ -858,7 +858,7 @@ Test-only --inspect-resource-targets <root> <selectors-json-array> validates1..1
 nonempty strings before full inventory IO and writes full original PascalCase five
 fields for comparison. Numeric inputs are literal here; batch references precede it.
 
-## Default Options status and prerequisite / next checkpoint
+## Default Options status and prerequisite / completed checkpoint
 
 `DefaultOptionsDetector.Find(ImmutableArray<InventoryItem> mods) -> InventoryItem?`
 returns the original first row whose Id equals modrinth:WEg59z5b or Name equals

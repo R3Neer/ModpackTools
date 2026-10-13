@@ -541,3 +541,19 @@ cases pass. Blind66 original controls pass with unchanged fixtures, including al
 four previously failing E09 priorities. White9 full-field pairs,4 cultural E09
 priorities, E18/grammar and native assertions pass. v54 failed evidence and original
 captures remain intact. No resource ordering/config writes or DefaultOptions gate.
+
+Default Options detection/status/prerequisite completed. Find returns the original
+first mod by ordinal ID/name or current-culture nonbacktracking filename pattern,
+without Source or physical-JAR restrictions. One config-leaf observation produces
+coherent Installed/ConfigPresent/Ready; AssertInstalled checks only Installed and
+retains the complete original prerequisite error. Fresh regex culture versus the
+old PS first-compilation cache and one versus two config observations are explicit
+refinements. Three-project locked restore/format/Release/Native AOT is warning-free.
+Host v57 SHA256:DF29AAE5B0FC8E13081CE3A5D22AA5493C0A69A363F3BE2B415DA07336C4E6AD;
+CLI v64 SHA256:51F1A85F5A0A0ED4BCA473EF268985992B2413BB60706025605321527A81A18B.
+Own34 complete-status/mod/grammar controls, native original-reference/local-first/
+no-config prerequisite/LF/current-culture assertions and15 protocol cases pass.
+Blind72 status/assert calls and white6 full-status pairs plus5 grammar/full-read
+priority controls pass with unchanged fixtures. Historical warm Turkish regex
+captures remain separate from explicitly declared fresh-process expectations.
+No config/source writes, installation check by JAR existence or public dispatch.
