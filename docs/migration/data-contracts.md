@@ -580,3 +580,56 @@ Return path and reference count only; inspect the actual resulting file separate
 Test fresh/replacement/empty/Unicode/duplicate caches against the legacy cache reader,
 exact/over budgets, invalid policy before effects, locked destination preservation,
 cleanup and handle release. Cache decoding/number resolution is a separate checkpoint.
+
+## Bounded reference-cache read and pure numeric lookup / next checkpoint
+
+`ReferenceCacheReader.Read(configurationDirectory, ReferenceCacheReadLimits?) ->
+CachedInventorySnapshot?` owns an extensible JSON value, its absolute source path
+and deferred typed field conversions. Default limits are 64 MiB actual file bytes,
+1024 JSON depth and one million result occurrences. Validate positive policy before
+IO. Missing files/directories and empty input return null. Decode replacement UTF-8
+with BOM detection, matching the existing reader rather than the strict request
+protocol. No cache, project or configuration write occurs.
+
+Validate the complete decoded tree for empty/case-conflicting property names;
+exact duplicate properties keep their last value. Preserve comments, trailing
+commas, single-quoted strings, unquoted property names, undefined/null, nonfinite
+numbers and the legacy hexadecimal/octal/leading-dot numeric forms demonstrated
+by independent probes. A small lexical normalization feeds System.Text.Json; no
+PowerShell or reflection-based JSON runtime is embedded. Nonfinite JSON values
+have their legacy observable string serialization, with compatible scalar casts.
+Retain unknown fields, original arrays/objects and date auto-conversion in returned
+data and consumer string projections. Do not narrow caches to generated writer DTOs.
+
+`ReferenceCacheResolver.Resolve(snapshot, selector, projectId, nowUtc,
+allowedKinds, requirePackwiz) -> CachedReference?` is pure. The caller provides
+clock/project/kinds; the default allowed kinds are mod/resourcepack/shaderpack,
+while an explicit empty/null collection accepts none. `ResolveFromDirectory`
+recognizes the selector before reading and then composes these two operations.
+The recognition pattern is the original ^[1-9][0-9]*$: one final LF is accepted,
+CRLF and leading zeros are not. Nonnumeric selectors return null without cache IO.
+
+Preserve validation order: falsey cache; schema Int32 conversion; Results null;
+ProjectId whitespace; timestamp age; ordinal-ignore-case project match; every
+Index conversion and then selector Int32 conversion; exactly one occurrence;
+invariant-ignore-case Kind; Source only when Packwiz is required. Future dates
+remain valid and exactly 24 hours is inclusive. Defer field conversion failures
+until their stage; do not require unused row Id/Name/Filename/Selector/Source.
+Empty Results with an overflowing selector is out-of-range without integer cast.
+Range wording uses occurrence count, not greatest Index. Duplicate matches fail.
+
+Compatibility accessors expose typed conversions computed only when needed and
+retain missing/null/invalid distinctions. Cache visited header projections, not
+six eager slots per unvisited row. Snapshot owns one cloned JSON root; row views
+share it while scanning, and only the selected row is cloned for the returned
+CachedReference, avoiding retention of a large snapshot by later consumers.
+It offers string-field access for consumers and full extensible row data. JSON
+stays at this extensible boundary, not the domain's general inventory models.
+
+E15 maps actual member/cast failures to InvalidReferenceCache/InvalidData/path with
+details and a regeneration hint, retaining their phase. Byte/depth/row budget
+failures are explicit ReferenceCacheReadLimitExceeded/LimitsExceeded/path.
+Test-only inspectors separately expose read data and resolved full rows; support
+fixed clock, allowed kinds, Packwiz requirement and budgets. Native gates compare
+the frozen 123-case baseline and separate nonstandard/encoding probes, including
+priorities, full values, unchanged source bytes and handle release.

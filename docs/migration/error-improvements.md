@@ -174,3 +174,16 @@ path, details and a rerun/permission hint. Preserve the old complete cache and s
 pack; do not return a successful inventory with an unusable newly written cache.
 Temporary cleanup is limited to this invocation's same-directory file. Cache
 replacement does not stand in for the later durable source-transaction protocol.
+
+## E15: malformed reference fields fail at their actual validation stage
+
+Replace actual StrictMode property and scalar conversion runtime exceptions with
+Inventory.InvalidReferenceCache / InvalidData, the absolute cache path, details
+and the existing modpack content list regeneration hint. Keep all existing domain
+errors and their validation priority. An unused missing Source or Selector does
+not fail a valid lookup. Supported successful legacy coercions and nonstandard
+JSON forms are preserved; E15 does not authorize silently narrowing the reader.
+Positive byte/depth/occurrence limits protect decoding/lookup and abort with
+Inventory.ReferenceCacheReadLimitExceeded / LimitsExceeded / cache path. Invalid
+policy fails before IO. This changes errors and introduces explicit resource bounds,
+without repairing, writing, omitting rows or returning partial success.
