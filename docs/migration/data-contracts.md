@@ -586,10 +586,18 @@ cleanup and handle release. Cache decoding/number resolution is a separate check
 `ReferenceCacheReader.Read(configurationDirectory, ReferenceCacheReadLimits?) ->
 CachedInventorySnapshot?` owns an extensible JSON value, its absolute source path
 and deferred typed field conversions. Default limits are 64 MiB actual file bytes,
-1024 JSON depth and one million result occurrences. Validate positive policy before
+1024 JSON depth, one million result occurrences and 64 Mi UTF-16 code units of
+normalized JSON. Validate positive policy before
 IO. Missing files/directories and empty input return null. Decode replacement UTF-8
 with BOM detection, matching the existing reader rather than the strict request
 protocol. No cache, project or configuration write occurs.
+Whitespace/BOM-only input is empty. Byte/depth/normalized-output bounds are a
+resource prelude, not legacy semantic checks. Results quota is checked during Read
+only if Results can be projected; a missing/member failure remains deferred for
+Resolve, while a quota can precede schema/expiry errors. Check normalized output
+before each append, including quoted-token control-character expansion. The byte
+budget is not a peak-memory claim: decoding, normalization and the owned JSON
+representation coexist. The small-workload memory gate still requires measurement.
 
 Validate the complete decoded tree for empty/case-conflicting property names;
 exact duplicate properties keep their last value. Preserve comments, trailing
@@ -633,3 +641,7 @@ Test-only inspectors separately expose read data and resolved full rows; support
 fixed clock, allowed kinds, Packwiz requirement and budgets. Native gates compare
 the frozen 123-case baseline and separate nonstandard/encoding probes, including
 priorities, full values, unchanged source bytes and handle release.
+Inspector --max-cache-normalized-chars controls the explicit normalization quota;
+--string-field on a resolved reference exercises later consumer string projection.
+Known malformed JSON/read domain errors preserve their complete legacy diagnostic;
+E15 details are added only to formerly raw field/cast failures.
