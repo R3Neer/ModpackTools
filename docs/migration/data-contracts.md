@@ -352,3 +352,29 @@ Only overrides for IDs actually encountered are inspected; unrelated malformed
 entries remain untouched. Test-only --inspect-classified-mods <root> composes
 editorial read, managed mods, local discovery and pure classification, preserving
 raw discovery order and field presence. It does not switch public content list.
+
+## Default resource order reader / next checkpoint
+
+`ResourcePackOrderReader.Read(ProjectContext, ResourceOrderReadLimits?)` returns
+immutable resource ID strings from config/defaultoptions-common.toml in reversed
+stored order, preserving duplicates, spelling and Unicode. Missing file, missing
+exact-case key and an empty array return an empty result. This is a bounded lexical
+reader matching the existing algorithm, not whole-document TOML validation: first
+defaultResourcePacks occurrence wins; quotes in comments can be selected; single
+quotes are ignored; nested arrays are flattened by string matching; brackets in
+comments/single quotes affect the span scanner. Preserve these supported successes
+instead of silently changing configuration interpretation.
+
+The span scanner counts brackets outside double-quoted strings and skips one
+escaped character inside strings. The string matcher keeps non-Singleline dot
+semantics and the existing Regex.Unescape decoder. NonBacktracking matching avoids
+adversarial whitespace rescanning. Unclosed array retains ResourcePack.UnclosedTomlArray
+/ InvalidData with defaultResourcePacks target. E08 covers existing empty-input,
+empty-quoted-ID and unsupported-decoder failures with a path/hint.
+
+Use the existing bounded text reader and a positive default 100000 matched-ID
+budget, checked before adding each result. Exceeding it gives Content.ReadLimitExceeded
+/ LimitsExceeded with the configuration path and no partial successful result.
+Validate policy before missing/empty early returns. Test-only
+--inspect-resource-order <root> [--max-items n] emits the ID array; no project write,
+inventory sorting, activation change or public command switch occurs here.

@@ -94,3 +94,12 @@ supported table and table-array successes, including optional singleton keys and
 multi-table field projections; do not broadly reject every non-table entry.
 Falsey entries keep their existing ignored behavior. Overrides for absent mod IDs
 are not eagerly validated. No metadata is rewritten by this read-only operation.
+
+## E08: default resource order decoding failures identify the file
+
+Keep empty-file, empty quoted-ID and unsupported escape failures unsuccessful,
+replacing parameter-binding/decoder runtime failures with ResourcePack.InvalidDefaultOptions
+/ InvalidData, the config/defaultoptions-common.toml path and a repair hint/details.
+Do not turn those failures into empty successful orders or phantom builtin IDs.
+An unclosed target array keeps its existing domain ID and key target. Missing
+file/key and an actual empty array remain ordinary empty successful results.
