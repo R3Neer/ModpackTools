@@ -2,6 +2,14 @@ using ModpackTools.Core.Data;
 using System.Globalization;
 using System.Text.Json;
 
+// Test-only transport peer: arbitrary replies exercise adapter validation before
+// any parent session mutation. This mode is never part of the shipping CLI.
+if (args is ["--request-path", _] && Environment.GetEnvironmentVariable("MODPACKTOOLS_TEST_RESPONSE_PATH") is { } responsePath)
+{
+    Console.Write(File.ReadAllText(responsePath));
+    return int.Parse(Environment.GetEnvironmentVariable("MODPACKTOOLS_TEST_RESPONSE_EXIT") ?? "0", CultureInfo.InvariantCulture);
+}
+
 if (args is ["--inspect-psd1", var inputPath])
 {
     try

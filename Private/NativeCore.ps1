@@ -1,6 +1,6 @@
 function Invoke-MpNativeCommand {
     param([Parameter(Mandatory)][string]$Executable, [string[]]$Arguments,
-        [ValidateSet('version','project-list','project-current')][string]$Capability,
+        [ValidateSet('version','project-list','project-current','project-use')][string]$Capability,
         [AllowNull()][object]$ActiveProject)
     if (-not [IO.File]::Exists($Executable)) {
         Throw-MpError -Message 'The configured ModpackTools native executable does not exist' -Hint 'correct MODPACKTOOLS_CORE_PATH' -ErrorId 'Core.ExecutableNotFound' -Category ObjectNotFound -TargetObject $Executable
@@ -9,7 +9,7 @@ function Invoke-MpNativeCommand {
     $process = $null
     try {
         $requestData = @{ schema_version=1; arguments=@($Arguments) }
-        if ($Capability -eq 'project-current') {
+        if ($Capability -in @('project-current','project-use')) {
             if ($null -ne $ActiveProject -and $ActiveProject -isnot [string]) { Throw-MpNativeProtocolError 'Invalid session snapshot' }
             $requestData.context = @{ active_project=$ActiveProject }
         }
@@ -36,6 +36,8 @@ function Invoke-MpNativeCommand {
                 if ($result.command -ine '--version' -or $result.data.version.version -isnot [string]) { Throw-MpNativeProtocolError 'Invalid native version result' }
             } elseif ($Capability -eq 'project-current') {
                 if ($result.command -ine 'project' -or $result.arguments.Count -ne 1 -or $result.arguments[0] -ine 'current' -or -not $result.data.PSObject.Properties['active_project'] -or ($null -ne $result.data.active_project -and $result.data.active_project -isnot [string])) { Throw-MpNativeProtocolError 'Invalid native session result' }
+            } elseif ($Capability -eq 'project-use') {
+                if ($result.command -ine 'project' -or $result.arguments.Count -ne 2 -or $result.arguments[0] -ine 'use' -or $result.data.active_project -isnot [string] -or [string]::IsNullOrWhiteSpace($result.data.active_project)) { Throw-MpNativeProtocolError 'Invalid native selected project' }
             } else {
                 if ($result.command -ine 'project' -or $result.arguments.Count -ne 1 -or $result.arguments[0] -ine 'list' -or $result.data.projects.root -isnot [string] -or $result.data.projects.items -isnot [array]) { Throw-MpNativeProtocolError 'Invalid native project catalog' }
                 foreach ($item in $result.data.projects.items) {
