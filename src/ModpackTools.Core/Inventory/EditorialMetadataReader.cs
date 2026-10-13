@@ -12,9 +12,11 @@ public static class EditorialMetadataReader
 {
     private static readonly PsdTable Empty = new(ImmutableDictionary<string, PsdValue>.Empty.WithComparers(StringComparer.OrdinalIgnoreCase));
 
-    public static EditorialMetadata Read(ProjectContext project)
+    public static EditorialMetadata Read(ProjectContext project) => Read(project.Root);
+
+    public static EditorialMetadata Read(string projectRoot)
     {
-        var path = Path.Combine(project.Root, ".modpack", "metadata.psd1");
+        var path = Path.Combine(projectRoot, ".modpack", "metadata.psd1");
         PsdTable source;
         try { source = File.Exists(path) ? PsdReader.Parse(TextFile.Read(path)) : Empty; }
         catch (Exception exception) when (exception is FormatException or IOException or UnauthorizedAccessException or ArgumentException)

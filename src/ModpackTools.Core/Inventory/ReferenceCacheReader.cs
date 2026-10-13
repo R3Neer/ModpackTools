@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 using ModpackTools.Core.Data;
 
@@ -10,16 +9,19 @@ public sealed record ReferenceCacheReadLimits(long MaximumBytes = 64 * 1024 * 10
 {
     internal void Validate()
     {
-        var invalid = MaximumBytes <= 0 ? nameof(MaximumBytes)
+        var invalid = InvalidProperty;
+        if (invalid is not null)
+            throw new DomainException("Inventory.InvalidReferenceCacheReadPolicy", "Reference-cache reader limits are invalid",
+                "use positive byte/row quotas and a JSON depth between 1 and 1024", target: invalid);
+    }
+    internal string? InvalidProperty => MaximumBytes <= 0 ? nameof(MaximumBytes)
             : MaximumDepth is < 1 or > 1024 ? nameof(MaximumDepth)
             : MaximumRows <= 0 ? nameof(MaximumRows)
             : MaximumNormalizedCharacters <= 0 ? nameof(MaximumNormalizedCharacters)
             : MaximumTokenCharacters <= 0 ? nameof(MaximumTokenCharacters)
             : MaximumNodes <= 0 ? nameof(MaximumNodes) : null;
-        if (invalid is not null)
-            throw new DomainException("Inventory.InvalidReferenceCacheReadPolicy", "Reference-cache reader limits are invalid",
-                "use positive byte/row quotas and a JSON depth between 1 and 1024", target: invalid);
-    }
+    internal CacheDecodeLimits DecodeLimits => new(MaximumBytes, MaximumDepth,
+        MaximumNormalizedCharacters, MaximumTokenCharacters, MaximumNodes);
 }
 
 public sealed class CachedInventorySnapshot
@@ -135,12 +137,12 @@ internal static class CacheFields
         if (projected.Count == 0) throw new FormatException($"Cache property '{name}' is unavailable.");
         return projected.Count == 1 ? new(projected[0]) : new(default, projected.ToArray());
     }
-    public static T Access<T>(string path, Func<T> access)
+    public static T Access<T>(string path, Func<T> access, Func<string, string?, DomainException>? invalid = null)
     {
         try { return access(); }
         catch (Exception exception) when (exception is FormatException or OverflowException or InvalidOperationException or ArgumentException)
         {
-            throw ReferenceCacheReader.Invalid(path, exception.Message);
+            throw (invalid ?? ReferenceCacheReader.Invalid)(path, exception.Message);
         }
     }
 }
@@ -152,40 +154,11 @@ public static class ReferenceCacheReader
         limits ??= new();
         limits.Validate();
         var path = System.IO.Path.Combine(System.IO.Path.GetFullPath(configurationDirectory), "last-inventory.json");
-        try
-        {
-            FileStream file;
-            try { file = File.OpenRead(path); }
-            catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException) { return null; }
-            catch (UnauthorizedAccessException) when (Directory.Exists(path)) { return null; }
-            using (file)
-            using (var bounded = new CacheInput(file, limits.MaximumBytes))
-            using (var reader = new StreamReader(bounded, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 8192, leaveOpen: true))
-            {
-                var decoded = CacheTokenCodec.Read(reader, limits.MaximumDepth, limits.MaximumNormalizedCharacters,
-                    limits.MaximumTokenCharacters, limits.MaximumNodes);
-                if (decoded is null) return null;
-                using var document = decoded.Document;
-                JsonDisplayProjection.Validate(document.RootElement);
-                var root = document.RootElement;
-                if (root.ValueKind == JsonValueKind.Array)
-                {
-                    if (root.GetArrayLength() == 0) return null;
-                    if (root.GetArrayLength() == 1) root = root[0];
-                }
-                if (root.ValueKind == JsonValueKind.Null) return null;
-                var snapshot = new CachedInventorySnapshot(root.Clone(), path, limits, decoded.Dates);
-                snapshot.CheckRowQuota();
-                return snapshot;
-            }
-        }
-        catch (JsonException exception) when (exception.Message.StartsWith("The maximum configured depth of ", StringComparison.Ordinal))
-        { throw Limit(path, exception.Message); }
-        catch (Newtonsoft.Json.JsonReaderException exception) when (exception.Message.StartsWith("The reader's MaxDepth of ", StringComparison.Ordinal))
-        { throw Limit(path, exception.Message); }
-        catch (CacheJsonLimitException exception) { throw Limit(path, exception.Message); }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or Newtonsoft.Json.JsonException or FormatException or OverflowException or InvalidOperationException or InvalidCastException or ArgumentException)
-        { throw Invalid(path, null); }
+        var decoded = LegacyCacheFile.Read(path, limits.DecodeLimits, Invalid, Limit);
+        if (decoded is null) return null;
+        var snapshot = new CachedInventorySnapshot(decoded.Data, path, limits, decoded.Dates);
+        snapshot.CheckRowQuota();
+        return snapshot;
     }
     internal static DomainException Invalid(string path, string? details) => new("Inventory.InvalidReferenceCache",
         $"Inventory reference cache '{path}' is invalid", "modpack content list", "InvalidData", path, details: details);
@@ -193,25 +166,4 @@ public static class ReferenceCacheReader
         "Inventory reference cache exceeds the reader quota", "run modpack content list with narrower filters",
         "LimitsExceeded", path, details: details);
 
-    private sealed class CacheInput(Stream source, long maximumBytes) : Stream
-    {
-        private long read;
-        public override bool CanRead => true;
-        public override bool CanSeek => false;
-        public override bool CanWrite => false;
-        public override long Length => source.Length;
-        public override long Position { get => read; set => throw new NotSupportedException(); }
-        public override void Flush() { }
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-        public override void SetLength(long value) => throw new NotSupportedException();
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-        public override int Read(byte[] buffer, int offset, int count) => Read(buffer.AsSpan(offset, count));
-        public override int Read(Span<byte> buffer)
-        {
-            var count = source.Read(buffer);
-            if (count > maximumBytes - read) throw new CacheJsonLimitException("Actual file bytes exceed the reader quota.");
-            read += count;
-            return count;
-        }
-    }
 }
