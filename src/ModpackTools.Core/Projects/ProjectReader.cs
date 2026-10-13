@@ -65,7 +65,7 @@ public static partial class ProjectReader
     public static ProjectCatalog Discover(string registeredRoot)
     {
         var root = Path.GetFullPath(registeredRoot);
-        var projects = Directory.EnumerateDirectories(root, "*", new EnumerationOptions { AttributesToSkip = FileAttributes.Hidden | FileAttributes.System, IgnoreInaccessible = false })
+        var projects = Directory.EnumerateDirectories(root, "*", new EnumerationOptions { AttributesToSkip = FileAttributes.Hidden, IgnoreInaccessible = false })
             .Where(directory => File.Exists(Path.Combine(directory, ".modpack", "project.psd1")))
             .Select(Read).ToArray();
         var duplicates = projects.GroupBy(project => project.Id, StringComparer.OrdinalIgnoreCase).Where(group => group.Count() > 1).ToArray();
