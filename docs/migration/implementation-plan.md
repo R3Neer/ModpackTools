@@ -523,3 +523,21 @@ cases, public projects31+10 cases,15 protocol cases and native captured-culture/
 programmatic assertions pass. Blind77 imported/publicRoot/resource-view controls and
 white12 import pairs plus native assertions pass with unchanged fixtures. Resource
 work resumes separately; v54 stays failed evidence, not a completed checkpoint.
+
+Resource activation target selection completed after the separate940dd71 imported
+table correction. Per-call ordinal alias indexing retains active/inactive/builtin/
+missing/editorial five-field targets, null filenames, empty metadata identities,
+duplicate occurrences and repeated request order. Invariant represented membership
+and imported current-culture lookup remain distinct. E18 preserves actual candidate
+construction failures; E19 canonicalizes editorial ordering, including the explicit
+Turkish successful representative for imported-distinct/invariant-equal keys.
+Three-project locked restore/format/Release/Native AOT completes without warnings;
+final comment receives an additional Core format verification. Host v56 SHA256:
+57C04EA2284EF51ABB7FADB6FC18B71A4EE04C556CC991AC732EE03D032DCD06;
+CLI v63 SHA256:5873DF7274799672187272477029ACEE07EECEDA9F1494179241209785A9C709.
+Own30 controls, exact1024 repeated-output boundary, native null/empty/identity/
+invariant-skip/ordinal-match/E18/E19-insertion-reversal assertions and15 protocol
+cases pass. Blind66 original controls pass with unchanged fixtures, including all
+four previously failing E09 priorities. White9 full-field pairs,4 cultural E09
+priorities, E18/grammar and native assertions pass. v54 failed evidence and original
+captures remain intact. No resource ordering/config writes or DefaultOptions gate.

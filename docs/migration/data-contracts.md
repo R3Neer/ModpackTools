@@ -820,7 +820,7 @@ resolution. Return full physical rows, buffered result or complete structured er
 Compare baseline helper calls in order on frozen files; snapshot reuse deliberately
 follows the existing per-invocation architecture, not repeated inventory discovery.
 
-## Resource activation target selection / next checkpoint
+## Resource activation target selection / completed checkpoint
 
 `ResourcePackSelector.Resolve(RawInventorySnapshot, ImmutableArray<string> selectors)
 -> ImmutableArray<ResourcePackTarget>` is pure. Target fields are DefaultId, Id,
