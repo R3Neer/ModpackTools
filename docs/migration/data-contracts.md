@@ -734,3 +734,23 @@ before project IO as grammar errors. Core callers supply validated immutable inp
 Compare aliases/cross-kind ambiguity/local rejection/dedup/error priority and full
 rows against original PS, keeping intentional diagnostic ties separate. Validate
 programmatic repeated/equal-row identity and culture distinctions natively.
+
+## Cached selector text / next infrastructure checkpoint
+
+`ReferenceCacheResolver.ResolveSelector(snapshot, selector, projectId, nowUtc, policy)
+-> string?` and the equivalent directory facade expose the concrete Selector string
+needed by later batch consumers. Null means a nonnumeric input exclusively; a saved
+null/empty Selector produces an actual empty string. A missing Selector is E15 only
+when consumed. Preserve every existing cache/schema/timestamp/project/index/range/
+kind/source validation and priority before reading Selector, including scanning all
+Index fields after a valid first selector cast and skipping that cast for empty rows.
+
+Share the existing selection logic through an internal borrowed CacheRowView. Public
+full-row Resolve still clones selected data and retains only selected date metadata.
+The text API performs the same one-level returned-array unwrap and StringField
+projection using snapshot dates, but emits only an independent string; no borrowed
+JSON/view/date map escapes and no full-row copy or unrelated-date scan is needed.
+All complete decoder validation remains; unused fields are not newly validated.
+The inspector's exact --string-field Selector path exercises this API. Other fields
+and full-row paths retain ownership and behavior. Differential consumer/date cases
+and the complete existing cache corpus guard the extraction before any batch wiring.
