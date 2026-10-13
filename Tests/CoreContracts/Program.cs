@@ -61,6 +61,7 @@ if (args.FirstOrDefault() is "--inspect-read-reference-cache" or "--inspect-reso
 if (args.FirstOrDefault() == "--inspect-update-targets") return UpdateTargetInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-batch-selectors") return BatchSelectorInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-classification-targets") return ClassificationTargetInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-resource-targets") return ResourceTargetInspection.Run(args);
 
 // Test-only transport peer: arbitrary replies exercise adapter validation before
 // any parent session mutation. This mode is never part of the shipping CLI.
@@ -246,6 +247,7 @@ if (!numbered.Mods.Select(row => row.Number).SequenceEqual(new int?[] { 7, 6, 7,
 UpdateTargetContracts.Verify(rawSnapshot);
 BatchSelectorContracts.Verify();
 ClassificationTargetContracts.Verify(rawSnapshot);
+ResourceTargetContracts.Verify(rawSnapshot);
 ImportedLookupContracts.Verify();
 Console.WriteLine($"PSD1 native contracts passed: {invalid.Length + 7 + limits.Length} rejected inputs, typed literals, nested arrays, bounded numeric extraction, immutable classification/reference/alias identities, {args.Length} files");
 return 0;
