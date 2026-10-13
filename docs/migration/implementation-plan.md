@@ -310,7 +310,17 @@ array case. Native assertion, 17-success/four-error classification regression an
 15 protocol cases pass; all-project format, Release and Native AOT are warning-free.
 White-box source and native assertion close the general typed contract.
 
-Next checkpoint: resource-order reading and
+Default resource order reading completed as an internal native capability.
+Lexical selection and reversal retain duplicate/comment/nesting behavior while
+preserving empty successful cases and improving actual failures with E08. Positive
+matched-ID limits are checked before missing-file returns and result additions.
+Warning-free Native AOT and all-project format/build, own eleven successes/four
+failures, count/blank-line controls, native contracts and 15 protocol cases pass.
+Independent black-box review passes 52 cases (38 successes, five Unclosed errors,
+six E08 errors and three policy controls); white-box passes nine extra successes,
+two errors and quota/adversarial controls. No public inventory switch yet.
+
+Next checkpoint: resource activation and
 composition into RawInventorySnapshot. Native inspection tests make each internal
 capability observable without partial public content-list success. Public content
 list still uses the legacy engine.
