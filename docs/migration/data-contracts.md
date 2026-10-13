@@ -687,7 +687,7 @@ Scalar compatibility references: installed PowerShell 7.6.6 probes are the oracl
 explain the separately tested literal and system-converter paths. These source rules
 are implemented as a bounded scalar boundary, without embedding the PS parser.
 
-## Pure Packwiz update-target selection / next checkpoint
+## Pure Packwiz update-target selection / completed checkpoint
 
 `UpdateTargetSelector.Resolve(RawInventorySnapshot, ImmutableArray<string> selectors,
 string? type = "all") -> ImmutableArray<InventoryItem>` consumes an existing owned
@@ -705,7 +705,9 @@ presentation rows; builtin/missing/default IDs and active-only names are exclude
 Retain mod editorial names already present in raw inventory. Match nonempty Name,
 Id, Filename or metadata filename stem (remove a final .pw.toml case-insensitively)
 using OrdinalIgnoreCase equality, without trimming, substring/glob matching or
-provider normalization. Several aliases on one row count as one occurrence; separate
+provider normalization. Preserve the legacy regex $ anchor before one final LF,
+retaining that LF in the stem; CRLF and multiple final LFs do not consume the suffix.
+Several aliases on one row count as one occurrence; separate
 rows with the same ID, path or object identity still produce ambiguity.
 Only null/empty aliases are omitted; whitespace remains a literal alias. The pure
 operation does not normalize paths or validate their filesystem existence.

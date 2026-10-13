@@ -442,3 +442,20 @@ Own 59 category/project pairs,221 cache pairs,category/native/protocol regressio
 and41 public project controls pass. Independent black-box130 category +3 project
 pairs and white-box typed/wrapper/giant/cast/empty-prefix cases close review with
 unchanged fixtures. No public content-list switch or global performance claim.
+
+`d6c65f6`: pure Packwiz update-target selection completed. One per-call alias index
+uses occurrence ordinals, avoiding repeated full-inventory scans and per-row alias
+sets; collision lists allocate only when needed. Physical resources, original row
+references, ordinal matching, complete errors and invariant path dedup are retained.
+Unused category Order stays deferred; every source/path check precedes dedup. E16
+stabilizes only ambiguous diagnostic ties. Stem preserves legacy regex dollar-anchor
+behavior before one LF, with no trim or path normalization. No cache/network/writes.
+Three projects pass locked restore/format/Release/Native AOT without warnings.
+Final host v50 SHA256:60F9F97BE4E84921A95D77EAE5B1D9E1337982615D1D4CEFD551AB9EF4A4C372;
+CLI v57 SHA256:C8B89046B234C88B499176297C7811617957C58BAAF58DA77B8B1680E15F04F9.
+Own37 differential/grammar controls and exact1024 selector boundary, native parser/
+identity/path-culture/whitespace/E16/three-LF cases,27 selection and15 protocol cases
+pass. Black-box58 original pairs +8 grammar controls and white-box10 independent
+pairs +two priority/grammar controls pass with intact fixtures. Native assertions
+cover synthetic identity/LF/E16 cases separately; blind file-based coverage does not
+claim them. Earlier managed preflight was followed by the required native gates.
