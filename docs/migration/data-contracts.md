@@ -149,7 +149,15 @@ recursive enumeration uses a different traversal order. The pinned
 [PowerShell provider source](https://raw.githubusercontent.com/PowerShell/PowerShell/v7.6.6/src/System.Management.Automation/namespaces/FileSystemProvider.cs)
 confirms its sorting, recursion and hidden/link policies.
 
-Parse each TOML once through bounded syntax nodes. Exact unquoted section headers
+Validate each TOML once through bounded syntax nodes. Extract published fields
+through cached lexical section windows and independent per-field matchers, rather
+than AST values: apparent fields/headers inside valid multiline strings remain
+observable in the legacy contract. Keep the historical Regex.Unescape decoder;
+unsupported escapes produce structured failures rather than new successful values.
+All these matchers use NonBacktracking to avoid quadratic blank-line searches.
+The [official regex documentation](https://learn.microsoft.com/en-us/dotnet/standard/base-types/regular-expression-source-generators)
+describes the cached NonBacktracking instance: no runtime code compilation is used.
+Exact unquoted section headers
 identify update.modrinth/update.curseforge; quoted or array-table headers remain
 unselected. Modrinth string mod-id wins, then nonempty CurseForge string project-id,
 then packwiz: plus lowercase normalized metadata-relative path. Numeric provider

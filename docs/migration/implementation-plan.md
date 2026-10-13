@@ -213,7 +213,7 @@ The fix passed eight fresh-process baseline/native pairs and the independent
 eight-case review, including exact terminating-error element types, false-ID
 selection and true's help coercion. Use/current regression checks pass.
 
-No inventory, resolver, native transaction or installed
+No complete inventory, resolver, native transaction or installed
 distribution exists yet. Catalog review does not prove their parity or performance.
 
 - `2b619f5`: visible System-only projects are included; Hidden and System+Hidden
@@ -222,9 +222,21 @@ distribution exists yet. Catalog review does not prove their parity or performan
   regressions pass. Independent reviewer reproduced v12's exclusion and passed
   v13's four cases with unchanged hashes and directory/file attributes.
 
-Next reviewed inventory checkpoint: the complete managed-content reader alone,
-then local/editorial/resource-order composition into RawInventorySnapshot. Native
-inspection tests make each internal capability observable without partial public
-content-list success. Independent baseline corpus prepared before code: 35 fixtures,
-including 29 successful reads and six interpreter binding failures recorded for
-E05/structured diagnostics. No new managed reader has been executed yet.
+`0dd015c`: managed Packwiz reader completed as an internal native capability.
+Locked restore, direct Core/CLI/test-host format verification, warning-free Release
+and Native AOT publication passed. Own native tests cover 13 differential cases,
+E05, three budgets, four malformed/resource/escape failures and two blank-line
+regressions. Shared catalog (21 differentials plus seven exception/limit cases),
+four project-attribute cases, 15 protocol cases and native PSD1 contracts pass.
+Independent black-box review passes the frozen 35-fixture corpus, six additional
+multiline fixtures, exact/over budget boundaries and junction cases. White-box
+review caught successful AST-versus-lexical differences, then quadratic whitespace
+searches; both were corrected before the checkpoint. The final 262144-line valid
+metadata probe completed in 112 ms rather than exceeding 10 seconds. This is a
+diagnostic regression measurement, not an inventory benchmark or performance-gate
+claim. Real cloud placeholders were not tested.
+
+Next checkpoint: local JAR/ZIP discovery and metadata, then editorial/resource-order
+composition into RawInventorySnapshot. Native inspection tests make each internal
+capability observable without partial public content-list success. Public content
+list still uses the legacy engine.

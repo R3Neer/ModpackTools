@@ -34,6 +34,12 @@ values or discard error targets in differential tests. Invalid descriptor/config
 cases compare ID/category/target and diagnostic meaning rather than interpreter
 wording. Overflow and malformed TOML test the native failure explicitly.
 
+Managed metadata uses Content.InvalidMetadata / InvalidData with the selected
+metadata file target, details and repair hint for read, parse and compatibility
+decoder failures. In particular, valid TOML with an unsupported historical
+Regex.Unescape sequence (such as uppercase Unicode \U) remains a failure, now
+structured; no new successful decoding policy is implied.
+
 ## E03: empty project catalog is a valid result
 
 An existing configured root with zero immediate registered projects returns a
