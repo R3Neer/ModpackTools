@@ -1005,3 +1005,6 @@ the old reader/resolver consume every category number with AllowUnclassified.
 Cover fresh/replacement/Unicode/duplicates/empty snapshots, exact/over budgets,
 invalid policy without directories, locked replacement, unrelated temporaries,
 exclusive handle reopening, reader compatibility and unchanged source fixtures.
+The diagnostic-only --empty-categories true flag substitutes an initialized empty
+typed view after the normal read-only prelude, to compare the separate programmatic
+empty-array writer contract. This is a test-host producer, not public CLI behavior.
