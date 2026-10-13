@@ -10,6 +10,7 @@ if (args.FirstOrDefault() == "--inspect-jar-display") return JarDisplayInspectio
 if (args.FirstOrDefault() == "--inspect-local-jars") return LocalJarInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-editorial") return EditorialInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-classified-mods") return ClassificationInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-resource-order") return ResourceOrderInspection.Run(args);
 
 // Test-only transport peer: arbitrary replies exercise adapter validation before
 // any parent session mutation. This mode is never part of the shipping CLI.
