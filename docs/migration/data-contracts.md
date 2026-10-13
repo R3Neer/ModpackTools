@@ -314,6 +314,9 @@ use the legacy BigInteger-to-Double conversion rather than floating-token parsin
 Trim sign and leading zeros with a linear scan; more than 309 significant integer
 digits are signed infinity, so never construct a giant BigInteger. At most 309
 digits enter that conversion. Floating literals retain Double.Parse semantics.
+Integer literals whose conversion is nonfinite are rejected by the data parser,
+matching the legacy import failure; explicit floating exponents can still produce
+infinity. A bounded conversion must not turn a non-importable PSD1 into success.
 Scalar display strings retain exact Decimal integers and otherwise use invariant
 G15, matching PowerShell string casts. Typed diagnostic targets retain numeric
 values separately from display text. Test-only JSON keeps its existing R-format

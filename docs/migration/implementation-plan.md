@@ -283,6 +283,16 @@ The buffered test inspector preserves Int64/Decimal/Double transport, including
 overflowing integer conversion through BigInteger; Core retains literal nodes.
 No public inventory route changes in this checkpoint.
 
+`c03667c`: shared numeric extraction corrected without changing literal storage.
+G15 display, bounded integer-to-Double conversion and typed Decimal/Double JSON
+targets preserve legacy values/types. Nonfinite integer literals remain import
+failures, while explicit floating exponents retain their existing infinity result.
+Locked restore, all-project format, warning-free Release/Native AOT, 31 own project
+pairs, ten error/limit controls, 19 editorial pairs, bounded numeric contracts and
+15 protocol cases pass. Independent black-box 28 cases and white-box six public
+pairs plus parser/architecture checks close the correction. Original main was
+rechecked clean at 025b7f3. No full inventory performance claim follows from this.
+
 Next checkpoint: editorial classification and resource-order
 composition into RawInventorySnapshot. Native inspection tests make each internal
 capability observable without partial public content-list success. Public content
