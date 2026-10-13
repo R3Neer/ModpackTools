@@ -3,15 +3,17 @@ namespace ModpackTools.Core.Inventory;
 internal sealed class ReadBudget
 {
     private readonly ManagedReadLimits limits;
+    private readonly string scope;
     private long bytes;
     private long files;
     private long directories;
 
-    public ReadBudget(ManagedReadLimits limits)
+    public ReadBudget(ManagedReadLimits limits, string scope = "managed-content")
     {
         if (limits.MaximumBytes < 1 || limits.MaximumFiles < 1 || limits.MaximumDirectories < 1)
             throw new ArgumentOutOfRangeException(nameof(limits), "Reader budgets must be positive.");
         this.limits = limits;
+        this.scope = scope;
     }
 
     public void File(string path)
@@ -30,7 +32,7 @@ internal sealed class ReadBudget
         bytes += count;
     }
 
-    private static void Exceeded(string path, string budget) => throw new DomainException(
-        "Content.ReadLimitExceeded", $"The managed-content {budget} exceeds the reader budget",
+    private void Exceeded(string path, string budget) => throw new DomainException(
+        "Content.ReadLimitExceeded", $"The {scope} {budget} exceeds the reader budget",
         "reduce the metadata size or split the project before retrying", "LimitsExceeded", path);
 }

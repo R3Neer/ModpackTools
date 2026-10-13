@@ -24,7 +24,7 @@ internal static class ContentFiles
         }
     }
 
-    public static IEnumerable<FileInfo> Enumerate(string path, ReadBudget budget)
+    public static IEnumerable<FileInfo> Enumerate(string path, ReadBudget budget, string pattern = "*.pw.toml")
     {
         if (!Directory.Exists(path)) yield break;
         var pending = new Stack<DirectoryInfo>();
@@ -32,7 +32,7 @@ internal static class ContentFiles
         pending.Push(new(path));
         while (pending.TryPop(out var directory))
         {
-            var files = InDirectory(directory, "*.pw.toml", file => budget.File(file.FullName));
+            var files = InDirectory(directory, pattern, file => budget.File(file.FullName));
             foreach (var file in files) yield return file;
             var children = new List<DirectoryInfo>();
             try

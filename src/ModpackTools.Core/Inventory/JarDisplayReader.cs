@@ -11,11 +11,12 @@ public sealed record ArtifactDisplayMetadata(string Name, string Side, ArtifactR
 
 public static class JarDisplayReader
 {
-    public static ArtifactDisplayMetadata Read(string path, ArchiveReadLimits? limits = null)
+    public static ArtifactDisplayMetadata Read(string path, ArchiveReadLimits? limits = null) => Read(path, limits, null);
+
+    internal static ArtifactDisplayMetadata Read(string path, ArchiveReadLimits? limits, Action<int>? bytesRead)
     {
         limits ??= new();
-        if (limits.MaximumMetadataBytes < 1 || limits.MaximumCentralDirectoryBytes < 1 || limits.MaximumEntries < 1)
-            throw new ArgumentOutOfRangeException(nameof(limits), "Archive budgets must be positive.");
+        limits.Validate();
         var name = Path.GetFileNameWithoutExtension(path);
         var side = "unknown";
         try
@@ -33,6 +34,7 @@ public static class JarDisplayReader
             int count;
             while ((count = stream.Read(buffer)) != 0)
             {
+                bytesRead?.Invoke(count);
                 if (count > limits.MaximumMetadataBytes - bytes.Length)
                     throw new ArchiveLimitException("The actual decompressed metadata exceeds the reader budget.");
                 bytes.Write(buffer, 0, count);
