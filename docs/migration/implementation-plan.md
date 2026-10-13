@@ -341,8 +341,14 @@ native/protocol regressions pass. Independent black-box review passes 63 invocat
 plus 17 strengthened assertions with unchanged fixtures; white-box closes one exact
 snapshot, two E02 priority assertions, suppressed-ZIP quotas and four extra invalid
 policies. This does not yet replace public content list or provide complete health.
+`3551bfc`: pure inventory selection completed. Immutable groups preserve ordering,
+aliases, linguistic membership and ordinal substring matching across field boundaries.
+Read-before-filter priority and exact domain hints remain compatible. Warning-free
+all-project formatting/Release/Native AOT, 17 own successes/ten domain errors,
+native contracts, raw inventory and 15 protocol regressions pass. Independent
+black-box 94 cases (68 successes/26 errors) and white-box seven additional successes/
+six exact errors pass; the earlier InvalidSide hint mismatch is corrected in the
+final artifact. No reference/cache/health effects or public content-list switch.
 
-Next checkpoint: filtered read-only
-composition into RawInventorySnapshot. Native inspection tests make each internal
-capability observable without partial public content-list success. Public content
-list still uses the legacy engine.
+Next checkpoint: pure category definitions and inventory reference assignment,
+then separately persisted cache validation. Public content list still uses legacy.
