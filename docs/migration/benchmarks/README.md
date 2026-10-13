@@ -73,3 +73,14 @@ raw values but do not interpret them as memory use; corrected summary marks them
 unavailable. The corrected runners do this directly for future runs. First samples
 are not physically cold-storage measurements. Cache/host/load limitations and
 pending memory/online/large-JAR measurements are detailed in [performance.md](../performance.md).
+
+Raw inventory repeat after shared scalar compatibility (`0ba0245`, host v48):
+[raw samples and manifest](raw-inventory-current-results.json). Same frozen 123-file
+fixture is copied again; full common projection and original hashes/attributes pass.
+21 alternating warm samples compare an already-loaded PS7.6.6 module with a fresh
+Native AOT process per invocation. Median PS172.709ms / native65.6657ms, p95
+182.0609ms /69.2784ms, ratio2.63x. Original v29 result remains above and in its
+original JSON. This confirms the slice's improvement; changes in PS timing between
+runs are not attributed to native optimizations. No filter/reference/health/adapter/
+renderer/network or public end-to-end claim. Both reviewers had completed native
+runs; no competing tests/builds were intentionally started during this measurement.
