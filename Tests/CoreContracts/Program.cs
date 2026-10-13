@@ -6,6 +6,7 @@ if (args.FirstOrDefault() == "--inspect-managed") return ManagedInspection.Run(a
 if (args.FirstOrDefault() == "--inspect-local-zips") return LocalZipInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-jar-display") return JarDisplayInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-local-jars") return LocalJarInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-editorial") return EditorialInspection.Run(args);
 
 // Test-only transport peer: arbitrary replies exercise adapter validation before
 // any parent session mutation. This mode is never part of the shipping CLI.
