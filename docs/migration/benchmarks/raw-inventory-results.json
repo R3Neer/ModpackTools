@@ -1,0 +1,1028 @@
+{
+  "scope": "raw inventory plus equivalent projection and JSON; loaded PS vs fresh Native AOT inspector",
+  "timestamp": "2026-10-13T17:41:40.7925021+02:00",
+  "source": "D:\\Minecraft\\VanillaPlus-26.2",
+  "fixture": "C:\\Users\\Usuario\\Desktop\\ReorganizacionPC\\assessment\\benchmarks\\raw-inventory-cb7989961cc24a01946ba73ccddedf8b\\pack",
+  "native_sha256": "4414046AD0AC593BF976FB7FC1C0DC1553B880D915DFD05D255405C653C39E87",
+  "legacy_revision": "025b7f32200484070fe6ec5e5aa1a3ef49c3bfa2",
+  "ps_version": "7.6.6",
+  "culture": "es-ES",
+  "os": "Microsoft Windows NT 10.0.26200.0",
+  "cache": "Copied fixture, warmed OS cache; no eviction, no persistent inventory/health cache",
+  "first_legacy_ms": 437.881,
+  "first_aot_ms": 88.4298,
+  "counts": {
+    "shaders": 2,
+    "inactive": 0,
+    "resources": 17,
+    "mods": 100,
+    "active": 25
+  },
+  "samples": [
+    {
+      "sample": 1,
+      "engine": "legacy",
+      "ms": 162.4417,
+      "output_chars": 57780
+    },
+    {
+      "sample": 1,
+      "engine": "aot",
+      "ms": 66.6845,
+      "output_chars": 60566
+    },
+    {
+      "sample": 2,
+      "engine": "aot",
+      "ms": 66.6078,
+      "output_chars": 60566
+    },
+    {
+      "sample": 2,
+      "engine": "legacy",
+      "ms": 153.1674,
+      "output_chars": 57780
+    },
+    {
+      "sample": 3,
+      "engine": "legacy",
+      "ms": 155.9881,
+      "output_chars": 57780
+    },
+    {
+      "sample": 3,
+      "engine": "aot",
+      "ms": 65.5788,
+      "output_chars": 60566
+    },
+    {
+      "sample": 4,
+      "engine": "aot",
+      "ms": 70.4853,
+      "output_chars": 60566
+    },
+    {
+      "sample": 4,
+      "engine": "legacy",
+      "ms": 161.4118,
+      "output_chars": 57780
+    },
+    {
+      "sample": 5,
+      "engine": "legacy",
+      "ms": 172.3098,
+      "output_chars": 57780
+    },
+    {
+      "sample": 5,
+      "engine": "aot",
+      "ms": 65.0052,
+      "output_chars": 60566
+    },
+    {
+      "sample": 6,
+      "engine": "aot",
+      "ms": 66.9287,
+      "output_chars": 60566
+    },
+    {
+      "sample": 6,
+      "engine": "legacy",
+      "ms": 152.2077,
+      "output_chars": 57780
+    },
+    {
+      "sample": 7,
+      "engine": "legacy",
+      "ms": 146.7108,
+      "output_chars": 57780
+    },
+    {
+      "sample": 7,
+      "engine": "aot",
+      "ms": 64.328,
+      "output_chars": 60566
+    },
+    {
+      "sample": 8,
+      "engine": "aot",
+      "ms": 62.2935,
+      "output_chars": 60566
+    },
+    {
+      "sample": 8,
+      "engine": "legacy",
+      "ms": 149.7476,
+      "output_chars": 57780
+    },
+    {
+      "sample": 9,
+      "engine": "legacy",
+      "ms": 150.2781,
+      "output_chars": 57780
+    },
+    {
+      "sample": 9,
+      "engine": "aot",
+      "ms": 64.8254,
+      "output_chars": 60566
+    },
+    {
+      "sample": 10,
+      "engine": "aot",
+      "ms": 66.3928,
+      "output_chars": 60566
+    },
+    {
+      "sample": 10,
+      "engine": "legacy",
+      "ms": 154.5789,
+      "output_chars": 57780
+    },
+    {
+      "sample": 11,
+      "engine": "legacy",
+      "ms": 145.1554,
+      "output_chars": 57780
+    },
+    {
+      "sample": 11,
+      "engine": "aot",
+      "ms": 64.1011,
+      "output_chars": 60566
+    },
+    {
+      "sample": 12,
+      "engine": "aot",
+      "ms": 63.0563,
+      "output_chars": 60566
+    },
+    {
+      "sample": 12,
+      "engine": "legacy",
+      "ms": 150.9324,
+      "output_chars": 57780
+    },
+    {
+      "sample": 13,
+      "engine": "legacy",
+      "ms": 147.472,
+      "output_chars": 57780
+    },
+    {
+      "sample": 13,
+      "engine": "aot",
+      "ms": 61.4112,
+      "output_chars": 60566
+    },
+    {
+      "sample": 14,
+      "engine": "aot",
+      "ms": 65.7945,
+      "output_chars": 60566
+    },
+    {
+      "sample": 14,
+      "engine": "legacy",
+      "ms": 151.994,
+      "output_chars": 57780
+    },
+    {
+      "sample": 15,
+      "engine": "legacy",
+      "ms": 154.1246,
+      "output_chars": 57780
+    },
+    {
+      "sample": 15,
+      "engine": "aot",
+      "ms": 64.3058,
+      "output_chars": 60566
+    },
+    {
+      "sample": 16,
+      "engine": "aot",
+      "ms": 63.3794,
+      "output_chars": 60566
+    },
+    {
+      "sample": 16,
+      "engine": "legacy",
+      "ms": 158.3348,
+      "output_chars": 57780
+    },
+    {
+      "sample": 17,
+      "engine": "legacy",
+      "ms": 168.2869,
+      "output_chars": 57780
+    },
+    {
+      "sample": 17,
+      "engine": "aot",
+      "ms": 63.751,
+      "output_chars": 60566
+    },
+    {
+      "sample": 18,
+      "engine": "aot",
+      "ms": 64.4841,
+      "output_chars": 60566
+    },
+    {
+      "sample": 18,
+      "engine": "legacy",
+      "ms": 153.313,
+      "output_chars": 57780
+    },
+    {
+      "sample": 19,
+      "engine": "legacy",
+      "ms": 147.8931,
+      "output_chars": 57780
+    },
+    {
+      "sample": 19,
+      "engine": "aot",
+      "ms": 64.0286,
+      "output_chars": 60566
+    },
+    {
+      "sample": 20,
+      "engine": "aot",
+      "ms": 63.3781,
+      "output_chars": 60566
+    },
+    {
+      "sample": 20,
+      "engine": "legacy",
+      "ms": 152.0215,
+      "output_chars": 57780
+    },
+    {
+      "sample": 21,
+      "engine": "legacy",
+      "ms": 155.7092,
+      "output_chars": 57780
+    },
+    {
+      "sample": 21,
+      "engine": "aot",
+      "ms": 63.4338,
+      "output_chars": 60566
+    }
+  ],
+  "summary": [
+    {
+      "engine": "legacy",
+      "median_ms": 153.1674,
+      "p95_ms": 168.2869
+    },
+    {
+      "engine": "aot",
+      "median_ms": 64.328,
+      "p95_ms": 66.9287
+    }
+  ],
+  "manifest": [
+    {
+      "path": "pack.toml",
+      "bytes": 286,
+      "attributes": 32,
+      "sha256": "2E639427B60A9A98AAD4C2BCBA1971C585A371FFD46AD5BBB9821AF985500907"
+    },
+    {
+      "path": ".modpack\\project.psd1",
+      "bytes": 163,
+      "attributes": 32,
+      "sha256": "66EB46B7ECF635A37B3FF39A97263715F8F811FA59312C3C0543C9DE3DAB7802"
+    },
+    {
+      "path": ".modpack\\metadata.psd1",
+      "bytes": 13141,
+      "attributes": 32,
+      "sha256": "F8E6278E763D96AE18BF46182C4C7D1AF4DF19E770C115899C4E9BBF549945E7"
+    },
+    {
+      "path": "config\\defaultoptions-common.toml",
+      "bytes": 901,
+      "attributes": 32,
+      "sha256": "B24F19509AE566B22253CDB6C13D60998C4F23B880E0B74B122F9A2B35B65420"
+    },
+    {
+      "path": "mods\\alchemical-leather-0.1.0-beta.2.jar",
+      "bytes": 234071,
+      "attributes": 32,
+      "sha256": "AAC71BC36F3EA01427FF926F16B918EF9BF3A24B5F84079EC21E54D40C486E27"
+    },
+    {
+      "path": "mods\\alexs-mobs-continued.pw.toml",
+      "bytes": 431,
+      "attributes": 32,
+      "sha256": "1508A5E821DFF8BB2526EF6556E05DCF3075304C35887FC9C4EFC369A2F11B80"
+    },
+    {
+      "path": "mods\\ambient-environment.pw.toml",
+      "bytes": 449,
+      "attributes": 32,
+      "sha256": "3F1957512B30C38930C0C1972FB4E4649E0669B5F0CFDC5474BE118AC23183BD"
+    },
+    {
+      "path": "mods\\ambientsounds.pw.toml",
+      "bytes": 437,
+      "attributes": 32,
+      "sha256": "82C561313A11160AE868D5050601A68A24C59B6C0DCDE232664C224CF9D90134"
+    },
+    {
+      "path": "mods\\animal-weight.pw.toml",
+      "bytes": 431,
+      "attributes": 32,
+      "sha256": "1DE7E5B801557F9A132B465B18655191D2022D10262E45F6F8989B96D4EF6BCB"
+    },
+    {
+      "path": "mods\\architectury-api.pw.toml",
+      "bytes": 422,
+      "attributes": 32,
+      "sha256": "1C5DBDC5E213127AE20EA2E878D8A9B8E052279DF69834D41F19F3F076D2ED9F"
+    },
+    {
+      "path": "mods\\armor-poser.pw.toml",
+      "bytes": 423,
+      "attributes": 32,
+      "sha256": "189E2F502DF6A6D0761F4AB5D97BEF0482F18BB8C5586F55A93C49DE377B8E22"
+    },
+    {
+      "path": "mods\\atlas-core.pw.toml",
+      "bytes": 436,
+      "attributes": 32,
+      "sha256": "49B103DC143BCD1E27394B1EFCE98AFF212B992AA37CD0104F93C1720814612A"
+    },
+    {
+      "path": "mods\\baguettelib.pw.toml",
+      "bytes": 423,
+      "attributes": 32,
+      "sha256": "88F36DF3BE71776F3F02C3931485BF475657EC77BD029D90418ACB6DB6EA917F"
+    },
+    {
+      "path": "mods\\balm.pw.toml",
+      "bytes": 408,
+      "attributes": 32,
+      "sha256": "B8A4A910DFC69CE756BAFC2E149850F14B2216963370F903CFE0DA9F6E93F097"
+    },
+    {
+      "path": "mods\\bedrockify.pw.toml",
+      "bytes": 414,
+      "attributes": 32,
+      "sha256": "D87FA5F877252406AEC0CDFD8474AA034CC2AA43587F0D41CEA59574AADBCAF2"
+    },
+    {
+      "path": "mods\\better-archeology.pw.toml",
+      "bytes": 439,
+      "attributes": 32,
+      "sha256": "9050D0B078C89146D1C68455C8E18C89CBDBEF2051FE9B720DFB222DD18ACC30"
+    },
+    {
+      "path": "mods\\better-snowy-biome-2.5.1+26.2-vanillaplus-patched.jar",
+      "bytes": 3780449,
+      "attributes": 32,
+      "sha256": "B822210B4ADB730CC6634FBF6B6851FB7E1FF27D610E0A0E57DA0CB112109FFF"
+    },
+    {
+      "path": "mods\\bundles-beyond.pw.toml",
+      "bytes": 438,
+      "attributes": 32,
+      "sha256": "E9151A35C1A3E7194540216B9520342C16BE9D17551716EC4C70F7EA121B0D27"
+    },
+    {
+      "path": "mods\\camera-utils.pw.toml",
+      "bytes": 428,
+      "attributes": 32,
+      "sha256": "8166BCABD06707859BF6C4466CB535DAB38826855EAC89254A7605A2F0EBBE90"
+    },
+    {
+      "path": "mods\\carpet-extra.pw.toml",
+      "bytes": 410,
+      "attributes": 32,
+      "sha256": "065EED4E2FD2E5EAF17DAD94DE72DACC6E339CDA19F0D0F65F690476EDC3EDCA"
+    },
+    {
+      "path": "mods\\carpet.pw.toml",
+      "bytes": 414,
+      "attributes": 32,
+      "sha256": "C5ED17434B9F7FA4DAA641963566CD3337E1617957D8E77F52D3CB03AAFB3B1A"
+    },
+    {
+      "path": "mods\\clinging-reoriented-0.1.0-beta.4.jar",
+      "bytes": 389883,
+      "attributes": 32,
+      "sha256": "3EBD716C106DB49E6139E96D4F876F4F06A6B2EACACE1EEE8C77F9367036B778"
+    },
+    {
+      "path": "mods\\cloth-config.pw.toml",
+      "bytes": 412,
+      "attributes": 32,
+      "sha256": "7FA9592B9948B8809018A4E7C3CA7DA4D19FC5EF8C03021414CB22AE0253F083"
+    },
+    {
+      "path": "mods\\codxlib.pw.toml",
+      "bytes": 412,
+      "attributes": 32,
+      "sha256": "04AB8EFD63574F29BAC4EE32CF3AFDF1122C6AD5108F2CD77D9EBDC4F0F14347"
+    },
+    {
+      "path": "mods\\combatify.pw.toml",
+      "bytes": 433,
+      "attributes": 32,
+      "sha256": "6F7DD9410239DE08DA2999E101BA3DAF5B704784D8FBA5BD799C8A925DBF3649"
+    },
+    {
+      "path": "mods\\creativecore.pw.toml",
+      "bytes": 436,
+      "attributes": 32,
+      "sha256": "7EF52EE07BD8EAAEBE8BA3AF73FEE0B6EED30884E92282EED582C2CCE7AEE8D7"
+    },
+    {
+      "path": "mods\\deeper_dark.pw.toml",
+      "bytes": 399,
+      "attributes": 32,
+      "sha256": "5A5F8C3BADF8C603D3A601D919FFA4CB13B13D1119859492527D01D5C2484762"
+    },
+    {
+      "path": "mods\\default-options.pw.toml",
+      "bytes": 441,
+      "attributes": 32,
+      "sha256": "EE70CD3021D7F27E3EE7062589CFF4A96FC72607121B6849B80CDD8C3717EE1F"
+    },
+    {
+      "path": "mods\\defaulted.pw.toml",
+      "bytes": 437,
+      "attributes": 32,
+      "sha256": "1319FF9E5E3C8858DBD2A7CDC1B971915FCB43DA170C6A423D6A78393044676F"
+    },
+    {
+      "path": "mods\\dungeons-and-taverns-ancient-city-overhaul.pw.toml",
+      "bytes": 488,
+      "attributes": 32,
+      "sha256": "FCA3B5DD958ABE4AE6A46016D89E50E62962C9DF2292ABAD54BC30CD31C5033F"
+    },
+    {
+      "path": "mods\\dungeons-and-taverns.pw.toml",
+      "bytes": 426,
+      "attributes": 32,
+      "sha256": "FE1901158F49CAE71686A3519334607FCCAA59E7DBB7B4F8FBBAAB70D527A2C8"
+    },
+    {
+      "path": "mods\\e4mc.pw.toml",
+      "bytes": 406,
+      "attributes": 32,
+      "sha256": "89E01E31BFB003BE8675D0682011CB1735D20325E7974E98E35950336F5036F2"
+    },
+    {
+      "path": "mods\\effectual.pw.toml",
+      "bytes": 419,
+      "attributes": 32,
+      "sha256": "0BD29F6830A355B4C52B0851425DB91D08E818C92E39C3CFCB1217D0378F9673"
+    },
+    {
+      "path": "mods\\emf-compat-core.pw.toml",
+      "bytes": 424,
+      "attributes": 32,
+      "sha256": "AF11E6359457A1210E9B3F16D5F5182F9ABEE018BE5FE751FC725344A4C06B81"
+    },
+    {
+      "path": "mods\\entity-model-features.pw.toml",
+      "bytes": 461,
+      "attributes": 32,
+      "sha256": "44EE083173741300CED9075E99B4AEBEC1C2AB230E69500F34844B5E41B7AA27"
+    },
+    {
+      "path": "mods\\entitytexturefeatures.pw.toml",
+      "bytes": 463,
+      "attributes": 32,
+      "sha256": "3D9DEA964C9B5C3F3837053317685EFFE6EC26037C9C444CD640FA29F6ABD8F2"
+    },
+    {
+      "path": "mods\\fabric-api.pw.toml",
+      "bytes": 412,
+      "attributes": 32,
+      "sha256": "2F63CA526981E06DE2C3B9684CFB7E21ABF636CF9F0F657B9151685CD11692A7"
+    },
+    {
+      "path": "mods\\fabric-language-kotlin.pw.toml",
+      "bytes": 466,
+      "attributes": 32,
+      "sha256": "2A760E528BF27C3EB4AE7C06200D91EE9C2849295ADDAA2ADD05495C7DEE9528"
+    },
+    {
+      "path": "mods\\falldropbackport.pw.toml",
+      "bytes": 441,
+      "attributes": 32,
+      "sha256": "FF973D30A62FBF02635AE82393EE774A328E3ED053F06925ABC943D8B9CBD78A"
+    },
+    {
+      "path": "mods\\falling-snow-layers.pw.toml",
+      "bytes": 404,
+      "attributes": 32,
+      "sha256": "4FC33D07B91F014858DACA4B3C9E2317EF74849013FD40CC74BFF941A99319EC"
+    },
+    {
+      "path": "mods\\ferrite-core.pw.toml",
+      "bytes": 413,
+      "attributes": 32,
+      "sha256": "069D81CAB53C0141459AD4D70BCF3E10F17652F24CC62D3B4A0FC2CD2B700871"
+    },
+    {
+      "path": "mods\\first-person-model.pw.toml",
+      "bytes": 436,
+      "attributes": 32,
+      "sha256": "AACBA6178DBA67905A3B241F6BF3E2083B81FD820FD4FDABE184CB9D87494147"
+    },
+    {
+      "path": "mods\\forge-config-api-port.pw.toml",
+      "bytes": 459,
+      "attributes": 32,
+      "sha256": "8C91080E610D7C8C40AE6445D36AF1CF591FE1EBF70718B3E6D4714232B23592"
+    },
+    {
+      "path": "mods\\friends-and-foes.pw.toml",
+      "bytes": 453,
+      "attributes": 32,
+      "sha256": "89E4FCD00EF2E7B0909B4D81A03E63FA3BE58CBD1E5FF1C4CAB46659931E1E33"
+    },
+    {
+      "path": "mods\\frozenlib.pw.toml",
+      "bytes": 407,
+      "attributes": 32,
+      "sha256": "7889F43E63D473E147FDA7CA58B0AD4689588AB557DF3D3CE545F5A7DA9EE64E"
+    },
+    {
+      "path": "mods\\functional_trims.pw.toml",
+      "bytes": 442,
+      "attributes": 32,
+      "sha256": "93EC7517AD8CD4C1677F95C0B868BF0DB9B4CA8404AF893DCA9D354FA86FDE2D"
+    },
+    {
+      "path": "mods\\fzzy-config.pw.toml",
+      "bytes": 411,
+      "attributes": 32,
+      "sha256": "289599AC70B0F0A9A0055F1BD10FB7E2C38C540C3EF49DB8779C5C3988A7455C"
+    },
+    {
+      "path": "mods\\graves-3.12.0+26.2.jar",
+      "bytes": 789101,
+      "attributes": 32,
+      "sha256": "EE38E0EEEBFA2DA28596ABC636282DFD1B452590CD35C80F15542669D5BBEEB2"
+    },
+    {
+      "path": "mods\\immediatelyfast.pw.toml",
+      "bytes": 441,
+      "attributes": 32,
+      "sha256": "2C5CB7B630F770C1CBD923135DCA774367FA28DFDCA7E3F9C38314729D566B38"
+    },
+    {
+      "path": "mods\\incendium.pw.toml",
+      "bytes": 426,
+      "attributes": 32,
+      "sha256": "3F1B73D2DAE955ECA7974F17E453C9430C8187C86EC46601498FA9971292CA08"
+    },
+    {
+      "path": "mods\\iris.pw.toml",
+      "bytes": 420,
+      "attributes": 32,
+      "sha256": "7262C5DEA44F3EF66051C5300F498D03AD64F97CC5C920DD04EC8F0BA607BB92"
+    },
+    {
+      "path": "mods\\itemswapper.pw.toml",
+      "bytes": 467,
+      "attributes": 32,
+      "sha256": "1E1BED0F92A2D37F4BB8F5140A8E83D804A44A9B4A51A1A86C340D206631B8CC"
+    },
+    {
+      "path": "mods\\lambdynamiclights.pw.toml",
+      "bytes": 450,
+      "attributes": 32,
+      "sha256": "A5A49F16C46123806CD53726BF7F99E0A1B250293A4492F695944AFC8BD32FB2"
+    },
+    {
+      "path": "mods\\libjf.pw.toml",
+      "bytes": 383,
+      "attributes": 32,
+      "sha256": "EE8A76A95AA9202EC212666985D83683D42DBFF03F6E376029D33ED7648E59AF"
+    },
+    {
+      "path": "mods\\litematica.pw.toml",
+      "bytes": 424,
+      "attributes": 32,
+      "sha256": "2CEBCE7154E5EB2B3787C69795893FC57B2DF92B6ACC710A7D5B1675029EC34F"
+    },
+    {
+      "path": "mods\\lithium.pw.toml",
+      "bytes": 419,
+      "attributes": 32,
+      "sha256": "A5EE497EC151DD6E6B946091E12E2C56362E5C772C4B8EA175B2E81277CC708D"
+    },
+    {
+      "path": "mods\\lithostitched.pw.toml",
+      "bytes": 442,
+      "attributes": 32,
+      "sha256": "AE8A768E2CF20A347A41DD48A19F403157F03B434C696F08EFF33F9915084FBE"
+    },
+    {
+      "path": "mods\\lodestone-transit-0.1.0-beta.2.jar",
+      "bytes": 667393,
+      "attributes": 32,
+      "sha256": "7BD048541DB228D9BFE39D44E72A5F6942D83AA92F6316907AA2F1BDC276FC1E"
+    },
+    {
+      "path": "mods\\malilib.pw.toml",
+      "bytes": 415,
+      "attributes": 32,
+      "sha256": "34C37B333214A9A803A0745EA41D230BDB33922E5AB5EA05A3A6320C1ED5BE93"
+    },
+    {
+      "path": "mods\\minihud.pw.toml",
+      "bytes": 415,
+      "attributes": 32,
+      "sha256": "F746C9185FC01E9676793C2E81E2B6FD7853F7BA8B0236D97D1D22A69A92E1F8"
+    },
+    {
+      "path": "mods\\modmenu.pw.toml",
+      "bytes": 392,
+      "attributes": 32,
+      "sha256": "9CEB72B7C586DF8828EE5E9EAF096C913F8DEBE92805CD5CE6C4EA8922E5FE1D"
+    },
+    {
+      "path": "mods\\modrinth-5vF20eac.pw.toml",
+      "bytes": 417,
+      "attributes": 32,
+      "sha256": "547BC74553B415BB442D32682378582370A82AF7B4E85905D3C8B70C22E82561"
+    },
+    {
+      "path": "mods\\modrinth-6hN1V6wJ.pw.toml",
+      "bytes": 411,
+      "attributes": 32,
+      "sha256": "F77735DC88F1909DB7ED2A756DAEEBDD9ADF2DFDADDAD301CF7649CBCD7B34A9"
+    },
+    {
+      "path": "mods\\modrinth-9dzLWnmZ.pw.toml",
+      "bytes": 410,
+      "attributes": 32,
+      "sha256": "CF84CCA299FD51289BB12B76B443560D8F2A1D67ECCF85247D63787CC8F734D7"
+    },
+    {
+      "path": "mods\\modrinth-9Ya7Yyre.pw.toml",
+      "bytes": 414,
+      "attributes": 32,
+      "sha256": "A6AA3C771AAB711640854A4EE01958DD86401D7C052B523392AF871CA7F1C027"
+    },
+    {
+      "path": "mods\\modrinth-apjGEP3R.pw.toml",
+      "bytes": 393,
+      "attributes": 32,
+      "sha256": "8C84426C36B9B20D9C974F00CED3253F74A244213219B8327F2B351D5EF88CCD"
+    },
+    {
+      "path": "mods\\modrinth-jwgNKFuT.pw.toml",
+      "bytes": 446,
+      "attributes": 32,
+      "sha256": "404C8C2CDAE68A41B68FB23BF65C7E1877AEF6CC55E2767C691820626EE26CA2"
+    },
+    {
+      "path": "mods\\modrinth-R4TvILfj.pw.toml",
+      "bytes": 470,
+      "attributes": 32,
+      "sha256": "1E82946A2E77B60655FA19FB241555FC450FA9249F3D5A273FEC60650A21DD17"
+    },
+    {
+      "path": "mods\\modrinth-WC4UgDcZ.pw.toml",
+      "bytes": 427,
+      "attributes": 32,
+      "sha256": "3E11C568193F0ED0BC292471322C336643F80462E20A8B71652330FC62C1DE1E"
+    },
+    {
+      "path": "mods\\not-enough-animations-emf-compat.pw.toml",
+      "bytes": 475,
+      "attributes": 32,
+      "sha256": "69B32175A473B4A12D87A1B58BD81E790EAE5036504B5B37D95B5EF7E706004C"
+    },
+    {
+      "path": "mods\\not-enough-animations.pw.toml",
+      "bytes": 457,
+      "attributes": 32,
+      "sha256": "0D21CFC05D3EAEE705F131E9F8F8A742BB8928916CCE378F2E7E7C9E8BE7962D"
+    },
+    {
+      "path": "mods\\nullscape.pw.toml",
+      "bytes": 407,
+      "attributes": 32,
+      "sha256": "7FE4184F4C7CED127E9E32D3F9940172260E1102B92C12D6489F65A4AF9AE469"
+    },
+    {
+      "path": "mods\\particular-reforged.pw.toml",
+      "bytes": 435,
+      "attributes": 32,
+      "sha256": "92BA5FB001BB4B1EF06C89F0D883AD86E0AEF357BB6FCAD6CC9F2B671168E7CA"
+    },
+    {
+      "path": "mods\\peek.pw.toml",
+      "bytes": 404,
+      "attributes": 32,
+      "sha256": "4A608AC2011B06409EF4BB935CE59488B05CA250BC6E0ADEDB8153A26D109F32"
+    },
+    {
+      "path": "mods\\pistorder.pw.toml",
+      "bytes": 413,
+      "attributes": 32,
+      "sha256": "BBF1B89916334FD4A2CFC82FA43286B93B2192C8F162C76977CCE9D0A6531652"
+    },
+    {
+      "path": "mods\\placeholder-api.pw.toml",
+      "bytes": 442,
+      "attributes": 32,
+      "sha256": "B234ADE7FD54BB9D99C27769CD1635B18835752676D0CDD0A29AF2B4146251A8"
+    },
+    {
+      "path": "mods\\polymer.pw.toml",
+      "bytes": 417,
+      "attributes": 32,
+      "sha256": "9D87047CE28B748302A1512F4D697DFEAB65E6CFAD84725774BD5BF96F3EA487"
+    },
+    {
+      "path": "mods\\presence-footsteps.pw.toml",
+      "bytes": 434,
+      "attributes": 32,
+      "sha256": "958221CC09F9AC42C5133C986C34D22E57648472EEB215815CAF0581D5F1EF2E"
+    },
+    {
+      "path": "mods\\punchy-fpa.pw.toml",
+      "bytes": 409,
+      "attributes": 32,
+      "sha256": "2F2EE747A193C41ED85C0FE469EC40F4EFCBF7E1DDB2171B6C54A139220652C8"
+    },
+    {
+      "path": "mods\\pushier-pistons.pw.toml",
+      "bytes": 419,
+      "attributes": 32,
+      "sha256": "2A43AA0181CE94EC240FB10C7DDB1FC39BD0D90E9366FC139D4343A2524B02F4"
+    },
+    {
+      "path": "mods\\resourceful-config.pw.toml",
+      "bytes": 418,
+      "attributes": 32,
+      "sha256": "A8D92E3A2CF956CFA5932D3324A219729FE549FBCC3992C75B54D6B345178389"
+    },
+    {
+      "path": "mods\\resourceful-lib.pw.toml",
+      "bytes": 409,
+      "attributes": 32,
+      "sha256": "BA2B4F8001AB9A364A71331EB125C22199B5EE1C968E34532797FFDF2D103AA7"
+    },
+    {
+      "path": "mods\\respackopts.pw.toml",
+      "bytes": 401,
+      "attributes": 32,
+      "sha256": "D03C004135204792CA6E7E6752CFA59BBE14ED533B6BBFA73F4B4DD354B9B0D9"
+    },
+    {
+      "path": "mods\\rotatable-sculk.pw.toml",
+      "bytes": 423,
+      "attributes": 32,
+      "sha256": "E823353FA4964596C61C51C546DB124B814603398BDC80C4F9F6082FA72C9BE7"
+    },
+    {
+      "path": "mods\\scale-visual-compat-0.1.0.jar",
+      "bytes": 20300,
+      "attributes": 32,
+      "sha256": "3C38131622359B76EB1CD9CE71C0B475DC3BE65FD6FAF46408B0D5D5A89CC01C"
+    },
+    {
+      "path": "mods\\scalebrews-0.1.0-beta.9.jar",
+      "bytes": 714951,
+      "attributes": 32,
+      "sha256": "2AB4362CBA70582FA463D9DB7EC2F7EA1235A7C217AE0CC5F128C96A27FAF181"
+    },
+    {
+      "path": "mods\\scalebrews-animalweights-compat-0.1.0.jar",
+      "bytes": 5944,
+      "attributes": 32,
+      "sha256": "27AA22D0ED1B0AC4F6ADC4E14EDF9C6B6BAABEA7EE0AEE6FCED527052E494B27"
+    },
+    {
+      "path": "mods\\scribble.pw.toml",
+      "bytes": 420,
+      "attributes": 32,
+      "sha256": "96ECE933FD61B7C700320047B89F7BE9596CDC957C8BDC39A8C7314F1B456B6B"
+    },
+    {
+      "path": "mods\\sharedworld.pw.toml",
+      "bytes": 417,
+      "attributes": 32,
+      "sha256": "BFC3B489B20B8F4922F23657741A85EFF5A974504485F0174CE3F1F8B777116C"
+    },
+    {
+      "path": "mods\\sodium.pw.toml",
+      "bytes": 427,
+      "attributes": 32,
+      "sha256": "F06C0B9150DA9877B99CB265D037C067E509340D9BF347E02CEF2043C110E963"
+    },
+    {
+      "path": "mods\\sound-physics-remastered.pw.toml",
+      "bytes": 464,
+      "attributes": 32,
+      "sha256": "CFD82363B33192A90D7F0E63DC6149F9B37507D8EE428FC1CFDEA48063A91720"
+    },
+    {
+      "path": "mods\\stormies-spiders.pw.toml",
+      "bytes": 435,
+      "attributes": 32,
+      "sha256": "F51209D66F17D2C163B581F59E7BF2F15715AFA86A7E843E717EE53DB15AF74E"
+    },
+    {
+      "path": "mods\\subtle-effects.pw.toml",
+      "bytes": 432,
+      "attributes": 32,
+      "sha256": "879C8A6226E1215B7C47C5F7DEB4614FCC8BB4FD4BA6B9320EED82E694513257"
+    },
+    {
+      "path": "mods\\tectonic.pw.toml",
+      "bytes": 416,
+      "attributes": 32,
+      "sha256": "8F2B6F7B6626FD440001AF7FD8AE39671FEA791FA9D570919F9E216B0FB3AA3E"
+    },
+    {
+      "path": "mods\\telepistons.pw.toml",
+      "bytes": 411,
+      "attributes": 32,
+      "sha256": "D5154C61871FD2252F58CFE0F461D4130C0A7311F8D09A2C8A22AF62B3AB8283"
+    },
+    {
+      "path": "mods\\terrablender.pw.toml",
+      "bytes": 436,
+      "attributes": 32,
+      "sha256": "FF1940DA0AB52A46300559AE87ADDA2A4CAFC211BBF22DEF5217C4169EE9A56E"
+    },
+    {
+      "path": "mods\\tiny-takeover-x-punchy.pw.toml",
+      "bytes": 441,
+      "attributes": 32,
+      "sha256": "FC5D765E7F17EA453405CEDD43AC6127A056FB6FDE98BBD87D7D540A6644F32E"
+    },
+    {
+      "path": "mods\\tlib.pw.toml",
+      "bytes": 402,
+      "attributes": 32,
+      "sha256": "83539BBA4FD6D270867C8A4C3CAFB52A9FAA098CEECB2833DE4D499619777671"
+    },
+    {
+      "path": "mods\\vanillaplus-dnt-better-archeology-compat-1.0.0.jar",
+      "bytes": 4869,
+      "attributes": 32,
+      "sha256": "9C9C2E1BB3602F26E5A0F14F04EA01510CDA16217E22F4316732C274ADD7FB7F"
+    },
+    {
+      "path": "mods\\vanillaplus-enchancement-compat-1.0.1.jar",
+      "bytes": 27783,
+      "attributes": 32,
+      "sha256": "687326B2872D28CA8EB0081ABEDEB25736AC48B9E4EB6BB487CCFD7BCA5F8D8D"
+    },
+    {
+      "path": "mods\\vanillaplus-punchy-compat-1.1.16.jar",
+      "bytes": 25606,
+      "attributes": 32,
+      "sha256": "FB52DE8509D9FEE6219D57E8BD72A889F945C011642574620E4F6A68F7AAA81A"
+    },
+    {
+      "path": "mods\\wakes.pw.toml",
+      "bytes": 395,
+      "attributes": 32,
+      "sha256": "5C08D10BCE6F39D4519987D6A55603468237D09DEF01210A0C00056DCAB58893"
+    },
+    {
+      "path": "mods\\wilder-wild.pw.toml",
+      "bytes": 413,
+      "attributes": 32,
+      "sha256": "3079498253CBFB08ACF7E56EC706C7DF34E6081AF72ED0F5B033AFA57C9EF5DD"
+    },
+    {
+      "path": "mods\\yacl.pw.toml",
+      "bytes": 468,
+      "attributes": 32,
+      "sha256": "B08EA22923B8CCF2FBEB020CB532487BE60C2DD75DD8E1C04E14DEB66C118BBA"
+    },
+    {
+      "path": "resourcepacks\\3d-held-lanterns-and-torches-for-punchy.pw.toml",
+      "bytes": 468,
+      "attributes": 32,
+      "sha256": "0259549B5CF8EFFB434C6FCBD5D6964B9C931981C01493D44B60600D8D8779E9"
+    },
+    {
+      "path": "resourcepacks\\animated-3d-wind-charge-compatible-with-punchy!.pw.toml",
+      "bytes": 475,
+      "attributes": 32,
+      "sha256": "84F4D11ECC9C64FEBE33FE248D05FFD3BB7BE1258D6253E0984AE4610B894BB4"
+    },
+    {
+      "path": "resourcepacks\\fa-player-extension.pw.toml",
+      "bytes": 420,
+      "attributes": 32,
+      "sha256": "2E1A6866E4366CEBE200DCF71AB52923B7653F76DC48741B93411EE3BF77372A"
+    },
+    {
+      "path": "resourcepacks\\fresh-animations-details.pw.toml",
+      "bytes": 413,
+      "attributes": 32,
+      "sha256": "76FAC76ECFA8369E351FD6892174112BBD46F1806A79D569D239E171D6B21BF5"
+    },
+    {
+      "path": "resourcepacks\\fresh-animations.pw.toml",
+      "bytes": 418,
+      "attributes": 32,
+      "sha256": "213428B7676ADFAA1C59FCFE93E6E7F3D0257E236F32A5A245EB0FC966E1B218"
+    },
+    {
+      "path": "resourcepacks\\fyoncles-3d-trims.pw.toml",
+      "bytes": 416,
+      "attributes": 32,
+      "sha256": "332158C3799FEC4A30701A1AC1CE146624A668B306B7267A909DEE003B3F3831"
+    },
+    {
+      "path": "resourcepacks\\glowing-3d-armor-fa.pw.toml",
+      "bytes": 441,
+      "attributes": 32,
+      "sha256": "B1B09E0E9821149AE94DA493CAEECC6570ACD2F71CB6C19256F7E42E46AB6DAE"
+    },
+    {
+      "path": "resourcepacks\\glowing-3d-armor.pw.toml",
+      "bytes": 408,
+      "attributes": 32,
+      "sha256": "7D6B6B1C21B9DD6979D0A328423F122C5CC3E8FA78A4F177202D138B22531E34"
+    },
+    {
+      "path": "resourcepacks\\glowing-3d-tools.pw.toml",
+      "bytes": 408,
+      "attributes": 32,
+      "sha256": "FA40DC105A1581802FFE47C3BDD639787BE0284AB18461C0F88ECD349E7419D0"
+    },
+    {
+      "path": "resourcepacks\\glowing-3d-totem.pw.toml",
+      "bytes": 408,
+      "attributes": 32,
+      "sha256": "1CF88A17064F88120B644E93B8F1211C0E93007DFC9F7B5C71DF53346A438D75"
+    },
+    {
+      "path": "resourcepacks\\hyper-punchy.pw.toml",
+      "bytes": 404,
+      "attributes": 32,
+      "sha256": "C1A500647C961F03E2E7B52364E1DEEFC860F56A6FE340355A04D7B04D05E111"
+    },
+    {
+      "path": "resourcepacks\\luminous-lanterns.pw.toml",
+      "bytes": 419,
+      "attributes": 32,
+      "sha256": "AEC067265A2D73D44C83B609D8EAA6947124A196E3BD5FC004F75E6935EE36A9"
+    },
+    {
+      "path": "resourcepacks\\p1kls-3d-items.pw.toml",
+      "bytes": 437,
+      "attributes": 32,
+      "sha256": "BFB78C32DC853F5F23DB25FA51482A40DE9C9EA5ABCC7FE2FC6B1B1E84E04224"
+    },
+    {
+      "path": "resourcepacks\\redstone-tweaks.pw.toml",
+      "bytes": 417,
+      "attributes": 32,
+      "sha256": "E3E9969ABA842A573092443612C2289A22568A1FE9F02E434BCB0ED1AC8C1206"
+    },
+    {
+      "path": "resourcepacks\\vanilla-ultra.pw.toml",
+      "bytes": 255,
+      "attributes": 32,
+      "sha256": "81A30EC8ECA19E09705C09703AFF207489DA889C2CAE5D2017F6F29DCFAB7DFA"
+    },
+    {
+      "path": "resourcepacks\\VanillaPlus-Compatibility.zip",
+      "bytes": 7512,
+      "attributes": 32,
+      "sha256": "9A8799036B716D205030B8C03DD482B70971ADC4F460AF12821DBE59A27F3905"
+    },
+    {
+      "path": "resourcepacks\\VanillaPlus-ItemSwapper-Families.zip",
+      "bytes": 4226,
+      "attributes": 32,
+      "sha256": "13F120EA34E5054EBB4BF566F18879786EA4B5D8E5C584F52DEDF2B67596E2F8"
+    },
+    {
+      "path": "shaderpacks\\complementary-reimagined.pw.toml",
+      "bytes": 450,
+      "attributes": 32,
+      "sha256": "75D1D2488A0C332A9A58AF7E57F980A1B006C02B3A1C580FBD50443088E4EAB0"
+    },
+    {
+      "path": "shaderpacks\\vivid-visuals.pw.toml",
+      "bytes": 251,
+      "attributes": 32,
+      "sha256": "FC947EDA9B396762BF79D55CA4BDDA03B0657987E11864E5381D6615E0922207"
+    }
+  ],
+  "notes": "Native inspector also emits original JAR observations. No filters/references/health/renderer/adapters/network. No competing agent tests or builds intentionally started. Source hashes/attributes unchanged."
+}

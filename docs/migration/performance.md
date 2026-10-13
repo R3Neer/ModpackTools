@@ -3,6 +3,35 @@
 Date: 2026-10-12. This is an exploratory local baseline, not a release benchmark
 or evidence that a replacement engine already meets the targets.
 
+## Implemented raw inventory checkpoint, 2026-10-13
+
+The actual Native AOT reader from b603678 was measured against the unchanged
+025b7f3 module on an isolated copy of the relevant real-pack files: 123 files,
+6731513 bytes; 100 mods, 17 physical resources, 25 active rows, zero inactive rows
+and two shaders. Full common project/metadata/item projections matched before the
+timing series. Source hashes and attributes remained unchanged. No network,
+health, reference cache, renderer or public adapter was exercised.
+
+| Engine / measured scope | Median ms | p95 ms | n |
+|---|---:|---:|---:|
+| Already-loaded PowerShell: read, equivalent projection and JSON | 153.17 | 168.29 | 21 |
+| Fresh Native AOT inspector: launch, read, projection and JSON | 64.33 | 66.93 | 21 |
+
+The observed median ratio is 2.38x. Native also emits original JAR observations.
+Samples alternate which engine runs first. Copying and first observations warm OS
+caches; no eviction or disk-cold claim. First observations, excluded from the
+series: PS 437.88 ms, native 88.43 ms. No competing agent tests/builds were
+intentionally started during this short local run; it is not a dedicated host.
+
+This establishes a faster implemented reader despite native process overhead.
+It does not establish the complete public inventory's >=4x median gate: health,
+references, rendering and adapter costs remain to be implemented/measured. Do not
+subtract separate startup medians to claim a reader-only native time, or extrapolate
+this metadata-oriented workload to a large installed JAR collection/resolver.
+Reproducer: [Measure-RawInventory.ps1](benchmarks/Measure-RawInventory.ps1).
+Raw samples, environment, executable SHA and fixture manifest:
+[raw-inventory-results.json](benchmarks/raw-inventory-results.json).
+
 ## Environment and workload
 
 - Windows 11 Home 10.0.26200; Intel i7-12650H, 10 cores/16 threads; 16005 MiB RAM.
