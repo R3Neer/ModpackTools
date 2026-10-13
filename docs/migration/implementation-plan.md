@@ -427,3 +427,18 @@ Next correction: shared quoted numeric fields (category Order and descriptor
 SchemaVersion), preserving existing errors and parser grammar. Then continue selector
 consumers, health/declarations/providers and public read-only integration. Source
 transactions, mutators, recovery, updater and full public performance gates remain.
+
+`0ba0245`: quoted scalar Int32 compatibility shared by category Order, project
+SchemaVersion and reference-cache strings. Original PSD values remain available
+for diagnostics; nonstring branches and literal/import grammar are unchanged.
+Malformed radix converter arguments normalize to FormatException at the scalar
+boundary so actual category failures remain E11; no broad consumer catch added.
+Independent baseline found +0x must cast zero. Preserve empty signed/suffixed hex
+zero and keep missing binary digits invalid; prior failed artifacts stay frozen.
+Three-project locked restore/format/Release/Native AOT is warning-free. Final host
+v48 SHA256:14EFC49D2D0381FD17F0491509917118354B94D83FD19B0846E300D7AC7B6B77;
+CLI v55 SHA256:91458923DF5230E21F5FFD0680B612854DE2000BD8202BA015226ADF7F9559EA.
+Own 59 category/project pairs,221 cache pairs,category/native/protocol regressions
+and41 public project controls pass. Independent black-box130 category +3 project
+pairs and white-box typed/wrapper/giant/cast/empty-prefix cases close review with
+unchanged fixtures. No public content-list switch or global performance claim.

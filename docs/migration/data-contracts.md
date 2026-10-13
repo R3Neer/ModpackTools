@@ -668,7 +668,7 @@ parsing. Do not strip suffixes or leading zeroes before choosing signed width.
 The closed scanner evaluates no expressions and accumulates complements of negative
 words to avoid allocating arbitrary-size BigIntegers for a final Int32 result.
 
-## Shared quoted numeric fields / next correction
+## Shared quoted numeric fields / completed correction
 
 Reuse the reviewed text-to-Int32 compatibility at DataScalars.Integer(PsdString),
 with a private nonrecursive invariant integer/double fallback. Category Order and
