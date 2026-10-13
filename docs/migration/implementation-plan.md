@@ -204,11 +204,14 @@ successful envelope and empty stderr, so no hypothetical dotted-key limit was ad
   exact; selector correlation is token-membership only, deliberately avoiding a
   second presentation parser in the adapter. It is not full request correlation.
 
-Next PS compatibility detail: positional values can be numbers/bools. Legacy
+- PS typed positional targets: positional values can be numbers/bools. Legacy
 machine arguments already normalize to strings; only positional-error targets
 retain the original value types. An initial review proposal to restore raw public
 arguments was disproved by the initializer and direct probes before implementation.
 Keep Core/public argument strings and project original arity-error targets in PS.
+The fix passed eight fresh-process baseline/native pairs and the independent
+eight-case review, including exact terminating-error element types, false-ID
+selection and true's help coercion. Use/current regression checks pass.
 
 No inventory, resolver, native transaction or installed
 distribution exists yet. Catalog review does not prove their parity or performance.
