@@ -581,7 +581,7 @@ Test fresh/replacement/empty/Unicode/duplicate caches against the legacy cache r
 exact/over budgets, invalid policy before effects, locked destination preservation,
 cleanup and handle release. Cache decoding/number resolution is a separate checkpoint.
 
-## Bounded reference-cache read and pure numeric lookup / next checkpoint
+## Bounded reference-cache read and pure numeric lookup / completed checkpoint
 
 `ReferenceCacheReader.Read(configurationDirectory, ReferenceCacheReadLimits?) ->
 CachedInventorySnapshot?` owns an extensible JSON value, its absolute source path
@@ -600,7 +600,7 @@ budget is not a peak-memory claim: decoding, normalization and the owned JSON
 representation coexist. The small-workload memory gate still requires measurement.
 
 Validate the complete decoded tree for empty/case-conflicting property names;
-exact duplicate properties keep their last value. Preserve comments, trailing
+exact duplicate properties keep their last value and last-occurrence position. Preserve comments, trailing
 commas, single-quoted strings, unquoted property names, undefined/null, nonfinite
 numbers and the legacy hexadecimal/octal/leading-dot numeric forms demonstrated
 by independent probes. Statically pinned Newtonsoft token decoding feeds explicitly
@@ -661,3 +661,28 @@ Inspector --max-cache-normalized-chars controls the explicit normalization quota
 --string-field on a resolved reference exercises later consumer string projection.
 Known malformed JSON/read domain errors preserve their complete legacy diagnostic;
 E15 details are added only to formerly raw field/cast failures.
+Text-to-Int32 compatibility is isolated from decoding. Preserve radix word width,
+explicit signs, type suffixes, KB through PB multipliers and midpoint rounding.
+Unsigned hexadecimal system-converter fallback differs from signed/binary literal
+parsing. Do not strip suffixes or leading zeroes before choosing signed width.
+The closed scanner evaluates no expressions and accumulates complements of negative
+words to avoid allocating arbitrary-size BigIntegers for a final Int32 result.
+
+## Shared quoted numeric fields / next correction
+
+Reuse the reviewed text-to-Int32 compatibility at DataScalars.Integer(PsdString),
+with a private nonrecursive invariant integer/double fallback. Category Order and
+project descriptor SchemaVersion consume it. Preserve all other PsdValue branches,
+literal parser grammar, array/member projection and diagnostic mappings. Successful
+category definitions retain Key/Name/Order; actual failures remain E11 by category
+key. Project UnsupportedSchema retains the original string as its diagnostic target.
+Editorial metadata schema import follows its separate existing rules.
+Validate the independent 130-case category baseline, project schema successes and
+invalid/unsupported priorities, cache conversion regressions and warning-free AOT.
+
+Scalar compatibility references: installed PowerShell 7.6.6 probes are the oracle;
+[LanguagePrimitives conversion fallback](https://github.com/PowerShell/PowerShell/blob/v7.6.6/src/System.Management.Automation/engine/LanguagePrimitives.cs),
+[tokenizer suffix/multiplier rules](https://github.com/PowerShell/PowerShell/blob/v7.6.6/src/System.Management.Automation/engine/parser/tokenizer.cs), and
+[Utils binary sign-bit conventions](https://github.com/PowerShell/PowerShell/blob/v7.6.6/src/System.Management.Automation/engine/Utils.cs)
+explain the separately tested literal and system-converter paths. These source rules
+are implemented as a bounded scalar boundary, without embedding the PS parser.

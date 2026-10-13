@@ -350,8 +350,8 @@ black-box 94 cases (68 successes/26 errors) and white-box seven additional succe
 six exact errors pass; the earlier InvalidSide hint mismatch is corrected in the
 final artifact. No reference/cache/health effects or public content-list switch.
 
-Next checkpoint: pure category definitions and inventory reference assignment,
-then separately persisted cache validation. Public content list still uses legacy.
+Category definitions, reference assignment and persisted cache validation are
+recorded below. Public content list still uses legacy.
 `1c24204`: direct ResourcePacks member projection corrected separately from mod
 binding. Singleton wrappers enumerate one field layer; no produced values fail,
 explicit null remains a value, and mod singleton empty Name stays successful.
@@ -399,3 +399,31 @@ blocked by the default sandbox; the same new isolated temporary fixtures passed
 outside that restriction. Black-box 27 controls include twelve full caches and 125
 resolved legacy references; white-box checks include four concurrent writer pairs.
 Neither cache crash durability nor source transactions/public dispatch is claimed.
+
+`e1ceeb2`: bounded reference-cache read and pure numeric lookup completed. Preserve
+extensible full rows, legacy token dialect/date kinds, last-occurrence duplicate
+property order, deferred field/cast priorities, occurrence counts and selected-row
+ownership. E15 improves only actual raw member/cast failures; existing read/domain
+messages remain intact. Six resource bounds are explicit; no write or public switch.
+Three projects pass locked restore, format verification, Release and Native AOT
+without warnings. Final host v45 SHA256:
+BEA0891E81CE5D9831FE0BFAE08E51FFCB03DAA2D6975784244B047AD22728CF;
+CLI v52 SHA256:
+9D69995BD9915E29D08ADF42700349D0F457EA418F6317390B512AE72BB91AB4.
+Own 197 full differential/consumer checks, native assertions, seven numbering and
+15 protocol regressions, and real isolated atomic writer checks pass. Independent
+black-box final 395 checks plus ten threshold probes pass with intact fixtures;
+white-box closes 51 cast/priority pairs, nullable consumers, duplicates and native
+assertions. Earlier unchanged decoder components retain independent date/dialect/
+budget/constructor checks. Frozen baseline and earlier findings are preserved.
+Newtonsoft 13.0.4 token APIs are statically compiled, provenance pinned and MIT notice
+shipped; no external managed DLL, JToken graph, reflection serializer or PS runtime.
+One independent 1 Mi-character control-expansion sample used 47.36 MiB observed
+working set and 113 ms; this is not a hard peak bound or complete performance gate.
+The writer flushes around 16 KiB, but one escaped token can temporarily exceed that
+buffer size, bounded separately by its lexical quota. No 16 KiB peak-memory claim.
+
+Next correction: shared quoted numeric fields (category Order and descriptor
+SchemaVersion), preserving existing errors and parser grammar. Then continue selector
+consumers, health/declarations/providers and public read-only integration. Source
+transactions, mutators, recovery, updater and full public performance gates remain.
