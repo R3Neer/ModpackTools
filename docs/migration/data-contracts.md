@@ -887,9 +887,9 @@ Ready, Mod (complete common lowercase physical fields or null), and ConfigPath.
 
 ## Category cache and ID resolution / next checkpoint
 
-`CategorySelector.Resolve(EditoralMetadata categories context, CachedCategorySnapshot?
-cache, selector, projectId, nowUtc, allowUnclassified=false) -> string` is pure; use
-the actual EditorialMetadata type. The directory facade takes project root/ID and
+`CategorySelector.Resolve(EditorialMetadata metadata, CachedCategorySnapshot? cache,
+string selector, string projectId, DateTimeOffset nowUtc, bool allowUnclassified=false)
+-> string` is pure. The directory facade takes project root/ID and
 configuration directory explicitly, with no descriptor/pack/full-inventory prelude.
 Reserved literal unclassified checks before metadata/cache IO: allow returns canonical
 unclassified; forbid preserves original selector target. Other selectors require
