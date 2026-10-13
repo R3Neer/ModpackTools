@@ -605,3 +605,32 @@ fixed-clock full-file comparisons and reader/resolver compatibility. Extract onl
 the existing inventory writer's bounded atomic file mechanics, then run its complete
 writer regression before acceptance. Category writes remain outside source-pack
 transactions/public dispatch, with E23 diagnostics specified before implementation.
+
+Category-reference persistence completed asfe1e308. The typed view writes only
+SchemaVersion/CreatedUtc/ProjectId and Index/Id/Name occurrences, retaining seven
+UTC fractional digits, original numbers/text/order/duplicate IDs and initialized
+empty arrays. Internal bounded atomic JSON mechanics are shared with the existing
+inventory writer without changing its mappings, flush sites or errors. E23 covers
+policy, byte quota and IO/cleanup diagnostics. Three-project locked restore/format/
+Release/Native AOT passes without warnings. Host v60 SHA256:
+8CCEB0F861313F1E0AC52EACED24E552937A9CD9A2FBECA909C1293978E94F55;
+CLI v67 SHA256:AEBEBC0578C04DFBF44DD34CDDDA9CA3D6A99CE5F2926D0392E96D1704B13EDF.
+Own30 category write/file/legacy-resolver/quota/locked/policy checks, inventory
+atomic suite,15 protocol cases and default native assertions pass. Blind31 category
+controls plus27 inventory writer regressions pass, including nine full category
+files/21 legacy category resolutions and125 legacy inventory resolutions. Eight
+concurrent category writers produce a complete candidate; two controlled completed
+replacements establish ordered replacement behavior, without inferring process-exit
+order or durability. White full-file/legacy-resolution/atomic/source-integrity and
+focused shared-inventory-writer probes pass. Two blind pack integrity manifests stay
+true and native stderr is empty. Actual IO uses approved escalation solely for owned
+GUID fixtures; default sandbox denial of the original Move-Item is not a core bug.
+The diagnostic empty-view producer remains confined to CoreContracts. Public commands
+still use PowerShell; no source-pack transaction or installation was performed.
+
+Next analysis covers strong source snapshots and change detection before health/
+transactions. Preserve hidden/system files, .git exclusion, rejection of filesystem
+links and full SHA256 content hashing. dist belongs to transaction snapshots even
+though the health fingerprint excludes it. Independent analysis found the old
+cultural Sort-Object -Unique can omit changes between ordinally distinct paths;
+the next contract must explicitly repair that safety defect rather than reproduce it.

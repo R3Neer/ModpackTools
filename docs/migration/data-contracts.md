@@ -971,7 +971,7 @@ OutputName, MinecraftVersion, Loader, LoaderVersion and IndexFile. Keep full ori
 Project captures separately; do not claim serialization of its private descriptor/
 pack properties. Defined category rows have five fields; the appended row has six.
 
-## Atomic category-reference cache persistence / next checkpoint
+## Atomic category-reference cache persistence / completed checkpoint
 
 `CategoryReferenceCache.Write(configurationDirectory, CategoryListView,
 DateTimeOffset createdUtc, ReferenceCacheWriteLimits?) -> ReferenceCacheWriteResult`
