@@ -388,3 +388,14 @@ this is not blanket legacy tie parity or a persisted/public inventory capability
 `702fa0e`: category baseline projection uses PSCustomObject before property sorting;
 one extra full multi-category comparison passes against frozen native v34, alongside
 existing cases. This corrects the test harness, not product behavior.
+`19266fe`: version-1 cache persistence completed. Streamed UTF-8 data retains all
+occurrences and exact UTC O timestamps; an actual byte quota precedes writes, and
+only a complete closed owned same-directory temporary replaces the cache. Failure
+preserves the prior file; cleanup does not delete unrelated temporaries. Warning-free
+locked restore/format/Release/Native AOT and own actual legacy read/resolve, Unicode,
+exact/over quotas, invalid policy, locked replacement, cleanup, empty replacement,
+handle/source integrity and numbering/protocol regressions pass. Atomic rename was
+blocked by the default sandbox; the same new isolated temporary fixtures passed
+outside that restriction. Black-box 27 controls include twelve full caches and 125
+resolved legacy references; white-box checks include four concurrent writer pairs.
+Neither cache crash durability nor source transactions/public dispatch is claimed.
