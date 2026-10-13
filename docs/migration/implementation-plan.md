@@ -352,3 +352,10 @@ final artifact. No reference/cache/health effects or public content-list switch.
 
 Next checkpoint: pure category definitions and inventory reference assignment,
 then separately persisted cache validation. Public content list still uses legacy.
+`1c24204`: direct ResourcePacks member projection corrected separately from mod
+binding. Singleton wrappers enumerate one field layer; no produced values fail,
+explicit null remains a value, and mod singleton empty Name stays successful.
+Warning-free locked restore/format/Release/Native AOT, expanded own resource nine
+successes/eight E09 and mod 19 successes/six E07, inventory/native/protocol regressions
+pass. Black-box 139 invocations (30 new, 55 classification, 54 resource regressions)
+and white-box twelve additional contrasts close the correction with intact fixtures.

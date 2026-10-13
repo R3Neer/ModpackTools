@@ -497,3 +497,16 @@ while direct-table Order=@(1) fails; wrapped empty Name/Order fails, whereas dir
 Name=@() displays empty. Mod override binding first collapses a singleton table
 wrapper and retains direct-table field behavior. Keep these two input boundaries
 explicit instead of changing the shared literal model or unwrapping every array.
+## PSD1 import duplicate-key validation / next correction
+
+Preserve OrdinalIgnoreCase lookup in PsdTable and every programmatic domain model.
+At the literal import boundary, additionally reject a duplicate key under
+InvariantCultureIgnoreCase within each individual table, matching the actual
+Import-PowerShellDataFile validation. Composed/decomposed accents, ligatures and
+ignored characters can collide at import even though a runtime Hashtable lookup
+would distinguish them. This is a parser guard, not a new domain lookup comparer.
+Nested/different tables maintain independent key sets. No Unicode normalization,
+key rewriting or deduplication is allowed. Throw PsdParseException on the second
+key; existing project/editorial callers map it to their structured invalid-file
+errors under E02. Supported noncolliding keys retain spelling and both entries.
+Native rejection assertions and full differential editorial cases are required.
