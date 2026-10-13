@@ -70,7 +70,7 @@ public sealed class CachedReference
     {
         // The legacy function returns through a pipeline: one array level is
         // enumerated after Kind/Source have been checked on the selected value.
-        if (data.ValueKind == JsonValueKind.Array && data.GetArrayLength() == 1) data = data[0];
+        data = CacheFields.ReturnedData(data);
         Data = data.Clone();
         Path = path;
         this.dates = dates.ForRow(Data);
@@ -111,6 +111,9 @@ internal sealed class CacheRows(JsonDisplayValue value, string path, CacheDateTa
 
 internal static class CacheFields
 {
+    public static JsonElement ReturnedData(JsonElement data) =>
+        data.ValueKind == JsonValueKind.Array && data.GetArrayLength() == 1 ? data[0] : data;
+
     public static JsonDisplayValue Field(JsonElement value, string name)
     {
         static JsonElement Direct(JsonElement item, string field)

@@ -43,7 +43,10 @@ internal static class CacheReadInspection
             using var bytes = new MemoryStream();
             using (var writer = new Utf8JsonWriter(bytes, new() { MaxDepth = 1024 }))
             {
-                if (resolve)
+                if (resolve && stringField == "Selector")
+                    writer.WriteStringValue(ReferenceCacheResolver.ResolveSelectorFromDirectory(arguments[1], arguments[2], arguments[3], now,
+                        new ReferenceLookupPolicy(kinds, requirePackwiz), limits));
+                else if (resolve)
                 {
                     var row = ReferenceCacheResolver.ResolveFromDirectory(arguments[1], arguments[2], arguments[3], now,
                         new ReferenceLookupPolicy(kinds, requirePackwiz), limits);

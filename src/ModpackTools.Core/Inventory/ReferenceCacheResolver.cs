@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Collections.Immutable;
 using System.Text.RegularExpressions;
+using ModpackTools.Core.Data;
 
 namespace ModpackTools.Core.Inventory;
 
@@ -20,18 +21,42 @@ public static partial class ReferenceCacheResolver
 {
     [GeneratedRegex("^[1-9][0-9]*$", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking)]
     private static partial Regex NumberPattern();
+    internal static bool IsNumericSelector(string selector) => NumberPattern().IsMatch(selector);
 
     public static CachedReference? ResolveFromDirectory(string configurationDirectory, string selector, string projectId,
         DateTimeOffset nowUtc, ReferenceLookupPolicy? policy = null, ReferenceCacheReadLimits? limits = null)
     {
-        if (!NumberPattern().IsMatch(selector)) return null;
+        if (!IsNumericSelector(selector)) return null;
         return Resolve(ReferenceCacheReader.Read(configurationDirectory, limits), selector, projectId, nowUtc, policy);
+    }
+
+    public static string? ResolveSelectorFromDirectory(string configurationDirectory, string selector, string projectId,
+        DateTimeOffset nowUtc, ReferenceLookupPolicy? policy = null, ReferenceCacheReadLimits? limits = null)
+    {
+        if (!IsNumericSelector(selector)) return null;
+        return ResolveSelector(ReferenceCacheReader.Read(configurationDirectory, limits), selector, projectId, nowUtc, policy);
     }
 
     public static CachedReference? Resolve(CachedInventorySnapshot? snapshot, string selector, string projectId,
         DateTimeOffset nowUtc, ReferenceLookupPolicy? policy = null)
     {
-        if (!NumberPattern().IsMatch(selector)) return null;
+        var row = ResolveRow(snapshot, selector, projectId, nowUtc, policy);
+        return row is { } selected ? new(selected.Data, selected.Path, selected.Dates) : null;
+    }
+
+    public static string? ResolveSelector(CachedInventorySnapshot? snapshot, string selector, string projectId,
+        DateTimeOffset nowUtc, ReferenceLookupPolicy? policy = null)
+    {
+        var row = ResolveRow(snapshot, selector, projectId, nowUtc, policy);
+        if (row is not { } selected) return null;
+        return CacheFields.Access(selected.Path, () => CacheJson.String(
+            CacheFields.Field(CacheFields.ReturnedData(selected.Data), "Selector"), selected.Dates));
+    }
+
+    private static CacheRowView? ResolveRow(CachedInventorySnapshot? snapshot, string selector, string projectId,
+        DateTimeOffset nowUtc, ReferenceLookupPolicy? policy)
+    {
+        if (!IsNumericSelector(selector)) return null;
         policy ??= ReferenceLookupPolicy.Default;
         if (snapshot is null || !snapshot.HasValue)
             throw new DomainException("Inventory.ReferenceCacheNotFound",
@@ -75,6 +100,6 @@ public static partial class ReferenceCacheResolver
                 throw new DomainException("Inventory.ReferenceNotUpdatable", $"Inventory reference '{selector}' points to '{source}' content, which Packwiz cannot update",
                     "choose Packwiz-managed content from modpack content list --source packwiz", "InvalidOperation", selector);
         }
-        return new(selected.Data, snapshot.Path, snapshot.Dates);
+        return selected;
     }
 }
