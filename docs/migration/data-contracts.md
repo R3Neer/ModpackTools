@@ -273,3 +273,7 @@ for actual reads; it is not a renderer callback or a second ZIP implementation.
 The inspector's managed-mod read has its own existing budget; a future complete
 inventory invocation must explicitly compose its budgets. No archive assets are
 expanded, hashes weakened, caches persisted or files written by this checkpoint.
+
+Archive and aggregate policy values must be positive and are validated before the
+local reader returns for a missing/empty/fully-managed mods directory. Invalid
+policy cannot become a success because no candidate happens to trigger archive IO.

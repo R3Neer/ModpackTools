@@ -259,7 +259,19 @@ review probes; these are regression observations, not an inventory benchmark.
 The typed display projection isolates legacy coercions from business records;
 request decoding remains strict. Native CLI still does not expose inventory.
 
-Next checkpoint: local JAR discovery and managed-path exclusion, then editorial/resource-order
+Local JAR discovery/managed-path exclusion completed. Immutable local observations
+reuse bounded JAR display reads and a shared DFS file traversal. Known candidates
+are excluded before archive opening; matched files/directories and actual delivered
+metadata bytes (including failed JSON reads) remain charged. Own seven differentials,
+three aggregate-limit cases, invalid empty-project policy and per-archive uncertainty
+pass. Independent review passes 28 frozen fixtures, eleven quotas and two invalid
+empty/fully-managed policy cases. White-box probes verify locked known-file exclusion,
+exact/over failed-JSON byte budgets, isolation from resources and handle disposal.
+Archive policy validation is shared and runs before empty/excluded early returns.
+Locked restore, all-project format, Release/Native AOT and relevant reader/protocol
+regressions pass without warnings. This still does not switch public content list.
+
+Next checkpoint: editorial metadata and resource-order
 composition into RawInventorySnapshot. Native inspection tests make each internal
 capability observable without partial public content-list success. Public content
 list still uses the legacy engine.
