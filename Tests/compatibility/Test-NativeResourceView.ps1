@@ -26,7 +26,7 @@ Import-Module $ModulePath -Force
 } $RootPath
 '@)
     $success=0;$failure=0
-    foreach($entry in @('@{}',"@{Name='Display'}",'@{Name=$null}',"@{Name=@('A',`$null,'B')}",'@{Name=1.234567891234567}',"@(@{Name='Wrapped'})","@(@{Name=`$null},@{Name='B'})",'@(@{},@{})','$null','$false','0',"''",'@()')) {
+    foreach($entry in @('@{Name=@()}','@(@{Name=@()})','@(@{Name=@()},@{Name=@()})','@(@{Name=@()},@{Name=$null})','@{}',"@{Name='Display'}",'@{Name=$null}',"@{Name=@('A',`$null,'B')}",'@{Name=1.234567891234567}',"@(@{Name='Wrapped'})","@(@{Name=`$null},@{Name='B'})",'@(@{},@{})','$null','$false','0',"''",'@()')) {
         [IO.File]::WriteAllText($path,"@{ResourcePacks=@{'file/A.zip'=$entry;unused=`$null}}")
         $old=Invoke-NativeTestProcess (Get-Command pwsh).Source @('-NoProfile','-File',$runner,'-ModulePath',(Join-Path $LegacyRoot 'ModpackTools.psd1'),'-RootPath',$fixture)
         $new=Invoke-NativeTestProcess $Executable @('--inspect-resource-view',$fixture)

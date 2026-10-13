@@ -33,7 +33,7 @@ public static class ResourcePackActivation
                 {
                     try
                     {
-                        if (EditorialProjection.TryField(entry, "Name", out var value)) overridden = EditorialProjection.Display(value);
+                        if (EditorialProjection.TryMemberField(entry, "Name", out var value)) overridden = EditorialProjection.Display(value);
                     }
                     catch (FormatException exception)
                     {
