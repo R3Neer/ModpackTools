@@ -55,7 +55,7 @@ internal static class ManagedInspection
         }
     }
 
-    private static void WriteFailure(string id, string message, string category, DiagnosticTarget? target, string hint, string? details)
+    internal static void WriteFailure(string id, string message, string category, DiagnosticTarget? target, string hint, string? details)
     {
         using var writer = new Utf8JsonWriter(Console.OpenStandardOutput());
         writer.WriteStartObject();
