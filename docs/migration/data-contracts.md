@@ -306,3 +306,17 @@ not by casting every schema to an integer or executing expressions.
 
 The test-only host --inspect-editorial <project-root> emits the normalized table
 as JSON, or a structured domain failure; no public command routing changes yet.
+
+## PSD1 numeric conversion correction / next checkpoint
+
+Literal nodes remain unchanged. At numeric extraction, overflowing integer tokens
+use the legacy BigInteger-to-Double conversion rather than floating-token parsing.
+Trim sign and leading zeros with a linear scan; more than 309 significant integer
+digits are signed infinity, so never construct a giant BigInteger. At most 309
+digits enter that conversion. Floating literals retain Double.Parse semantics.
+Scalar display strings retain exact Decimal integers and otherwise use invariant
+G15, matching PowerShell string casts. Typed diagnostic targets retain numeric
+values separately from display text. Test-only JSON keeps its existing R-format
+transport; JSON rendering must not substitute display strings for finite numbers.
+Validate native project catalog display/targets, signed extremes, leading zeros
+and large integer work bounds before committing this shared correction.
