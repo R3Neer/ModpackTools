@@ -195,10 +195,18 @@ successful envelope and empty stderr, so no hypothetical dotted-key limit was ad
   casing-altered mock replies; both were corrected and retested. JSON and PS
   ErrorRecord targets now each preserve their legacy representation.
 
-Nu project-use parent mutation is next. Its existing raw snapshot emission also
-needs correction: independent experiments show that inherited process environment
-preserves Nu export conversions whereas explicit raw context does not. The reviewed
-contract now requires Nu to omit context; PS continues sending module state.
+- Nu project use: updates parent environment only after validated success, retaining
+  legacy case-sensitive update behavior. Omitted context preserves actual Nu
+  environment exports, including custom conversions. Fresh-shell syntax/version/
+  catalog/current/use gates, eight environment cases and twelve malformed replies
+  pass. Independent review passed 25 comparisons, six environment conversions and
+  eight mock replies, with unchanged fixtures. Command/operation correlation is
+  exact; selector correlation is token-membership only, deliberately avoiding a
+  second presentation parser in the adapter. It is not full request correlation.
+
+Next PS compatibility detail: original positional values can be numbers/bools in
+  PowerShell. Keep the Core protocol string-only while restoring original public
+  argument types and positional-error target representation in the PS adapter.
 
 No inventory, resolver, native transaction or installed
 distribution exists yet. Catalog review does not prove their parity or performance.
