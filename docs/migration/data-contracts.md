@@ -1136,3 +1136,47 @@ Compare original Generic/Maven results, equality aliases, nonunit signed values,
 null binding, qualifier aliases, zero/nested lists, newline/build semantics and lazy
 versus eager failures. Test exact/over text/numeric/item/depth bounds, invalid-policy
 prelude and hard depth override rejection. Ranges are a separate later capability.
+
+## Typed version ranges / next checkpoint
+
+VersionRange is a closed immutable Text/Any/All/Unknown value. Text may be null;
+Any/All own initialized ImmutableArray children. Evaluate(version, range, scheme,
+policy) returns bool?: true satisfied, false unsatisfied, null unknown. No loader,
+provider, filesystem or JSON object enters the evaluator. A separate data lowerer
+reads bounded JsonElement declarations into owned range values, retaining original
+root-array OR semantics and object-member getter/PowerShell truthiness semantics.
+Unsupported scalar/object declarations become Unknown, never match-all.
+
+Any accumulates unknown until a true wins; initialized empty Any is false. All
+accumulates unknown until a false wins; initialized empty All is true. Both preserve
+visited order and skip later exceptions after a decisive result. Object declarations
+activate any before all only when the getter-returned value is truthy. Empty/null,
+false,zero,empty string/array and recursively falsey singleton arrays do not activate
+it. Multi-element arrays are truthy even when their elements are false/null. The
+getter unwraps a singleton property array once before branch truthiness/iteration;
+root range arrays are not globally flattened. Lower inactive objects to Unknown.
+
+Text trims only the range. Null/empty/star matches all. General || is Any including
+empty alternatives; whitespace-separated conditions stop immediately on unknown
+or false (distinct from All). Preserve exact operator/wildcard/caret/tilde grammars,
+opaque equality fallback, arbitrary-precision wildcard increment, initial Int32
+caret/tilde component conversion and promotion on increment of Int32.MaxValue.
+Numeric conversions occur only in visited conditions, retaining actual failures.
+
+Maven bare versions remain recommendations/match-all. Regex interval coverage and
+normalized comma-joined text are checked completely before bounds. Single-bound
+bracket shape and comma counts are checked per visited interval: an earlier match
+can skip a later malformed interval. Exact singleton contents are not trimmed;
+two-ended bounds are trimmed, evaluated lower then upper, even if lower fails its
+predicate. Preserve endpoint inclusion, unbounded endpoints and interval unions.
+
+Range policy defaults:16Ki UTF16 units per visited text,4096 visited nodes,
+10000 ordering calls,depth64. Positive policies and depth1..64 are validated before
+evaluation; comparison policies are also validated once, while comparison text/
+numeric/item quotas apply only when comparison is consumed. Range node/depth/text/
+call guards run before the respective work; General expansions consume the same
+scope. Declaration decoding independently bounds4096 nodes/depth64 before allocation,
+including inactive members; this explicit input-resource prelude does not parse
+semantic text/numbers or replace visited evaluation priorities. E30/E31 cover new
+range policies/limits and actual bound conversion failures. Existing E28/E29 apply
+to consumed version comparisons. No invented healthy result on failure.

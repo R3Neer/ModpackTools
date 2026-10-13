@@ -330,3 +330,22 @@ in details, with an explicit-quota/input-reduction hint. Whole-text resource bou
 precede equality; numeric bounds only run for consumed numbers. Guard Maven item
 and depth allocation before it happens, retaining a hard recursion bound even when
 other policies are increased. No partial integer or invented unknown result.
+
+## E30: bounded typed range evaluation and declaration decoding
+
+Version.InvalidRangePolicy/InvalidArgument identifies invalid range quotas or depth
+outside1..64. Version.RangeLimitExceeded/LimitsExceeded identifies visited text,
+node,depth or comparison work with the exceeded property in details. Separate
+Version.InvalidRangeDeclarationPolicy and RangeDeclarationLimitExceeded identify
+data-lowering quotas before allocation, including inactive input. No partial range
+or result escapes. Evaluation guards preserve semantic short circuits; declaration
+quotas are an explicit input-resource prelude. Repair hints identify the relevant
+input/policy. Malformed or unsupported semantic expressions still return unknown.
+
+## E31: actual numeric range-bound failures
+
+Version.InvalidRangeBound/InvalidData contextualizes visited wildcard BigInteger or
+initial caret/tilde Int32 conversion failures, using the bound as target, parser
+details and a range-editing hint. Preserve Int32.MaxValue increment promotion and
+do not validate unused conditions. Consumed ordering errors retain E28/E29 rather
+than being silently mapped to unknown or wrapped as a different failure.
