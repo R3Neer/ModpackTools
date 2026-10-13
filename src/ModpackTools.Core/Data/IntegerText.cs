@@ -2,8 +2,8 @@ using System.Globalization;
 
 namespace ModpackTools.Core.Data;
 
-// Compatibility at the extensible cache boundary, not an expression evaluator.
-internal static class CacheIntegerText
+// Scalar compatibility at data boundaries, not an expression evaluator.
+internal static class IntegerText
 {
     public static int Parse(string text)
     {
@@ -15,19 +15,26 @@ internal static class CacheIntegerText
             // PowerShell falls back to the system integer converter after a
             // literal fails. Its hexadecimal path ignores lexical word width.
             if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-                return Convert.ToInt32(text[2..].Length == 0 ? "0" : text[2..], 16);
-            if (text.StartsWith("#", StringComparison.Ordinal)) return Convert.ToInt32(text[1..], 16);
-            if (text.StartsWith("&h", StringComparison.OrdinalIgnoreCase)) return Convert.ToInt32(text[2..], 16);
+                return Hexadecimal(text[2..].Length == 0 ? "0" : text[2..]);
+            if (text.StartsWith("#", StringComparison.Ordinal)) return Hexadecimal(text[1..]);
+            if (text.StartsWith("&h", StringComparison.OrdinalIgnoreCase)) return Hexadecimal(text[2..]);
             if (text.StartsWith("0b", StringComparison.OrdinalIgnoreCase)) throw;
-            return DataScalars.Integer(new PsdString(text));
+            if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var integer)) return integer;
+            return Convert.ToInt32(double.Parse(text, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture));
         }
+    }
+
+    private static int Hexadecimal(string digits)
+    {
+        try { return Convert.ToInt32(digits, 16); }
+        catch (ArgumentException exception) { throw new FormatException(exception.Message, exception); }
     }
 
     private static int Literal(string text)
     {
         var position = text[0] is '+' or '-' ? 1 : 0;
         var negative = text[0] == '-';
-        var radix = text.Length > position + 2 && text[position] == '0'
+        var radix = text.Length > position + 1 && text[position] == '0'
             ? char.ToLowerInvariant(text[position + 1]) switch { 'x' => 16, 'b' => 2, _ => 10 } : 10;
         if (radix != 10) position += 2;
         var start = position;
@@ -46,8 +53,11 @@ internal static class CacheIntegerText
                 while (position < text.Length && Digit(text[position], 10) >= 0) position++;
             }
         }
-        if (position == start) throw new FormatException("Missing numeric digits.");
+        if (position == start && radix != 16) throw new FormatException("Missing numeric digits.");
         var digits = text.AsSpan(start, position - start);
+        // The PowerShell hexadecimal scanner prepends a zero, so even a bare
+        // signed prefix or a prefix followed only by a valid suffix denotes zero.
+        if (radix == 16 && digits.IsEmpty) digits = "0";
         var tail = text[position..].ToLowerInvariant();
         long multiplier = 1;
         if (tail.Length >= 2 && tail[^1] == 'b')

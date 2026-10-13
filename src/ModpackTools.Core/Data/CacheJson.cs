@@ -56,7 +56,7 @@ internal static class CacheJson
         };
     }
 
-    private static int StringInteger(string text) => CacheIntegerText.Parse(text);
+    private static int StringInteger(string text) => IntegerText.Parse(text);
 
     public static bool Timestamp(JsonDisplayValue value, CacheDateTable dates, out DateTimeOffset timestamp)
     {

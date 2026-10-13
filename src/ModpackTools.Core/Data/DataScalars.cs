@@ -20,7 +20,7 @@ internal static class DataScalars
         PsdNumber number when IsFloating(number.Literal) => Convert.ToInt32(double.Parse(number.Literal, CultureInfo.InvariantCulture)),
         PsdNumber number when decimal.TryParse(number.Literal, CultureInfo.InvariantCulture, out var integer) => Convert.ToInt32(integer),
         PsdNumber number => Convert.ToInt32(PsdNumbers.Floating(number.Literal)),
-        PsdString text => StringInteger(text.Value),
+        PsdString text => IntegerText.Parse(text.Value),
         _ => throw new FormatException("Expected an integer data value.")
     };
 
@@ -41,13 +41,4 @@ internal static class DataScalars
         ? new FloatingTarget(value)
         : new TextTarget(value.ToString(CultureInfo.InvariantCulture));
 
-    private static int StringInteger(string text)
-    {
-        text = text.Trim();
-        if (text.Length == 0) return 0;
-        if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) return Convert.ToInt32(text[2..], 16);
-        if (text.StartsWith("0b", StringComparison.OrdinalIgnoreCase)) return Convert.ToInt32(text[2..], 2);
-        if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var integer)) return integer;
-        return Convert.ToInt32(double.Parse(text, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture));
-    }
 }
