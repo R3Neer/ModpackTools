@@ -487,3 +487,17 @@ pairs plus7 invalid-input and locked-empty noIO controls pass with intact fixtur
 The own preflight harness initially used the wrong cache basename and enumerated
 empty JSON arrays; both were corrected before final native acceptance. Original
 independent captures were retained. No claim of a concurrent-writer stress test.
+
+`9c51063`: classification targets completed. Original mod rows are selected through a shared
+occurrence-aware alias index, with locals allowed and repeated queries retaining
+repeated original references. Update selection retains its independent type/source/
+path/dedup policy; E17 only stabilizes ambiguous ID diagnostic ties. Three-project
+locked restore/format/Release/Native AOT completes without warnings. Host v53 SHA256:
+CC81DDB77B300BEC89069745B09C14199E5FC187812E9FE3B84331ADE8266033;
+CLI v60 SHA256:D7D067020E6CB1D3214E4E3D8D6456FB6401C21D6CF15AA2D524C4F20C3749DB.
+Own25 classification controls plus full-read priority,37 update controls, native
+identity/LF/E17/batch-owned assertions and15 protocol cases pass. Independent blind
+46 classification pairs plus8 grammar controls and58 update pairs plus8 grammar
+controls pass; original two E17 captures and separate expected ties remain intact.
+White8 classification pairs plus2 grammar/read priorities and10 update regression
+pairs plus2 priorities pass with unchanged fixtures. No classification/side writes.

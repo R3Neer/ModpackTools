@@ -793,7 +793,7 @@ casting/order/dedup/failure behavior. Test-only --inspect-batch-selectors
 <configuration-directory> <project-id> <selectors-json-array> supports --now-utc,
 --allowed-kinds, --require-packwiz and the existing six reader-limit options.
 
-## Classification target selection / next checkpoint
+## Classification target selection / completed checkpoint
 
 `ModClassificationSelector.Resolve(RawInventorySnapshot, ImmutableArray<string>
 selectors) -> ImmutableArray<InventoryItem>` selects only original snapshot Mods.

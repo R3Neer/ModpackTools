@@ -53,8 +53,10 @@ regression, deliberate approved difference, or legacy defect requiring a decisio
 
 ## Evidence status and gates
 
-The current evaluation measured the unmodified legacy engine and diagnostic
-startup executables. It did not validate C01-C28 against a replacement engine.
+The initial language evaluation measured the unmodified legacy engine and diagnostic
+startup executables. That evaluation did not validate C01-C28 against a replacement
+engine. Subsequent native checkpoints have focused differential evidence recorded
+in implementation-plan.md; they do not imply all C01-C28 or public-command gates pass.
 Existing tests cover many cases; their existence does not establish current pass
 status or full disk-full/process-kill coverage.
 
