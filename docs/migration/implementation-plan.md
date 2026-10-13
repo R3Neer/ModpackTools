@@ -186,8 +186,19 @@ successful envelope and empty stderr, so no hypothetical dotted-key limit was ad
   uppercase descriptor success, two E04 repeats and four protocol/environment
   controls; fixture hashes unchanged, empty stderr. Protocol/Nu regressions pass.
 
-PS/Nu project-use parent mutation is the next reviewed adapter boundary. Errors
-and malformed transport must leave the existing selection intact.
+- PS project use: module selection changes only after strict validated native
+  success. A test-only AOT transport peer exercises 11 malformed replies;
+  fresh-shell transitions/current/catalog/version gates pass. Pester final:
+  250 passed, zero failed, 45.58 seconds. Independent review: 38 initial pairs,
+  ten targeted cases, three extras, then nine final regressions and eight mock
+  replies. It found a thrown-target representation discrepancy and accepted
+  casing-altered mock replies; both were corrected and retested. JSON and PS
+  ErrorRecord targets now each preserve their legacy representation.
 
-No inventory, session mutation, resolver, native transaction or installed
+Nu project-use parent mutation is next. Its existing raw snapshot emission also
+needs correction: independent experiments show that inherited process environment
+preserves Nu export conversions whereas explicit raw context does not. The reviewed
+contract now requires Nu to omit context; PS continues sending module state.
+
+No inventory, resolver, native transaction or installed
 distribution exists yet. Catalog review does not prove their parity or performance.

@@ -87,8 +87,13 @@ wrong types, NUL and invalid Unicode are protocol errors. Existing byte/depth an
 argument limits apply. This additive request field leaves old producers valid.
 
 PS must send its actual script:ActiveProjectId, including null: legacy project use
-updates module state without changing the environment. Nu sends its own session
-environment. Native current preserves command spelling and validates forbidden
+updates module state without changing the environment. Nu uses the actual process
+environment after Nushell's export conversions; it must omit request context.
+Experiments found that explicit raw Nu values disagree with the existing bridge
+for numbers, booleans, dates, lists and custom ENV_CONVERSIONS, including strings.
+Relying on the inherited environment preserves these shell semantics without
+reimplementing Nushell serialization or spawning PowerShell. Native current
+preserves command spelling and validates forbidden
 --project before extra positional arguments, like PS. Help stays with legacy
 until native human presentation is implemented. No artificial domain service is
 needed just to echo a typed immutable snapshot.
@@ -110,3 +115,9 @@ PS changes module state after validated success. Nu retains its existing
 case-sensitive parent update condition: exactly project/use updates environment,
 other casing still returns success without changing the parent. Help and errors
 leave prior selection intact. A change to that successful quirk is not E04.
+
+PS terminating ErrorRecord targets can retain a positional array even when legacy
+JSON unwraps it to null or a scalar. The adapter preserves both representations
+for Command.InvalidArguments; this presentation detail does not enter Core.
+Successful native response headers must match the parsed request exactly before
+any session update. Malformed responses and mismatched exits preserve prior state.
