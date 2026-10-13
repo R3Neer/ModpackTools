@@ -499,16 +499,20 @@ wrapper and retains direct-table field behavior. Keep these two input boundaries
 explicit instead of changing the shared literal model or unwrapping every array.
 ## PSD1 import duplicate-key validation / next correction
 
-Preserve OrdinalIgnoreCase lookup in PsdTable and every programmatic domain model.
-At the literal import boundary, additionally reject a duplicate key under
-InvariantCultureIgnoreCase within each individual table, matching the actual
-Import-PowerShellDataFile validation. Composed/decomposed accents, ligatures and
-ignored characters can collide at import even though a runtime Hashtable lookup
-would distinguish them. This is a parser guard, not a new domain lookup comparer.
-Nested/different tables maintain independent key sets. No Unicode normalization,
-key rewriting or deduplication is allowed. Throw PsdParseException on the second
-key; existing project/editorial callers map it to their structured invalid-file
-errors under E02. Supported noncolliding keys retain spelling and both entries.
+Correction from independent resource-target review: file-imported tables capture
+CurrentCultureIgnoreCase for lookup and import-value duplicate rejection. The older
+ordinal-lookup/invariant-import-guard assumption confused evaluated runtime literals
+with Import-PowerShellDataFile's safe-value visitor. Preserve the comparers explicitly
+supplied to programmatic PsdTable; only PsdReader-imported tables change. Root/nested/
+array-contained tables share the culture captured at the start of that parse, even
+after the caller changes culture. No Unicode normalization or key rewriting.
+Separately retain OrdinalIgnoreCase lexical duplicate rejection: Turkish I/i is a
+parser error even though the captured culture would distinguish those lookup keys;
+I/dotless-i is an import-value duplicate only in Turkish. Independent key scopes,
+original key spelling, bounded grammar and E02 caller errors remain. Validate
+project sections/fields, editorial keys/fields, classification/category membership
+and active resource override lookup. Primary source: [PowerShell7.6.6 SafeValues
+VisitHashtable](https://raw.githubusercontent.com/PowerShell/PowerShell/v7.6.6/src/System.Management.Automation/engine/parser/SafeValues.cs).
 Native rejection assertions and full differential editorial cases are required.
 ## Pure inventory reference assignment / next checkpoint
 

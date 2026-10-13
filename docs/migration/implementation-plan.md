@@ -501,3 +501,11 @@ identity/LF/E17/batch-owned assertions and15 protocol cases pass. Independent bl
 controls pass; original two E17 captures and separate expected ties remain intact.
 White8 classification pairs plus2 grammar/read priorities and10 update regression
 pairs plus2 priorities pass with unchanged fixtures. No classification/side writes.
+
+Resource-target Native v54 remains failed and uncommitted:62/66 blind checks pass;
+four active Unicode metadata cases reveal an earlier imported-table lookup defect.
+Preserve that artifact and original captures. Resource work is saved byte-for-byte
+outside build inputs while a separate parser correction is validated and committed.
+SafeValues7.6.6 and fresh probes distinguish captured CurrentCultureIgnoreCase import
+lookup from ordinal literal lookup; lexical duplicate guards remain ordinal. Native
+v55/v62 will validate the import correction alone; resource work resumes afterward.
