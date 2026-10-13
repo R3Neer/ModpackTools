@@ -13,6 +13,7 @@ if (args.FirstOrDefault() == "--inspect-classified-mods") return ClassificationI
 if (args.FirstOrDefault() == "--inspect-resource-order") return ResourceOrderInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-resource-view") return ResourceViewInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-inventory") return FullInventoryInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-selected-inventory") return SelectionInspection.Run(args);
 
 // Test-only transport peer: arbitrary replies exercise adapter validation before
 // any parent session mutation. This mode is never part of the shipping CLI.
@@ -160,5 +161,19 @@ if (resourceView.Active[0].Name != "Display" || resourceView.Active[0].Source !=
     resourceView.Active[4].Filename != "" || resourceView.Active[4].Name != "file/" || resourceView.Active[4].Priority != 5 ||
     resourceView.Inactive.Length != 1 || resourceView.Inactive[0] != localResource || resource.Name != "Technical")
     throw new InvalidOperationException("Resource activation order, source, exclusion or immutability failed");
+var rawSnapshot = new RawInventorySnapshot(new ModpackTools.Core.Projects.ProjectContext("fixture", "C:\\fixture", "Name", null,
+    "fixture.mrpack", null, null, null, "index.toml", "C:\\fixture\\index.toml"), editorial,
+    classified.Where(item => item.Kind == ContentKind.Mod).ToImmutableArray(), physicalResources, resourceView, [shader], []);
+var selection = InventorySelector.Select(rawSnapshot, new(Category: "qol", Side: "client", Match: "Override modrinth:"));
+if (selection.TotalMatches != 2 || !selection.IncludedTypes.SequenceEqual([ContentKind.Mod]) ||
+    !selection.Filters.SequenceEqual(["type=mod", "category=qol", "side=client", "search=Override modrinth:"]) ||
+    selection.Mods[0] != rawSnapshot.Mods[0] || rawSnapshot.Mods.Length != 2)
+    throw new InvalidOperationException("Pure selection scope, cross-field match, labels or immutability failed");
+foreach (var query in new[] { new RawInventoryQuery(Type: null), new RawInventoryQuery(State: null) })
+{
+    try { InventorySelector.Select(rawSnapshot, query); }
+    catch (ModpackTools.Core.DomainException exception) when (exception.Target is ModpackTools.Core.TextTarget { Value: "" }) { continue; }
+    throw new InvalidOperationException("Explicit null selection choice was silently defaulted");
+}
 Console.WriteLine($"PSD1 native contracts passed: {invalid.Length + 7 + limits.Length} rejected inputs, typed literals, nested arrays, bounded numeric extraction, immutable classification, {args.Length} files");
 return 0;
