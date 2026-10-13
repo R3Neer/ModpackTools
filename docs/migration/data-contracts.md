@@ -277,3 +277,32 @@ expanded, hashes weakened, caches persisted or files written by this checkpoint.
 Archive and aggregate policy values must be positive and are validated before the
 local reader returns for a missing/empty/fully-managed mods directory. Invalid
 policy cannot become a success because no candidate happens to trigger archive IO.
+
+## Editorial PSD1 metadata reader / next checkpoint
+
+`EditorialMetadataReader.Read(ProjectContext) -> EditorialMetadata` returns an
+immutable normalized PsdTable Data plus typed table views Categories, Mods,
+ResourcePacks and optional Content. Missing metadata.psd1 supplies three empty
+tables without creating a file. Missing required sections are added in memory;
+unknown keys and nested values remain intact. This reader does not apply overrides,
+classify mods, sort categories, render or write metadata. Existing literal PSD1
+grammar/limits apply; no evaluator or new PowerShell process is introduced.
+
+Preserve validation priority: Categories, Mods, ResourcePacks table shape;
+ContentSchemaVersion support; Content table shape. Invalid PSD1 gives
+Metadata.InvalidFile / InvalidData with path/details/hint. Invalid required section
+gives Metadata.InvalidSection with the section name target. Unsupported intent
+schema and invalid Content retain their respective domain IDs and null targets.
+Parser/runtime wording can differ under E02; ordinary values cannot be normalized
+away. Case-insensitive table membership is OrdinalIgnoreCase like literal PS
+hashtables, preserving original key spelling in the normalized source.
+
+Intent schema compatibility is type-sensitive. Numeric 1, true and string '1'
+are supported; string '1.0' is not. For array schema values the legacy inequality
+filters out values equal to one, then tests the filtered collection's truthiness.
+Retain that observable behavior for empty/falsey singleton survivors and reject
+two survivors even when both are falsey. Implement this on typed data nodes,
+not by casting every schema to an integer or executing expressions.
+
+The test-only host --inspect-editorial <project-root> emits the normalized table
+as JSON, or a structured domain failure; no public command routing changes yet.
