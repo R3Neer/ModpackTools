@@ -29,6 +29,12 @@ function modpack {
                 }
             }
             if ($nativeCapability -eq 'project-use' -and $native.ok) { $script:ActiveProjectId = $native.data.active_project }
+            if (-not $native.ok -and $nativeCapability -in @('project-list','project-current','project-use') -and $native.error.id -ceq 'ModpackTools.Command.InvalidArguments') {
+                $positionalTargets = @($Arguments | Select-Object -Skip 1)
+                if ($positionalTargets.Count -eq 0) { $native.error.target = $null }
+                elseif ($positionalTargets.Count -eq 1) { $native.error.target = $positionalTargets[0] }
+                else { $native.error.target = $positionalTargets }
+            }
             Write-MpMachineEnvelope $native
             if (-not $native.ok) {
                 if ($nativeCapability -in @('project-list','project-current','project-use') -and $native.error.id -ceq 'ModpackTools.Command.InvalidArguments') {
