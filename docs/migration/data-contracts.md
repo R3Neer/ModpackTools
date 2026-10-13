@@ -378,3 +378,31 @@ budget, checked before adding each result. Exceeding it gives Content.ReadLimitE
 Validate policy before missing/empty early returns. Test-only
 --inspect-resource-order <root> [--max-items n] emits the ID array; no project write,
 inventory sorting, activation change or public command switch occurs here.
+
+## Pure resource activation / next checkpoint
+
+`ResourcePackActivation.Compose(ImmutableArray<InventoryItem> resources,
+ImmutableArray<string> activeIds, EditorialMetadata)` returns ResourcePackView with
+immutable ActiveResource and inactive physical rows. ActiveResource carries Id,
+Name, nullable Filename, Packwiz/Local/Builtin/Missing source and one-based Priority;
+kind=resourcepack/enabled=true are implied in its mapper. Physical records remain
+unchanged and retain their source-specific absent fields.
+
+Preserve ordered/duplicate IDs. Recognize file/ with OrdinalIgnoreCase and retain
+its substring spelling, including empty Filename for file/ alone. Nonempty filenames
+match the first physical row using InvariantCultureIgnoreCase; otherwise source is
+Missing, while non-file and empty-file tokens use Builtin. Fallback Name is physical
+Name, nonempty Filename or the full ID. Index physical filenames first-wins and
+use a set of nonempty active filenames for inactive exclusion, avoiding repeated
+full scans. Sort inactive rows stably by CurrentCultureIgnoreCase Name; do not
+deduplicate physical rows or apply active name overrides to them.
+
+Only matching active IDs consult ResourcePacks editorial entries. Name key presence
+overrides even with null/empty; absent Name keeps the fallback. Unlike mod overrides,
+present falsey entries fail legacy and receive E09. Retain empty tables and singleton
+table wrappers, multi-table Name projections with every key present, array flattening,
+null positions and singleton collapse. Share a small internal typed display/field
+projection with mod classification; do not create another dynamic evaluator.
+Test-only --inspect-resource-view <root> composes managed resource/local ZIP reads,
+editorial metadata and order, emitting raw resources/active/inactive arrays. It does
+not read mods/shaders, alter activation or switch public content list.

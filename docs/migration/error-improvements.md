@@ -103,3 +103,13 @@ replacing parameter-binding/decoder runtime failures with ResourcePack.InvalidDe
 Do not turn those failures into empty successful orders or phantom builtin IDs.
 An unclosed target array keeps its existing domain ID and key target. Missing
 file/key and an actual empty array remain ordinary empty successful results.
+
+## E09: invalid active resource name overrides identify their ID
+
+Replace actual method/property/null failures while applying a matching active
+ResourcePacks entry with Metadata.InvalidResourceOverride / InvalidData, the active
+ID target and a metadata repair hint. Present falsey entries are errors here,
+matching legacy; they are not ignored as in mod classification. Preserve supported
+empty-table, optional singleton and multi-table Name successes. Unencountered
+editorial IDs remain unvalidated. Abort before a partial successful resource view;
+there are no filesystem effects.
