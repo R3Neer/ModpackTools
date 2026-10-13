@@ -685,3 +685,29 @@ plus50 object-property lowering probes. A closed typed Text/Any/All/Unknown boun
 will keep loader-data coercion outside evaluation, preserve tri-state short circuits
 and avoid standard-range substitutions. This remains analysis, not implemented range
 matching. Public content dispatch, providers and dependency health remain PowerShell.
+
+Typed range evaluation completed asb0f33e7. A closed immutable tagged value keeps
+Text/Any/All/Unknown separate from owned declaration lowering. General/Maven syntax,
+tri-state short circuits, visited interval-shape checks and Int32 increment promotion
+match the original. JSON member lookup is Ordinal; explicitly supplied comparers
+preserve literal-table origins, including nested any/all. Input-resource decoding
+preludes include inactive members, while evaluator quotas apply only to visited work.
+E30/E31 and consumed E28/E29 provide contextual limits/conversion failures.
+Three-project locked restore/format/Release and both Native AOT publications pass
+without warnings. Host v63 SHA256:
+4D70700F9095475558CD15A05BE83DDE4BBEFF2BA799FE503E07635DFDAEEF3D;
+CLI v70 SHA256:F3837B623689198E0A9B386AA92A177A7DBA711F2307B305D36C4B64225BF59F.
+Own44 range checks,106 ordering regressions,15 protocol cases and default native
+assertions pass. Blind255 cases comprise167 originals,50 lowering,4 lookup controls,
+31 new policies/quotas and3 grammar cases; white35 originals plus16 controls,48
+ordering regressions and default assertions pass. Baselines167/50 remain unchanged,
+stderr is empty and no product blocker remains. The own initial managed ANY mismatch
+exposed a JSON-versus-literal comparer error fixed before publication. White's first
+assessment read the wrong error-envelope field; black's provisional wildcard999.x
+expectation omitted its generated1000 quota. Both assessment-only mistakes are
+retained and their complete final reruns pass without changing original expectations.
+
+Next declaration capability extracts Fabric/Quilt root manifest semantics into typed
+requirements, aliases, sides, schema diagnostics and nested-path declarations.
+Archive ownership/byte limits and actual nested JAR traversal remain separate effects;
+no health result or supported-loader claim is inferred from display metadata alone.
