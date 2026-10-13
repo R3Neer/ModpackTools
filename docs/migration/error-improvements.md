@@ -230,3 +230,13 @@ representative change from legacy Hashtable iteration. This is not limited to er
 Retain original captures and targeted expectations, and verify insertion-order reversal.
 Keep incremental invariant DefaultId membership and ordinal alias matching distinct.
 Retain every duplicate physical occurrence and label.
+
+## E20: malformed category cache fields fail at their actual consumption stage
+
+Map actual raw missing-member/cast failures to Metadata.InvalidCategoryCache,
+InvalidData, absolute cache path, details and modpack category list hint. Preserve
+the distinct known read-invalid diagnostic without added details, timestamp/project/
+index/Id/reserved/metadata order, null-versus-empty Categories, ignored SchemaVersion
+and successful legacy coercions. Reader resource bounds use
+Metadata.CategoryCacheReadLimitExceeded/LimitsExceeded; invalid policy is a separate
+InvalidArgument diagnostic before IO. No fallback, cache rewrite or eager Id checks.

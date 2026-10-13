@@ -884,3 +884,44 @@ diagnostic and install hint. It does not require Ready/ConfigPresent. No writes.
 Test-only --inspect-default-options <root> [--assert-installed true|false] [--culture name] validates
 grammar before full project/inventory IO, then writes Pascal Installed, ConfigPresent,
 Ready, Mod (complete common lowercase physical fields or null), and ConfigPath.
+
+## Category cache and ID resolution / next checkpoint
+
+`CategorySelector.Resolve(EditoralMetadata categories context, CachedCategorySnapshot?
+cache, selector, projectId, nowUtc, allowUnclassified=false) -> string` is pure; use
+the actual EditorialMetadata type. The directory facade takes project root/ID and
+configuration directory explicitly, with no descriptor/pack/full-inventory prelude.
+Reserved literal unclassified checks before metadata/cache IO: allow returns canonical
+unclassified; forbid preserves original selector target. Other selectors require
+complete metadata-section/schema validation before any numeric cache read. Literal
+selection scans category keys with OrdinalIgnoreCase, retaining original key spelling;
+Name/Order/definition shape are not consulted. Empty input strings are caller grammar
+errors before IO; cached null/empty Id becomes UnknownCategory with empty target,
+including a defined empty key because legacy selected-key truthiness rejects it.
+
+Numeric recognition reuses the exact reference regex. Cache has no SchemaVersion
+check; falsey cache -> CategoryCacheNotFound; timestamp -> expiry; ProjectId ->
+project mismatch; then every Index cast, selector cast after first valid Index,
+exactly one occurrence, selected Id string cast, carried reserved handling, literal
+metadata-key resolution. Empty Categories[] skips selector cast and gives
+EmptyCategoryCache; Categories=null enumerates a null row and fails at Index.
+Missing/unused fields remain deferred, all Index casts still execute after a match.
+Preserve complete existing Metadata errors/targets/hints and24h-inclusive/future time.
+E20 replaces actual raw member/cast failures with Metadata.InvalidCategoryCache,
+InvalidData/cache-path/details/category-list hint; known malformed read errors retain
+their original message and null details. No write/repair/partial success.
+
+Extract one internal bounded legacy cache-file decoder with owned root/date metadata
+and injected error factories, retaining all six existing ReferenceCacheReadLimits
+defaults and token/date grammar. Inventory remains a distinct wrapper with unchanged
+schema/Results/null/error behavior and must pass its405 blind controls. Category wrapper
+uses Categories occurrence quota, defers unavailable-field failures until actual use,
+and produces Metadata.CategoryCacheReadLimitExceeded/LimitsExceeded and a separate
+invalid-policy diagnostic. Explicit resource limits may precede semantic validation.
+Reader alone exposes full extensible JSON; resolver emits an independent string,
+never cloned selected rows or borrowed JSON/date metadata. Caller clock is fixed.
+Test-only --inspect-read-category-cache <configuration-directory> and
+--inspect-category-id <project-root> <project-id> <configuration-directory> <selector>
+support --now-utc, --allow-unclassified and the existing six reader-limit options.
+Own and independent comparisons cover full read values, exact returned strings,
+validation priorities/consumer casts/quota boundaries/unchanged fixtures/closed handles.
