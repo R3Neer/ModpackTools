@@ -192,3 +192,12 @@ identify formerly raw field/cast failures. Resource limits can precede semantic
 schema/expiry checks. The normalization quota counts UTF-16 code units before
 stream delivery, preventing unbounded normalized output. Separately cap lexical
 token length before parsing and temporary JSON value/container allocation count.
+
+## E16: deterministic ambiguity details for content selectors
+
+Retain Content.AmbiguousSelector, category/selector target, wording/hint and the
+current-culture-ignore-case sorted unique matching labels. Use ordinal tie order
+to choose a stable representative for distinct spellings that collate equally.
+This affects only an existing failure's informational list. All physical candidate
+occurrences still count toward ambiguity; no candidate is removed before matching,
+no successful selector changes comparison and no pack effects occur.

@@ -686,3 +686,49 @@ Scalar compatibility references: installed PowerShell 7.6.6 probes are the oracl
 [Utils binary sign-bit conventions](https://github.com/PowerShell/PowerShell/blob/v7.6.6/src/System.Management.Automation/engine/Utils.cs)
 explain the separately tested literal and system-converter paths. These source rules
 are implemented as a bounded scalar boundary, without embedding the PS parser.
+
+## Pure Packwiz update-target selection / next checkpoint
+
+`UpdateTargetSelector.Resolve(RawInventorySnapshot, ImmutableArray<string> selectors,
+string? type = "all") -> ImmutableArray<InventoryItem>` consumes an existing owned
+snapshot and returns its original physical rows, preserving caller selector order.
+The operation performs no IO, cache lookup, provider request, update or file write.
+A composing inspector reads project/raw inventory before validating Type, matching
+Resolve-ModpackUpdateSelectors failure priority. Normalize Type through the existing
+inventory aliases and complete InvalidType diagnostic. Empty/default selector input
+is a caller grammar error; supported nonempty strings are literal selectors here.
+Numeric inventory references remain a separate preceding resolution capability.
+
+Candidates are raw mods, physical ResourcePacks and shaders in that order, filtered
+by normalized Type. Resource candidates are neither ActiveResources nor inactive
+presentation rows; builtin/missing/default IDs and active-only names are excluded.
+Retain mod editorial names already present in raw inventory. Match nonempty Name,
+Id, Filename or metadata filename stem (remove a final .pw.toml case-insensitively)
+using OrdinalIgnoreCase equality, without trimming, substring/glob matching or
+provider normalization. Several aliases on one row count as one occurrence; separate
+rows with the same ID, path or object identity still produce ambiguity.
+Only null/empty aliases are omitted; whitespace remains a literal alias. The pure
+operation does not normalize paths or validate their filesystem existence.
+
+For each selector: no occurrence -> Content.NotFound; several ->
+Content.AmbiguousSelector; exactly one non-Packwiz or missing metadata path ->
+Content.LocalNotUpdatable. Retain complete IDs/categories/targets/messages/hints and
+matching-ID details. Validate the whole request before returning any array. Dedup
+successful selections by MetadataPath with InvariantCultureIgnoreCase, retaining
+first selected row and caller order, rather than deduping by content ID or record
+value. Check LocalNotUpdatable for every selector before path dedup, so a later
+invalid target cannot be hidden by a previous selection. Do not collapse ambiguous
+candidates before matching. No category Order,
+reference numbering, health or extra unused-field validation is introduced.
+
+E16 only stabilizes the ambiguous diagnostic list: current-culture-ignore-case
+sorting/uniqueness remains, but ordinal ties select a deterministic representative.
+All physical occurrences still determine ambiguity and successful result ordering.
+Test-only --inspect-update-targets <root> <selectors-json-array> [--type value]
+returns full common physical rows with existing lowercase inspector fields, a
+buffered complete result, domain exit1 or grammar exit2. Bound the inspector to the
+request contract's1024 selectors; reject null/empty strings and empty/default arrays
+before project IO as grammar errors. Core callers supply validated immutable input.
+Compare aliases/cross-kind ambiguity/local rejection/dedup/error priority and full
+rows against original PS, keeping intentional diagnostic ties separate. Validate
+programmatic repeated/equal-row identity and culture distinctions natively.
