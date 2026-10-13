@@ -39,6 +39,11 @@ Import-Module $ModulePath -Force
     }
     Assert-EditorialPair
     foreach($text in @(
+        "@{Unknown=@{'é'=1;'e$([char]769)'=2}}",
+        "@{Unknown=@{'ffi'=1;'ﬃ'=2}}",
+        "@{Unknown=@{'a'=1;'a$([char]173)'=2}}",
+        "@{Unknown=@{'ß'=1;'ss'=2;'MOD'=1;'ＭＯＤ'=2}}",
+        "@{Unknown=@{First=@{'é'=1};Second=@{'e$([char]769)'=2}}}",
         '@{}',
         "@{categories=@{perf=@{Name='Performance';Order=1.0}};Mods=@{'modrinth:test'=@{Name='Display';Side='both'}};ResourcePacks=@{};Unknown=@{Nested=@(1,2,'á',`$null)}}",
         '@{Categories=$null;ContentSchemaVersion=2;Content=$null}',
@@ -63,7 +68,7 @@ Import-Module $ModulePath -Force
     $invalid=Invoke-NativeTestProcess $Executable @('--inspect-editorial',$fixture)
     $result=$invalid.Stdout|ConvertFrom-Json
     if($invalid.Exit -ne 1 -or $invalid.Stderr -cne '' -or $result.error.id -cne 'ModpackTools.Metadata.InvalidFile' -or $result.error.target -cne $path -or -not $result.error.details){throw 'Invalid editorial PSD1 escaped a structured file diagnostic'}
-    'Native editorial reader: 19 differential cases and malformed-PSD1 diagnostic passed'
+    'Native editorial reader: 24 differential cases and malformed-PSD1 diagnostic passed'
 } finally {
     $resolved=[IO.Path]::GetFullPath($fixture)
     if(-not $resolved.StartsWith([IO.Path]::GetFullPath([IO.Path]::GetTempPath()),[StringComparison]::OrdinalIgnoreCase) -or [IO.Path]::GetFileName($resolved) -notlike 'modpacktools-editorial-*'){throw 'Unsafe fixture cleanup target'}

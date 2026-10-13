@@ -80,7 +80,7 @@ if (table.Entries["ROOT"] is not PsdString { Value: "C:\\O'Brien" } ||
     table.Entries["Title"] is not PsdString { Value: "hello\nworld" })
     throw new InvalidOperationException("Typed PSD1 data mismatch");
 
-string[] invalid = ["@{Root=$(Get-Content secret)}", "@{Root=\"$env:HOME\"}", "@{A=1;a=2}", "@{A='unterminated}", "@{A=1 B=2}", "@{A=[int]1}", "@{A=Get-Date}", "@{A=@(1 2)}", "@{}; Get-Date", "<# unclosed"];
+string[] invalid = ["@{Root=$(Get-Content secret)}", "@{Root=\"$env:HOME\"}", "@{A=1;a=2}", "@{'é'=1;'e\u0301'=2}", "@{'ffi'=1;'ﬃ'=2}", "@{'a'=1;'a\u00ad'=2}", "@{'a'=1;\"a`0\"=2}", "@{A='unterminated}", "@{A=1 B=2}", "@{A=[int]1}", "@{A=Get-Date}", "@{A=@(1 2)}", "@{}; Get-Date", "<# unclosed"];
 foreach (var source in invalid)
 {
     try { PsdReader.Parse(source); }
@@ -88,6 +88,9 @@ foreach (var source in invalid)
     throw new InvalidOperationException("Unsafe/invalid data accepted");
 }
 var arrays = PsdReader.Parse("@{A=@(1,@(2,3));B=@(@(1,2),@(3,4));C=@(@(1,2));D=\"`u{41}`u{1F600}\"}");
+var distinctKeys = PsdReader.Parse("@{First=@{'é'=1};Second=@{'e\u0301'=2};'ß'=1;'ss'=2;'MOD'=1;'ＭＯＤ'=2}");
+if (distinctKeys.Entries.Count != 6 || ((PsdTable)distinctKeys.Entries["First"]).Entries.ContainsKey("e\u0301"))
+    throw new InvalidOperationException("Import validation changed runtime key lookup or independent table scopes");
 if (arrays.Entries["A"] is not PsdArray a || a.Items.Length != 2 || a.Items[1] is not PsdArray { Items.Length: 2 } ||
     arrays.Entries["B"] is not PsdArray b || b.Items.Length != 2 || b.Items.Any(item => item is not PsdArray { Items.Length: 2 }) ||
     arrays.Entries["C"] is not PsdArray c || c.Items.Length != 2 || c.Items[0] is not PsdNumber { Literal: "1" } ||

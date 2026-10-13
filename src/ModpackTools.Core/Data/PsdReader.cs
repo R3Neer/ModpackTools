@@ -72,11 +72,14 @@ public sealed partial class PsdReader
     private PsdTable ReadTable(int depth)
     {
         var entries = ImmutableDictionary.CreateBuilder<string, PsdValue>(StringComparer.OrdinalIgnoreCase);
+        // Import validation uses linguistic equality; runtime table lookup remains ordinal.
+        var importedKeys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
         while (true)
         {
             SkipTrivia();
             if (Take("}")) return new(entries.ToImmutable());
             var key = position < source.Length && source[position] is '\'' or '"' ? ReadString() : ReadKey();
+            if (!importedKeys.Add(key)) throw Error($"Duplicate data key '{key}'");
             SkipTrivia();
             if (!Take("=")) throw Error("Expected '=' after data key");
             SkipTrivia();
