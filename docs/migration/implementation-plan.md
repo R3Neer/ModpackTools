@@ -472,3 +472,18 @@ Independent black-box395 plus10 threshold calls and white-box14 text/priority pa
 pass with unchanged fixtures. No public dispatch or timing improvement claim.
 Next batch contract deliberately fixes one cache generation and buffers failures;
 root absence and invalid-element transport priorities are documented separately.
+
+`185d7fb`: numeric/literal batch composition completed, using a single lazily read
+owned snapshot, a fixed caller clock, per-call raw numeric text memo and ordinal
+case-insensitive result dedup. Empty mapped strings are retained; empty helper
+input succeeds. Complete output is buffered. Fixed cache generation and global
+transport grammar priority are explicit refinements; no public dispatch/mutation.
+Three-project locked restore/format/Release/Native AOT completes without warnings.
+Host v52 SHA256:59DC57563407434B33D605AA4C547ABB2C19B252E794334B4B985C02385ECDD7;
+CLI v59 SHA256:7166B2198DD6092176C18D126A2A0BCA2C8B6A57FB8A8615311DE04F706E134E.
+Own41 controls, native owned-snapshot replacement/deletion/24-hour/default-policy
+assertions and15 protocol cases pass. Blind72 comparisons and white12 independent
+pairs plus7 invalid-input and locked-empty noIO controls pass with intact fixtures.
+The own preflight harness initially used the wrong cache basename and enumerated
+empty JSON arrays; both were corrected before final native acceptance. Original
+independent captures were retained. No claim of a concurrent-writer stress test.

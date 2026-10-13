@@ -201,3 +201,11 @@ to choose a stable representative for distinct spellings that collate equally.
 This affects only an existing failure's informational list. All physical candidate
 occurrences still count toward ambiguity; no candidate is removed before matching,
 no successful selector changes comparison and no pack effects occur.
+
+## E17: deterministic classification ambiguity details
+
+Preserve Metadata.AmbiguousMod, category, selector target, wording and hint.
+Matching IDs remain sorted and unique using current-culture-ignore-case comparison;
+ordinal ties select a deterministic representative. All original mod occurrences
+still determine ambiguity. No successful matching, local-mod acceptance, target
+order or classification state changes. This is limited to informational error ties.

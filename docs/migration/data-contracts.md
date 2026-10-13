@@ -755,7 +755,7 @@ The inspector's exact --string-field Selector path exercises this API. Other fie
 and full-row paths retain ownership and behavior. Differential consumer/date cases
 and the complete existing cache corpus guard the extraction before any batch wiring.
 
-## Batch selector composition / next checkpoint
+## Batch selector composition / completed checkpoint
 
 `BatchSelectorResolver.Resolve(ImmutableArray<string> selectors,
 CachedInventorySnapshot? snapshot, string projectId, DateTimeOffset nowUtc,
@@ -792,3 +792,26 @@ Independent baseline69 cases plus three separately retained prelude probes estab
 casting/order/dedup/failure behavior. Test-only --inspect-batch-selectors
 <configuration-directory> <project-id> <selectors-json-array> supports --now-utc,
 --allowed-kinds, --require-packwiz and the existing six reader-limit options.
+
+## Classification target selection / next checkpoint
+
+`ModClassificationSelector.Resolve(RawInventorySnapshot, ImmutableArray<string>
+selectors) -> ImmutableArray<InventoryItem>` selects only original snapshot Mods.
+Match Name, Id, Filename and metadata .pw.toml stem with OrdinalIgnoreCase, retaining
+the verified one-final-LF suffix rule. No cache lookup, type choice, category Order
+validation, Packwiz restriction, classification write or IO. Local mods are valid.
+Multiple aliases of one occurrence count once; repeated/equal physical occurrences
+remain ambiguous. Repeated successful selectors return repeated original references
+in request order. ID dedup/sorting is a separate composing caller responsibility.
+
+Reuse one internal occurrence-aware physical alias index with update-target selection;
+do not share error policy or update-only metadata/source checks. Missing ->
+Metadata.ModNotFound/ObjectNotFound; ambiguous -> Metadata.AmbiguousMod/InvalidArgument;
+retain project/selector target, message and hint, and matching IDs. E17 stabilizes
+only diagnostic current-culture-ignore-case sorted-unique ID ties using ordinal
+tie order, as E16 already does for update ambiguity. Success comparison is unchanged.
+Test-only --inspect-classification-targets <root> <selectors-json-array> accepts
+one through1024 nonempty strings before IO, then reads project/raw inventory before
+resolution. Return full physical rows, buffered result or complete structured error.
+Compare baseline helper calls in order on frozen files; snapshot reuse deliberately
+follows the existing per-invocation architecture, not repeated inventory discovery.
