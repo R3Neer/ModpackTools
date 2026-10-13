@@ -209,3 +209,21 @@ Matching IDs remain sorted and unique using current-culture-ignore-case comparis
 ordinal ties select a deterministic representative. All original mod occurrences
 still determine ambiguity. No successful matching, local-mod acceptance, target
 order or classification state changes. This is limited to informational error ties.
+
+## E18: resource selector metadata failures become domain errors
+
+Convert actual raw method/member failures while building editorial-only candidates
+to ResourcePack.InvalidSelectorMetadata/InvalidData, metadata-key target, details and
+matching-entry repair hint. Preserve candidate construction before query and the
+empty-candidate DefaultId failure before Name access. Do not validate skipped entries
+or change earlier full-inventory errors. This does not turn former failures into
+successful selections.
+
+## E19: deterministic editorial resource candidate ordering
+
+Order editorial-only keys ordinally after unchanged active/inactive candidates.
+This stabilizes ambiguity detail ordering and first malformed metadata-key diagnostics.
+Validated imported metadata rejects culturally equivalent duplicate keys, so no
+successful imported identity changes. Keep incremental invariant DefaultId membership
+and ordinal alias matching distinct. Synthetic unvalidated metadata tables are not
+an alternative input grammar. Retain every duplicate physical occurrence and label.

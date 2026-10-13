@@ -815,3 +815,38 @@ one through1024 nonempty strings before IO, then reads project/raw inventory bef
 resolution. Return full physical rows, buffered result or complete structured error.
 Compare baseline helper calls in order on frozen files; snapshot reuse deliberately
 follows the existing per-invocation architecture, not repeated inventory discovery.
+
+## Resource activation target selection / next checkpoint
+
+`ResourcePackSelector.Resolve(RawInventorySnapshot, ImmutableArray<string> selectors)
+-> ImmutableArray<ResourcePackTarget>` is pure. Target fields are DefaultId, Id,
+Name, nullable Filename and Active. Build active candidates in priority order,
+inactive presentation candidates in their existing order, then editorial-only keys.
+Inactive DefaultId is file/ plus Filename; null Filename remains null but yields
+file/. Include builtin/missing active rows and metadata-only definitions. Neither
+physical resource rows nor metadata stems are automatically additional aliases.
+Match nonempty DefaultId/Id/Name/Filename with OrdinalIgnoreCase; retain every physical
+occurrence, original target fields and repeated request outputs. A per-call alias
+index avoids repeated scans. No cache/DefaultOptions check/mutation/IO in this layer.
+
+Skip represented editorial keys using InvariantCultureIgnoreCase DefaultId membership,
+updating membership after each addition. Snapshot metadata must have passed the PSD1
+import uniqueness contract; synthetic Invariant-equivalent duplicate metadata keys
+are outside this trusted-input contract. E19 sorts editorial-only keys ordinally for
+deterministic ambiguity details and first-invalid-key diagnostics, retaining active/
+inactive ordering. Valid imported keys cannot alter successful selection under this
+ordering. Empty metadata keys and empty names remain valid outputs where selectable
+by a nonempty alias. Missing Name defaults to the metadata key; existing bounded
+member projection and display coercions retain null/array/table behavior.
+
+Build/validate all candidates before any query. Preserve raw failure with empty
+active/inactive candidates plus any metadata key: E18 diagnoses unavailable DefaultId
+membership before reading Name, rather than inventing a new success. Other malformed
+editorial entries fail E18 even if not queried. ResourcePack.InvalidSelectorMetadata/
+InvalidData targets the metadata key, with details and repair hint. Existing full
+inventory E09 failures retain priority before this layer. Empty view with no metadata
+remains ResourcePack.NotFound. NotFound/AmbiguousSelector retain complete original
+errors/hints/targets and all duplicate matching labels. Result buffers before return.
+Test-only --inspect-resource-targets <root> <selectors-json-array> validates1..1024
+nonempty strings before full inventory IO and writes full original PascalCase five
+fields for comparison. Numeric inputs are literal here; batch references precede it.
