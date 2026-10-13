@@ -223,7 +223,10 @@ successful selections.
 
 Order editorial-only keys ordinally after unchanged active/inactive candidates.
 This stabilizes ambiguity detail ordering and first malformed metadata-key diagnostics.
-Validated imported metadata rejects culturally equivalent duplicate keys, so no
-successful imported identity changes. Keep incremental invariant DefaultId membership
-and ordinal alias matching distinct. Synthetic unvalidated metadata tables are not
-an alternative input grammar. Retain every duplicate physical occurrence and label.
+Additionally, valid imported keys can be distinct under their captured current culture
+yet equivalent under invariant membership (Turkish I+soft-hyphen versus i). Select the
+first ordinal key in that equivalence group, an explicit deterministic successful
+representative change from legacy Hashtable iteration. This is not limited to errors.
+Retain original captures and targeted expectations, and verify insertion-order reversal.
+Keep incremental invariant DefaultId membership and ordinal alias matching distinct.
+Retain every duplicate physical occurrence and label.

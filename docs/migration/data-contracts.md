@@ -835,11 +835,14 @@ index avoids repeated scans. No cache/DefaultOptions check/mutation/IO in this l
 
 Skip represented editorial keys using InvariantCultureIgnoreCase DefaultId membership,
 updating membership after each addition. Snapshot metadata must have passed the PSD1
-import uniqueness contract; synthetic Invariant-equivalent duplicate metadata keys
-are outside this trusted-input contract. E19 sorts editorial-only keys ordinally for
-deterministic ambiguity details and first-invalid-key diagnostics, retaining active/
-inactive ordering. Valid imported keys cannot alter successful selection under this
-ordering. Empty metadata keys and empty names remain valid outputs where selectable
+import uniqueness contract. Imported culture and invariant membership can nevertheless
+differ: Turkish I+soft-hyphen and i are valid distinct imported keys but invariant
+equivalent. E19 sorts editorial-only keys ordinally for deterministic ambiguity details,
+first-invalid-key diagnostics and the representative of such equivalence groups,
+retaining active/inactive ordering. This last case deliberately stabilizes a formerly
+Hashtable-enumeration-dependent successful identity; it is not an errors-only delta.
+Preserve original captures and compare that explicit representative separately.
+Empty metadata keys and empty names remain valid outputs where selectable
 by a nonempty alias. Missing Name defaults to the metadata key; existing bounded
 member projection and display coercions retain null/array/table behavior.
 
