@@ -1049,6 +1049,8 @@ ordinally/case-sensitively; missing and null remain equivalent as in the helper.
 Emit full PascalCase Path/Before/After, including nulls. E24 retains all culturally
 equivalent but ordinally distinct paths; the old Sort-Object -Unique can hide a real
 change, so reproducing it would violate external-edit/rollback requirements.
+Enumerate actual typed keys: a legacy Hashtable entry named Keys shadows .Keys and
+can also hide real changes. E24 explicitly corrects that dynamic-member collision.
 
 `SourceFingerprint.Health(snapshot, culture?)` preserves the legacy v3 text formula:
 filter only root dist/* using captured current-culture-ignore-case prefix semantics,
@@ -1056,6 +1058,8 @@ sort remaining paths culturally then ordinally, join path=UPPERHASH with LF/no f
 LF, append |validator=3, and return lowercase SHA256 of replacement-fallback UTF8.
 Keep Turkish and ignorable-character matching. E25 stabilizes cultural sort ties,
 which may invalidate an old health cache but must never omit a path. This slice
+also retains actual paths named Keys rather than using the legacy shadowed member,
+so those old incomplete fingerprints change under E25 as well. This slice
 hashes the complete tree first; future health-only scans can avoid dist byte reads
 while still checking links, and cannot substitute for a protected full snapshot.
 

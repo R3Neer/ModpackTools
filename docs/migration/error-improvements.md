@@ -280,11 +280,16 @@ that safety defect. Preserve missing/null equivalence, hash case-sensitive compa
 ordinary path casing and full Path/Before/After values. This is an explicit successful
 result correction required for complete external-edit detection, not an error-only
 formatting change.
+Also enumerate actual dictionary keys: a source key named Keys shadows PowerShell's
+Hashtable .Keys property and can hide changes entirely. Preserve it as a real path,
+with all other keys, instead of reproducing that dynamic-member failure.
 
 ## E25: deterministic fingerprint ties and a distinct full-source identity
 
 Keep all paths in the legacy health fingerprint and stabilize cultural sort ties
 ordinally. Old tied-order cache hashes may change; regeneration is appropriate.
+Use actual key enumeration when a path named Keys shadowed the old Hashtable member;
+old incomplete fingerprints in that case change and are regenerated as well.
 Retain legacy root-dist filtering/culture, exact v3 payload and UTF8 fallback.
 Use a separately framed culture-independent full-tree fingerprint for future bound
 plans, with root identity separate. Do not substitute a filtered health identity
