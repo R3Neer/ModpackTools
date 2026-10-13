@@ -1072,6 +1072,15 @@ text and malformed surrogate controls; use streaming encoding/incremental hashin
 Test-only tree inspection exposes full paths/hashes and both fingerprints; changes
 inspection consumes explicit immutable hash maps; text-hash inspection consumes
 UTF16-unit arrays so malformed surrogate tests do not depend on JSON string decoding.
+Modes are --inspect-source-tree <root> [--culture name] [--max-tree-files n]
+[--max-tree-directories n] [--max-tree-bytes n] [--max-tree-path-chars n],
+--inspect-source-changes <before-json-object> <after-json-object> [--culture name],
+and --inspect-text-hash <utf16-units-json-array>. Tree output has root, files,
+health_fingerprint, source_fingerprint and root_hash; root_hash preserves
+TextHash.Compute(snapshot.Root.ToLowerInvariant()), the legacy health-cache address.
+Changes maps accept unique ordinal-ignore-case keys and null/string values;
+invalid/null objects are grammar failures before operations. Diagnostic JSON input
+is bounded to1Mi characters/depth16. Root identity is not part of All's content frame.
 Compare actual old tree/link/hash cases, hidden/system/Git/dist/root-file behavior,
 same-length/same-mtime content edits, ordinary changes and explicit E24/E25 cases.
 Exercise all exact/over resource limits, policy prelude, IO failure without partial
