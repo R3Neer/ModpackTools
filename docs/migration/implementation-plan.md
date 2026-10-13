@@ -373,3 +373,18 @@ ties. Warning-free locked restore/format/Release/Native AOT, own twelve successe
 seven E11 cases plus ordering/empty controls, native assertions and 15 protocol cases
 pass. Independent black-box 71 cases (42 successes, 25 E11, four invalid imports)
 and white-box 22 pairs plus deterministic tie controls pass with unchanged fixtures.
+`237f0c5`: pure reference assignment completed. Immutable typed wrappers retain
+original rows; cache projection records every occurrence and visible numbers use
+last assignment by object identity. Categories are validated even for mod-free
+views; null categories remain unreferenced and explicit unclassified duplication
+is preserved. Grouped sorting avoids category-by-mod scans. Warning-free locked
+restore/format/Release/Native AOT, native equal-record/repeated-object/null-category
+controls, seven own E13-derived full views, 27 selection and 15 protocol regressions
+pass. Independent black-box 28 original plus four separately captured E13 cases
+(36 native calls), and white-box original/derived views, error priorities, no-write
+and shared-parser controls close review. Original tie differences remain recorded;
+this is not blanket legacy tie parity or a persisted/public inventory capability.
+
+`702fa0e`: category baseline projection uses PSCustomObject before property sorting;
+one extra full multi-category comparison passes against frozen native v34, alongside
+existing cases. This corrects the test harness, not product behavior.
