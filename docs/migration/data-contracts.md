@@ -857,3 +857,30 @@ errors/hints/targets and all duplicate matching labels. Result buffers before re
 Test-only --inspect-resource-targets <root> <selectors-json-array> validates1..1024
 nonempty strings before full inventory IO and writes full original PascalCase five
 fields for comparison. Numeric inputs are literal here; batch references precede it.
+
+## Default Options status and prerequisite / next checkpoint
+
+`DefaultOptionsDetector.Find(ImmutableArray<InventoryItem> mods) -> InventoryItem?`
+returns the original first row whose Id equals modrinth:WEg59z5b or Name equals
+Default Options with OrdinalIgnoreCase, or whose nonempty Filename matches the legacy
+case-insensitive pattern ^defaultoptions(?:-|\.|_).*\.jar$. No trimming, Source gate,
+physical JAR existence check, category validation or IO. Empty mods yields null;
+default arrays are invalid caller input. Bare defaultoptions.jar does not match.
+One terminal LF follows the regex dollar-anchor rule; CRLF/double LF do not match.
+Use a per-invocation, lazily constructed nonbacktracking BCL matcher with current
+culture, avoiding a generated invariant/static first-culture matcher. Compare fresh
+PowerShell processes for Turkish cases; the old PS regex cache retains its first
+compilation culture after an in-session culture switch, a separately retained
+historical behavior rather than the new pure contract.
+
+`Read(RawInventorySnapshot) -> DefaultOptionsState` derives Installed from original
+Mod, ConfigPresent from one File.Exists observation of config/defaultoptions-common.toml,
+and Ready from their conjunction. Directory/missing config is not a leaf. Observe
+the configuration once per invocation; legacy tests it twice when installed, so
+coherent status during a race is an explicit refinement, not a stress-test claim.
+`AssertInstalled(DefaultOptionsState, projectId)` returns that state unchanged or
+raises the original ResourcePack.DefaultOptionsRequired/NotInstalled/projectId
+diagnostic and install hint. It does not require Ready/ConfigPresent. No writes.
+Test-only --inspect-default-options <root> [--assert-installed true|false] validates
+grammar before full project/inventory IO, then writes Pascal Installed, ConfigPresent,
+Ready, Mod (complete common lowercase physical fields or null), and ConfigPath.
