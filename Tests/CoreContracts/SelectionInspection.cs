@@ -9,20 +9,7 @@ internal static class SelectionInspection
     {
         try
         {
-            if (arguments.Length < 2 || arguments.Length % 2 != 0)
-                throw new ArgumentException("Use --inspect-selected-inventory <root> [--filter value].");
-            var query = new RawInventoryQuery();
-            for (var index = 2; index < arguments.Length; index += 2)
-                query = arguments[index] switch
-                {
-                    "--type" => query with { Type = arguments[index + 1] },
-                    "--category" => query with { Category = arguments[index + 1] },
-                    "--side" => query with { Side = arguments[index + 1] },
-                    "--source" => query with { Source = arguments[index + 1] },
-                    "--state" => query with { State = arguments[index + 1] },
-                    "--match" => query with { Match = arguments[index + 1] },
-                    _ => throw new ArgumentException("Unknown selection-inspection option.")
-                };
+            var query = ParseQuery(arguments);
             var view = InventorySelector.Select(InventoryReader.Read(ProjectReader.Read(arguments[1])), query);
             using var writer = new Utf8JsonWriter(Console.OpenStandardOutput());
             writer.WriteStartObject();
@@ -54,6 +41,25 @@ internal static class SelectionInspection
                 "check inventory selection arguments and input access permissions", null);
             return 2;
         }
+    }
+
+    internal static RawInventoryQuery ParseQuery(string[] arguments)
+    {
+        if (arguments.Length < 2 || arguments.Length % 2 != 0)
+            throw new ArgumentException($"Use {arguments.FirstOrDefault()} <root> [--filter value].");
+        var query = new RawInventoryQuery();
+        for (var index = 2; index < arguments.Length; index += 2)
+            query = arguments[index] switch
+            {
+                "--type" => query with { Type = arguments[index + 1] },
+                "--category" => query with { Category = arguments[index + 1] },
+                "--side" => query with { Side = arguments[index + 1] },
+                "--source" => query with { Source = arguments[index + 1] },
+                "--state" => query with { State = arguments[index + 1] },
+                "--match" => query with { Match = arguments[index + 1] },
+                _ => throw new ArgumentException("Unknown selection-inspection option.")
+            };
+        return query;
     }
 
     private static void WritePhysical(Utf8JsonWriter writer, string name, IEnumerable<InventoryItem> items)

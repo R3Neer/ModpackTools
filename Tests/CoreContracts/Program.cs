@@ -15,6 +15,7 @@ if (args.FirstOrDefault() == "--inspect-resource-view") return ResourceViewInspe
 if (args.FirstOrDefault() == "--inspect-inventory") return FullInventoryInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-selected-inventory") return SelectionInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-categories") return CategoryInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-numbered-inventory") return NumberingInspection.Run(args);
 
 // Test-only transport peer: arbitrary replies exercise adapter validation before
 // any parent session mutation. This mode is never part of the shipping CLI.
@@ -179,5 +180,23 @@ foreach (var query in new[] { new RawInventoryQuery(Type: null), new RawInventor
     catch (ModpackTools.Core.DomainException exception) when (exception.Target is ModpackTools.Core.TextTarget { Value: "" }) { continue; }
     throw new InvalidOperationException("Explicit null selection choice was silently defaulted");
 }
-Console.WriteLine($"PSD1 native contracts passed: {invalid.Length + 7 + limits.Length} rejected inputs, typed literals, nested arrays, bounded numeric extraction, immutable classification, {args.Length} files");
+var numberMetadata = editorial with { Categories = PsdReader.Parse("@{unclassified=@{Order=0};qol=@{Order=1}}") };
+var identityA = original with { Name = "Same", Category = "unclassified", Filename = null };
+var identityB = identityA with { };
+var classifiedC = original with { Category = "qol" };
+var unreferenced = original with { Category = null };
+var activeIdentity = new ActiveResource("builtin", "Builtin", "", ActiveResourceSource.Builtin, 1);
+var identitySelection = new InventorySelection(rawSnapshot.Project, numberMetadata,
+    [identityA, identityB, identityA, classifiedC, unreferenced], [activeIdentity, activeIdentity], [localResource], [],
+    [ContentKind.Mod, ContentKind.ResourcePack], []);
+var numbered = InventoryReferences.Assign(identitySelection);
+if (!numbered.Mods.Select(row => row.Number).SequenceEqual(new int?[] { 7, 6, 7, 4, null }) ||
+    !numbered.ActiveResources.Select(row => row.Number).SequenceEqual([9, 9]) ||
+    numbered.InactiveResources[0].Number != 10 || numbered.References.Length != 10 ||
+    numbered.References[0].Filename != "" || numbered.References[0].Selector != identityA.Id ||
+    numbered.References[7].Selector != activeIdentity.Id || numbered.References[9].Selector != localResource.Filename ||
+    !ReferenceEquals(numbered.Mods[0].Item, identityA) || !ReferenceEquals(numbered.Mods[1].Item, identityB) ||
+    !ReferenceEquals(numbered.Selection, identitySelection) || identityA != identityB || ReferenceEquals(identityA, identityB))
+    throw new InvalidOperationException("Reference occurrence, object identity, null category or original-row retention failed");
+Console.WriteLine($"PSD1 native contracts passed: {invalid.Length + 7 + limits.Length} rejected inputs, typed literals, nested arrays, bounded numeric extraction, immutable classification and reference identities, {args.Length} files");
 return 0;
