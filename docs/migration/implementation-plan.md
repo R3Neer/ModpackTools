@@ -359,3 +359,10 @@ Warning-free locked restore/format/Release/Native AOT, expanded own resource nin
 successes/eight E09 and mod 19 successes/six E07, inventory/native/protocol regressions
 pass. Black-box 139 invocations (30 new, 55 classification, 54 resource regressions)
 and white-box twelve additional contrasts close the correction with intact fixtures.
+`974f42d`: PSD1 import duplicate-key validation now matches PowerShell's linguistic
+collision guard while runtime tables keep ordinal lookup. Independent table scopes,
+original key spelling and valid noncolliding Unicode keys are retained. Warning-free
+locked restore/format/Release/Native AOT, 25 rejection assertions and scope/lookup
+controls, 24 own editorial pairs, raw inventory and 15 protocol regressions pass.
+Black-box 86 invocations (34 key/scope cases plus 52 editorial regressions) and
+white-box ten independent pairs close the guard; fixtures remain intact.
