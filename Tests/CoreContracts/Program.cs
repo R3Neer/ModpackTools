@@ -16,6 +16,7 @@ if (args.FirstOrDefault() == "--inspect-inventory") return FullInventoryInspecti
 if (args.FirstOrDefault() == "--inspect-selected-inventory") return SelectionInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-categories") return CategoryInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-numbered-inventory") return NumberingInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-write-reference-cache") return CacheWriteInspection.Run(args);
 
 // Test-only transport peer: arbitrary replies exercise adapter validation before
 // any parent session mutation. This mode is never part of the shipping CLI.
