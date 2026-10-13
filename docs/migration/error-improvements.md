@@ -122,3 +122,22 @@ break for distinct keys that collate equally (such as composed/decomposed Unicod
 This stabilizes diagnostic wording across dictionary enumeration orders. It changes
 only the error's informational list; category membership, row filtering and future
 numbered references do not acquire a new comparison or ordering rule here.
+
+## E11: invalid category definitions identify their key
+
+Replace actual category ContainsKey/property/Int32 conversion runtime failures
+with Metadata.InvalidCategoryDefinition / InvalidData, the category key target
+and a metadata repair hint. Evaluate all definitions even for an empty/mod-free
+selection, matching legacy reference preparation. Preserve successful null fields,
+array/table Name display, scalar rounding and singleton table wrappers. No repair,
+metadata write, omission or successful partial result occurs.
+
+## E12: reproducible ordering for equal category priority and name
+
+Sort category definitions by existing Int32 Order and current-culture Name, then
+ordinal Key only for ties. Five fresh PowerShell processes returned five different
+key orders for one identical four-category input with equal Order/Name; no stable
+legacy numbering can be preserved for that ambiguous input. Deterministic ordering
+prevents regenerated references from drifting without content changes. This is a
+limited successful-order change, not an error-format change. Ordinary category and
+row ordering remains unchanged; keys that collate equally are retained separately.

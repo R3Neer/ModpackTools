@@ -461,3 +461,31 @@ always a typed collection, matching the public mapper's array normalization.
 Test-only --inspect-selected-inventory <root> [--type/--category/--side/--source/
 --state/--match value] emits raw groups, included_types, filters and total_matches.
 It does not assign references, cache data, inspect health or change public dispatch.
+
+## Ordered category definitions / next checkpoint
+
+`CategoryDefinitions.Read(EditorialMetadata) -> ImmutableArray<CategoryDefinition>`
+is pure and produces Key, Name and Int32 Order for every category, even when a
+selected inventory contains no mods. Name defaults to Key.ToUpperInvariant only
+when its field is absent; a present null becomes empty, arrays use the existing
+editorial display projection and tables retain their PowerShell display spelling.
+Order defaults to 1000 only when absent. Present null becomes zero, boolean maps
+to 0/1, scalar strings/numbers preserve the existing bounded Int32 conversion,
+including midpoint-to-even rounding. Arrays/tables as Order are failures, including
+singleton arrays; do not unwrap them into successful numbers.
+
+Category entries reuse the typed table-field projection with no truthy guard.
+Supported singleton table wrappers retain their behavior. Multi-table Name fields
+can project successfully, while projected arrays as Order fail as PowerShell does.
+All category definitions are evaluated before sorting and irrespective of selected
+kind. Actual method/property/cast failures receive E11 InvalidCategoryDefinition,
+with the category key and metadata repair hint; unused malformed definitions are
+not silently skipped at this stage. This differs from lazy matching mod overrides.
+
+Sort by Order and CurrentCultureIgnoreCase Name. E12 adds an ordinal Key tie-break
+only when both preceding comparisons tie: legacy Hashtable enumeration made this
+order vary between fresh processes. Preserve all definitions; no deduplication by
+linguistic key comparison and no implicit reserved-category rewrite. This ordering
+will be shared by reference assignment and presentation rather than reimplemented
+by adapters. No files/cache, timestamps, reference numbers or public dispatch are
+changed in this checkpoint. Test-only --inspect-categories <root> emits definitions.
