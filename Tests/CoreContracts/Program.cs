@@ -1,4 +1,6 @@
 using ModpackTools.Core.Data;
+using ModpackTools.Core.Inventory;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Text.Json;
 
@@ -7,6 +9,7 @@ if (args.FirstOrDefault() == "--inspect-local-zips") return LocalZipInspection.R
 if (args.FirstOrDefault() == "--inspect-jar-display") return JarDisplayInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-local-jars") return LocalJarInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-editorial") return EditorialInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-classified-mods") return ClassificationInspection.Run(args);
 
 // Test-only transport peer: arbitrary replies exercise adapter validation before
 // any parent session mutation. This mode is never part of the shipping CLI.
@@ -123,5 +126,18 @@ foreach (var literal in new[] { new string('9', 309), new string('9', 310), "-" 
     catch (PsdParseException) { continue; }
     throw new InvalidOperationException("Non-importable overflowing integer was accepted");
 }
-Console.WriteLine($"PSD1 native contracts passed: {invalid.Length + 7 + limits.Length} rejected inputs, typed literals, nested arrays, bounded numeric extraction, {args.Length} files");
+var editorialData = PsdReader.Parse("@{Categories=@{qol=@{}};Mods=@{'modrinth:x'=@{Name='Override';Side='CLIENT';Category='QOL'}};ResourcePacks=@{}}");
+var editorial = new EditorialMetadata(editorialData, (PsdTable)editorialData.Entries["Categories"],
+    (PsdTable)editorialData.Entries["Mods"], (PsdTable)editorialData.Entries["ResourcePacks"], null);
+var original = new InventoryItem("modrinth:x", ContentKind.Mod, "Original", "one.jar", "unknown",
+    ContentSource.Packwiz, "v1", "metadata", true);
+var shader = original with { Kind = ContentKind.ShaderPack };
+ImmutableArray<InventoryItem> input = [original, original with { Filename = "two.jar" }, shader];
+var classified = ModClassification.Apply(input, editorial);
+if (original.Name != "Original" || original.Category != null || classified[0].Name != "Override" ||
+    classified[0].Category != "QOL" || classified[0].Pinned != true || classified[0].VersionId != "v1" ||
+    classified[1].Filename != "two.jar" || classified[1].Name != "Override" || classified[2] != shader ||
+    !ModClassification.Apply(classified, editorial).SequenceEqual(classified))
+    throw new InvalidOperationException("Classification immutability, field retention or idempotence failed");
+Console.WriteLine($"PSD1 native contracts passed: {invalid.Length + 7 + limits.Length} rejected inputs, typed literals, nested arrays, bounded numeric extraction, immutable classification, {args.Length} files");
 return 0;
