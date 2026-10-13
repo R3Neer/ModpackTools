@@ -331,7 +331,18 @@ ZIP, native invariants and 15 protocol regressions pass. Independent black-box 5
 cases and white-box seven additional successes/five E09 cases, isolation and cache/
 immutability controls pass. This remains internal rather than a public inventory.
 
-Next checkpoint: full read-only
+Full raw inventory composition completed. Interleaved readers preserve failure
+priority; managed and ZIP quotas span all applicable kinds, and every policy is
+validated before inventory IO. Mods/shaders sort stably while resources and original
+JAR observations retain discovery identity/order. Inspector buffers complete JSON
+and keeps typed numeric diagnostics. Warning-free Native AOT, all-project format/
+build, own snapshot/priority/identity/aggregate/policy cases and managed/JAR/ZIP/order/
+native/protocol regressions pass. Independent black-box review passes 63 invocations
+plus 17 strengthened assertions with unchanged fixtures; white-box closes one exact
+snapshot, two E02 priority assertions, suppressed-ZIP quotas and four extra invalid
+policies. This does not yet replace public content list or provide complete health.
+
+Next checkpoint: filtered read-only
 composition into RawInventorySnapshot. Native inspection tests make each internal
 capability observable without partial public content-list success. Public content
 list still uses the legacy engine.
