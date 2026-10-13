@@ -293,7 +293,20 @@ pairs, ten error/limit controls, 19 editorial pairs, bounded numeric contracts a
 pairs plus parser/architecture checks close the correction. Original main was
 rechecked clean at 025b7f3. No full inventory performance claim follows from this.
 
-Next checkpoint: editorial classification and resource-order
+`22d4399`: pure immutable mod classification completed for supported PSD1 inputs.
+Typed physical rows preserve source-specific pin/version presence; metadata applies
+to duplicate IDs without sorting or mutating input. Name/Side/Category presence,
+case, null/array/table display and successful table-array projections match the
+baseline; actual legacy override runtime failures now receive E07 diagnostics.
+Warning-free Native AOT and all-project format/build, 17 own successes/four E07
+failures, immutable/idempotent contracts, 19 editorial and 15 protocol regressions
+pass. Independent black-box review passes 55 cases (47 success/eight E07); white-box
+review passes seven extra successes/three failures and the ownership checks.
+It additionally recommends collapsing a projected singleton field group for typed
+metadata constructed in memory, a shape outside current literal parser fixtures.
+Handle that separately before expanding the pure API's callers.
+
+Next checkpoint: resource-order reading and
 composition into RawInventorySnapshot. Native inspection tests make each internal
 capability observable without partial public content-list success. Public content
 list still uses the legacy engine.
