@@ -26,8 +26,17 @@ public sealed record ArtifactTraversalLimits
 public static class ArtifactArchiveReader
 {
     public static ArtifactArchiveDeclarations Read(string path, string loader, ArtifactTraversalLimits? limits = null)
+        => ReadCore(path, loader, limits, null);
+
+    public static ArtifactArchiveDeclarations Read(FileStream file, string displayPath, string loader, ArtifactTraversalLimits? limits = null)
     {
-        ArgumentNullException.ThrowIfNull(path); ArgumentNullException.ThrowIfNull(loader);
+        ArgumentNullException.ThrowIfNull(file);
+        if (!file.CanRead || !file.CanSeek) throw new ArgumentException("Borrowed archive handle must be readable and seekable.", nameof(file));
+        return ReadCore(displayPath, loader, limits, file);
+    }
+
+    internal static ArtifactTraversalLimits ValidatePolicy(ArtifactTraversalLimits? limits)
+    {
         limits ??= new(); RootArchiveReader.Validate(limits.Root);
         var invalid = limits.MaximumDepth is < 0 or > 16 ? nameof(limits.MaximumDepth)
             : limits.MaximumChildBytes <= 0 ? nameof(limits.MaximumChildBytes)
@@ -40,10 +49,19 @@ public static class ArtifactArchiveReader
             : limits.MaximumDiagnostics <= 0 ? nameof(limits.MaximumDiagnostics) : null;
         if (invalid is not null) throw new DomainException("Metadata.InvalidTraversalPolicy", "Archive traversal limits are invalid",
             "use positive quotas and depth between 0 and 16", target: invalid);
+        return limits;
+    }
+
+    private static ArtifactArchiveDeclarations ReadCore(string path, string loader, ArtifactTraversalLimits? limits, FileStream? supplied)
+    {
+        ArgumentNullException.ThrowIfNull(path); ArgumentNullException.ThrowIfNull(loader);
+        limits = ValidatePolicy(limits);
         var scope = new Scope(limits, loader);
         try
         {
-            using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var owned = supplied is null ? new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read) : null;
+            var file = supplied ?? owned!;
+            file.Position = 0;
             scope.Preflight(file);
             using var archive = new ZipArchive(file, ZipArchiveMode.Read, leaveOpen: true);
             scope.Visit(archive, [], 0);
