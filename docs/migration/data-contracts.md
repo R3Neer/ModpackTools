@@ -1425,4 +1425,40 @@ preflight is a new global resource prelude, not an exact old failure-priority cl
 E34 retains actual declaration/read stages and prefixes. Acceptance includes52 new
 original ZIPs,204 earlier root fixtures, staged later-entry limits, first duplicates,
 encoding, corrupt/nonZIP/empty inputs, actual byte limits/handle release and shared
-Forge/Fabric/Quilt pure-parser regressions. No Native50 acceptance is claimed yet.
+Forge/Fabric/Quilt pure-parser regressions. Native50 acceptance is recorded below.
+
+## Nested archive traversal / capability51
+
+ArtifactArchiveReader returns immutable ArtifactMod(Declaration,Nested,EntryChain)
+and ArtifactDiagnostic(Diagnostic,EntryChain), retaining duplicate occurrences in
+depth-first declaration order. EntryChain is an array of exact ZIP names, never a
+filesystem path. Root remains separately observable. Completion describes traversal,
+not dependency health. Filter NoSupportedManifest only in children.
+
+Reuse an internally opened root reader on the same preflighted archive handle.
+Each available child is copied into a unique CreateNew, FileShare.None,
+DeleteOnClose temporary FileStream with a pooled64KiB buffer. Rewind and inspect
+that same handle; dispose child ZIP before spool. No source writes or child pathname
+extraction. Missing or declared oversized children warn and continue. Copy/open/ZIP
+failure stops remaining children of that parent; returned child declaration errors
+allow its parent's next sibling. Earlier declarations and diagnostics survive.
+At depth17 copy and construct the archive before the depth warning; no metadata
+is read there. Default maximum depth16, hard upper bound16.
+
+Traversal limits: existing per-root policies; actual child bytes128MiB;
+aggregate copied bytes512MiB; available nested attempts1000 (root excluded,
+duplicates/copy failures/depth17 included, missing/declared oversized excluded);
+aggregate delivered metadata24MiB; aggregate actual central bytes64MiB and
+entries100000 including root and every opened child attempt; emitted mods100000
+and diagnostics100000 plus one reserved terminal quota diagnostic. Positive
+policies validate before root IO. Census and copy counters charge before accepting
+buffers/index allocation. Root parsers receive remaining mod/diagnostic allowances
+before construction; per-root declaration limits remain distinct. Exhausting a
+traversal quota terminates the entire invocation, preserving the accumulated prefix.
+No claim that these policies prove the final128MiB public memory gate.
+
+E37 explicitly refines resource exhaustion and temporary-spool failures with typed,
+contextual diagnostics. Finite acceptance covers DFS/duplicates, sibling propagation,
+root-only warning, Forge child warnings, valid/corrupt depth17 priority, actual-size
+lies, exact/over quotas, source hashes, handles and spool cleanup. No Native51
+acceptance is claimed before frozen artifacts and both reviews.

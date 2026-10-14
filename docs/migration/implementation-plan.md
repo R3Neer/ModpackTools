@@ -802,3 +802,22 @@ This isolates repeated conversion allocation, not process RAM or wall speed.
 Raw samples/summary/artifact hashes are retained under benchmarks/root-text-*.csv
 and root-text-allocation-summary.json. Reproducible sources, snapshot, locks and
 logs remain assessment/review-whitebox/root-allocation-aot-49 with its README.
+
+Capability50 completed as ae4ea3a: bounded root archive ownership, first duplicate
+lookup, encoding/BOM compatibility, staged single decode and retained root prefixes.
+Three projects pass locked restore, formatting and strict Release; both Native AOT
+publications are warning-free. Host v68 SHA256:
+291F3811AEED394F70769435EC110A6E41D753BDB1C7089BCF96D58197CF748D;
+CLI v75 SHA256:711E265E68A28C35E884DFAC1E41D78F925A5DCD8DA8CC368C3DCD45DD3919FE.
+Own14 archive,24 root,26 Forge,44 ranges,106 ordering,15 protocol and default
+assertions pass. Independent blind282 (256 full roots/26 controls) and white98
+(30 archive/2 actual stored excess/47 Forge/19 root) pass. Deflate underclaimed
+sizes may deliver truncated data; preserved provisional assessments distinguish
+this from stored-entry canaries that prove actual delivered-byte quota enforcement.
+Fixture audits, empty stderr and handle release pass. This is root-only; no child
+traversal, public content switch, whole-artifact health or speed claim follows.
+
+Next capability51 preserves DFS duplicate occurrences and parent-scoped failure
+propagation while replacing recursive MemoryStreams with owned disk spools. Sixteen
+independent original observations establish depth17 construction priority. Contract
+and E37 resource refinement are in data-contracts.md before implementation.
