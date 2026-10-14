@@ -62,7 +62,7 @@ or reflection-based object serialization in the core.
 | Maven ranges | Reuse/adapt `Private/MavenVersion.cs`, keeping its original range/qualifier fixtures. | Avoid a second guessed comparator. Nullable/style adaptation must not change ordering. |
 | ZIP/JAR | `System.IO.Compression`, bounded streams and existing manifest/nesting limits. | Existing runtime APIs; no mod execution. |
 | Hashes | .NET cryptography APIs for declared algorithms; buffer/stream measurement, full verification at mutation boundaries. | Remove interpreter overhead without weakening integrity. |
-| HTTP | One `HttpClient` per process; explicit timeouts, cancellation, bounded concurrency, per-request deduplication. | Avoid repeated connections/provider requests and unbounded task fan-out. |
+| HTTP | Invocation-owned reusable metadata and artifact clients; explicit timeouts, cancellation, bounded concurrency and request/identity coordination. | Keep distinct JSON/body and artifact/hash budgets; avoid a client per helper/file and unbounded task fan-out. |
 | Locks/atomic writes | .NET file sharing/handles and same-directory temporary replacement; preserve existing rollback semantics. | Start from known Windows behavior; injected failure tests govern changes. |
 | Tests | Existing Pester/Nu as legacy/public-contract harness; add a native-process differential harness before switching commands. | No external unit-test framework is required to begin. Managed unit tests can supplement but never replace native artifact checks. |
 
