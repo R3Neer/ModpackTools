@@ -775,7 +775,10 @@ version parts, warmed binary/input filesystem caches, including parse/serializat
 stdout/startup. All response hashes match. Array sampled peak working-set median is
 12193792 old versus11083776 new bytes; scalar11456512 versus11091968. Wall medians
 64.6634/63.86ms for array and65.0743/67.3412ms for scalar are not a speed claim.
-White's separate three-trial samples instead increase working-set for both shapes;
+White's separate three-trial samples, retained in
+benchmarks/root-text-projection-independent-samples.jsonl, instead increase
+working-set for both shapes (48-alias array10260480/11091968 and scalar
+11005952/12120064 old/new median bytes);
 the noisy whole-process measurements do not establish a robust memory reduction.
 Keep both results, distinguish sampled OS working-set from GC allocations, and do
 not generalize this diagnostic fixture to public CLI performance. Source review
