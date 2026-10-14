@@ -83,9 +83,9 @@ internal static class RequirementInspection
                     foreach (var child in field.EnumerateArray()) children.Add(Requirement(child, depth + 1));
                     return children.ToImmutable();
                 }
-                var range = value.TryGetProperty("Range", out var raw) ? VersionRangeDeclaration.Read(raw, memberComparer: comparer) : VersionRange.Text("*");
+                var constraint = value.TryGetProperty("Range", out var raw) ? VersionConstraint.FromJsonLiteral(raw.GetRawText(), comparer == StringComparer.OrdinalIgnoreCase) : VersionConstraint.Text("*");
                 var unless = value.TryGetProperty("Unless", out var condition) && condition.ValueKind != JsonValueKind.Null ? Requirement(condition, depth + 1) : null;
-                return new(Text("Target"), range, "", Text("Kind", "required"), Text("Side", "both"), Text("Scope", "mod"),
+                return new(Text("Target"), constraint, Text("Kind", "required"), Text("Side", "both"), Text("Scope", "mod"),
                     value.TryGetProperty("Maven", out var maven) && maven.GetBoolean() ? VersionScheme.Maven : VersionScheme.General,
                     Text("Source", "manifest"), Text("SuggestedVersionId"), Children("Any"), Children("All"), unless);
             }

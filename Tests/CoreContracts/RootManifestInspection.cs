@@ -20,6 +20,7 @@ internal static class RootManifestInspection
             var forgeLimits = new ForgeManifestLimits();
             var archiveLimits = new RootArchiveLimits();
             var traversalLimits = new ArtifactTraversalLimits();
+            var includeEvidence = false;
             var probes = ImmutableArray<string?>.Empty;
             var seen = new HashSet<string>(StringComparer.Ordinal);
             for (var index = offset; index < arguments.Length; index += 2)
@@ -30,6 +31,9 @@ internal static class RootManifestInspection
                 long Bytes() => long.Parse(value, CultureInfo.InvariantCulture);
                 switch (arguments[index])
                 {
+                    case "--include-constraint-evidence": includeEvidence = bool.Parse(value); break;
+                    case "--max-constraint-wire-chars": limits = limits with { MaximumConstraintWireCharacters = Number() }; break;
+                    case "--max-aggregate-constraint-wire-chars": limits = limits with { MaximumAggregateConstraintWireCharacters = Number() }; break;
                     case "--max-nested-depth" when traversal: traversalLimits = traversalLimits with { MaximumDepth = Number() }; break;
                     case "--max-child-bytes" when traversal: traversalLimits = traversalLimits with { MaximumChildBytes = Bytes() }; break;
                     case "--max-copied-bytes" when traversal: traversalLimits = traversalLimits with { MaximumCopiedBytes = Bytes() }; break;
@@ -112,7 +116,7 @@ internal static class RootManifestInspection
                     foreach (var alias in mod.Provides) Alias(writer, alias);
                     writer.WriteEndArray();
                     writer.WriteStartArray("Requirements");
-                    foreach (var requirement in mod.Requirements) Requirement(writer, requirement, probes);
+                    foreach (var requirement in mod.Requirements) Requirement(writer, requirement, probes, includeEvidence);
                     writer.WriteEndArray(); writer.WriteEndObject();
                 }
                 writer.WriteEndArray();
@@ -216,9 +220,15 @@ internal static class RootManifestInspection
         }
         writer.WriteString("value", alias.Version); writer.WriteEndObject();
     }
-    private static void Requirement(Utf8JsonWriter writer, ManifestRequirement requirement, ImmutableArray<string?> probes)
+    private static void Requirement(Utf8JsonWriter writer, ManifestRequirement requirement, ImmutableArray<string?> probes, bool includeEvidence)
     {
         writer.WriteStartObject(); writer.WriteString("Target", requirement.Target); writer.WriteString("RangeDisplay", requirement.RangeDisplay);
+        if (includeEvidence)
+        {
+            writer.WriteStartObject("ConstraintEvidence");
+            writer.WriteString("LegacyJson", requirement.Constraint.LegacyJson); writer.WriteString("PublicJson", requirement.Constraint.PublicJson);
+            writer.WriteString("TypedFingerprint", requirement.Constraint.TypedFingerprint); writer.WriteEndObject();
+        }
         writer.WriteString("Kind", requirement.Kind); writer.WriteString("Side", requirement.Side); writer.WriteString("Scope", requirement.Scope);
         writer.WriteBoolean("Maven", requirement.Scheme == VersionScheme.Maven); writer.WriteString("Source", requirement.Source);
         writer.WriteString("SuggestedVersionId", requirement.SuggestedVersionId);
@@ -236,9 +246,9 @@ internal static class RootManifestInspection
             writer.WriteEndObject();
         }
         writer.WriteEndArray();
-        writer.WriteStartArray("Any"); foreach (var child in requirement.Any) Requirement(writer, child, probes); writer.WriteEndArray();
-        writer.WriteStartArray("All"); foreach (var child in requirement.All) Requirement(writer, child, probes); writer.WriteEndArray();
-        writer.WritePropertyName("Unless"); if (requirement.Unless is { } unless) Requirement(writer, unless, probes); else writer.WriteNullValue();
+        writer.WriteStartArray("Any"); foreach (var child in requirement.Any) Requirement(writer, child, probes, includeEvidence); writer.WriteEndArray();
+        writer.WriteStartArray("All"); foreach (var child in requirement.All) Requirement(writer, child, probes, includeEvidence); writer.WriteEndArray();
+        writer.WritePropertyName("Unless"); if (requirement.Unless is { } unless) Requirement(writer, unless, probes, includeEvidence); else writer.WriteNullValue();
         writer.WriteEndObject();
     }
 }

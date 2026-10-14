@@ -128,7 +128,8 @@ internal static class TomlDeclarationReader
                 IntegerValueSyntax integer => new TomlInteger(integer.Value),
                 FloatValueSyntax number => new TomlFloat(number.Value),
                 BooleanValueSyntax boolean => new TomlBoolean(boolean.Value),
-                DateTimeValueSyntax date => new TomlDateText(date.Value.ToString()),
+                DateTimeValueSyntax date => new TomlDateText(date.Value.ToString(), date.Value.DateTime,
+                    date.Value.SecondPrecision, (int)date.Value.Kind, date.Value.Kind.ToString()),
                 _ => throw new FormatException("Unsupported TOML declaration syntax.")
             });
         }

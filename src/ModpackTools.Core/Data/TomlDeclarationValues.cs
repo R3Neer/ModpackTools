@@ -11,7 +11,7 @@ internal sealed record TomlText(string Value) : TomlDeclarationValue;
 internal sealed record TomlInteger(long Value) : TomlDeclarationValue;
 internal sealed record TomlFloat(double Value) : TomlDeclarationValue;
 internal sealed record TomlBoolean(bool Value) : TomlDeclarationValue;
-internal sealed record TomlDateText(string Value) : TomlDeclarationValue;
+internal sealed record TomlDateText(string Value, DateTimeOffset DateTime, int SecondPrecision, int Kind, string KindName) : TomlDeclarationValue;
 internal sealed record TomlEntry(string Key, TomlDeclarationValue Value) : TomlDeclarationValue;
 internal sealed record TomlSequence(ImmutableArray<TomlDeclarationValue> Items, bool TableArray = false, bool PipelineArray = false) : TomlDeclarationValue;
 internal sealed record TomlFields : TomlDeclarationValue

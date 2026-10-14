@@ -4,9 +4,13 @@ using ModpackTools.Core.Versions;
 
 namespace ModpackTools.Core.Artifacts;
 
-public sealed record ManifestRequirement(string Target, VersionRange Range, string RangeDisplay,
+public sealed record ManifestRequirement(string Target, VersionConstraint Constraint,
     string Kind, string Side, string Scope, VersionScheme Scheme, string Source, string SuggestedVersionId,
-    ImmutableArray<ManifestRequirement> Any, ImmutableArray<ManifestRequirement> All, ManifestRequirement? Unless);
+    ImmutableArray<ManifestRequirement> Any, ImmutableArray<ManifestRequirement> All, ManifestRequirement? Unless)
+{
+    public VersionRange Range => Constraint.SemanticRange;
+    public string RangeDisplay => Constraint.Display;
+}
 public sealed record ManifestAlias(ManifestAliasKey Key, string Version);
 public sealed record DeclaredMod(string Id, string Version, string Side,
     ImmutableArray<ManifestAlias> Provides, ImmutableArray<ManifestRequirement> Requirements);
@@ -18,7 +22,8 @@ public sealed record RootManifestDeclarations(ImmutableArray<DeclaredMod> Mods,
 public sealed record RootManifestLimits(int MaximumTextCharacters = 4 * 1024 * 1024,
     int MaximumTokenCharacters = 4 * 1024 * 1024, int MaximumNodes = 100000, int MaximumJsonDepth = 64,
     int MaximumRequirements = 100000, int MaximumRequirementDepth = 64,
-    int MaximumAliases = 100000, int MaximumNestedPaths = 100000);
+    int MaximumAliases = 100000, int MaximumNestedPaths = 100000,
+    int MaximumConstraintWireCharacters = 4 * 1024 * 1024, int MaximumAggregateConstraintWireCharacters = 16 * 1024 * 1024);
 
 public enum ManifestAliasKeyKind { String, Int64, BigInteger, Double, Boolean, Date, Array, Object }
 

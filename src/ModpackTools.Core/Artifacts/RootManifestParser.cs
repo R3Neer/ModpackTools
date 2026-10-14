@@ -60,13 +60,16 @@ public static class RootManifestParser
             : limits.MaximumRequirements <= 0 ? nameof(limits.MaximumRequirements)
             : limits.MaximumRequirementDepth is < 1 or > 64 ? nameof(limits.MaximumRequirementDepth)
             : limits.MaximumAliases <= 0 ? nameof(limits.MaximumAliases)
-            : limits.MaximumNestedPaths <= 0 ? nameof(limits.MaximumNestedPaths) : null;
+            : limits.MaximumNestedPaths <= 0 ? nameof(limits.MaximumNestedPaths)
+            : limits.MaximumConstraintWireCharacters <= 0 ? nameof(limits.MaximumConstraintWireCharacters)
+            : limits.MaximumAggregateConstraintWireCharacters <= 0 ? nameof(limits.MaximumAggregateConstraintWireCharacters) : null;
         if (invalid is not null) throw new DomainException("Metadata.InvalidDeclarationPolicy", "Root-manifest limits are invalid",
             "use positive declaration quotas and depths between 1 and 64", target: invalid);
     }
 
     private sealed class Scope(RootManifestLimits limits, DeclarationAllowance? allowance)
     {
+        private readonly ConstraintScope constraints = new(limits);
         public List<DeclaredMod> Mods { get; } = [];
         public List<ManifestDiagnostic> Diagnostics { get; } = [];
         public void Warn(ManifestDiagnostic diagnostic)
@@ -185,9 +188,9 @@ public static class RootManifestParser
             BeginRequirement(depth);
             return BuildRequirement(target, range, kind, [], [], null);
         }
-        private static ManifestRequirement BuildRequirement(string target, OrderedManifestValue range, string kind,
+        private ManifestRequirement BuildRequirement(string target, OrderedManifestValue range, string kind,
             ImmutableArray<ManifestRequirement> any, ImmutableArray<ManifestRequirement> all, ManifestRequirement? unless) => new(
-                target, OrderedManifestProjection.Range(range), OrderedManifestProjection.RangeDisplay(range), kind, "both", "mod",
+                target, constraints.Json(range), kind, "both", "mod",
                 VersionScheme.General, "manifest", "", any, all, unless);
         private ManifestRequirement QuiltRequirement(OrderedManifestValue value, string kind, int depth)
         {

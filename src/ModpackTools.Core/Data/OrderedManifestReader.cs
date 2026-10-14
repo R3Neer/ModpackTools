@@ -10,14 +10,14 @@ internal sealed class ManifestLimitException(string property) : Exception(proper
 
 internal static class OrderedManifestReader
 {
-    public static OrderedManifestValue Read(string text, RootManifestLimits limits)
+    public static OrderedManifestValue Read(string text, RootManifestLimits limits, bool parseDates = true)
     {
         using var input = new StringReader(text);
         using var guarded = new TokenLengthReader(input, limits.MaximumTokenCharacters);
         using var reader = new JsonTextReader(guarded)
         {
             MaxDepth = limits.MaximumJsonDepth,
-            DateParseHandling = DateParseHandling.DateTime,
+            DateParseHandling = parseDates ? DateParseHandling.DateTime : DateParseHandling.None,
             DateTimeZoneHandling = DateTimeZoneHandling.RoundtripKind,
             FloatParseHandling = FloatParseHandling.Double,
             Culture = CultureInfo.InvariantCulture,

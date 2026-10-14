@@ -99,7 +99,7 @@ public static partial class ForgeRootManifestParser
         public string Operation { get; private set; } = "read text";
         private int requirements;
         private readonly Dictionary<TomlDeclarationValue, string> textValues = new(ReferenceEqualityComparer.Instance);
-        private readonly Dictionary<TomlDeclarationValue, string> rangeDisplays = new(ReferenceEqualityComparer.Instance);
+        private readonly ConstraintScope constraints = new(limits.Declarations);
         public void Input(string? text, string manifest)
         { Manifest = manifest; Operation = "read text"; if (text?.Length > limits.Declarations.MaximumTextCharacters) throw new ManifestLimitException(nameof(limits.Declarations.MaximumTextCharacters)); }
         public void Warn(string code, string message)
@@ -125,7 +125,7 @@ public static partial class ForgeRootManifestParser
         private ManifestRequirement Requirement(string target, TomlDeclarationValue range, string kind = "required", string side = "both")
         {
             if (++requirements > limits.Declarations.MaximumRequirements) throw new ManifestLimitException(nameof(limits.Declarations.MaximumRequirements));
-            return new(target, TomlDeclarationProjection.Range(range), Projection(range, rangeDisplays, true), kind, side, "mod", VersionScheme.Maven, "manifest", "", [], [], null);
+            return new(target, constraints.Toml(range), kind, side, "mod", VersionScheme.Maven, "manifest", "", [], [], null);
         }
         public void Mods(string text, string name, Func<LoaderManifestEntry, string?> read)
         {
