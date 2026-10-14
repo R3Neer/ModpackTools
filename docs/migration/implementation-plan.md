@@ -711,3 +711,25 @@ Next declaration capability extracts Fabric/Quilt root manifest semantics into t
 requirements, aliases, sides, schema diagnostics and nested-path declarations.
 Archive ownership/byte limits and actual nested JAR traversal remain separate effects;
 no health result or supported-loader claim is inferred from display metadata alone.
+
+Fabric/Quilt root declarations completed as f9eaa18. The pure parser owns ordered
+typed values, aliases and recursive requirements, retaining partial prefixes and
+separate root completeness/child-loop eligibility. E32 repairs Keys shadowing;
+E33 bounds construction and decoding; E34 contextualizes incomplete declarations.
+All three projects pass locked restore, formatting and Release warnings-as-errors;
+both win-x64 Native AOT publications are warning-free. Host v64 SHA256:
+856CF080DF97E2AB3BC12351667A9D2C01D91E698DEB12B55CC4CF9CE753FB0B;
+CLI v71 SHA256:F11C01939CFAFD5D13BE9C2A3CB5F6DC469B2F6753CE999202BAD8A69E519657.
+Own24 full-root/live-range checks,226 cache regressions,44 range checks,106 ordering
+checks,15 protocol cases and default native assertions pass. Blind105 cases comprise
+76 original-root cases and29 policy/quota/grammar controls; white78 independent
+root/guard/codec/date controls and default assertions pass. Fixture audits and hashes
+are unchanged and stderr is empty. Provisional assessment alias-shadowing and
+alias-quota assumptions remain recorded separately from product fixes. White review
+found nested array equality must use scalar collection filtering; that product error
+was corrected and reviewed before publication. No archive traversal or speed claim.
+
+Next checkpoint characterizes Forge/NeoForge root TOML declarations, substitutions,
+dependency/features tables and Jar-in-Jar path intents. Use the pinned Tomlyn syntax
+API and an owned semantic boundary; the existing lexical inventory reader cannot
+stand in for full TOML declaration semantics. Actual archive traversal follows later.

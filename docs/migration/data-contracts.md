@@ -1262,13 +1262,24 @@ Keep General/Maven and existing cache cases as regressions. Native comparison mu
 cover complete root fields/order, nonstring alias lookup distinction, ISO/float/map
 casts, selected-manifest precedence, partial prefixes, nested intents without child
 effects, exact/over quotas and separately acknowledged E32 cases. Original70 blind
-archives and focused white oracles remain unchanged; there is no Native47 acceptance yet.
+archives and focused white oracles remain unchanged. Native47 acceptance is recorded
+in implementation-plan.md; expanded blind acceptance covers76 original root cases.
 
 Root results also carry CanTraverseNested: false after an actual parsing/limit
 failure, including a late schema member failure, because the original catch skips
 the child loop. Unknown-schema warnings alone retain true. Nested-path assignment
 is committed only after its extraction stage completes. Root completeness and
 child-loop eligibility are separate; neither claims that children were verified.
+Exact root status mapping: no diagnostics with a recognized root is Complete;
+only NoSupportedManifest with zero mods is Missing; UnknownSchema or an actual
+failure/resource diagnostic is Incomplete. UnknownSchema alone still permits
+the child loop. These new statuses have no direct original field; retained mods,
+warnings and operation eligibility are the original observations they describe.
+MaximumAliases counts each visited alias construction before allocating its key/
+version, including later overwrites; it is not the number of unique final entries.
+Falsey Fabric values skipped by the source rule consume no construction. For
+['alias','Alias','alias','é','é',''] five candidates produce three final string
+entries: exact quota5 succeeds and quota4 fails. This bounds duplicate work too.
 Alias arrays use deterministic first slot order with last values/first string key
 spelling; original Hashtable iteration is not claimed to have that stable order.
 The diagnostic root inspector exposes full requirement fields, original RangeDisplay
