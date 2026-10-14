@@ -757,3 +757,27 @@ Before archive integration, review repeated array-valued Fabric/Quilt version ca
 for bounded ownership and allocation reuse; then implement the real root archive
 facade and bounded nested traversal as independent, testable checkpoints. Keep
 public content commands on the current engine until complete health/wiring gates pass.
+
+Scoped root text reuse completed as abc0d3e. Non-string formatted nodes use an
+invocation-local reference cache at their existing lazy conversion points, preserving
+all access/failure priorities. Three-project locked restore/format/strict Release and
+both Native AOT publications pass warning-free. Host v67 SHA256:
+51BE3293DAAF1DC125BFB02A8F0BA44BB00F7DEDA84837626C01B2769DA600F1;
+CLI v74 SHA256:E20D0D4B92840176F348F3AC7AA17DDC12E41964A0A5B75AB9976DA9134A2262.
+Own24 root,26 Forge,44 range,106 ordering,15 protocol and default native assertions
+pass. Blind141 cases comprise112 unchanged roots and29 policy/grammar controls;
+white8 original priorities,19 root regressions, default assertions and36 independent
+before/after process samples pass with unchanged output hashes and no source blocker.
+
+Parent benchmark results are in benchmarks/root-text-projection-current-results.json:
+seven alternating fresh processes per engine/shape,48 aliases,two8192-character
+version parts, warmed binary/input filesystem caches, including parse/serialization/
+stdout/startup. All response hashes match. Array sampled peak working-set median is
+12193792 old versus11083776 new bytes; scalar11456512 versus11091968. Wall medians
+64.6634/63.86ms for array and65.0743/67.3412ms for scalar are not a speed claim.
+White's separate three-trial samples instead increase working-set for both shapes;
+the noisy whole-process measurements do not establish a robust memory reduction.
+Keep both results, distinguish sampled OS working-set from GC allocations, and do
+not generalize this diagnostic fixture to public CLI performance. Source review
+confirms one formatted result per reused owned node; a separate native allocation
+evaluation may quantify that narrower cost. Actual archive ownership is next.
