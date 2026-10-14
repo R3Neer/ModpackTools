@@ -19,7 +19,7 @@ try {
     $env:PSModulePath = $modules + [IO.Path]::PathSeparator + (Join-Path $PSHOME 'Modules')
     . (Join-Path $source 'Private/Errors.ps1')
     . (Join-Path $source 'Private/Installation.ps1')
-    [void](Invoke-MpInstallProcess @('-File', (Join-Path $package 'Install-ModpackTools.ps1'), '-Force', '-NonInteractive', '-SkipDoctor', '-InstallPath', $target))
+    [void](Invoke-MpInstallProcess @('-File', (Join-Path $package 'Install-ModpackTools.ps1'), '-Force', '-NonInteractive', '-SkipDoctor', '-SkipNushellAdapter', '-InstallPath', $target))
     $manifestPath = Join-Path $target 'ModpackTools.psd1'
     $text = [IO.File]::ReadAllText($manifestPath).Replace("'$releaseVersion'", "'1.0.0'")
     [IO.File]::WriteAllText($manifestPath, $text)
@@ -50,7 +50,7 @@ try {
     # Inject a post-replacement failure, beyond the existing preflight tests.
     [IO.File]::WriteAllText((Join-Path $package 'Private/VerifyInstallation.ps1'), "throw 'injected post-replacement validation failure'")
     $failed = $false
-    try { [void](Invoke-MpInstallProcess @('-File', (Join-Path $package 'Install-ModpackTools.ps1'), '-Force', '-NonInteractive', '-SkipDoctor', '-InstallPath', $target)) }
+    try { [void](Invoke-MpInstallProcess @('-File', (Join-Path $package 'Install-ModpackTools.ps1'), '-Force', '-NonInteractive', '-SkipDoctor', '-SkipNushellAdapter', '-InstallPath', $target)) }
     catch { if ($_.Exception.Message -notmatch 'injected post-replacement') { throw }; $failed = $true }
     if (-not $failed) { throw 'Expected post-replacement failure did not occur.' }
     $after = @(Get-ChildItem -LiteralPath $target -File -Recurse)

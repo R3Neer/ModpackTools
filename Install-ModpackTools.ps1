@@ -4,6 +4,8 @@ param(
     [switch]$NonInteractive,
     [switch]$SkipDoctor,
     [string]$InstallPath,
+    [string]$NushellConfigPath,
+    [switch]$SkipNushellAdapter,
     [string]$ExpectedManifestHash
 )
 
@@ -49,6 +51,8 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
     if ($NonInteractive) { $forward += '-NonInteractive' }
     if ($SkipDoctor) { $forward += '-SkipDoctor' }
     if ($InstallPath) { $forward += @('-InstallPath', $InstallPath) }
+    if ($NushellConfigPath) { $forward += @('-NushellConfigPath', $NushellConfigPath) }
+    if ($SkipNushellAdapter) { $forward += '-SkipNushellAdapter' }
     if ($ExpectedManifestHash) { $forward += @('-ExpectedManifestHash', $ExpectedManifestHash) }
     & $pwshPath @forward
     exit $LASTEXITCODE
@@ -61,6 +65,8 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
 $manifest = Import-PowerShellDataFile -LiteralPath (Join-Path $PSScriptRoot 'ModpackTools.psd1')
 $version = [string]$manifest.ModuleVersion
 $destination = Resolve-MpInstallDestination $InstallPath
+if ($NushellConfigPath -and $SkipNushellAdapter) { throw 'Do not combine -NushellConfigPath with -SkipNushellAdapter.' }
+$adapterConfigPath = if ($SkipNushellAdapter) { $null } elseif ($NushellConfigPath) { [IO.Path]::GetFullPath($NushellConfigPath) } else { Get-MpNushellConfigPath }
 $userModuleRoot = Split-Path -Parent $destination
 if ((Test-Path -LiteralPath $destination) -and -not $Force) {
     throw "ModpackTools is already installed at '$destination'. Use -Force to update it."
@@ -106,6 +112,8 @@ try {
         [void](Get-MpConsole)
     } (Join-Path $destination 'theme.toml')
     Remove-Module $stagedModule
+    $installationState = @{ SchemaVersion=1; InstallPath=$destination; ConfigureNushellAdapter=(-not $SkipNushellAdapter); NushellConfigPath=$adapterConfigPath }
+    [IO.File]::WriteAllText((Join-Path $temporary 'installation.json'), ($installationState | ConvertTo-Json -Compress), [Text.UTF8Encoding]::new($false))
     if (Test-Path -LiteralPath $destination) { Move-Item -LiteralPath $destination -Destination $backup }
     Move-Item -LiteralPath $temporary -Destination $destination
     $replacementPlaced = $true
@@ -139,9 +147,9 @@ catch {
 }
 finally { $installLock.Dispose() }
 Write-Information "ModpackTools $version installed at $destination" -InformationAction Continue
-Import-Module (Join-Path $destination 'ModpackTools.psd1') -Force
+$installedModule = Import-Module (Join-Path $destination 'ModpackTools.psd1') -Force -PassThru
 try {
-    $nuInstall = Install-MpNushellAdapter -ModuleRoot $destination
+    $nuInstall = if ($SkipNushellAdapter) { [pscustomobject]@{ Installed=$false; Reason='Nushell configuration was explicitly skipped.' } } else { Install-MpNushellAdapter -ModuleRoot $destination -ConfigPath $adapterConfigPath }
     if ($nuInstall.Installed) {
         Write-Information "Nushell adapter configured in $($nuInstall.ConfigPath)" -InformationAction Continue
     }
@@ -156,4 +164,4 @@ if (-not $SkipDoctor) {
     if ($NonInteractive) { modpack doctor }
     else { modpack doctor --fix }
 }
-& (Get-Module ModpackTools) { Write-R3Status (Get-MpConsole) success 'ModpackTools is ready. Open a new session or run: Import-Module ModpackTools -Force' }
+& $installedModule { Write-R3Status (Get-MpConsole) success 'ModpackTools is ready. Open a new session or run: Import-Module ModpackTools -Force' }

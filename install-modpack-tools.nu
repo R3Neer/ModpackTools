@@ -11,6 +11,8 @@ def main [
     --non-interactive
     --skip-doctor
     --install-path: string
+    --nushell-config-path: string
+    --skip-nushell-adapter
     --expected-manifest-hash: string
 ] {
     let pwsh = (external-path 'pwsh')
@@ -35,6 +37,8 @@ def main [
     if $force { $forwarded = ($forwarded | append '-Force') }
     if $non_interactive { $forwarded = ($forwarded | append '-NonInteractive') }
     if $skip_doctor { $forwarded = ($forwarded | append '-SkipDoctor') }
+    if $skip_nushell_adapter { $forwarded = ($forwarded | append '-SkipNushellAdapter') }
+    if $nushell_config_path != null { $forwarded = ($forwarded | append '-NushellConfigPath' | append $nushell_config_path) }
     if $install_path != null {
         $forwarded = ($forwarded | append '-InstallPath' | append $install_path)
     }

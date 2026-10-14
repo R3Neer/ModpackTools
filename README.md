@@ -70,10 +70,18 @@ For unattended installation:
 ```
 
 An explicit module destination can be supplied with `-InstallPath <directory>`.
+The directory must be named `ModpackTools` and separate from a Git checkout.
+Custom destinations can be outside Documents or HOME. Add their parent directory
+to `PSModulePath` for import by name, or import the installed manifest explicitly.
+Changing `PSModulePath` alone does not choose where a package manager installs modules.
 
 The installer can start under Windows PowerShell 5.1. When PowerShell 7 is missing it can offer to install it with WinGet and relaunch. Installation verifies the bundled R3CLI dependency, locates or installs Packwiz, installs the module and normally runs `modpack doctor --fix`.
 
 If Nushell is on `PATH`, the PowerShell installer also installs the Nu adapter and maintains one marked import block in `config.nu`.
+Use `-NushellConfigPath <file>` for a custom configuration or `-SkipNushellAdapter`
+to leave Nushell configuration untouched. The corresponding Nu installer options
+are `--nushell-config-path` and `--skip-nushell-adapter`. Self-update retains the
+selected installed module directory and these configuration choices.
 
 ### Nushell
 
