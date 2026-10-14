@@ -26,7 +26,9 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
     private readonly DateTimeOffset now;
     private readonly StringComparer comparer;
     private readonly object sync = new();
-    private readonly Dictionary<string, Lazy<Task<ImmutableArray<ProviderVersion>>>> pending = new(StringComparer.Ordinal);
+    private enum ResponseKind { Version, Batch, Project, Candidates }
+    private sealed record ProviderResponse(ProviderProject? Project, ImmutableArray<ProviderVersion> Versions);
+    private readonly Dictionary<string, Lazy<Task<ProviderResponse>>> pending = new(StringComparer.Ordinal);
     private readonly List<ProviderAcquisitionDiagnostic> diagnostics = [];
     private long bytes, endpointCharacters;
     private int requests, versions, inputIds;
@@ -74,8 +76,8 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
     {
         Input();
         ValidateId(id);
-        var result = await Request("version/" + id, [id], false).ConfigureAwait(false);
-        return result[0];
+        var result = await Request("version/" + id, [id], ResponseKind.Version).ConfigureAwait(false);
+        return result.Versions[0];
     }
 
     public Task<ImmutableArray<ProviderVersion>> GetVersionsAsync(IEnumerable<string?> ids)
@@ -99,10 +101,25 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
         using (var writer = new Utf8JsonWriter(buffer, new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }))
         { writer.WriteStartArray(); foreach (var id in selected) writer.WriteStringValue(id); writer.WriteEndArray(); }
         var json = System.Text.Encoding.UTF8.GetString(buffer.GetBuffer(), 0, (int)buffer.Length);
-        return Request("versions?ids=" + Uri.EscapeDataString(json), selected, true);
+        return Batch();
+        async Task<ImmutableArray<ProviderVersion>> Batch() =>
+            (await Request("versions?ids=" + Uri.EscapeDataString(json), selected, ResponseKind.Batch).ConfigureAwait(false)).Versions;
     }
 
-    private Task<ImmutableArray<ProviderVersion>> Request(string endpoint, string[] ids, bool batch)
+    public async Task<ProviderProject> GetProjectAsync(string id)
+    {
+        Input(); ProviderProject.ValidateId(id);
+        return (await Request("project/" + id, [id], ResponseKind.Project).ConfigureAwait(false)).Project!;
+    }
+
+    public async Task<ImmutableArray<ProviderVersion>> GetCandidateVersionsAsync(ProviderProject project,
+        string minecraftVersion, string loader)
+    {
+        ArgumentNullException.ThrowIfNull(project); Input();
+        return (await Request(project.CandidateEndpoint(minecraftVersion, loader), [project.Id], ResponseKind.Candidates).ConfigureAwait(false)).Versions;
+    }
+
+    private Task<ProviderResponse> Request(string endpoint, string[] ids, ResponseKind kind)
     {
         lock (sync)
         {
@@ -112,13 +129,13 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
             if (endpoint.Length > limits.MaximumEndpointCharacters) throw Resource(nameof(limits.MaximumEndpointCharacters));
             if (endpoint.Length > limits.MaximumTotalEndpointCharacters - endpointCharacters) throw Resource(nameof(limits.MaximumTotalEndpointCharacters));
             endpointCharacters += endpoint.Length;
-            var work = new Lazy<Task<ImmutableArray<ProviderVersion>>>(() => Fetch(endpoint, ids, batch));
+            var work = new Lazy<Task<ProviderResponse>>(() => Fetch(endpoint, ids, kind));
             pending.Add(endpoint, work);
             return work.Value;
         }
     }
 
-    private async Task<ImmutableArray<ProviderVersion>> Fetch(string endpoint, string[] ids, bool batch)
+    private async Task<ProviderResponse> Fetch(string endpoint, string[] ids, ResponseKind kind)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         timeout.CancelAfter(limits.TimeoutMilliseconds);
@@ -136,7 +153,7 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
             using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             GuardPath(directory); Directory.CreateDirectory(directory); GuardPath(directory);
-            ImmutableArray<ProviderVersion> result;
+            ProviderResponse result;
             using (var file = new FileStream(temporary, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 8192, FileOptions.Asynchronous))
             {
                 owned = true;
@@ -172,31 +189,57 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
                 using var document = decoded.Document;
                 var root = document.RootElement;
                 JsonDisplayProjection.Validate(root);
+                if (kind == ResponseKind.Candidates && root.ValueKind is not (JsonValueKind.Array or JsonValueKind.Null))
+                    throw Invalid("Provider candidate response must be an array or null.");
+                var batch = kind is ResponseKind.Batch or ResponseKind.Candidates;
                 var rowCount = root.ValueKind == JsonValueKind.Array ? root.GetArrayLength() : root.ValueKind == JsonValueKind.Null && batch ? 0 : 1;
-                if (!batch && rowCount != 1) throw Invalid("Provider single-version response must contain exactly one version.");
+                if (!batch && rowCount != 1) throw Invalid("Provider single response must contain exactly one object.");
                 lock (sync)
                 {
                     CheckBudget();
-                    if (rowCount > limits.MaximumReturnedVersions - versions) { exhausted = Resource(nameof(limits.MaximumReturnedVersions)); throw exhausted; }
-                    versions += rowCount;
+                    if (kind != ResponseKind.Project)
+                    {
+                        if (rowCount > limits.MaximumReturnedVersions - versions) { exhausted = Resource(nameof(limits.MaximumReturnedVersions)); throw exhausted; }
+                        versions += rowCount;
+                    }
                 }
                 var rows = root.ValueKind == JsonValueKind.Array ? root.EnumerateArray().ToArray() : rowCount == 0 ? [] : new[] { root };
                 var allowed = ids.ToHashSet(StringComparer.Ordinal);
                 var values = ImmutableArray.CreateBuilder<ProviderVersion>(rows.Length);
+                ProviderProject? project = null;
+                var collectionEntries = 0;
                 foreach (var row in rows)
                 {
-                    var version = ProviderVersionCache.Decode(row, decoded.Dates, decode.MaximumCollectionEntries);
-                    if (!allowed.Contains(version.Id)) throw Invalid("Provider returned an identity that was not requested.");
+                    if (kind == ResponseKind.Project)
+                    {
+                        project = ProviderProject.Decode(row, decoded.Dates, decode.MaximumCollectionEntries);
+                        if (!allowed.Contains(project.Id)) throw Invalid("Provider returned a project identity that was not requested.");
+                        continue;
+                    }
+                    var version = ProviderVersionCache.Decode(row, decoded.Dates,
+                        kind == ResponseKind.Candidates ? decode.MaximumCollectionEntries - collectionEntries : decode.MaximumCollectionEntries);
+                    if (kind == ResponseKind.Candidates)
+                    {
+                        if (!allowed.Contains(version.ProjectId)) throw Invalid("Provider candidate belongs to another project.");
+                        var entries = (long)version.Files.Length + version.Dependencies.Length + version.Loaders.Length + version.GameVersions.Length;
+                        if (entries > decode.MaximumCollectionEntries - collectionEntries) throw Resource("MaximumCollectionEntries");
+                        collectionEntries += (int)entries;
+                    }
+                    else if (!allowed.Contains(version.Id)) throw Invalid("Provider returned an identity that was not requested.");
                     values.Add(version);
                 }
-                result = values.ToImmutable();
+                var typedVersions = values.ToImmutable();
+                if (kind == ResponseKind.Candidates) typedVersions = ProviderCandidates.Order(typedVersions);
+                result = new(project, typedVersions);
                 token.ThrowIfCancellationRequested();
                 // Every row is valid before the first individually atomic store.
-                for (var index = 0; index < rows.Length; index++)
+                if (kind is ResponseKind.Project or ResponseKind.Candidates)
+                    Store(root, endpoint, token);
+                else for (var index = 0; index < rows.Length; index++)
                 {
                     token.ThrowIfCancellationRequested();
                     lock (sync) CheckBudget();
-                    Store(rows[index], result[index].Id, token);
+                    Store(rows[index], "version/" + result.Versions[index].Id, token);
                 }
             }
             return result;
@@ -228,9 +271,9 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
         }
     }
 
-    private void Store(JsonElement row, string id, CancellationToken token)
+    private void Store(JsonElement row, string endpoint, CancellationToken token)
     {
-        var path = Path.Combine(directory, TextHash.Compute("version/" + id) + ".json");
+        var path = Path.Combine(directory, TextHash.Compute(endpoint) + ".json");
         var temporary = Path.Combine(directory, ".store-" + Guid.NewGuid().ToString("N") + ".tmp");
         var owned = false;
         try

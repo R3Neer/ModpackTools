@@ -13,6 +13,7 @@ if (args.FirstOrDefault() == "--inspect-graph-report") return GraphInspection.Ru
 if (args.FirstOrDefault() == "--inspect-graph-policy") return GraphInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-provider-version-cache") return ProviderCacheInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-provider-acquisition") return ProviderAcquisitionInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-provider-candidates") return ProviderCandidateInspection.Run(args);
 
 if (args.FirstOrDefault() == "--inspect-psd-lookup")
 {
@@ -283,6 +284,7 @@ GraphContracts.Verify();
 GraphPolicyContracts.Verify();
 ProviderCacheContracts.Verify();
 ProviderAcquisitionContracts.VerifyAsync().GetAwaiter().GetResult();
+ProviderCandidateContracts.VerifyAsync().GetAwaiter().GetResult();
 ImportedLookupContracts.Verify();
 Console.WriteLine($"PSD1 native contracts passed: {invalid.Length + 7 + limits.Length} rejected inputs, typed literals, nested arrays, bounded numeric extraction, immutable classification/reference/alias identities, {args.Length} files");
 return 0;
