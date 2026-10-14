@@ -6,6 +6,12 @@ internal static class RootManifestContracts
 {
     public static void Verify()
     {
+        var repeated = RootManifestParser.Parse("{schemaVersion:1,id:'m',version:[12,1.234567891234567],provides:['a','b','c']}", null, "fabric");
+        Check(repeated.Mods[0].Version == "12 1.23456789123457" && repeated.Mods[0].Provides.All(alias => alias.Version == repeated.Mods[0].Version), "Repeated typed version projection");
+        var missingId = RootManifestParser.Parse("{schemaVersion:1,provides:[false]}", null, "fabric");
+        var missingVersion = RootManifestParser.Parse("{schemaVersion:1,provides:['a']}", null, "fabric");
+        Check(missingId.Diagnostics[0].Message.Contains("'id'", StringComparison.Ordinal)
+            && missingVersion.Diagnostics[0].Message.Contains("'version'", StringComparison.Ordinal), "Version projection preserves actual access stage");
         const string fabric = "{\"schemaVersion\":1,\"id\":\"root\",\"version\":\"1\",\"depends\":{\"Keys\":\"*\",\"other\":\"1.x\"},\"provides\":[12,\"12\",\"Keys\",true,[1],[1],{}]}";
         var result = RootManifestParser.Parse(fabric, null, "FABRIC");
         var mod = result.Mods.Single();
@@ -40,4 +46,6 @@ internal static class RootManifestContracts
         catch (DomainException exception) when (exception.Id == "ModpackTools.Metadata.InvalidDeclarationPolicy") { return; }
         throw new InvalidOperationException("Unsafe manifest depth override was accepted.");
     }
+    private static void Check(bool value, string context)
+    { if (!value) throw new InvalidOperationException(context); }
 }

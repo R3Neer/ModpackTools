@@ -70,6 +70,16 @@ public static class RootManifestParser
         private int requirements;
         private int aliasSlots;
         private readonly Dictionary<OrderedManifestValue, object> opaqueIdentities = new(ReferenceEqualityComparer.Instance);
+        private readonly Dictionary<OrderedManifestValue, string> formattedText = new(ReferenceEqualityComparer.Instance);
+        private string Text(OrderedManifestValue value)
+        {
+            if (value is not (ManifestArray or ManifestInteger or ManifestBigInteger or ManifestFloat or ManifestDate))
+                return OrderedManifestProjection.String(value);
+            if (formattedText.TryGetValue(value, out var text)) return text;
+            text = OrderedManifestProjection.String(value);
+            formattedText.Add(value, text);
+            return text;
+        }
         public void Input(string? text, string manifest)
         {
             Manifest = manifest;
@@ -99,11 +109,11 @@ public static class RootManifestParser
                 if (OrderedManifestProjection.Truthy(alias))
                 {
                     BeginAlias();
-                    aliases.Add(AliasKey(alias), OrderedManifestProjection.String(Dot(json, "version")));
+                    aliases.Add(AliasKey(alias), Text(Dot(json, "version")));
                 }
-            var id = OrderedManifestProjection.String(Dot(json, "id"));
-            var version = OrderedManifestProjection.String(Dot(json, "version"));
-            var side = OrderedManifestProjection.String(Index(json, "environment"));
+            var id = Text(Dot(json, "id"));
+            var version = Text(Dot(json, "version"));
+            var side = Text(Index(json, "environment"));
             Mods.Add(new(id, version, side, aliases.Finish(), declared.ToImmutable()));
             var paths = ImmutableArray.CreateBuilder<OrderedManifestValue>();
             foreach (var jar in OrderedManifestProjection.Elements(Index(json, "jars")))
@@ -130,14 +140,14 @@ public static class RootManifestParser
                 if (alias is ManifestString literal)
                 {
                     BeginAlias();
-                    aliases.Add(ManifestAliasKey.Text(literal.Value), OrderedManifestProjection.String(Dot(quilt, "version")));
+                    aliases.Add(ManifestAliasKey.Text(literal.Value), Text(Dot(quilt, "version")));
                 }
                 else if (OrderedManifestProjection.Truthy(alias))
                 {
                     BeginAlias();
-                    var id = OrderedManifestProjection.String(Dot(alias, "id"));
+                    var id = Text(Dot(alias, "id"));
                     var version = Index(alias, "version");
-                    aliases.Add(ManifestAliasKey.Text(id), OrderedManifestProjection.String(
+                    aliases.Add(ManifestAliasKey.Text(id), Text(
                         OrderedManifestProjection.Truthy(version) ? Dot(alias, "version") : Dot(quilt, "version")));
                 }
             }
@@ -146,9 +156,9 @@ public static class RootManifestParser
             {
                 Operation = "read minecraft environment";
                 if (minecraft is not ManifestMap game) throw new InvalidOperationException("minecraft must support an environment field lookup.");
-                if (game.TryGet("environment", out _)) side = OrderedManifestProjection.String(Dot(minecraft, "environment"));
+                if (game.TryGet("environment", out _)) side = Text(Dot(minecraft, "environment"));
             }
-            Mods.Add(new(OrderedManifestProjection.String(Dot(quilt, "id")), OrderedManifestProjection.String(Dot(quilt, "version")),
+            Mods.Add(new(Text(Dot(quilt, "id")), Text(Dot(quilt, "version")),
                 side, aliases.Finish(), declared.ToImmutable()));
             SetPaths(OrderedManifestProjection.Elements(Index(quilt, "jars")));
             if (OrderedManifestProjection.SchemaMismatch(Dot(json, "schema_version"))) Schema("Quilt");
@@ -174,7 +184,7 @@ public static class RootManifestParser
         {
             BeginRequirement(depth);
             if (value is ManifestString text) return BuildRequirement(text.Value, new ManifestString("*"), kind, [], [], null);
-            var target = OrderedManifestProjection.String(OrderedManifestProjection.Property(value, "id"));
+            var target = Text(OrderedManifestProjection.Property(value, "id"));
             var range = OrderedManifestProjection.Property(value, "versions");
             if (OrderedManifestProjection.EqualTrue(OrderedManifestProjection.Property(value, "optional"))) kind = "optional";
             ImmutableArray<ManifestRequirement> Children(string operation)
@@ -221,7 +231,7 @@ public static class RootManifestParser
             {
                 if (!OrderedManifestProjection.Truthy(value)) continue;
                 if (paths.Count >= limits.MaximumNestedPaths) throw new ManifestLimitException(nameof(limits.MaximumNestedPaths));
-                paths.Add(OrderedManifestProjection.String(value));
+                paths.Add(Text(value));
             }
             NestedPaths = paths.ToImmutable();
         }
