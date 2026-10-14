@@ -1425,7 +1425,8 @@ preflight is a new global resource prelude, not an exact old failure-priority cl
 E34 retains actual declaration/read stages and prefixes. Acceptance includes52 new
 original ZIPs,204 earlier root fixtures, staged later-entry limits, first duplicates,
 encoding, corrupt/nonZIP/empty inputs, actual byte limits/handle release and shared
-Forge/Fabric/Quilt pure-parser regressions. Native50 acceptance is recorded below.
+Forge/Fabric/Quilt pure-parser regressions. Native50 acceptance is recorded in
+implementation-plan.md.
 
 ## Nested archive traversal / capability51
 
@@ -1434,6 +1435,9 @@ and ArtifactDiagnostic(Diagnostic,EntryChain), retaining duplicate occurrences i
 depth-first declaration order. EntryChain is an array of exact ZIP names, never a
 filesystem path. Root remains separately observable. Completion describes traversal,
 not dependency health. Filter NoSupportedManifest only in children.
+Root is nullable when initial opening/preflight prevents root inspection. In this
+case traversal diagnostics describe failure; the inspector omits archive_status
+instead of inventing a Root read result, while its fallback status is Incomplete.
 
 Reuse an internally opened root reader on the same preflighted archive handle.
 Each available child is copied into a unique CreateNew, FileShare.None,
@@ -1453,12 +1457,63 @@ entries100000 including root and every opened child attempt; emitted mods100000
 and diagnostics100000 plus one reserved terminal quota diagnostic. Positive
 policies validate before root IO. Census and copy counters charge before accepting
 buffers/index allocation. Root parsers receive remaining mod/diagnostic allowances
-before construction; per-root declaration limits remain distinct. Exhausting a
+before construction through an internal typed allowance where zero is valid;
+public policies stay positive. Suppressed child NoSupported warnings consume no
+emitted allowance. Per-root declaration limits remain distinct. Exhausting a
 traversal quota terminates the entire invocation, preserving the accumulated prefix.
+Preflight scans the existing local archive policy without allocating an entry index,
+then debits shared census before constructing ZipArchive. A valid empty archive may
+consume zero at an exactly exhausted shared census budget. Local child census failure
+stops that parent's siblings; ancestor siblings continue. A global census exhaustion
+stops the invocation. Local child metadata/declaration failure returns to its parent,
+which continues its own siblings. Diagnostic exhaustion retains the offending entry
+chain and exactly one reserved global terminal diagnostic.
 No claim that these policies prove the final128MiB public memory gate.
 
 E37 explicitly refines resource exhaustion and temporary-spool failures with typed,
 contextual diagnostics. Finite acceptance covers DFS/duplicates, sibling propagation,
 root-only warning, Forge child warnings, valid/corrupt depth17 priority, actual-size
-lies, exact/over quotas, source hashes, handles and spool cleanup. No Native51
-acceptance is claimed before frozen artifacts and both reviews.
+lies, exact/over quotas, source hashes, handles and spool cleanup. Native51 acceptance
+is recorded in implementation-plan.md; public health/memory gates remain open.
+
+## Pure requirement evaluation / capability52
+
+RequirementEvaluator.Evaluate(ManifestRequirement,RequirementContext,limits) returns
+bool? (satisfied, unsatisfied, unknown). It has no archive, cache, provider, side
+selection or report effects. RequirementContext owns frozen OrdinalIgnoreCase maps
+of project IDs to version IDs and mod/string-alias IDs to ordered nullable version
+occurrences. Duplicate mod entries concatenate; duplicate project IDs are rejected
+before ownership, matching state identity validation. No non-string alias acquires
+a string target identity. A separate future graph builder supplies side-filtered
+contexts, environment versions and provider requirements.
+
+Unless is first: true satisfies immediately, unknown returns unknown immediately.
+Nonempty Any wins over All; preserve visited-child short circuits and negative-kind
+inversion. Missing optional/incompatible/discouraged targets satisfy; missing
+recommended fails. Missing java/javafml/lowcodefml is unknown for every kind.
+Present empty version collections differ from a collection containing empty/null
+versions; a later successful version overrides earlier unknowns. Tags use invariant
+case-insensitive comparison; map identity remains ordinal case-insensitive. Project
+text constraints use invariant case-sensitive equality and exact wildcard '*', not
+semantic version ordering. A suggested-version mismatch is unknown only after a
+project constraint matched, including negative kinds.
+
+Public provider project requirements always originate with the text wildcard.
+Typed text/null project constraints support the helper's scalar string behavior;
+non-text project constraints are explicitly unsupported/unknown, never healthy by
+casting VersionRange.Unknown. Arbitrary non-text helper probes are retained as
+characterization outside the current public provider domain, not silent parity.
+Mod constraints reuse VersionRanges with the original General/Maven scheme and
+propagate actual consumed numeric/range errors. No failure becomes unknown merely
+because it is inconvenient.
+
+Evaluation policy: positive visited node100000/version-check100000 quotas, depth64
+hard maximum, plus existing VersionRangeLimits. Validate even on short-circuited
+inputs. Context ownership policy:100000 projects,100000 mod keys,1000000 version
+occurrences and16Mi UTF16 characters in keys/versions, charged before owned insertion.
+Zero remaining budgets are invocation state, not invalid public policies. Resource
+exhaustion is a typed domain failure identifying the quota, not satisfaction/unknown.
+Acceptance will cover original tri-state cases, case/culture identity, simultaneous
+groups, unless, missing runtimes, multiple versions, suggested IDs, actual error
+priorities, exact/over quotas and existing range/root/archive regressions in AOT.
+No Native52 or full graph/report acceptance is claimed before implementation.

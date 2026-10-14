@@ -821,3 +821,24 @@ Next capability51 preserves DFS duplicate occurrences and parent-scoped failure
 propagation while replacing recursive MemoryStreams with owned disk spools. Sixteen
 independent original observations establish depth17 construction priority. Contract
 and E37 resource refinement are in data-contracts.md before implementation.
+
+Capability51 completed as c22133c. Owned disk spools replace recursive in-memory
+child copies, preserving DFS duplicate occurrences and parent-scoped failure paths.
+Internal typed allowances permit zero remaining budgets and suppress missing-root
+warnings in children before charge. Shared census debit precedes ZipArchive indexing;
+local census rejection and global exhaustion have distinct propagation. Terminal
+diagnostics retain exact entry chains. Three-project strict gates and both Native
+publications pass warning-free. Host v71 SHA256:
+6ABCB9C26B2833007703CBF1A6AB953A2662B7E6AA112B9B2FDDD59505781020;
+CLI v78 SHA256:EEB57220FC0EE48C8296629D5DE82262338BEBC237502DED0F1043C884491242.
+Own14 archive/24 Root/26 Forge/44 ranges/106 ordering/15 protocol and default
+contracts pass. Blind79 includes36 complete original pairs/39 resources/4 IO;
+white128 includes11 original ZIP pairs/19 resources/30 archive/2 stored-byte/
+47 Forge/19 pure root plus default. Five synthetic/direct-depth original observations
+remain characterization, not Native acceptance. Provisional69/70 and assessment
+corrections remain preserved. Frozen hashes, original/fixture audits, exclusive
+handles, isolated spool cleanup and sentinels pass. No new performance,128MiB
+memory, public content switch or dependency-health claim follows.
+
+Next52 is the pure tri-state requirement evaluator on owned contexts. Graph issue
+production, full source health/cache and provider resolution remain later slices.

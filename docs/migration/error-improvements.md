@@ -389,3 +389,24 @@ never silently drop a mod or infer healthy metadata. Global preflight changes fa
 priority for structurally limited archives explicitly. Ordinary root reads retain
 legacy entry-read/decode order, first duplicates, encodings and partial mod prefixes.
 Every owned handle closes on all outcomes. Child traversal remains a separate effect.
+
+## E37: bounded nested traversal and contextual resource disposition
+
+Replace recursive child MemoryStreams with same-handle, exclusively owned temporary
+disk spools deleted on close. Validate public policies before source IO. Guard actual
+child bytes and invocation copy/metadata/census/attempt/emitted budgets before writes,
+entry indexing or declaration construction. A global exhaustion preserves the prefix
+and stops all remaining work with one reserved TraversalLimit diagnostic and exact
+entry-chain context. Zero internal remaining allowances are valid; suppressed child
+NoSupportedManifest warnings consume none. A zero-cost empty census is valid at an
+exact shared limit. No final RAM/performance gate is claimed from these policies.
+
+Local child census rejection behaves like a child ZIP construction failure: stop
+remaining siblings of its parent, allow ancestors to continue. Local metadata or
+declaration rejection is a returned child root failure, so its parent's siblings
+continue. Shared census exhaustion is distinct and stops the whole invocation.
+Missing/declared-oversized entries still warn and continue. Normal depth17 checks
+still follow child copy/archive construction. Copy/open/spool failures have typed
+NestedReadFailed diagnostics instead of localized raw exception wrappers, preserving
+the original failure stage, mod prefix and sibling disposition. No source extraction
+or filesystem normalization of ZIP entry names occurs.
