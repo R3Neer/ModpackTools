@@ -1366,3 +1366,22 @@ The diagnostic inspector alone has a hard32MiB UTF8 buffered-response limit. Act
 exhaustion returns Metadata.InspectionOutputLimit/MaximumOutputBytes with exit1 and
 no partial JSON; it does not change the pure parser's declaration result. Warning
 quotas reserve one final failure diagnostic, so the reason for exhaustion survives.
+
+## Root text projection reuse / capability49
+
+Fabric/Quilt alias versions can repeatedly format the same owned array/date/number
+node. Reuse those formatted strings by node reference within one parse. Keep every
+conversion at its existing operator: after alias truthiness, construction quota and
+alias-key handling, and after final mod-id access for the root version. Do not hoist
+version access before those stages. Strings already own their value; null/Boolean/
+map constant projections need no cache. Cache lifetime is the parser Scope, and
+only immutable strings enter domain declarations. No syntax/data node escapes and
+no cross-invocation or cross-culture result is reused.
+
+Original values, casts, aliases, failure priorities and resource counters remain
+unchanged. Acceptance includes complete Root regressions and repeated version
+supplements. A bounded Native66 characterization found higher sampled process
+working-set for array-valued version than its value-equivalent scalar; this is
+motivation, not a before/after speed claim. Measure the same native diagnostic
+workload against frozen old/new binaries and preserve raw samples, input/output
+hashes and inclusion of serialization/process startup. Public CLI gates remain open.
