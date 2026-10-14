@@ -733,3 +733,27 @@ Next checkpoint characterizes Forge/NeoForge root TOML declarations, substitutio
 dependency/features tables and Jar-in-Jar path intents. Use the pinned Tomlyn syntax
 API and an owned semantic boundary; the existing lexical inventory reader cannot
 stand in for full TOML declaration semantics. Actual archive traversal follows later.
+
+Forge/NeoForge root declarations completed as adce511. The pinned syntax API builds
+bounded owned TOML ancestry before semantic validation, then freezes exact names,
+table/array distinctions and scalar values. Typed Maven ranges retain TOML uncertainty,
+feature pipeline outcomes, warning order, version substitutions and partial prefixes.
+Jar-in-Jar paths remain intents. Complex projections are reused within each parse;
+diagnostic response bytes are independently bounded. Three-project locked restore,
+formatting and strict Release checks and both Native AOT publications pass warning-free.
+Final host v66 SHA256:CB0459E1B62CE020B4A6E9BDCC6FEE8A57B20B116198FCB1193DC58EAEF0406C;
+CLI v73 SHA256:B492D90E33DAD8A22BAA3910D3A867903555388F9E23072FD84859DBFFF524B8.
+Own26 full-root/live-Maven cases,24 Fabric/Quilt regressions,226 cache comparisons,
+44 ranges,106 ordering,15 protocol cases and default native assertions pass. Blind133
+cases comprise92 original roots and41 quota/policy/grammar controls; white69 direct
+controls (47 original/semantic/culture/ordering pairs and22 limits/output cases),35
+Fabric/Quilt regressions and default assertions pass. Hashes, fixture audits and
+empty stderr are confirmed. Provisional v65 passes85 but fails2 of92 expanded roots
+on Boolean ordering equality; the corrected v66 rerun passes unchanged originals.
+One assessment-only empty-code-array comparison error is preserved separately from
+the product correction. No Forge health, actual child IO or new speed claim follows.
+
+Before archive integration, review repeated array-valued Fabric/Quilt version casts
+for bounded ownership and allocation reuse; then implement the real root archive
+facade and bounded nested traversal as independent, testable checkpoints. Keep
+public content commands on the current engine until complete health/wiring gates pass.

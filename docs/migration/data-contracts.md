@@ -1350,3 +1350,19 @@ Mandatory collection equality is not a Boolean shortcut: [false]/[0] remain requ
 but [false,false]/[0,0] become optional after filtered-array truthiness. Scalar false,
 0 and 'false' are optional. Original blind80 and white27 roots retain their raw
 observations; no feature-table baseline is patched into a healthy result.
+
+Ordering's comparison also retains left-hand type conversion: Boolean true equals
+the nonempty string NONE, so true/[true] suppress ordering warnings. Collection
+filtering remains superficial, then tests the retained elements' truthiness. The
+seven supplemental original cases cover this distinction; Native65 exposed it
+before the correction and is provisional, not the final acceptance artifact.
+
+Owned TOML ancestry is constructed with guards before Toml.Validate, then frozen
+before lowering; this also bounds combined implicit-table/array-table depth before
+library semantic recursion. Complex string and range-display projections are reused
+by owned-node identity within one parse, avoiding repeated large global table/array
+conversion across root mods. No cross-invocation cache or performance claim follows.
+The diagnostic inspector alone has a hard32MiB UTF8 buffered-response limit. Actual
+exhaustion returns Metadata.InspectionOutputLimit/MaximumOutputBytes with exit1 and
+no partial JSON; it does not change the pure parser's declaration result. Warning
+quotas reserve one final failure diagnostic, so the reason for exhaustion survives.
