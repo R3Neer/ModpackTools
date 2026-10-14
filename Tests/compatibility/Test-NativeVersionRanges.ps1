@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Executable,[string]$LegacyRoot='D:\Tools\ModpackTools')
+param([Parameter(Mandatory)][string]$Executable,[Parameter(Mandatory)][string]$LegacyRoot)
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'NativeProcess.ps1')
 Import-Module (Join-Path $LegacyRoot 'ModpackTools.psd1') -Force

@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Executable, [string]$LegacyRoot = 'D:\Tools\ModpackTools')
+param([Parameter(Mandatory)][string]$Executable, [Parameter(Mandatory)][string]$LegacyRoot)
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'NativeProcess.ps1')
 $run=Join-Path ([IO.Path]::GetTempPath()) ('modpacktools-use-'+[guid]::NewGuid().ToString('N'))
