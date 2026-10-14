@@ -1552,12 +1552,24 @@ Wire is full bounded evidence, not a claim that old depth30 outer serialization
 never truncated it. Standalone strict JSON literals do not auto-convert date strings,
 retaining the existing typed diagnostic profile; metadata dates keep auto-date rules.
 
-Fingerprint schema1 hashes a domain prefix, explicit raw type/container tags,
+Fingerprint schema1 uses SHA256 over a domain prefix, explicit raw type/container tags,
 ordered keys/elements, framed exact UTF16 units, numeric values/bits and captured
 date fields. Never hash Display, joined delimiters or wire alone. NaN and quoted
 NaN must differ despite their equal old JSON; unsupported maps must remain distinct.
 JSON/TOML composite/runtime origins remain explicit where evaluator semantics differ.
 No semantic version normalization, culture folding or structural alias identity.
+The prefix is ASCII `ModpackTools/version-constraint/evidence/v1` plus NUL. Tags:
+0 null/missing,1 omitted,2 text,3 Int64,4 BigInteger,5 Double,6 Boolean,7 JSONDate,
+8 JSONArray,9 JSONMap,10 TOMLDate,11 TOMLSequence,12 TOMLTable,13 TOMLEntry.
+Integers/counts use signed big-endian32/64 as appropriate. Text frames use Int32
+UTF16-unit count followed by raw UTF16BE units. BigInteger uses Int32 byte length
+and canonical signed big-endian two's-complement bytes. Double uses its IEEE64 bits;
+Boolean uses one0/1 byte. JSONDate stores ticks64,kind32,local offset ticks64 (zero
+for UTC/unspecified). TOMLDate stores DateTimeOffset ticks64,offset ticks64,precision32,
+kind32 and framed kind name. Containers store count32 then ordered children/keys;
+TOMLSequence includes one flag byte (TableArray1/PipelineArray2) before count.
+Fingerprint output is64 lowercase hex characters. This protocol describes evidence
+identity; future graph-key framing remains separately defined before implementation.
 
 Root policy adds positive MaximumConstraintWireCharacters=4Mi and
 MaximumAggregateConstraintWireCharacters=16Mi. Guard writer appends before accepting
