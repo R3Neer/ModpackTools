@@ -448,3 +448,17 @@ legacy hash may assist order but must not deduplicate distinct modern constraint
 Preserve ordinary public wire values, including enum-name versus numeric profiles;
 correct old identity collisions and depth truncation explicitly in the future graph
 contract. This checkpoint does not implement or claim accepted graph reports/caches.
+
+## E40: bounded pure side graph composition
+
+Separate owned side-specific graph composition from descriptor/ZIP/provider/cache IO.
+Validate positive graph policies first and charge complete input occurrences before
+composition, including disabled nodes and unused alternatives. Bound aggregate work,
+facts and emitted occurrences; actual exhaustion fails with GraphLimitExceeded and
+an exact quota target, never a healthy/partial report. Duplicate typed node IDs fail
+before building contexts. Preserve consumed evaluator failures as failures.
+The graph uses actual alias entries under E32 and schema2 diagnostic identities
+under E39. Input occurrence order defines duplicate-owner selection, replacing an
+unspecified hashtable enumeration tie; verified shallow legacy hashes can preserve
+ordinary issue ordering without becoming identity or baseline membership keys.
+Native acceptance and public graph/cache wiring remain pending this contract.

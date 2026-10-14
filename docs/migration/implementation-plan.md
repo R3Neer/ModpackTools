@@ -866,3 +866,32 @@ Before graph report construction, finalize ownership of original range evidence:
 typed Range/RangeDisplay alone cannot reconstruct every old serialized requirement
 or distinguish unsupported object constraints. Preserve distinct diagnostic identity
 and resolve public wire/cache/baseline compatibility explicitly, not via display text.
+
+Capability53 completed as2822643: immutable owned constraints bind semantic range,
+display, separate legacy/public wire profiles and a SHA256 typed evidence identity.
+JSON literal comparer profiles are explicit in the hash; equal raw maps with
+different member-lowering behavior no longer share identity. Metadata dates retain
+their origin; TOML date offset/precision/kind fields survive display conversion.
+Scoped memo shares complete constraints and charges retained distinct wire strings;
+exact/over quotas preserve earlier mod declarations and failure priority.
+Three-project locked restore/format/strict Release and both Native AOT publications
+pass without warnings. Hostv74 SHA256:
+982F98E1C50790EBFE7DF6A8822425F2FE50E52A05C6ACA1EB0E80D492818F3A;
+CLIv81 SHA256:967AA25BD417701EAC3F5D5CA3AAFFFC87D1A33F3103F8508BACE7F78001DFEB.
+Parent258 requirement/root/Forge/archive/range/ordering/protocol cases and default
+contracts pass. Blind806 acceptance checks include793 Native calls and13 relational
+assertions:45 complete root evidence executions,49 wire profiles,33 independently
+derived exact metadata fingerprints,12 exact literal fingerprints, quotas and
+affected regressions. White209 independent Native controls plus defaults pass.
+Both frozen hashes, original source39fixtures/six date supplements and repeated
+profile captures are unchanged. Provisional73/80 and old pre-profile fingerprint
+derivations remain preserved. One initial comparer-fingerprint source blocker was
+corrected before final74/81 acceptance. No graph key, report/cache, public content,
+whole-process memory or speed claim follows from this evidence checkpoint.
+
+Next54 is pure side graph composition, with its typed environment/node/report
+boundary, exact modern key schema2 framing, verified shallow legacy order hints
+and E40 consumed aggregate work policies specified in data-contracts.md. White
+architecture review closed duplicate-node rejection, explicit nonnull text fields
+and graph-wide consumed evaluation budgets before implementation. Full source
+health/cache/provider/public-command work remains separate.

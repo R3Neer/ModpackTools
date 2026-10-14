@@ -1558,7 +1558,9 @@ date fields. Never hash Display, joined delimiters or wire alone. NaN and quoted
 NaN must differ despite their equal old JSON; unsupported maps must remain distinct.
 JSON/TOML composite/runtime origins remain explicit where evaluator semantics differ.
 No semantic version normalization, culture folding or structural alias identity.
-The prefix is ASCII `ModpackTools/version-constraint/evidence/v1` plus NUL. Tags:
+The prefix is ASCII `ModpackTools/version-constraint/evidence/v1` plus NUL, then one
+lowering-profile byte:0 metadata/TOML/text/literalOrdinal,1 literalOrdinalIgnoreCase.
+This trait distinguishes equal raw maps whose any/all member matching differs. Tags:
 0 null/missing,1 omitted,2 text,3 Int64,4 BigInteger,5 Double,6 Boolean,7 JSONDate,
 8 JSONArray,9 JSONMap,10 TOMLDate,11 TOMLSequence,12 TOMLTable,13 TOMLEntry.
 Integers/counts use signed big-endian32/64 as appropriate. Text frames use Int32
@@ -1591,4 +1593,96 @@ caches will be implemented and accepted in later checkpoints.
 Acceptance:39 independently captured real roots and22 independent wire/profile
 observations, full date precision/kind/offset, nonfinite collisions, nested arrays/
 tables/maps/property order, memo ownership, exact/over wire budgets and all affected
-root/Forge/traversal/requirement/range regressions in Native AOT. No53 acceptance yet.
+root/Forge/traversal/requirement/range regressions in Native AOT. Native53 acceptance
+is recorded in implementation-plan.md; full graph acceptance remains pending.
+
+## Pure side graph composition / next capability54
+
+GraphReportBuilder.Build(GraphEnvironment,ImmutableArray<GraphNode>,RuntimeOverrides,
+GraphReportLimits) composes dependency health without filesystem, descriptor, cache,
+provider or console access. GraphEnvironment supplies MinecraftVersion,Loader,
+LoaderVersion and explicit JavaDeclared/JavaVersion. RuntimeOverrides has two
+presence flags for the existing Fabric/Quilt override files. GraphNode supplies
+Id,VersionId,Name,Kind,Side,Enabled, owned ArtifactMod occurrences, provider
+ManifestRequirements and warning strings. Inputs are immutable; input occurrence
+order determines the first owner of duplicate declarations. Case-insensitive IDs
+use ordinal identity; side/kind/loader tags use invariant comparison.
+GraphNode.Id values must be unique under ordinal ignore-case; reject a repeated
+node ID with Content.DuplicateIdentity/InvalidArgument and the second ID as target,
+before composing active versions. Duplicate mod declarations remain valid input.
+All environment/node/requirement text fields are non-null strings, including
+VersionId and SuggestedVersionId; null is invalid typed input, not canonicalized
+to empty. Raw constraint null and nullable mod/fact versions retain their own tags.
+
+Preserve warning issues even for disabled/off-side nodes. Build client and server
+contexts separately with environment versions, Forge javafml/lowcodefml, active
+project versions, native mod versions and actual string alias entries (E32). Keep
+duplicate/bundled occurrences; aliases do not acquire native ownership. More than
+one top-level native occurrence is an error; other multiple occurrences are unknown.
+Filter node/mod/requirement sides independently. Provider project requirements
+targeting an existing off-side node are skipped, including disabled target nodes.
+An absent mod requirement becomes unknown if any active mod item has no declarations.
+Reuse the pure evaluator, retaining consumed errors and suggested-version rules.
+Collect facts from every target in Any,All,Unless traversal order, including unused
+alternatives, as the old issue identity did. Runtime override presence emits unknown.
+Complete means no unknown issues; a complete report can still contain errors.
+
+Public issues retain Code,Owner,OwnerName,Requirement,Side,Severity,Message and Key.
+Requirement is the original typed requirement, a warning string, or null for an
+override. Public requirement Range uses its captured PublicJson. The model retains
+the closed variant and never exposes an arbitrary object payload.
+
+Modern Key schema2 hashes a domain-prefixed SHA256 stream of framed exact UTF16
+owner/version/side, a payload discriminator, every requirement field and its owned
+constraint fingerprint, ordered child boundaries and ordered typed facts. Warning
+payloads frame their text; runtime override payloads frame their relative filename.
+Facts distinguish absent targets, empty collections, null versions, empty strings
+and different collection boundaries. Code,severity and localized display messages
+stay outside requirement identity. Deduplicate by (modern Key,Severity), retaining
+the first matching occurrence. Sort by verified legacy auxiliary hash when its
+full requirement serialization is safely below old Depth30, otherwise modern Key,
+then Severity and modern Key as deterministic tie breaker. Auxiliary hashes never
+participate in membership/baseline policy. Former collisions, deep truncation and
+formerly unspecified duplicate-owner order remain explicit E39 refinements.
+
+Exact key frame: ASCII `ModpackTools/graph-issue/v2` plus NUL; framed Owner,
+VersionId,Side; payload byte0 warning,1 requirement,2 runtime override. Text frames
+are Int32 UTF16-unit count plus raw UTF16BE. All counts are signed Int32 big-endian.
+Warning/override payload is one text frame. A requirement writes Target,Kind,Side,
+Scope,Source,SuggestedVersionId text frames, scheme byte0 General/1 Maven,32 decoded
+constraint-fingerprint bytes, Any count/children,All count/children,Unless presence
+byte0/1 and optional child. Then fact count; each fact writes Scope,Target text,
+presence byte0/1,version count and each version as null byte0 or byte1/text frame.
+Warnings/overrides have zero facts. Output is64 lowercase hex characters.
+
+Validate all positive policies before composition. Bound nodes100000, mod
+occurrences100000, alias occurrences100000, requirement declarations100000,
+warnings100000, emitted issue occurrences100000, fact occurrences1000000 and
+aggregate input UTF16 characters32Mi. Requirement depth64 is hard. Count all
+input occurrences before composition, including disabled rows and unused branches;
+shared immutable declarations still charge each occurrence.
+Input text accounting includes environment/node/declaration fields, alias string
+or opaque wire evidence and versions, warning text, requirement fields and each
+constraint's Display,LegacyJson,PublicJson and fingerprint. Charge the two wire
+profiles once only when they are the same retained string reference. Entry-chain
+text is included; this is an occurrence policy, not a physical-allocation estimate.
+Context and evaluator
+policies remain independently enforced. Add consumed work budgets across the whole
+Build, both sides and all evaluator calls: MaximumEvaluatedNodes1000000 and
+MaximumEvaluatedVersions1000000. Debit them at the actual evaluator visit/version
+consumption point, including inspected null/empty versions, independently of each
+call's local budgets and each consumed range/comparison budget. No eager charging
+of skipped branches; aggregate exhausted work propagates as a graph limit failure.
+New graph exhaustion is a typed
+Compatibility.GraphLimitExceeded, not an incomplete or healthy report. Invalid
+graph policy is Compatibility.InvalidGraphPolicy. No partial result escapes.
+This ownership/work policy is E40, not proof of the whole-process128MiB gate.
+
+Finite acceptance covers both sides, disabled nodes, nested/top-level duplicates,
+aliases including a Keys data key, builtin collisions, undeclared/empty Java,
+Forge runtimes, provider off-side targets, unknown-artifact fallback, all severities,
+groups/guards/facts/suggested versions, warning/override variants, exact/over
+policies, preserved public Range values, strong collision separation and relevant
+Native regressions. No health cache, baseline policy or public command switch is
+implemented by this pure report checkpoint; validator4 isolation remains mandatory
+for the later health composer.
