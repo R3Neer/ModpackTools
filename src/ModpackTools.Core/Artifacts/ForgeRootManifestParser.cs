@@ -21,6 +21,18 @@ public static partial class ForgeRootManifestParser
     public static RootManifestDeclarations Parse(ForgeManifestTexts texts, string loader, ForgeManifestLimits? limits = null)
     {
         ArgumentNullException.ThrowIfNull(texts); ArgumentNullException.ThrowIfNull(loader);
+        return ParseEntries(entry => entry switch
+        {
+            LoaderManifestEntry.Forge => texts.ModsToml,
+            LoaderManifestEntry.NeoForge => texts.NeoForgeToml,
+            LoaderManifestEntry.Manifest => texts.Manifest,
+            LoaderManifestEntry.JarJar => texts.JarJar,
+            _ => throw new InvalidOperationException("Unexpected Forge text entry.")
+        }, loader, limits ?? new());
+    }
+
+    internal static void ValidatePolicy(ForgeManifestLimits limits)
+    {
         limits ??= new();
         RootManifestParser.ValidatePolicy(limits.Declarations);
         var invalid = limits.MaximumMods <= 0 ? nameof(limits.MaximumMods)
@@ -29,6 +41,13 @@ public static partial class ForgeRootManifestParser
             : limits.MaximumSyntaxNodes <= 0 ? nameof(limits.MaximumSyntaxNodes) : null;
         if (invalid is not null) throw new DomainException("Metadata.InvalidDeclarationPolicy", "Forge declaration limits are invalid",
             "use positive quotas and TOML depths between 1 and 64", target: invalid);
+    }
+
+    // One owned context controls decode/read stages. The public text boundary's
+    // entry source is pure; only the internal archive facade supplies IO here.
+    internal static RootManifestDeclarations ParseEntries(Func<LoaderManifestEntry, string?> read, string loader, ForgeManifestLimits limits)
+    {
+        ValidatePolicy(limits);
         var scope = new Scope(limits);
         var traverse = true;
         try
@@ -36,14 +55,20 @@ public static partial class ForgeRootManifestParser
             var neo = string.Equals(loader, "neoforge", StringComparison.InvariantCultureIgnoreCase);
             if (neo || string.Equals(loader, "forge", StringComparison.InvariantCultureIgnoreCase))
             {
-                if (neo) scope.Input(texts.NeoForgeToml, "META-INF/neoforge.mods.toml");
-                var selected = neo && !string.IsNullOrEmpty(texts.NeoForgeToml) ? texts.NeoForgeToml : texts.ModsToml;
-                var name = neo && !string.IsNullOrEmpty(texts.NeoForgeToml) ? "META-INF/neoforge.mods.toml" : "META-INF/mods.toml";
+                var neoText = neo ? read(LoaderManifestEntry.NeoForge) : null;
+                if (neo) scope.Input(neoText, "META-INF/neoforge.mods.toml");
+                var selected = neo && !string.IsNullOrEmpty(neoText) ? neoText : read(LoaderManifestEntry.Forge);
+                var name = neo && !string.IsNullOrEmpty(neoText) ? "META-INF/neoforge.mods.toml" : "META-INF/mods.toml";
                 scope.Input(selected, name);
-                if (!string.IsNullOrEmpty(selected)) scope.Mods(selected, name, texts.Manifest);
-                scope.JarJar(texts.JarJar);
+                if (!string.IsNullOrEmpty(selected)) scope.Mods(selected, name, read);
+                scope.JarJar(read(LoaderManifestEntry.JarJar));
             }
             if (scope.ModsResult.Count == 0) scope.Warn("NoSupportedManifest", "No supported " + loader + " mod manifest found");
+        }
+        catch (RootArchiveEntryException exception)
+        {
+            traverse = false;
+            scope.Diagnostics.Add(exception.Diagnostic);
         }
         catch (ManifestLimitException exception)
         {
@@ -101,10 +126,11 @@ public static partial class ForgeRootManifestParser
             if (++requirements > limits.Declarations.MaximumRequirements) throw new ManifestLimitException(nameof(limits.Declarations.MaximumRequirements));
             return new(target, TomlDeclarationProjection.Range(range), Projection(range, rangeDisplays, true), kind, side, "mod", VersionScheme.Maven, "manifest", "", [], [], null);
         }
-        public void Mods(string text, string name, string? manifest)
+        public void Mods(string text, string name, Func<LoaderManifestEntry, string?> read)
         {
             Manifest = name; Operation = "decode TOML";
             var data = TomlDeclarationReader.Read(text, limits);
+            var manifest = read(LoaderManifestEntry.Manifest);
             Input(manifest, "META-INF/MANIFEST.MF");
             var jarVersion = JarVersion().Match(manifest ?? "").Groups[1].Value;
             Manifest = name;

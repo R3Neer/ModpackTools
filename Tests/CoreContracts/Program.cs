@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text.Json;
 
 if (args.FirstOrDefault() == "--inspect-forge-manifest") return RootManifestInspection.Run(args, true);
+if (args.FirstOrDefault() == "--inspect-loader-archive-root") return RootManifestInspection.Run(args, archive: true);
 
 if (args.FirstOrDefault() == "--inspect-psd-lookup")
 {
@@ -267,6 +268,7 @@ VersionOrderingContracts.Verify();
 VersionRangeContracts.Verify();
 RootManifestContracts.Verify();
 ForgeManifestContracts.Verify();
+RootArchiveContracts.Verify();
 ImportedLookupContracts.Verify();
 Console.WriteLine($"PSD1 native contracts passed: {invalid.Length + 7 + limits.Length} rejected inputs, typed literals, nested arrays, bounded numeric extraction, immutable classification/reference/alias identities, {args.Length} files");
 return 0;

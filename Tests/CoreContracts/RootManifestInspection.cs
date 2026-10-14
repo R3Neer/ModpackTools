@@ -7,17 +7,18 @@ using ModpackTools.Core.Versions;
 
 internal static class RootManifestInspection
 {
-    public static int Run(string[] arguments, bool forge = false)
+    public static int Run(string[] arguments, bool forge = false, bool archive = false)
     {
         try
         {
-            var offset = forge ? 6 : 4;
+            var offset = archive ? 3 : forge ? 6 : 4;
             if (arguments.Length < offset || (arguments.Length - offset) % 2 != 0)
-                throw new ArgumentException(forge
+                throw new ArgumentException(archive ? "Use --inspect-loader-archive-root <archive-file> <loader> [--option value]." : forge
                     ? "Use --inspect-forge-manifest <mods-file-or-null> <neo-file-or-null> <manifest-file-or-null> <jarjar-file-or-null> <loader> [--option value]."
                     : "Use --inspect-root-manifest <fabric-file-or-null> <quilt-file-or-null> <loader> [--option value].");
             var limits = new RootManifestLimits();
             var forgeLimits = new ForgeManifestLimits();
+            var archiveLimits = new RootArchiveLimits();
             var probes = ImmutableArray<string?>.Empty;
             var seen = new HashSet<string>(StringComparer.Ordinal);
             for (var index = offset; index < arguments.Length; index += 2)
@@ -25,6 +26,7 @@ internal static class RootManifestInspection
                 if (!seen.Add(arguments[index])) throw new ArgumentException("Duplicate root-manifest inspection option.");
                 var value = arguments[index + 1];
                 int Number() => int.Parse(value, CultureInfo.InvariantCulture);
+                long Bytes() => long.Parse(value, CultureInfo.InvariantCulture);
                 switch (arguments[index])
                 {
                     case "--culture": CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(value); break;
@@ -37,15 +39,25 @@ internal static class RootManifestInspection
                     case "--max-requirement-depth": limits = limits with { MaximumRequirementDepth = Number() }; break;
                     case "--max-aliases": limits = limits with { MaximumAliases = Number() }; break;
                     case "--max-nested-paths": limits = limits with { MaximumNestedPaths = Number() }; break;
-                    case "--max-mods" when forge: forgeLimits = forgeLimits with { MaximumMods = Number() }; break;
-                    case "--max-diagnostics" when forge: forgeLimits = forgeLimits with { MaximumDiagnostics = Number() }; break;
-                    case "--max-toml-depth" when forge: forgeLimits = forgeLimits with { MaximumTomlDepth = Number() }; break;
-                    case "--max-syntax-nodes" when forge: forgeLimits = forgeLimits with { MaximumSyntaxNodes = Number() }; break;
+                    case "--max-mods" when forge || archive: forgeLimits = forgeLimits with { MaximumMods = Number() }; break;
+                    case "--max-diagnostics" when forge || archive: forgeLimits = forgeLimits with { MaximumDiagnostics = Number() }; break;
+                    case "--max-toml-depth" when forge || archive: forgeLimits = forgeLimits with { MaximumTomlDepth = Number() }; break;
+                    case "--max-syntax-nodes" when forge || archive: forgeLimits = forgeLimits with { MaximumSyntaxNodes = Number() }; break;
+                    case "--max-metadata-bytes" when archive: archiveLimits = archiveLimits with { Archive = archiveLimits.Archive with { MaximumMetadataBytes = Bytes() } }; break;
+                    case "--max-central-bytes" when archive: archiveLimits = archiveLimits with { Archive = archiveLimits.Archive with { MaximumCentralDirectoryBytes = Bytes() } }; break;
+                    case "--max-archive-entries" when archive: archiveLimits = archiveLimits with { Archive = archiveLimits.Archive with { MaximumEntries = Number() } }; break;
+                    case "--max-aggregate-metadata-bytes" when archive: archiveLimits = archiveLimits with { MaximumAggregateMetadataBytes = Bytes() }; break;
                     default: throw new ArgumentException("Unsupported root-manifest inspection option.");
                 }
             }
             RootManifestDeclarations result;
-            if (forge)
+            ArchiveReadStatus? archiveStatus = null;
+            if (archive)
+            {
+                var read = RootArchiveReader.Read(arguments[1], arguments[2], archiveLimits with { Declarations = forgeLimits with { Declarations = limits } });
+                result = read.Root; archiveStatus = read.Status;
+            }
+            else if (forge)
             {
                 var loader = arguments[5];
                 var neo = string.Equals(loader, "neoforge", StringComparison.InvariantCultureIgnoreCase);
@@ -66,6 +78,7 @@ internal static class RootManifestInspection
             using (var writer = new Utf8JsonWriter(bytes, new() { MaxDepth = 512 }))
             {
                 writer.WriteStartObject();
+                if (archiveStatus is not null) writer.WriteString("archive_status", archiveStatus.ToString());
                 writer.WriteString("status", result.Status.ToString());
                 writer.WriteBoolean("can_traverse_nested", result.CanTraverseNested);
                 writer.WriteStartArray("mods");
