@@ -378,3 +378,14 @@ Preserve warning stage/order and already inserted mods/nested intents; never tur
 failure into complete/healthy. Unknown-schema and no-supported-root diagnostics keep
 their existing useful messages. This improves formerly raw localized member errors
 without changing which manifest branch was selected or retrying a different loader.
+
+## E36: root archive reads have explicit physical resource boundaries
+
+Validate archive/declaration policies before file IO, and check the existing actual
+central census before BCL entry indexing. Preserve declared4MiB metadata limits and
+add actual decompressed-byte, aggregate-byte and decoded-text guards. Resource
+exhaustion returns Limited with incomplete declarations and exact entry/quota context;
+never silently drop a mod or infer healthy metadata. Global preflight changes failure
+priority for structurally limited archives explicitly. Ordinary root reads retain
+legacy entry-read/decode order, first duplicates, encodings and partial mod prefixes.
+Every owned handle closes on all outcomes. Child traversal remains a separate effect.

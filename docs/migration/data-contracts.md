@@ -1385,3 +1385,44 @@ working-set for array-valued version than its value-equivalent scalar; this is
 motivation, not a before/after speed claim. Measure the same native diagnostic
 workload against frozen old/new binaries and preserve raw samples, input/output
 hashes and inclusion of serialization/process startup. Public CLI gates remain open.
+
+## Root archive facade / capability50
+
+RootArchiveReader.Read(path, loader, RootArchiveLimits) is the first actual archive
+effect boundary. It owns one readonly FileStream, runs existing ArchivePreflight on
+that same handle before ZipArchive dictionary allocation, and owns a leave-open
+ZipArchive plus every entry stream/decoder. RootArchiveDeclarations carries Root
+declarations and an ArchiveReadStatus of Read, Unreadable or Limited. Read indicates
+this root read was possible; it does not establish full artifact/child verification.
+No child archive is opened. Preserve eligible nested intents and root prefixes.
+
+RootArchiveLimits contains ArchiveReadLimits (4MiB metadata entry,64MiB actual
+central-directory bytes,100000 entries), ForgeManifestLimits for all declaration
+policies and MaximumAggregateMetadataBytes=24MiB. Validate all positive policies
+and hard declaration depths before opening files. There is no arbitrary whole-file
+size cap: unrelated assets need no decompression. Existing readonly access follows
+filesystem links; strong source-tree rejection remains a separate higher-level gate.
+
+Read fabric.mod.json first for every loader; Quilt then reads quilt.mod.json. Forge
+reads mods.toml; NeoForge first reads neoforge.mods.toml and falls back only on falsey
+text. Decode selected TOML once before reading MANIFEST.MF, process mods before
+reading Jar-in-Jar JSON, and skip later reads after an earlier parse/field failure.
+Internal owned parser stages retain context/counters and typed partial declarations;
+the public text parser stays pure. Do not use readiness double-parsing, public
+callbacks or interfaces per helper. Unsupported loaders still consume Fabric first.
+
+Exact entry lookup selects the first duplicate occurrence, including an empty first
+entry. Preserve StreamReader UTF8/BOM recognition and replacement decoding, including
+UTF16 BOMs. Declared metadata byte length is checked before entry.Open; count actual
+decompressed bytes and aggregate bytes before accepting buffers. Bound decoded
+UTF16 text before StringBuilder append. Limits identify their quota and exact entry;
+actual IO/ZIP/decoder failures preserve completed mods and contextual diagnostics.
+All streams/handles close on success and failure. No child-unavailable warning is
+invented from a root-only read. A failed read prevents nested traversal eligibility.
+
+E36 adds explicit fail-closed archive census/actual-byte/aggregate resource handling;
+preflight is a new global resource prelude, not an exact old failure-priority claim.
+E34 retains actual declaration/read stages and prefixes. Acceptance includes52 new
+original ZIPs,204 earlier root fixtures, staged later-entry limits, first duplicates,
+encoding, corrupt/nonZIP/empty inputs, actual byte limits/handle release and shared
+Forge/Fabric/Quilt pure-parser regressions. No Native50 acceptance is claimed yet.
