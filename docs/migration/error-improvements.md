@@ -432,3 +432,19 @@ cases remain outside node construction, which assigns non-null string version ID
 Unless/Any/All, negative kinds, runtime absences and actual failure priorities remain
 the original rules. Full side filtering, graph issues/IDs, health and provider
 availability are separate capabilities, not inferred from this pure evaluation.
+
+## E39: constraint evidence keeps diagnostic identities truthful
+
+Original JSON and issue hashes collide for numeric NaN/Infinity and their quoted
+text forms even though evaluation differs. Display also merges different unsupported
+maps, numeric kinds and dates. Preserve full owned wire profiles plus a type-framed
+fingerprint, never use display or legacy wire hash as validator identity. Bind this
+evidence to its semantic range in a closed VersionConstraint. Bound and memo its
+retained wire allocation; exhaustion remains an incomplete declaration with prefix.
+
+Future graph keys use schema2/validator4 and isolated health/validator-4 caches;
+old baseline keys require recalculation, not cross-version suppression. A verified
+legacy hash may assist order but must not deduplicate distinct modern constraints.
+Preserve ordinary public wire values, including enum-name versus numeric profiles;
+correct old identity collisions and depth truncation explicitly in the future graph
+contract. This checkpoint does not implement or claim accepted graph reports/caches.

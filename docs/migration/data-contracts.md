@@ -1530,3 +1530,53 @@ groups, unless, missing runtimes, multiple versions, suggested IDs, actual error
 priorities, exact/over quotas and existing range/root/archive regressions in AOT.
 Native52 acceptance is recorded in implementation-plan.md. Full graph/report
 acceptance remains a separate milestone.
+
+## Owned version-constraint evidence / capability53
+
+VersionConstraint is a sealed value with private construction and inseparable
+SemanticRange, Display, LegacyJson, PublicJson and TypedFingerprint. ManifestRequirement
+owns one Constraint; Range/RangeDisplay become readonly forwarding getters. Replacing
+a constraint replaces all its evidence, preventing a with-expression from changing
+semantics while retaining an unrelated fingerprint. Text and strict JSON-literal
+factories serve provider/programmatic/diagnostic input; metadata lowering uses its
+already decoded owned values, preserving the original profile and doing no reparse.
+No syntax/data nodes, streams, borrowed arrays or reflection escape the boundary.
+
+Capture the raw range after its original getter, before lowering loses types.
+JSON dates/numeric kinds/nonfinite values/ordered maps and TOML arrays/tables/dates
+retain their exact wire distinctions. TOML table wire is a Key/Value array. Copy
+Tomlyn DateTimeOffset DateTime, SecondPrecision, numeric Kind and Kind name before
+display conversion. LegacyJson uses numeric enum kinds; PublicJson uses enum names,
+as the actual machine envelope does. Share the string when profiles are identical.
+Wire is full bounded evidence, not a claim that old depth30 outer serialization
+never truncated it. Standalone strict JSON literals do not auto-convert date strings,
+retaining the existing typed diagnostic profile; metadata dates keep auto-date rules.
+
+Fingerprint schema1 hashes a domain prefix, explicit raw type/container tags,
+ordered keys/elements, framed exact UTF16 units, numeric values/bits and captured
+date fields. Never hash Display, joined delimiters or wire alone. NaN and quoted
+NaN must differ despite their equal old JSON; unsupported maps must remain distinct.
+JSON/TOML composite/runtime origins remain explicit where evaluator semantics differ.
+No semantic version normalization, culture folding or structural alias identity.
+
+Root policy adds positive MaximumConstraintWireCharacters=4Mi and
+MaximumAggregateConstraintWireCharacters=16Mi. Guard writer appends before accepting
+output; charge retained distinct profile strings before ownership. Memo complete
+constraints by owned-node reference within one parser invocation, sharing reused
+global TOML ranges without a cross-call cache. New exhaustion is DeclarationLimit,
+retaining original completed mod prefixes and preventing that root's traversal.
+
+E39 intentionally revises future graph diagnostic identity: modern key schema2,
+validator revision4, evidence schema1; isolate health/validator-4 caches and recalculate
+old baselines before applying modern policy. Do not mix old keys or suppress new
+issues with old hashes. Legacy auxiliary sort hashes are only order hints for
+verified profiles/depths; use modern keys to distinguish ties and never deduplicate
+by the colliding old hash. Public wire values are preserved on verified profiles;
+deep truncation and collision corrections are explicit refinements, not blanket
+legacy Key/array-order parity. Capability53 owns evidence only; graph keys/reports/
+caches will be implemented and accepted in later checkpoints.
+
+Acceptance:39 independently captured real roots and22 independent wire/profile
+observations, full date precision/kind/offset, nonfinite collisions, nested arrays/
+tables/maps/property order, memo ownership, exact/over wire budgets and all affected
+root/Forge/traversal/requirement/range regressions in Native AOT. No53 acceptance yet.
