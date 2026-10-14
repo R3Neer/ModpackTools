@@ -9,6 +9,7 @@ if (args.FirstOrDefault() == "--inspect-loader-archive-root") return RootManifes
 if (args.FirstOrDefault() == "--inspect-loader-archive") return RootManifestInspection.Run(args, archive: true, traversal: true);
 if (args.FirstOrDefault() == "--inspect-requirement") return RequirementInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-constraint-literal") return ConstraintInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-graph-report") return GraphInspection.Run(args);
 
 if (args.FirstOrDefault() == "--inspect-psd-lookup")
 {
@@ -275,6 +276,7 @@ RootArchiveContracts.Verify();
 ArtifactArchiveContracts.Verify();
 RequirementContracts.Verify();
 ConstraintEvidenceContracts.Verify();
+GraphContracts.Verify();
 ImportedLookupContracts.Verify();
 Console.WriteLine($"PSD1 native contracts passed: {invalid.Length + 7 + limits.Length} rejected inputs, typed literals, nested arrays, bounded numeric extraction, immutable classification/reference/alias identities, {args.Length} files");
 return 0;

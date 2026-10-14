@@ -12,18 +12,27 @@ public static class RequirementEvaluator
     {
         ArgumentNullException.ThrowIfNull(requirement); ArgumentNullException.ThrowIfNull(context);
         limits ??= new();
+        ValidatePolicy(limits);
+        return EvaluateValidated(requirement, context, limits, null);
+    }
+
+    internal static void ValidatePolicy(RequirementEvaluationLimits limits)
+    {
         var invalid = limits.MaximumNodes <= 0 ? nameof(limits.MaximumNodes)
             : limits.MaximumVersionChecks <= 0 ? nameof(limits.MaximumVersionChecks)
             : limits.MaximumDepth is < 1 or > 64 ? nameof(limits.MaximumDepth) : null;
         if (invalid is not null) throw new DomainException("Compatibility.InvalidRequirementPolicy", "Requirement evaluation limits are invalid",
             "use positive quotas and a depth between 1 and 64", target: invalid);
         VersionRanges.ValidatePolicy(limits.Ranges ?? new());
-        return new Scope(context, limits).Visit(requirement, 1);
     }
+
+    internal static bool? EvaluateValidated(ManifestRequirement requirement, RequirementContext context,
+        RequirementEvaluationLimits limits, RequirementEvaluationBudget? budget)
+        => new Scope(context, limits, budget).Visit(requirement, 1);
 
     private static bool Is(string? value, string expected) => StringComparer.InvariantCultureIgnoreCase.Equals(value, expected);
     private static bool Negative(string? kind) => Is(kind, "incompatible") || Is(kind, "discouraged");
-    private sealed class Scope(RequirementContext context, RequirementEvaluationLimits limits)
+    private sealed class Scope(RequirementContext context, RequirementEvaluationLimits limits, RequirementEvaluationBudget? budget)
     {
         private int nodes, checks;
         private static void Guard(bool exceeded, string property)
@@ -36,7 +45,7 @@ public static class RequirementEvaluator
         {
             ArgumentNullException.ThrowIfNull(requirement);
             Guard(depth > limits.MaximumDepth, nameof(limits.MaximumDepth));
-            Guard(nodes >= limits.MaximumNodes, nameof(limits.MaximumNodes)); nodes++;
+            Guard(nodes >= limits.MaximumNodes, nameof(limits.MaximumNodes)); budget?.Node(); nodes++;
             if (requirement.Unless is not null)
             {
                 var unless = Visit(requirement.Unless, depth + 1);
@@ -80,7 +89,7 @@ public static class RequirementEvaluator
             else
                 foreach (var version in context.Mods[requirement.Target])
                 {
-                    Guard(checks >= limits.MaximumVersionChecks, nameof(limits.MaximumVersionChecks)); checks++;
+                    Guard(checks >= limits.MaximumVersionChecks, nameof(limits.MaximumVersionChecks)); budget?.Version(); checks++;
                     if (string.IsNullOrEmpty(version)) { uncertain = true; continue; }
                     var result = VersionRanges.Evaluate(version, requirement.Range, requirement.Scheme, limits.Ranges);
                     if (result == true) { matches = true; break; }

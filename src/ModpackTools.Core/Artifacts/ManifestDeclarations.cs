@@ -48,6 +48,8 @@ public sealed class ManifestAliasKey : IEquatable<ManifestAliasKey>
         this.identity = identity; OpaqueJson = opaqueJson;
     }
     internal static ManifestAliasKey Text(string value) => new(ManifestAliasKeyKind.String, text: value);
+    public static ManifestAliasKey FromString(string value)
+    { ArgumentNullException.ThrowIfNull(value); return Text(value); }
     internal static ManifestAliasKey Integer(long value) => new(ManifestAliasKeyKind.Int64, integer: value);
     internal static ManifestAliasKey Big(BigInteger value) => new(ManifestAliasKeyKind.BigInteger, big: value);
     internal static ManifestAliasKey Floating(double value) => new(ManifestAliasKeyKind.Double, floating: value);
