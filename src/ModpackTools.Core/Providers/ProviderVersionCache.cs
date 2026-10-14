@@ -27,14 +27,7 @@ public static class ProviderVersionCache
     {
         ArgumentNullException.ThrowIfNull(configurationDirectory); ArgumentNullException.ThrowIfNull(versionId);
         limits ??= new();
-        var invalid = limits.MaximumBytes <= 0 ? nameof(limits.MaximumBytes)
-            : limits.MaximumDepth is < 1 or > 1024 ? nameof(limits.MaximumDepth)
-            : limits.MaximumNormalizedCharacters <= 0 ? nameof(limits.MaximumNormalizedCharacters)
-            : limits.MaximumTokenCharacters <= 0 ? nameof(limits.MaximumTokenCharacters)
-            : limits.MaximumNodes <= 0 ? nameof(limits.MaximumNodes)
-            : limits.MaximumCollectionEntries <= 0 ? nameof(limits.MaximumCollectionEntries) : null;
-        if (invalid is not null) throw new DomainException("Metadata.InvalidProviderCachePolicy", "Provider cache limits are invalid",
-            "use positive quotas and a depth between 1 and 1024", target: invalid);
+        Validate(limits);
         var path = Path.Combine(Path.GetFullPath(configurationDirectory), "metadata", TextHash.Compute("version/" + versionId) + ".json");
         DateTime? modified = null;
         try
@@ -47,10 +40,7 @@ public static class ProviderVersionCache
             {
                 modified = File.GetLastWriteTimeUtc(file.SafeFileHandle);
                 if (modified.Value.Ticks <= now.UtcDateTime.Ticks - TimeSpan.TicksPerDay) return Result(ProviderCacheStatus.Expired);
-                using var bounded = new ProviderInput(file, limits.MaximumBytes);
-                using var reader = new StreamReader(bounded, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-                var decoded = CacheTokenCodec.Read(reader, limits.MaximumDepth, limits.MaximumNormalizedCharacters,
-                    limits.MaximumTokenCharacters, limits.MaximumNodes);
+                var decoded = ReadDocument(file, limits);
                 if (decoded is null) return Result(ProviderCacheStatus.Empty);
                 using var document = decoded.Document;
                 var root = document.RootElement;
@@ -77,7 +67,27 @@ public static class ProviderVersionCache
         ProviderCacheObservation Result(ProviderCacheStatus status, string? diagnostic = null) => new(status, path, modified, null, diagnostic);
     }
 
-    private static ProviderVersion Decode(JsonElement root, CacheDateTable dates, int maximumEntries)
+    internal static void Validate(ProviderCacheReadLimits limits)
+    {
+        var invalid = limits.MaximumBytes <= 0 ? nameof(limits.MaximumBytes)
+            : limits.MaximumDepth is < 1 or > 1024 ? nameof(limits.MaximumDepth)
+            : limits.MaximumNormalizedCharacters <= 0 ? nameof(limits.MaximumNormalizedCharacters)
+            : limits.MaximumTokenCharacters <= 0 ? nameof(limits.MaximumTokenCharacters)
+            : limits.MaximumNodes <= 0 ? nameof(limits.MaximumNodes)
+            : limits.MaximumCollectionEntries <= 0 ? nameof(limits.MaximumCollectionEntries) : null;
+        if (invalid is not null) throw new DomainException("Metadata.InvalidProviderCachePolicy", "Provider cache limits are invalid",
+            "use positive quotas and a depth between 1 and 1024", target: invalid);
+    }
+
+    internal static DecodedCache? ReadDocument(Stream source, ProviderCacheReadLimits limits)
+    {
+        using var bounded = new ProviderInput(source, limits.MaximumBytes);
+        using var reader = new StreamReader(bounded, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+        return CacheTokenCodec.Read(reader, limits.MaximumDepth, limits.MaximumNormalizedCharacters,
+            limits.MaximumTokenCharacters, limits.MaximumNodes);
+    }
+
+    internal static ProviderVersion Decode(JsonElement root, CacheDateTable dates, int maximumEntries)
     {
         if (root.ValueKind != JsonValueKind.Object) throw new FormatException("A provider version must be an object.");
         var count = 0;

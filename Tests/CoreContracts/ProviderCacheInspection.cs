@@ -38,27 +38,10 @@ internal static class ProviderCacheInspection
                 if (result.Version is not { } version) writer.WriteNullValue();
                 else
                 {
-                    writer.WriteStartObject(); writer.WriteString("Id", version.Id); writer.WriteString("ProjectId", version.ProjectId);
-                    writer.WriteString("Name", version.Name); writer.WriteString("VersionNumber", version.VersionNumber);
-                    writer.WriteStartObject("Published"); writer.WriteString("Text", version.Published.Text);
-                    writer.WriteString("Value", version.Published.Value?.ToString("o", CultureInfo.InvariantCulture));
-                    writer.WriteString("Kind", version.Published.Value?.Kind.ToString()); writer.WriteString("Instant", version.Published.Instant?.ToString("o", CultureInfo.InvariantCulture)); writer.WriteEndObject();
-                    writer.WriteStartArray("Files"); foreach (var file in version.Files)
-                    {
-                        writer.WriteStartObject(); writer.WriteString("Filename", file.Filename); writer.WriteString("Url", file.Url);
-                        writer.WriteBoolean("Primary", file.Primary); writer.WriteString("Sha1", file.Sha1); writer.WriteString("Sha512", file.Sha512);
-                        if (file.Size is { } size) writer.WriteNumber("Size", size); else writer.WriteNull("Size"); writer.WriteEndObject();
-                    }
-                    writer.WriteEndArray(); writer.WriteStartArray("Dependencies"); foreach (var dependency in version.Dependencies)
-                    {
-                        writer.WriteStartObject(); writer.WriteString("ProjectId", dependency.ProjectId); writer.WriteString("VersionId", dependency.VersionId);
-                        writer.WriteString("Type", dependency.Type); writer.WriteString("FileName", dependency.FileName); writer.WriteEndObject();
-                    }
-                    writer.WriteEndArray(); Strings("Loaders", version.Loaders); Strings("GameVersions", version.GameVersions); writer.WriteEndObject();
+                    WriteVersion(writer, version);
                 }
                 writer.WriteEndObject();
-                void Strings(string name, IEnumerable<string> values)
-                { writer.WriteStartArray(name); foreach (var value in values) writer.WriteStringValue(value); writer.WriteEndArray(); }
+
             }
             Console.OpenStandardOutput().Write(output.GetBuffer(), 0, (int)output.Length); return 0;
         }
@@ -67,7 +50,29 @@ internal static class ProviderCacheInspection
         catch (Exception exception) when (exception is ArgumentException or FormatException or OverflowException or IOException or UnauthorizedAccessException)
         { ManagedInspection.WriteFailure("Core.InputReadFailed", exception.Message, "InvalidData", null, "check provider cache inspection arguments", null); return 2; }
     }
-    private sealed class BoundedOutput : MemoryStream
+    internal static void WriteVersion(Utf8JsonWriter writer, ProviderVersion version)
+    {
+        writer.WriteStartObject(); writer.WriteString("Id", version.Id); writer.WriteString("ProjectId", version.ProjectId);
+        writer.WriteString("Name", version.Name); writer.WriteString("VersionNumber", version.VersionNumber);
+        writer.WriteStartObject("Published"); writer.WriteString("Text", version.Published.Text);
+        writer.WriteString("Value", version.Published.Value?.ToString("o", CultureInfo.InvariantCulture));
+        writer.WriteString("Kind", version.Published.Value?.Kind.ToString()); writer.WriteString("Instant", version.Published.Instant?.ToString("o", CultureInfo.InvariantCulture)); writer.WriteEndObject();
+        writer.WriteStartArray("Files"); foreach (var file in version.Files)
+        {
+            writer.WriteStartObject(); writer.WriteString("Filename", file.Filename); writer.WriteString("Url", file.Url);
+            writer.WriteBoolean("Primary", file.Primary); writer.WriteString("Sha1", file.Sha1); writer.WriteString("Sha512", file.Sha512);
+            if (file.Size is { } size) writer.WriteNumber("Size", size); else writer.WriteNull("Size"); writer.WriteEndObject();
+        }
+        writer.WriteEndArray(); writer.WriteStartArray("Dependencies"); foreach (var dependency in version.Dependencies)
+        {
+            writer.WriteStartObject(); writer.WriteString("ProjectId", dependency.ProjectId); writer.WriteString("VersionId", dependency.VersionId);
+            writer.WriteString("Type", dependency.Type); writer.WriteString("FileName", dependency.FileName); writer.WriteEndObject();
+        }
+        writer.WriteEndArray(); Strings("Loaders", version.Loaders); Strings("GameVersions", version.GameVersions); writer.WriteEndObject();
+        void Strings(string name, IEnumerable<string> values)
+        { writer.WriteStartArray(name); foreach (var value in values) writer.WriteStringValue(value); writer.WriteEndArray(); }
+    }
+    internal sealed class BoundedOutput : MemoryStream
     {
         private void Guard(int count)
         {
