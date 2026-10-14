@@ -1,0 +1,122 @@
+[
+  {
+    "Group": "0, array, baseline48",
+    "Samples": 9,
+    "Median": 200064,
+    "Min": 200064,
+    "Max": 200064,
+    "Hashes": [
+      "1E450BCB4BA7DEB332C7DC9C6B58F82B3A15588765C903A5F38EC0CCF59EC242"
+    ]
+  },
+  {
+    "Group": "0, array, current49",
+    "Samples": 9,
+    "Median": 200288,
+    "Min": 200288,
+    "Max": 200288,
+    "Hashes": [
+      "1E450BCB4BA7DEB332C7DC9C6B58F82B3A15588765C903A5F38EC0CCF59EC242"
+    ]
+  },
+  {
+    "Group": "0, scalar, baseline48",
+    "Samples": 9,
+    "Median": 166936,
+    "Min": 166936,
+    "Max": 166936,
+    "Hashes": [
+      "1E450BCB4BA7DEB332C7DC9C6B58F82B3A15588765C903A5F38EC0CCF59EC242"
+    ]
+  },
+  {
+    "Group": "0, scalar, current49",
+    "Samples": 9,
+    "Median": 167024,
+    "Min": 167024,
+    "Max": 167052,
+    "Hashes": [
+      "1E450BCB4BA7DEB332C7DC9C6B58F82B3A15588765C903A5F38EC0CCF59EC242"
+    ]
+  },
+  {
+    "Group": "48, array, baseline48",
+    "Samples": 9,
+    "Median": 1811216,
+    "Min": 1799712,
+    "Max": 1811616,
+    "Hashes": [
+      "07F58A23178BD956F2C9E1F8BFF95F98369D3429BBCE93F355134F899B9AC6C6"
+    ]
+  },
+  {
+    "Group": "48, array, current49",
+    "Samples": 9,
+    "Median": 221696,
+    "Min": 221696,
+    "Max": 233200,
+    "Hashes": [
+      "07F58A23178BD956F2C9E1F8BFF95F98369D3429BBCE93F355134F899B9AC6C6"
+    ]
+  },
+  {
+    "Group": "48, scalar, baseline48",
+    "Samples": 9,
+    "Median": 188344,
+    "Min": 188344,
+    "Max": 188372,
+    "Hashes": [
+      "07F58A23178BD956F2C9E1F8BFF95F98369D3429BBCE93F355134F899B9AC6C6"
+    ]
+  },
+  {
+    "Group": "48, scalar, current49",
+    "Samples": 9,
+    "Median": 188460,
+    "Min": 188432,
+    "Max": 188473,
+    "Hashes": [
+      "07F58A23178BD956F2C9E1F8BFF95F98369D3429BBCE93F355134F899B9AC6C6"
+    ]
+  },
+  {
+    "Group": "8, array, baseline48",
+    "Samples": 9,
+    "Median": 466784,
+    "Min": 466784,
+    "Max": 478288,
+    "Hashes": [
+      "C251DE5B411E9BF58C753156BD9DCF59DF1AB77548A8A015005AE54D3394D94C"
+    ]
+  },
+  {
+    "Group": "8, array, current49",
+    "Samples": 9,
+    "Median": 203968,
+    "Min": 203968,
+    "Max": 203968,
+    "Hashes": [
+      "C251DE5B411E9BF58C753156BD9DCF59DF1AB77548A8A015005AE54D3394D94C"
+    ]
+  },
+  {
+    "Group": "8, scalar, baseline48",
+    "Samples": 9,
+    "Median": 170616,
+    "Min": 170616,
+    "Max": 170616,
+    "Hashes": [
+      "C251DE5B411E9BF58C753156BD9DCF59DF1AB77548A8A015005AE54D3394D94C"
+    ]
+  },
+  {
+    "Group": "8, scalar, current49",
+    "Samples": 9,
+    "Median": 170732,
+    "Min": 170704,
+    "Max": 170732,
+    "Hashes": [
+      "C251DE5B411E9BF58C753156BD9DCF59DF1AB77548A8A015005AE54D3394D94C"
+    ]
+  }
+]

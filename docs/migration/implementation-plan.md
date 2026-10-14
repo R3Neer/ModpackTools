@@ -784,3 +784,21 @@ Keep both results, distinguish sampled OS working-set from GC allocations, and d
 not generalize this diagnostic fixture to public CLI performance. Source review
 confirms one formatted result per reused owned node; a separate native allocation
 evaluation may quantify that narrower cost. Actual archive ownership is next.
+
+An independent assessment-only Native AOT harness now quantifies pure Parse
+allocations, retaining both earlier working-set results unchanged. It compiles
+abc0d3e Core with the adce511 parser renamed in the same executable, pinned SDK
+10.0.300/AOT10.0.8/DLLs, no serializers/reflection in the measured region. Native
+publish is warning-free; executable SHA256:
+2E7BE10EA8B30229B809DE18780962D90DF752F0E791583DE7F83BF9E19F06EB.
+Three fresh processes, ten warmups per case, three alternating trials per parser/
+shape/count and ten Parse calls per sample yield108 samples/1080 measured calls.
+GC.GetAllocatedBytesForCurrentThread excludes file IO, startup, serialization,
+hashes and native/other-thread allocations. Values/hashes are identical per case.
+For48 aliases/two8192-character version parts, median bytes per Parse decrease
+1811216 to221696 (87.76%,1589520 bytes); scalar control188344/188460 adds116 bytes.
+Eight-alias array466784/203968 improves; zero-alias array200064/200288 adds224 bytes.
+This isolates repeated conversion allocation, not process RAM or wall speed.
+Raw samples/summary/artifact hashes are retained under benchmarks/root-text-*.csv
+and root-text-allocation-summary.json. Reproducible sources, snapshot, locks and
+logs remain assessment/review-whitebox/root-allocation-aot-49 with its README.
