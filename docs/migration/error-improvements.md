@@ -349,3 +349,32 @@ initial caret/tilde Int32 conversion failures, using the bound as target, parser
 details and a range-editing hint. Preserve Int32.MaxValue increment promotion and
 do not validate unused conditions. Consumed ordering errors retain E28/E29 rather
 than being silently mapped to unknown or wrapped as a different failure.
+
+## E32: typed declaration/alias enumeration protects actual Keys entries
+
+Fabric dependency groups enumerate their actual ordered map entries. A requirement
+named Keys must not shadow the map's key collection and erase requirements or invent
+Target='*'/Range=null. Preserve the captured defective original separately; explicitly
+test the complete corrected dependencies. Future graph alias indexing also enumerates
+actual alias entries: a string alias Keys must not become its version text as a new
+alias with null version. Root alias contents themselves remain faithful. These are
+scoped safety refinements, not claims of exact legacy equality for Keys fixtures.
+
+## E33: bounded root manifest input and construction
+
+Metadata.InvalidDeclarationPolicy identifies invalid positive quotas/hard depth
+overrides before parsing. Actual selected input/token/node/output/recursion exhaustion
+produces an incomplete root diagnostic identifying the quota; no healthy declaration
+or silently dropped requirement is returned. Preserve any root mod already inserted
+before a late failure. All data/requirement budgets guard owned allocation/descent;
+increased policies do not remove hard recursion bounds. Archive byte quotas remain a
+separate future effect, and no child-unavailable claim is inferred from root parsing.
+
+## E34: contextual root failures preserve partial observations
+
+Actual selected decoding/member/cast failures become structured ManifestIncomplete
+diagnostics with manifest name, operation/field context, details and repair guidance.
+Preserve warning stage/order and already inserted mods/nested intents; never turn
+failure into complete/healthy. Unknown-schema and no-supported-root diagnostics keep
+their existing useful messages. This improves formerly raw localized member errors
+without changing which manifest branch was selected or retrying a different loader.

@@ -1197,3 +1197,69 @@ Literal PS hashtables have a different comparer; diagnostic
 --member-case-insensitive true models that declared input origin. ANY is unknown
 under the JSON default and matches any only with the appropriate source comparer.
 This does not change the comparator used for versions or the Any/All truth table.
+
+## Fabric/Quilt root declarations / next checkpoint
+
+Pure root parsing takes already-read Fabric/Quilt texts plus the declared loader.
+It returns initialized owned Mods, root diagnostics and nested-path intents, with
+root completeness explicit. No ZIP entries, child streams, downloads or providers
+are opened here. Completeness concerns only this root parse; declared children do
+not establish whole-artifact verification. Forge/TOML and archive traversal follow
+separately. Loader comparison retains invariant case-insensitive matching; preserve
+the original spelling for diagnostics. Truthy Quilt text takes precedence for Quilt,
+and malformed selected Quilt never falls back to Fabric. Ignored Fabric contents
+are not semantically decoded when Quilt wins. Exact archive names/read-byte preludes
+belong to the future archive facade.
+
+An owned private OrderedManifestValue data tree preserves String, Int64, BigInteger,
+Double including nonfinite values, Boolean, DateTime, Null, Array and ordered map.
+Use the pinned Newtonsoft token reader, without JToken/serializer/reflection or PS.
+JSON maps use Ordinal names, allow empty and case-distinct keys, and move an exact
+duplicate to its last occurrence. Strict dot access, optional index access and
+Get-MpPropertyValue-style member retrieval remain distinct boundary operations.
+Root pipeline singleton/array and property enumeration behavior must be characterized
+from original helpers. No data tree or token-reader reference escapes into domain DTOs.
+Do not reuse PSCustomObject/cache object projections for OrderedHashtable casts.
+
+String casts occur only at the operator that needs them: null becomes empty, booleans
+True/False, floating numbers G15, dates invariant PS date text, ordered objects their
+runtime type name, and arrays join one level with spaces/type names for nested arrays.
+Dates/nonfinite numbers remain typed for optional comparisons, aliases and ranges.
+Date range leaves lower to Unknown, never canonical ISO Text. Nonfinite numeric range
+leaves also remain Unknown; quoted ordinary NaN/Infinity stay strings. Shared date
+constructor mechanics, if extracted, retain the seven-argument guard and require the
+complete existing cache regression; the cache decoder's default profile is unchanged.
+
+Requirements are immutable records with Target, compiled VersionRange, retained
+source display, Kind, Side, Scope, Maven scheme, Source, SuggestedVersionId, Any,
+All and Unless. These fields can coexist; do not replace Quilt requirement records
+with an exclusive operator union. Preserve Fabric group order/mappings and Quilt
+depends/breaks order, optional equality with true (not truthiness), required recursive
+children, any/all getter behavior and unless conversion. Retain unknown side/kind
+strings for later interpretation. No dependency satisfaction is evaluated during parse.
+
+Alias entries own closed String/Int64/BigInteger/Double/Boolean/Date/opaque-array/
+opaque-object key variants and string versions. Preserve literal-table String key
+OrdinalIgnoreCase equality, last value and first key spelling. Numeric kinds stay
+distinct and array/object keys preserve decoded object identity, not structural
+equality or stringification. Only String keys may enter the future string-target
+alias index. Nested intents preserve source order, duplicates and falsey/cast behavior;
+do not add unavailable-child warnings without attempting a child read.
+
+Preserve stage prefixes and warning order: Fabric schema checking precedes root
+insertion; Quilt schema checking follows root insertion/nested assignment, so a late
+missing schema can retain the root mod plus an incomplete diagnostic. Selected decode
+failure retains no root mod. No supported root yields the original loader warning.
+E32 explicitly repairs adapted Keys shadowing; E33 bounds reads/conversion and E34
+contextualizes actual incomplete-root failures without hiding retained prefixes.
+
+Initial parser limits:4Mi UTF16 units per input text/token,100000 decoded nodes,
+JSON depth64,100000 constructed requirements,requirement depth64,100000 alias slots
+and100000 nested intents. Positive policies/depth1..64 are validated before work;
+whole text guards are explicit input preludes. Shared requirement budgets cover all
+Any/All/Unless children, and output/recursion guards precede allocations/descent.
+Keep General/Maven and existing cache cases as regressions. Native comparison must
+cover complete root fields/order, nonstring alias lookup distinction, ISO/float/map
+casts, selected-manifest precedence, partial prefixes, nested intents without child
+effects, exact/over quotas and separately acknowledged E32 cases. Original70 blind
+archives and focused white oracles remain unchanged; there is no Native47 acceptance yet.
