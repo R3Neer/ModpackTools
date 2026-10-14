@@ -410,3 +410,25 @@ still follow child copy/archive construction. Copy/open/spool failures have type
 NestedReadFailed diagnostics instead of localized raw exception wrappers, preserving
 the original failure stage, mod prefix and sibling disposition. No source extraction
 or filesystem normalization of ZIP entry names occurs.
+
+## E38: owned requirement contexts and bounded tri-state evaluation
+
+Context ownership validates positive quotas and counts consumed rows, keys, version
+occurrences and UTF16 text before owned insertion. Repeated empty entries cannot
+bypass row accounting. Reject duplicate project IDs with Content.DuplicateIdentity;
+concatenate repeated mod-version occurrences. Freeze maps and arrays, using ordinal
+case-insensitive identity independently of invariant tag/version comparisons.
+
+Evaluation validates positive visited-node/version-check policies and hard depth64,
+including range/comparison policies before short circuits. Actual exhaustion fails
+with Compatibility.ContextLimitExceeded or Compatibility.RequirementLimitExceeded,
+identifying its quota; never convert exhaustion or consumed range errors to healthy
+or unknown. Empty/null inspected mod versions still consume checks and retain
+unknown semantics. Project constraints have an explicit text/null domain; non-text
+shapes return unknown instead of attempting arbitrary boxed PowerShell casts.
+Public provider requirements all use text wildcards, so retained non-text helper
+observations do not claim changed public behavior. Nullable project-version helper
+cases remain outside node construction, which assigns non-null string version IDs.
+Unless/Any/All, negative kinds, runtime absences and actual failure priorities remain
+the original rules. Full side filtering, graph issues/IDs, health and provider
+availability are separate capabilities, not inferred from this pure evaluation.

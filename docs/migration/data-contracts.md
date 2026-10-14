@@ -1486,6 +1486,8 @@ occurrences. Duplicate mod entries concatenate; duplicate project IDs are reject
 before ownership, matching state identity validation. No non-string alias acquires
 a string target identity. A separate future graph builder supplies side-filtered
 contexts, environment versions and provider requirements.
+Context duplicate rejection is Content.DuplicateIdentity/InvalidArgument with the
+second supplied ID as target; this is validation of this typed factory argument.
 
 Unless is first: true satisfies immediately, unknown returns unknown immediately.
 Nonempty Any wins over All; preserve visited-child short circuits and negative-kind
@@ -1497,6 +1499,8 @@ case-insensitive comparison; map identity remains ordinal case-insensitive. Proj
 text constraints use invariant case-sensitive equality and exact wildcard '*', not
 semantic version ordering. A suggested-version mismatch is unknown only after a
 project constraint matched, including negative kinds.
+Wildcard comparison follows the invariant tag comparator without trimming; null
+text differs from empty text and cannot match a non-null project version ID.
 
 Public provider project requirements always originate with the text wildcard.
 Typed text/null project constraints support the helper's scalar string behavior;
@@ -1509,11 +1513,20 @@ because it is inconvenient.
 
 Evaluation policy: positive visited node100000/version-check100000 quotas, depth64
 hard maximum, plus existing VersionRangeLimits. Validate even on short-circuited
-inputs. Context ownership policy:100000 projects,100000 mod keys,1000000 version
+inputs.
+Each consumed version gets its own existing range/comparison budget. Requirement
+visited-node and inspected-version counters span the complete evaluator invocation.
+Context ownership policy:100000 projects,100000 mod keys,1000000 version
 occurrences and16Mi UTF16 characters in keys/versions, charged before owned insertion.
+An additional200000 consumed-row cap includes repeated/empty context entries.
+Every inspected mod version occurrence, including null/empty, consumes a version
+check. Project text checks are bounded by visited nodes and context text ownership.
+Project version IDs are non-null strings, as assigned by the original node builder;
+synthetic nullable project helpers remain characterization outside this boundary.
 Zero remaining budgets are invocation state, not invalid public policies. Resource
 exhaustion is a typed domain failure identifying the quota, not satisfaction/unknown.
 Acceptance will cover original tri-state cases, case/culture identity, simultaneous
 groups, unless, missing runtimes, multiple versions, suggested IDs, actual error
 priorities, exact/over quotas and existing range/root/archive regressions in AOT.
-No Native52 or full graph/report acceptance is claimed before implementation.
+Native52 acceptance is recorded in implementation-plan.md. Full graph/report
+acceptance remains a separate milestone.

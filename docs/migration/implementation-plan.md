@@ -842,3 +842,27 @@ memory, public content switch or dependency-health claim follows.
 
 Next52 is the pure tri-state requirement evaluator on owned contexts. Graph issue
 production, full source health/cache and provider resolution remain later slices.
+
+Capability52 completed as d8d143d. Pure requirement evaluation preserves unless and
+group priorities, tri-state version/runtime/suggested-version rules and actual
+consumed numeric failures on owned frozen contexts. Per-invocation node/version
+checks are distinct from per-consumed-version range/comparison budgets. Public
+node version IDs are non-null strings; arbitrary non-text project constraints and
+synthetic nullable project helpers are explicitly characterized outside that domain.
+Three-project strict gates and both Native AOT publications pass warning-free.
+Host v72 SHA256:471D40A13802F379C9389B58518523F91F4D07C0CB76AD21526A20D75B44F785;
+CLI v79 SHA256:226757F140500B8EAFCB9DFFF0C70B4B0A633A7EF99648AC8852A96ABF21BF9E.
+Own29 requirement/44 range/106 ordering/24 Root/26 Forge/14 archive/15 protocol
+cases and default assertions pass. Blind228 includes159 original typed comparisons
+(seven actual errors),seven explicit non-text unknown cases,two typed nullable-ID
+rejections and60 resource/policy/grammar cases. White157 includes55 original pairs,
+seven explicit non-text unknowns,25 bounds/culture,51 range and19 Root regressions;
+two helper-only observations are not counted as Native parity. Frozen hashes,
+unchanged originals/input audits and empty stderr are verified. Provisional harness
+expectations remain preserved; no oracle was weakened. No full graph/side/provider/
+health/public content or performance acceptance follows from this pure evaluator.
+
+Before graph report construction, finalize ownership of original range evidence:
+typed Range/RangeDisplay alone cannot reconstruct every old serialized requirement
+or distinguish unsupported object constraints. Preserve distinct diagnostic identity
+and resolve public wire/cache/baseline compatibility explicitly, not via display text.
