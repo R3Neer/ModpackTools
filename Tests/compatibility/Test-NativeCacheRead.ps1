@@ -90,11 +90,11 @@ try {
    $calls++
    if($native.Stderr){throw "$($case.label)/$stage stderr: $($native.Stderr)"}
    if($legacyError){
-    $error=$native.Stdout|ConvertFrom-Json -AsHashtable -DateKind String
+    $failurePayload=$native.Stdout|ConvertFrom-Json -AsHashtable -DateKind String
     $id=$legacyError.Exception.Data['ModpackTools.ErrorId']
-    if(!$id){$id='ModpackTools.Inventory.InvalidReferenceCache';if($error.error.target-cne$path-or!$error.error.details){throw "$($case.label)/$stage missing E15 path/details"}}
-    elseif($case.label.StartsWith('schema-text-') -and $stage -eq 'resolve' -and $null -ne $error.error.target){throw "$($case.label)/$stage wrong cast failure phase"}
-    if($native.Exit-ne1-or$error.error.id-cne$id){throw "$($case.label)/$stage wrong error: $($native.Stdout)"}
+    if(!$id){$id='ModpackTools.Inventory.InvalidReferenceCache';if($failurePayload.error.target-cne$path-or!$failurePayload.error.details){throw "$($case.label)/$stage missing E15 path/details"}}
+    elseif($case.label.StartsWith('schema-text-') -and $stage -eq 'resolve' -and $null -ne $failurePayload.error.target){throw "$($case.label)/$stage wrong cast failure phase"}
+    if($native.Exit-ne1-or$failurePayload.error.id-cne$id){throw "$($case.label)/$stage wrong error: $($native.Stdout)"}
    }else{
     $actual=ConvertTo-Json -InputObject ($native.Stdout|ConvertFrom-Json -AsHashtable -DateKind String -Depth 100) -Depth 100 -Compress
     $expectedCanonical=ConvertTo-Json -InputObject ($expectedJson|ConvertFrom-Json -AsHashtable -DateKind String -Depth 100) -Depth 100 -Compress
