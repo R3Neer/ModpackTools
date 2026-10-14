@@ -13,16 +13,7 @@ public static class RootManifestParser
     {
         ArgumentNullException.ThrowIfNull(loader);
         limits ??= new();
-        var invalid = limits.MaximumTextCharacters <= 0 ? nameof(limits.MaximumTextCharacters)
-            : limits.MaximumTokenCharacters <= 0 ? nameof(limits.MaximumTokenCharacters)
-            : limits.MaximumNodes <= 0 ? nameof(limits.MaximumNodes)
-            : limits.MaximumJsonDepth is < 1 or > 64 ? nameof(limits.MaximumJsonDepth)
-            : limits.MaximumRequirements <= 0 ? nameof(limits.MaximumRequirements)
-            : limits.MaximumRequirementDepth is < 1 or > 64 ? nameof(limits.MaximumRequirementDepth)
-            : limits.MaximumAliases <= 0 ? nameof(limits.MaximumAliases)
-            : limits.MaximumNestedPaths <= 0 ? nameof(limits.MaximumNestedPaths) : null;
-        if (invalid is not null) throw new DomainException("Metadata.InvalidDeclarationPolicy", "Root-manifest limits are invalid",
-            "use positive declaration quotas and depths between 1 and 64", target: invalid);
+        ValidatePolicy(limits);
         var scope = new Scope(limits);
         var canTraverse = true;
         try
@@ -52,6 +43,21 @@ public static class RootManifestParser
         var status = !canTraverse || scope.Diagnostics.Any(item => item.Code != "NoSupportedManifest") ? RootManifestStatus.Incomplete
             : scope.Mods.Count == 0 ? RootManifestStatus.Missing : RootManifestStatus.Complete;
         return new([.. scope.Mods], [.. scope.Diagnostics], scope.NestedPaths, status, canTraverse);
+    }
+
+    internal static void ValidatePolicy(RootManifestLimits limits)
+    {
+        ArgumentNullException.ThrowIfNull(limits);
+        var invalid = limits.MaximumTextCharacters <= 0 ? nameof(limits.MaximumTextCharacters)
+            : limits.MaximumTokenCharacters <= 0 ? nameof(limits.MaximumTokenCharacters)
+            : limits.MaximumNodes <= 0 ? nameof(limits.MaximumNodes)
+            : limits.MaximumJsonDepth is < 1 or > 64 ? nameof(limits.MaximumJsonDepth)
+            : limits.MaximumRequirements <= 0 ? nameof(limits.MaximumRequirements)
+            : limits.MaximumRequirementDepth is < 1 or > 64 ? nameof(limits.MaximumRequirementDepth)
+            : limits.MaximumAliases <= 0 ? nameof(limits.MaximumAliases)
+            : limits.MaximumNestedPaths <= 0 ? nameof(limits.MaximumNestedPaths) : null;
+        if (invalid is not null) throw new DomainException("Metadata.InvalidDeclarationPolicy", "Root-manifest limits are invalid",
+            "use positive declaration quotas and depths between 1 and 64", target: invalid);
     }
 
     private sealed class Scope(RootManifestLimits limits)
