@@ -1263,3 +1263,15 @@ cover complete root fields/order, nonstring alias lookup distinction, ISO/float/
 casts, selected-manifest precedence, partial prefixes, nested intents without child
 effects, exact/over quotas and separately acknowledged E32 cases. Original70 blind
 archives and focused white oracles remain unchanged; there is no Native47 acceptance yet.
+
+Root results also carry CanTraverseNested: false after an actual parsing/limit
+failure, including a late schema member failure, because the original catch skips
+the child loop. Unknown-schema warnings alone retain true. Nested-path assignment
+is committed only after its extraction stage completes. Root completeness and
+child-loop eligibility are separate; neither claims that children were verified.
+Alias arrays use deterministic first slot order with last values/first string key
+spelling; original Hashtable iteration is not claimed to have that stable order.
+The diagnostic root inspector exposes full requirement fields, original RangeDisplay
+and optional predicate probes over the compiled range, without placing a JSON DOM
+in domain records. Live original Range objects supply the probe oracle, retaining
+Date/nonfinite type distinctions; raw original observations remain separately saved.
