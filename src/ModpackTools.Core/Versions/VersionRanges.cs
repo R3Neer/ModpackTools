@@ -26,6 +26,12 @@ public static partial class VersionRanges
         ArgumentNullException.ThrowIfNull(range);
         if (scheme is not (VersionScheme.General or VersionScheme.Maven)) throw new ArgumentOutOfRangeException(nameof(scheme));
         limits ??= new();
+        var scope = new Scope(version ?? "", scheme, limits, ValidatePolicy(limits));
+        return scope.Visit(range, 1);
+    }
+
+    internal static VersionComparisonLimits ValidatePolicy(VersionRangeLimits limits)
+    {
         var invalid = limits.MaximumTextCharacters <= 0 ? nameof(limits.MaximumTextCharacters)
             : limits.MaximumNodes <= 0 ? nameof(limits.MaximumNodes)
             : limits.MaximumComparisons <= 0 ? nameof(limits.MaximumComparisons)
@@ -33,8 +39,7 @@ public static partial class VersionRanges
         if (invalid is not null)
             throw new DomainException("Version.InvalidRangePolicy", "Version-range limits are invalid",
                 "use positive range quotas and a depth between 1 and 64", target: invalid);
-        var scope = new Scope(version ?? "", scheme, limits, VersionOrdering.Validate(limits.Comparison));
-        return scope.Visit(range, 1);
+        return VersionOrdering.Validate(limits.Comparison);
     }
 
     private sealed class Scope(string version, VersionScheme scheme, VersionRangeLimits limits, VersionComparisonLimits comparison)
