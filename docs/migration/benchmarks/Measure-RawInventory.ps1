@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Executable,[string]$PackRoot='D:\Minecraft\VanillaPlus-26.2',[string]$LegacyRoot='D:\Tools\ModpackTools',[int]$Samples=21)
+param([Parameter(Mandatory)][string]$Executable,[Parameter(Mandatory)][string]$PackRoot,[Parameter(Mandatory)][string]$LegacyRoot,[int]$Samples=21)
 $ErrorActionPreference='Stop'
 if($Samples -lt 3){throw 'At least three samples are required'}
 $workspace='C:\Users\Usuario\Desktop\ReorganizacionPC'

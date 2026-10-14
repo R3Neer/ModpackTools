@@ -1651,15 +1651,22 @@ are Int32 UTF16-unit count plus raw UTF16BE. All counts are signed Int32 big-end
 Warning/override payload is one text frame. A requirement writes Target,Kind,Side,
 Scope,Source,SuggestedVersionId text frames, scheme byte0 General/1 Maven,32 decoded
 constraint-fingerprint bytes, Any count/children,All count/children,Unless presence
-byte0/1 and optional child. Then fact count; each fact writes Scope,Target text,
+byte0/1 and optional child. Then fact-observation presence byte0 for warnings,
+overrides and duplicate-native declarations,1 for evaluated requirement issues;
+then fact count. This distinguishes no observation from an observed empty fact
+set, preserving the old base-key versus empty-fact-suffix distinction. Each fact writes Scope,Target text,
 presence byte0/1,version count and each version as null byte0 or byte1/text frame.
 Warnings/overrides have zero facts. Output is64 lowercase hex characters.
 
 Validate all positive policies before composition. Bound nodes100000, mod
 occurrences100000, alias occurrences100000, requirement declarations100000,
 warnings100000, emitted issue occurrences100000, fact occurrences1000000 and
-aggregate input UTF16 characters32Mi. Requirement depth64 is hard. Count all
-input occurrences before composition, including disabled rows and unused branches;
+aggregate input UTF16 characters32Mi. Requirement depth64 is hard.
+Also bound MaximumFactVersions1000000 across actual modern/auxiliary fact-version
+enumerations, including null/empty values. Identity-character budgets alone cannot
+bound repeated zero-length/null fact-version occurrences. Charge each borrowed
+version-array length before walking it; no per-fact version-array copies.
+Count all input occurrences before composition, including disabled rows and unused branches;
 shared immutable declarations still charge each occurrence.
 Input text accounting includes environment/node/declaration fields, alias string
 or opaque wire evidence and versions, warning text, requirement fields and each
@@ -1676,6 +1683,13 @@ of skipped branches; aggregate exhausted work propagates as a graph limit failur
 New graph exhaustion is a typed
 Compatibility.GraphLimitExceeded, not an incomplete or healthy report. Invalid
 graph policy is Compatibility.InvalidGraphPolicy. No partial result escapes.
+Bound repeated identity and message work too: MaximumIdentityCharacters64Mi counts
+all text actually fed to modern and auxiliary hash writers across issues;
+MaximumMessageCharacters64Mi counts constructed message characters before joining.
+Repeated long owner/version fields cannot bypass input quotas by reuse across many
+issues. Legacy auxiliary serialization hashes through a bounded streaming writer,
+not an unbounded temporary JSON string. These consumed limits fail the invocation
+truthfully; they do not switch to weak identity or silently omit diagnostics.
 This ownership/work policy is E40, not proof of the whole-process128MiB gate.
 
 Finite acceptance covers both sides, disabled nodes, nested/top-level duplicates,
