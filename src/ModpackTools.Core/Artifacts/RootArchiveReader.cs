@@ -29,18 +29,7 @@ public static class RootArchiveReader
             using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
             ArchivePreflight.Validate(file, limits.Archive);
             using var archive = new ZipArchive(file, ZipArchiveMode.Read, leaveOpen: true);
-            var reader = new EntryReader(archive, limits);
-            var fabric = reader.Read(LoaderManifestEntry.Fabric);
-            RootManifestDeclarations result;
-            if (string.Equals(loader, "forge", StringComparison.InvariantCultureIgnoreCase)
-                || string.Equals(loader, "neoforge", StringComparison.InvariantCultureIgnoreCase))
-                result = ForgeRootManifestParser.ParseEntries(reader.Read, loader, limits.Declarations);
-            else
-            {
-                var quilt = string.Equals(loader, "quilt", StringComparison.InvariantCultureIgnoreCase) ? reader.Read(LoaderManifestEntry.Quilt) : null;
-                result = RootManifestParser.Parse(fabric, quilt, loader, limits.Declarations.Declarations);
-            }
-            return new(result, result.Diagnostics.Any(item => item.Code is "ArchiveLimit" or "DeclarationLimit") ? ArchiveReadStatus.Limited : ArchiveReadStatus.Read);
+            return ReadOpened(archive, loader, limits);
         }
         catch (RootArchiveEntryException exception)
         { return Failed(exception.Diagnostic, exception.Diagnostic.Code == "ArchiveLimit" ? ArchiveReadStatus.Limited : ArchiveReadStatus.Read); }
@@ -49,9 +38,29 @@ public static class RootArchiveReader
         catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         { return Failed(new("ArchiveUnreadable", "JAR could not be read: " + path, "", exception.Message, "check archive integrity and readonly access"), ArchiveReadStatus.Unreadable); }
     }
+    internal static RootArchiveDeclarations ReadOpened(ZipArchive archive, string loader, RootArchiveLimits limits, Action<int>? chargeMetadata = null, DeclarationAllowance? allowance = null)
+    {
+        try
+        {
+            var reader = new EntryReader(archive, limits, chargeMetadata);
+            var fabric = reader.Read(LoaderManifestEntry.Fabric);
+            RootManifestDeclarations result;
+            if (string.Equals(loader, "forge", StringComparison.InvariantCultureIgnoreCase)
+                || string.Equals(loader, "neoforge", StringComparison.InvariantCultureIgnoreCase))
+                result = ForgeRootManifestParser.ParseEntries(reader.Read, loader, limits.Declarations, allowance);
+            else
+            {
+                var quilt = string.Equals(loader, "quilt", StringComparison.InvariantCultureIgnoreCase) ? reader.Read(LoaderManifestEntry.Quilt) : null;
+                result = RootManifestParser.ParseOwned(fabric, quilt, loader, limits.Declarations.Declarations, allowance);
+            }
+            return new(result, result.Diagnostics.Any(item => item.Code is "ArchiveLimit" or "DeclarationLimit") ? ArchiveReadStatus.Limited : ArchiveReadStatus.Read);
+        }
+        catch (RootArchiveEntryException exception)
+        { return Failed(exception.Diagnostic, exception.Diagnostic.Code == "ArchiveLimit" ? ArchiveReadStatus.Limited : ArchiveReadStatus.Read); }
+    }
     private static RootArchiveDeclarations Failed(ManifestDiagnostic diagnostic, ArchiveReadStatus status) =>
         new(new([], [diagnostic], [], RootManifestStatus.Incomplete, false), status);
-    private static void Validate(RootArchiveLimits limits)
+    internal static void Validate(RootArchiveLimits limits)
     {
         ArgumentNullException.ThrowIfNull(limits.Archive); ArgumentNullException.ThrowIfNull(limits.Declarations);
         ForgeRootManifestParser.ValidatePolicy(limits.Declarations);
@@ -72,7 +81,7 @@ public static class RootArchiveReader
         LoaderManifestEntry.JarJar => "META-INF/jarjar/metadata.json",
         _ => throw new ArgumentOutOfRangeException(nameof(entry))
     };
-    private sealed class EntryReader(ZipArchive archive, RootArchiveLimits limits)
+    private sealed class EntryReader(ZipArchive archive, RootArchiveLimits limits, Action<int>? chargeMetadata)
     {
         private long aggregate;
         public string? Read(LoaderManifestEntry requested)
@@ -86,7 +95,7 @@ public static class RootArchiveReader
                 using var stream = new CountedReadStream(entry.Open(), limits.Archive.MaximumMetadataBytes, count =>
                 {
                     if (count > limits.MaximumAggregateMetadataBytes - aggregate) Limit(nameof(limits.MaximumAggregateMetadataBytes), name);
-                    aggregate += count;
+                    chargeMetadata?.Invoke(count); aggregate += count;
                 }, name);
                 using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
                 var buffer = ArrayPool<char>.Shared.Rent(4096);

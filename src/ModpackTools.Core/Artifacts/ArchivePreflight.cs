@@ -4,7 +4,7 @@ namespace ModpackTools.Core.Artifacts;
 
 internal static class ArchivePreflight
 {
-    public static void Validate(FileStream file, ArchiveReadLimits limits)
+    public static (long Bytes, int Entries) Validate(FileStream file, ArchiveReadLimits limits)
     {
         if (file.Length < 22) throw new InvalidDataException("The archive has no end record.");
         var tail = new byte[(int)Math.Min(file.Length, 65557)];
@@ -64,6 +64,7 @@ internal static class ArchivePreflight
         }
         if (actualEntries != entries) throw new InvalidDataException("The archive entry count does not match its end record.");
         file.Position = 0;
+        return (bytes, checked((int)actualEntries));
     }
 
     private static ushort U16(ReadOnlySpan<byte> bytes) => BinaryPrimitives.ReadUInt16LittleEndian(bytes);

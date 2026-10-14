@@ -45,10 +45,10 @@ public static partial class ForgeRootManifestParser
 
     // One owned context controls decode/read stages. The public text boundary's
     // entry source is pure; only the internal archive facade supplies IO here.
-    internal static RootManifestDeclarations ParseEntries(Func<LoaderManifestEntry, string?> read, string loader, ForgeManifestLimits limits)
+    internal static RootManifestDeclarations ParseEntries(Func<LoaderManifestEntry, string?> read, string loader, ForgeManifestLimits limits, DeclarationAllowance? allowance = null)
     {
         ValidatePolicy(limits);
-        var scope = new Scope(limits);
+        var scope = new Scope(limits, allowance);
         var traverse = true;
         try
         {
@@ -90,7 +90,7 @@ public static partial class ForgeRootManifestParser
             : scope.ModsResult.Count == 0 ? RootManifestStatus.Missing : RootManifestStatus.Complete;
         return new([.. scope.ModsResult], [.. scope.Diagnostics], scope.Paths, status, traverse);
     }
-    private sealed class Scope(ForgeManifestLimits limits)
+    private sealed class Scope(ForgeManifestLimits limits, DeclarationAllowance? allowance)
     {
         public List<DeclaredMod> ModsResult { get; } = [];
         public List<ManifestDiagnostic> Diagnostics { get; } = [];
@@ -104,6 +104,7 @@ public static partial class ForgeRootManifestParser
         { Manifest = manifest; Operation = "read text"; if (text?.Length > limits.Declarations.MaximumTextCharacters) throw new ManifestLimitException(nameof(limits.Declarations.MaximumTextCharacters)); }
         public void Warn(string code, string message)
         {
+            if (allowance?.Diagnostic(code, Diagnostics.Count) == false) return;
             if (Diagnostics.Count >= limits.MaximumDiagnostics) throw new ManifestLimitException(nameof(limits.MaximumDiagnostics));
             Diagnostics.Add(new(code, message, Manifest, null, null));
         }
@@ -136,6 +137,7 @@ public static partial class ForgeRootManifestParser
             Manifest = name;
             foreach (var mod in TomlDeclarationProjection.Elements(Field(data, "mods")))
             {
+                allowance?.Mod(ModsResult.Count);
                 if (ModsResult.Count >= limits.MaximumMods) throw new ManifestLimitException(nameof(limits.MaximumMods));
                 var declared = ImmutableArray.CreateBuilder<ManifestRequirement>();
                 var dependencies = Field(data, "dependencies");

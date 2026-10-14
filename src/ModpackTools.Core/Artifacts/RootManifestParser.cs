@@ -10,11 +10,14 @@ namespace ModpackTools.Core.Artifacts;
 public static class RootManifestParser
 {
     public static RootManifestDeclarations Parse(string? fabric, string? quilt, string loader, RootManifestLimits? limits = null)
+        => ParseOwned(fabric, quilt, loader, limits ?? new(), null);
+
+    internal static RootManifestDeclarations ParseOwned(string? fabric, string? quilt, string loader, RootManifestLimits limits, DeclarationAllowance? allowance)
     {
         ArgumentNullException.ThrowIfNull(loader);
         limits ??= new();
         ValidatePolicy(limits);
-        var scope = new Scope(limits);
+        var scope = new Scope(limits, allowance);
         var canTraverse = true;
         try
         {
@@ -23,8 +26,10 @@ public static class RootManifestParser
             if (isQuilt) scope.Input(quilt, "quilt.mod.json");
             if (isQuilt && !string.IsNullOrEmpty(quilt)) scope.Quilt(quilt);
             else if ((isQuilt || string.Equals(loader, "fabric", StringComparison.InvariantCultureIgnoreCase)) && !string.IsNullOrEmpty(fabric)) scope.Fabric(fabric);
-            if (scope.Mods.Count == 0) scope.Diagnostics.Add(new("NoSupportedManifest", "No supported " + loader + " mod manifest found", "", null, null));
+            if (scope.Mods.Count == 0) scope.Warn(new("NoSupportedManifest", "No supported " + loader + " mod manifest found", "", null, null));
         }
+        catch (RootArchiveEntryException exception)
+        { canTraverse = false; scope.Diagnostics.Add(exception.Diagnostic); }
         catch (ManifestLimitException exception)
         {
             canTraverse = false;
@@ -60,10 +65,12 @@ public static class RootManifestParser
             "use positive declaration quotas and depths between 1 and 64", target: invalid);
     }
 
-    private sealed class Scope(RootManifestLimits limits)
+    private sealed class Scope(RootManifestLimits limits, DeclarationAllowance? allowance)
     {
         public List<DeclaredMod> Mods { get; } = [];
         public List<ManifestDiagnostic> Diagnostics { get; } = [];
+        public void Warn(ManifestDiagnostic diagnostic)
+        { if (allowance?.Diagnostic(diagnostic.Code, Diagnostics.Count) != false) Diagnostics.Add(diagnostic); }
         public ImmutableArray<string> NestedPaths { get; private set; } = [];
         public string Manifest { get; private set; } = "fabric.mod.json";
         public string Operation { get; private set; } = "decode JSON";
@@ -96,6 +103,7 @@ public static class RootManifestParser
         {
             var json = Decode(text, "fabric.mod.json");
             if (OrderedManifestProjection.SchemaMismatch(Dot(json, "schemaVersion"))) Schema("Fabric");
+            allowance?.Mod(Mods.Count);
             var declared = ImmutableArray.CreateBuilder<ManifestRequirement>();
             foreach (var group in new[] { "depends", "breaks", "conflicts", "recommends", "suggests" })
             {
@@ -130,6 +138,7 @@ public static class RootManifestParser
         {
             var json = Decode(text, "quilt.mod.json");
             var quilt = Dot(json, "quilt_loader");
+            allowance?.Mod(Mods.Count);
             var declared = ImmutableArray.CreateBuilder<ManifestRequirement>();
             foreach (var group in new[] { "depends", "breaks" })
                 foreach (var dependency in OrderedManifestProjection.Elements(Index(quilt, group)))
@@ -163,7 +172,7 @@ public static class RootManifestParser
             SetPaths(OrderedManifestProjection.Elements(Index(quilt, "jars")));
             if (OrderedManifestProjection.SchemaMismatch(Dot(json, "schema_version"))) Schema("Quilt");
         }
-        private void Schema(string loader) => Diagnostics.Add(new("UnknownSchema", "Unknown " + loader + " schema version", Manifest, null, null));
+        private void Schema(string loader) => Warn(new("UnknownSchema", "Unknown " + loader + " schema version", Manifest, null, null));
         private void BeginRequirement(int depth)
         {
             Operation = "construct dependency requirement";

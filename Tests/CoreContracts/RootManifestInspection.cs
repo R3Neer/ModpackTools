@@ -7,7 +7,7 @@ using ModpackTools.Core.Versions;
 
 internal static class RootManifestInspection
 {
-    public static int Run(string[] arguments, bool forge = false, bool archive = false)
+    public static int Run(string[] arguments, bool forge = false, bool archive = false, bool traversal = false)
     {
         try
         {
@@ -19,6 +19,7 @@ internal static class RootManifestInspection
             var limits = new RootManifestLimits();
             var forgeLimits = new ForgeManifestLimits();
             var archiveLimits = new RootArchiveLimits();
+            var traversalLimits = new ArtifactTraversalLimits();
             var probes = ImmutableArray<string?>.Empty;
             var seen = new HashSet<string>(StringComparer.Ordinal);
             for (var index = offset; index < arguments.Length; index += 2)
@@ -29,6 +30,15 @@ internal static class RootManifestInspection
                 long Bytes() => long.Parse(value, CultureInfo.InvariantCulture);
                 switch (arguments[index])
                 {
+                    case "--max-nested-depth" when traversal: traversalLimits = traversalLimits with { MaximumDepth = Number() }; break;
+                    case "--max-child-bytes" when traversal: traversalLimits = traversalLimits with { MaximumChildBytes = Bytes() }; break;
+                    case "--max-copied-bytes" when traversal: traversalLimits = traversalLimits with { MaximumCopiedBytes = Bytes() }; break;
+                    case "--max-nested-attempts" when traversal: traversalLimits = traversalLimits with { MaximumNestedAttempts = Number() }; break;
+                    case "--max-total-metadata-bytes" when traversal: traversalLimits = traversalLimits with { MaximumMetadataBytes = Bytes() }; break;
+                    case "--max-total-central-bytes" when traversal: traversalLimits = traversalLimits with { MaximumCentralBytes = Bytes() }; break;
+                    case "--max-total-entries" when traversal: traversalLimits = traversalLimits with { MaximumEntries = Number() }; break;
+                    case "--max-total-mods" when traversal: traversalLimits = traversalLimits with { MaximumMods = Number() }; break;
+                    case "--max-total-diagnostics" when traversal: traversalLimits = traversalLimits with { MaximumDiagnostics = Number() }; break;
                     case "--culture": CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(value); break;
                     case "--range-probes": probes = Probes(value); break;
                     case "--max-manifest-chars": limits = limits with { MaximumTextCharacters = Number() }; break;
@@ -52,7 +62,15 @@ internal static class RootManifestInspection
             }
             RootManifestDeclarations result;
             ArchiveReadStatus? archiveStatus = null;
-            if (archive)
+            ArtifactArchiveDeclarations? artifact = null;
+            if (traversal)
+            {
+                artifact = ArtifactArchiveReader.Read(arguments[1], arguments[2], traversalLimits with
+                { Root = archiveLimits with { Declarations = forgeLimits with { Declarations = limits } } });
+                result = artifact.Root?.Root ?? new([], [], [], RootManifestStatus.Incomplete, false);
+                archiveStatus = artifact.Root?.Status;
+            }
+            else if (archive)
             {
                 var read = RootArchiveReader.Read(arguments[1], arguments[2], archiveLimits with { Declarations = forgeLimits with { Declarations = limits } });
                 result = read.Root; archiveStatus = read.Status;
@@ -78,14 +96,18 @@ internal static class RootManifestInspection
             using (var writer = new Utf8JsonWriter(bytes, new() { MaxDepth = 512 }))
             {
                 writer.WriteStartObject();
+                if (artifact is not null) writer.WriteString("traversal_status", artifact.Status.ToString());
                 if (archiveStatus is not null) writer.WriteString("archive_status", archiveStatus.ToString());
                 writer.WriteString("status", result.Status.ToString());
                 writer.WriteBoolean("can_traverse_nested", result.CanTraverseNested);
                 writer.WriteStartArray("mods");
-                foreach (var mod in result.Mods)
+                foreach (var occurrence in artifact?.Mods ?? [.. result.Mods.Select(mod => new ArtifactMod(mod, false, []))])
                 {
+                    var mod = occurrence.Declaration;
                     writer.WriteStartObject();
-                    writer.WriteString("Id", mod.Id); writer.WriteString("Version", mod.Version); writer.WriteString("Side", mod.Side); writer.WriteBoolean("Nested", false);
+                    writer.WriteString("Id", mod.Id); writer.WriteString("Version", mod.Version); writer.WriteString("Side", mod.Side); writer.WriteBoolean("Nested", occurrence.Nested);
+                    if (artifact is not null)
+                    { writer.WriteStartArray("EntryChain"); foreach (var entry in occurrence.EntryChain) writer.WriteStringValue(entry); writer.WriteEndArray(); }
                     writer.WriteStartArray("Aliases");
                     foreach (var alias in mod.Provides) Alias(writer, alias);
                     writer.WriteEndArray();
@@ -94,12 +116,17 @@ internal static class RootManifestInspection
                     writer.WriteEndArray(); writer.WriteEndObject();
                 }
                 writer.WriteEndArray();
-                writer.WriteStartArray("warnings"); foreach (var diagnostic in result.Diagnostics) writer.WriteStringValue(diagnostic.Message); writer.WriteEndArray();
+                var diagnostics = artifact?.Diagnostics ?? [.. result.Diagnostics.Select(diagnostic => new ArtifactDiagnostic(diagnostic, []))];
+                writer.WriteStartArray("warnings"); foreach (var item in diagnostics) writer.WriteStringValue(item.Diagnostic.Message); writer.WriteEndArray();
                 writer.WriteStartArray("diagnostics");
-                foreach (var diagnostic in result.Diagnostics)
+                foreach (var item in diagnostics)
                 {
+                    var diagnostic = item.Diagnostic;
                     writer.WriteStartObject(); writer.WriteString("code", diagnostic.Code); writer.WriteString("message", diagnostic.Message);
-                    writer.WriteString("manifest", diagnostic.Manifest); writer.WriteString("details", diagnostic.Details); writer.WriteString("hint", diagnostic.Hint); writer.WriteEndObject();
+                    writer.WriteString("manifest", diagnostic.Manifest); writer.WriteString("details", diagnostic.Details); writer.WriteString("hint", diagnostic.Hint);
+                    if (artifact is not null)
+                    { writer.WriteStartArray("entry_chain"); foreach (var entry in item.EntryChain) writer.WriteStringValue(entry); writer.WriteEndArray(); }
+                    writer.WriteEndObject();
                 }
                 writer.WriteEndArray();
                 writer.WriteStartArray("nested_paths"); foreach (var path in result.NestedPaths) writer.WriteStringValue(path); writer.WriteEndArray();
