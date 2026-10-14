@@ -160,38 +160,7 @@ internal static class CacheTokenCodec
             Add(value);
         }
 
-        private static DateTime ReadDateConstructor(JsonTextReader reader)
-        {
-            using var text = new StringWriter(CultureInfo.InvariantCulture);
-            using var writer = new JsonTextWriter(text) { DateTimeZoneHandling = DateTimeZoneHandling.RoundtripKind };
-            using var arguments = new DateConstructorReader(reader);
-            writer.WriteToken(arguments, writeChildren: false);
-            writer.Flush();
-            using var parsed = JsonDocument.Parse(text.ToString());
-            return parsed.RootElement.GetDateTime();
-        }
-
-        // The library accumulates constructor integers before checking Count.
-        // Reject the intrinsically invalid eighth argument before its List.Add;
-        // retain the library's actual date conversion rather than copying it.
-        private sealed class DateConstructorReader : JsonReader
-        {
-            private readonly JsonTextReader source;
-            private int count;
-            public DateConstructorReader(JsonTextReader source)
-            {
-                this.source = source;
-                SetToken(JsonToken.StartConstructor, "Date");
-            }
-            public override bool Read()
-            {
-                if (!source.Read()) return false;
-                if (source.TokenType == JsonToken.Integer && ++count > 7)
-                    throw new FormatException("A Date constructor accepts at most seven arguments.");
-                SetToken(source.TokenType, source.Value);
-                return true;
-            }
-        }
+        private static DateTime ReadDateConstructor(JsonTextReader reader) => LegacyDateConstructor.Read(reader);
         private static void SkipConstructor(JsonTextReader reader)
         {
             var depth = reader.Depth;
