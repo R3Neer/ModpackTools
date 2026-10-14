@@ -1286,3 +1286,67 @@ The diagnostic root inspector exposes full requirement fields, original RangeDis
 and optional predicate probes over the compiled range, without placing a JSON DOM
 in domain records. Live original Range objects supply the probe oracle, retaining
 Date/nonfinite type distinctions; raw original observations remain separately saved.
+
+## Forge/NeoForge root declarations / capability48 contract preparation
+
+The next pure boundary accepts optional mods.toml, neoforge.mods.toml,
+MANIFEST.MF and jarjar/metadata.json texts plus loader and explicit limits. It
+returns the same owned RootManifestDeclarations; filesystem/ZIP ownership remains
+outside this boundary. NeoForge selects truthy neoforge text, otherwise mods text;
+Forge ignores neoforge text. A selected malformed document never falls back.
+MANIFEST.MF is consumed only after selected TOML decoding succeeds. Jar-in-Jar
+JSON is consumed after all root mods, even when no TOML was selected. Earlier
+inserted mods and warnings survive a later dependency, feature or Jar-in-Jar failure.
+
+Use Tomlyn0.19.0 syntax nodes to construct an owned semantic TOML boundary; do not
+use reflection, dynamic ToModel, the lexical inventory field reader or JSON coercion.
+ParseOnly plus bounded syntax/key-path inspection precedes Validate and model
+construction. Bare keys use token Text, quoted keys their decoded Value, never
+syntax ToString with trivia. Table-array descent selects the last current table.
+Preserve exact TOML names, root/inline/dotted tables, ordered entries, scalar types
+and the distinction between ordinary arrays and table arrays. No syntax/model node
+escapes into domain declarations.
+
+TOML collections differ from JSON: TomlTable/TomlArray/TomlTableArray are neither
+CLR arrays nor nongeneric IDictionary in the original helper. Empty TOML collections
+are truthy. Direct casts enumerate their immediate entries/elements; nested
+collections retain their source runtime type name. TOML dates keep the original
+TomlDateTime string representation, not the JSON DateTime display. Range strings
+lower to Text; TOML collections, dates and other scalars lower to Unknown, because
+the original range getter does not find their any/all keys. Preserve RangeDisplay
+separately from the compiled range. Collection equality with false filters original
+elements and then tests the filtered result, rather than using Any(matches).
+
+Dependencies retain source order, explicit type before mandatory fallback, lowercase
+side and Maven scheme. Preserve loaderVersion truthiness and modLoader target.
+A present per-mod features field suppresses global features even when falsey.
+Feature selection retains the original pipeline's one-level enumeration: nonempty
+direct tables become key/value entries and fail before inserting the current mod;
+empty direct tables/arrays collapse to null. Singleton arrays of tables can instead
+retain a table and supply Java requirements. Preserve these actual partial/unknown
+outcomes under E34 in capability48; any correction of the feature-table defect must
+be a separate, explicitly reviewed behavior change. Recognized Java feature keys
+in successfully consumed shapes produce Maven java requirements; other features and
+non-NONE ordering retain warnings. Implementation-Version matching and ordinal
+replacement of the literal ${file.jarVersion} preserve source behavior. Other
+unresolved substitutions/empty versions retain warnings. Root sides remain both,
+aliases empty. Nested intents do not assert availability or successful traversal.
+
+Reuse E33/E34 for resource and contextual failures. Additional Forge bounds cover
+constructed root mods, emitted diagnostics and TOML ancestry (hard1..64), alongside
+text/token/node/requirement/nested-path quotas. Validate policy before parsing;
+guard output construction before allocation and retain completed prefixes. Syntax
+preflight retains the existing hard64 lexical-container and100000 structural-token
+safety bounds. Reviewer baselines will settle remaining adapted key/cast details
+before implementation; no Native48 acceptance or Forge support is claimed yet.
+
+The typed input is ForgeManifestTexts(ModsToml, NeoForgeToml, Manifest, JarJar).
+ForgeManifestLimits includes the existing RootManifestLimits declaration policy,
+MaximumMods=100000, MaximumDiagnostics=100000, MaximumTomlDepth=64 and
+MaximumSyntaxNodes=1000000. Syntax and owned-node budgets are distinct; inspect AST
+tokens/key ancestry before validation, with text already bounded. Every consumed
+input is checked at its original stage, including ignored fallback/read differences.
+Mandatory collection equality is not a Boolean shortcut: [false]/[0] remain required,
+but [false,false]/[0,0] become optional after filtered-array truthiness. Scalar false,
+0 and 'false' are optional. Original blind80 and white27 roots retain their raw
+observations; no feature-table baseline is patched into a healthy result.
