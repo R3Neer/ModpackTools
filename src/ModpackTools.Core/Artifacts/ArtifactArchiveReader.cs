@@ -21,6 +21,8 @@ public sealed record ArtifactTraversalLimits
     public int MaximumEntries { get; init; } = 100000;
     public int MaximumMods { get; init; } = 100000;
     public int MaximumDiagnostics { get; init; } = 100000;
+    public int MaximumRequirements { get; init; } = 100000;
+    public int MaximumAliases { get; init; } = 100000;
 }
 
 public static class ArtifactArchiveReader
@@ -46,7 +48,9 @@ public static class ArtifactArchiveReader
             : limits.MaximumCentralBytes <= 0 ? nameof(limits.MaximumCentralBytes)
             : limits.MaximumEntries <= 0 ? nameof(limits.MaximumEntries)
             : limits.MaximumMods <= 0 ? nameof(limits.MaximumMods)
-            : limits.MaximumDiagnostics <= 0 ? nameof(limits.MaximumDiagnostics) : null;
+            : limits.MaximumDiagnostics <= 0 ? nameof(limits.MaximumDiagnostics)
+            : limits.MaximumRequirements <= 0 ? nameof(limits.MaximumRequirements)
+            : limits.MaximumAliases <= 0 ? nameof(limits.MaximumAliases) : null;
         if (invalid is not null) throw new DomainException("Metadata.InvalidTraversalPolicy", "Archive traversal limits are invalid",
             "use positive quotas and depth between 0 and 16", target: invalid);
         return limits;
@@ -89,6 +93,7 @@ public static class ArtifactArchiveReader
 
     private sealed class Scope(ArtifactTraversalLimits limits, string loader)
     {
+        private readonly DeclarationWorkBudget declarationBudget = new(limits.MaximumRequirements, limits.MaximumAliases);
         public RootArchiveDeclarations? Root { get; private set; }
         public List<ArtifactMod> Mods { get; } = [];
         public List<ArtifactDiagnostic> Diagnostics { get; } = [];
@@ -127,7 +132,7 @@ public static class ArtifactArchiveReader
                             "", nameof(limits.MaximumMetadataBytes), "inspect nested metadata or use explicit traversal quotas"));
                     }
                     metadata += count;
-                }, new(limits.MaximumMods - Mods.Count, limits.MaximumDiagnostics - Diagnostics.Count, depth != 0));
+                }, new(limits.MaximumMods - Mods.Count, limits.MaximumDiagnostics - Diagnostics.Count, depth != 0, declarationBudget));
                 if (depth == 0) Root = root;
                 foreach (var mod in root.Root.Mods)
                 {

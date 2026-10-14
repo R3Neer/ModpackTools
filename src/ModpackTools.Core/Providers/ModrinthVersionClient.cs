@@ -22,6 +22,7 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
     private readonly CancellationTokenSource lifetime;
     private readonly ProviderRequestLimits limits;
     private readonly ProviderCacheReadLimits decode;
+    private readonly ProviderModelBudget models;
     private readonly string directory;
     private readonly DateTimeOffset now;
     private readonly StringComparer comparer;
@@ -36,7 +37,7 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
     private DomainException? exhausted;
 
     public ModrinthVersionClient(string configurationDirectory, DateTimeOffset now, ProviderRequestLimits? limits = null,
-        CancellationToken cancellation = default, HttpMessageHandler? handler = null, Uri? baseUri = null)
+        CancellationToken cancellation = default, HttpMessageHandler? handler = null, Uri? baseUri = null, ProviderModelLimits? modelLimits = null)
     {
         this.limits = limits ?? new(); this.now = now;
         var invalid = this.limits.MaximumRequests <= 0 ? nameof(this.limits.MaximumRequests)
@@ -51,6 +52,7 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
         if (invalid is not null) throw new DomainException("Metadata.InvalidProviderRequestPolicy", "Provider request limits are invalid",
             "use positive quotas and concurrency between 1 and 64", target: invalid);
         decode = this.limits.Decode ?? new(); ProviderVersionCache.Validate(decode);
+        models = new(modelLimits);
         directory = Path.Combine(Path.GetFullPath(configurationDirectory), "metadata");
         baseUri ??= new("https://api.modrinth.com/v2/");
         if (!baseUri.IsAbsoluteUri || baseUri.Scheme is not ("http" or "https") || baseUri.UserInfo.Length != 0
@@ -184,7 +186,7 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
                 }
                 await file.FlushAsync(token).ConfigureAwait(false); file.Position = 0;
                 token.ThrowIfCancellationRequested();
-                var decoded = ProviderVersionCache.ReadDocument(file, decode);
+                var decoded = ProviderVersionCache.ReadDocument(file, decode, models.Bytes);
                 if (decoded is null) throw Invalid("Provider returned an empty response.");
                 using var document = decoded.Document;
                 var root = document.RootElement;
@@ -212,12 +214,13 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
                 {
                     if (kind == ResponseKind.Project)
                     {
-                        project = ProviderProject.Decode(row, decoded.Dates, decode.MaximumCollectionEntries);
+                        project = ProviderProject.Decode(row, decoded.Dates, decode.MaximumCollectionEntries, models.Entry);
                         if (!allowed.Contains(project.Id)) throw Invalid("Provider returned a project identity that was not requested.");
                         continue;
                     }
+                    models.Version();
                     var version = ProviderVersionCache.Decode(row, decoded.Dates,
-                        kind == ResponseKind.Candidates ? decode.MaximumCollectionEntries - collectionEntries : decode.MaximumCollectionEntries);
+                        kind == ResponseKind.Candidates ? decode.MaximumCollectionEntries - collectionEntries : decode.MaximumCollectionEntries, models.Entry);
                     if (kind == ResponseKind.Candidates)
                     {
                         if (!allowed.Contains(version.ProjectId)) throw Invalid("Provider candidate belongs to another project.");

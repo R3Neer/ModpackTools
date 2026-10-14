@@ -71,22 +71,7 @@ internal static class GraphInspection
             using var output = new OutputBuffer();
             using (var writer = new Utf8JsonWriter(output))
             {
-                writer.WriteStartObject(); writer.WriteNumber("ValidatorRevision", GraphReport.ValidatorRevision); writer.WriteNumber("IssueKeySchema", GraphReport.IssueKeySchema);
-                Issues("Issues", report.Issues); Issues("Errors", report.Errors); Issues("Unknown", report.Unknown); Issues("Warnings", report.Warnings);
-                writer.WriteBoolean("Complete", report.Complete); writer.WriteEndObject();
-                void Issues(string name, ImmutableArray<GraphIssue> values)
-                {
-                    writer.WriteStartArray(name);
-                    foreach (var issue in values)
-                    {
-                        writer.WriteStartObject(); writer.WriteString("Key", issue.Key); writer.WriteString("Code", issue.Code); writer.WriteString("Owner", issue.Owner); writer.WriteString("OwnerName", issue.OwnerName);
-                        writer.WritePropertyName("Requirement");
-                        if (issue.Requirement is { } requirement) WriteRequirement(writer, requirement);
-                        else if (issue.WarningRequirement is { } warning) writer.WriteStringValue(warning); else writer.WriteNullValue();
-                        writer.WriteString("Side", issue.Side); writer.WriteString("Severity", issue.Severity); writer.WriteString("Message", issue.Message); writer.WriteEndObject();
-                    }
-                    writer.WriteEndArray();
-                }
+                WriteReport(writer, report);
             }
             Console.OpenStandardOutput().Write(output.GetBuffer(), 0, (int)output.Length); return 0;
 
@@ -96,6 +81,26 @@ internal static class GraphInspection
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or FormatException or OverflowException or InvalidOperationException or JsonException)
         { ManagedInspection.WriteFailure("Core.InputReadFailed", exception.Message, "InvalidData", null, "check graph inspection arguments and input", null); return 2; }
     }
+    internal static void WriteReport(Utf8JsonWriter writer, GraphReport report)
+    {
+        writer.WriteStartObject(); writer.WriteNumber("ValidatorRevision", GraphReport.ValidatorRevision); writer.WriteNumber("IssueKeySchema", GraphReport.IssueKeySchema);
+        Issues("Issues", report.Issues); Issues("Errors", report.Errors); Issues("Unknown", report.Unknown); Issues("Warnings", report.Warnings);
+        writer.WriteBoolean("Complete", report.Complete); writer.WriteEndObject();
+        void Issues(string name, ImmutableArray<GraphIssue> values)
+        {
+            writer.WriteStartArray(name);
+            foreach (var issue in values)
+            {
+                writer.WriteStartObject(); writer.WriteString("Key", issue.Key); writer.WriteString("Code", issue.Code); writer.WriteString("Owner", issue.Owner); writer.WriteString("OwnerName", issue.OwnerName);
+                writer.WritePropertyName("Requirement");
+                if (issue.Requirement is { } requirement) WriteRequirement(writer, requirement);
+                else if (issue.WarningRequirement is { } warning) writer.WriteStringValue(warning); else writer.WriteNullValue();
+                writer.WriteString("Side", issue.Side); writer.WriteString("Severity", issue.Severity); writer.WriteString("Message", issue.Message); writer.WriteEndObject();
+            }
+            writer.WriteEndArray();
+        }
+    }
+
     internal static GraphReport Read(JsonElement root, GraphReportLimits limits, bool insensitive = true)
     {
         var env = root.GetProperty("Environment");
@@ -144,7 +149,7 @@ internal static class GraphInspection
     private static string? OptionalText(JsonElement value, string name) => value.TryGetProperty(name, out var field) ? field.GetString() : null;
     private static bool Boolean(JsonElement value, string name, bool fallback) => value.TryGetProperty(name, out var field) ? field.GetBoolean() : fallback;
     private static IEnumerable<JsonElement> Array(JsonElement value, string name) => value.TryGetProperty(name, out var field) && field.ValueKind != JsonValueKind.Null ? field.EnumerateArray() : [];
-    private static void WriteRequirement(Utf8JsonWriter writer, ManifestRequirement requirement)
+    internal static void WriteRequirement(Utf8JsonWriter writer, ManifestRequirement requirement)
     {
         writer.WriteStartObject(); writer.WriteString("Target", requirement.Target); writer.WritePropertyName("Range"); writer.WriteRawValue(requirement.Constraint.PublicJson);
         writer.WriteString("Kind", requirement.Kind); writer.WriteString("Side", requirement.Side); writer.WriteString("Scope", requirement.Scope); writer.WriteBoolean("Maven", requirement.Scheme == VersionScheme.Maven);

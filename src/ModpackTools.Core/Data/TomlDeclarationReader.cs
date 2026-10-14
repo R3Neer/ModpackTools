@@ -15,6 +15,11 @@ internal static class TomlDeclarationReader
         catch (FormatException exception) when (exception.Message.Contains("structural token limit", StringComparison.Ordinal))
         { throw new ManifestLimitException("HardTomlStructuralTokens"); }
         var syntax = Toml.Parse(text, options: TomlParserOptions.ParseOnly);
+        return ReadParsed(syntax, limits);
+    }
+
+    internal static TomlFields ReadParsed(DocumentSyntax syntax, ForgeManifestLimits limits)
+    {
         Guard(syntax, limits);
         if (syntax.HasErrors) throw new FormatException(syntax.Diagnostics.ToString());
         var reader = new Builder(limits);

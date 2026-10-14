@@ -15,6 +15,7 @@ if (args.FirstOrDefault() == "--inspect-provider-version-cache") return Provider
 if (args.FirstOrDefault() == "--inspect-provider-acquisition") return ProviderAcquisitionInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-provider-candidates") return ProviderCandidateInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-artifact") return ArtifactProviderInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-project-health") return ProjectHealthInspection.Run(args);
 
 if (args.FirstOrDefault() == "--inspect-psd-lookup")
 {
@@ -287,6 +288,7 @@ ProviderCacheContracts.Verify();
 ProviderAcquisitionContracts.VerifyAsync().GetAwaiter().GetResult();
 ProviderCandidateContracts.VerifyAsync().GetAwaiter().GetResult();
 ArtifactProviderContracts.VerifyAsync().GetAwaiter().GetResult();
+ProjectHealthContracts.VerifyAsync().GetAwaiter().GetResult();
 ImportedLookupContracts.Verify();
 Console.WriteLine($"PSD1 native contracts passed: {invalid.Length + 7 + limits.Length} rejected inputs, typed literals, nested arrays, bounded numeric extraction, immutable classification/reference/alias identities, {args.Length} files");
 return 0;

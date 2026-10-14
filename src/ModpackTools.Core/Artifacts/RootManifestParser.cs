@@ -181,6 +181,7 @@ public static class RootManifestParser
             Operation = "construct dependency requirement";
             if (depth > limits.MaximumRequirementDepth) throw new ManifestLimitException(nameof(limits.MaximumRequirementDepth));
             if (requirements >= limits.MaximumRequirements) throw new ManifestLimitException(nameof(limits.MaximumRequirements));
+            allowance?.Requirement();
             requirements++;
         }
         private ManifestRequirement Requirement(string target, OrderedManifestValue range, string kind, int depth)
@@ -214,6 +215,7 @@ public static class RootManifestParser
         }
         private void BeginAlias()
         {
+            allowance?.Alias();
             Operation = "construct provided alias";
             if (aliasSlots >= limits.MaximumAliases) throw new ManifestLimitException(nameof(limits.MaximumAliases));
             aliasSlots++;

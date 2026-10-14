@@ -24,6 +24,17 @@ public static class ProviderCandidates
         string projectId, string minecraftVersion, string loader, DateTimeOffset now,
         ModrinthVersionClient? checkedClient = null, ProviderProject? suppliedProject = null,
         ProviderCacheReadLimits? offlineLimits = null, int maximumOfflineVersions = 10000)
+        => await ObserveCore(configurationDirectory, projectId, minecraftVersion, loader, now, checkedClient, suppliedProject,
+            offlineLimits, maximumOfflineVersions, new()).ConfigureAwait(false);
+
+    internal static Task<ProviderCandidateObservation> ObserveWithBudget(string configurationDirectory, string projectId,
+        string minecraftVersion, string loader, DateTimeOffset now, ModrinthVersionClient? checkedClient,
+        ProviderCacheReadLimits? offlineLimits, ProviderModelBudget models) =>
+        ObserveCore(configurationDirectory, projectId, minecraftVersion, loader, now, checkedClient, null, offlineLimits, 10000, models);
+
+    private static async Task<ProviderCandidateObservation> ObserveCore(string configurationDirectory, string projectId,
+        string minecraftVersion, string loader, DateTimeOffset now, ModrinthVersionClient? checkedClient,
+        ProviderProject? suppliedProject, ProviderCacheReadLimits? offlineLimits, int maximumOfflineVersions, ProviderModelBudget models)
     {
         if (checkedClient is not null && (offlineLimits is not null || maximumOfflineVersions != 10000))
             throw new DomainException("Metadata.InvalidProviderCachePolicy", "Checked candidate lookup uses its client's acquisition policy",
@@ -50,7 +61,7 @@ public static class ProviderCandidates
                     if (root.GetArrayLength() != 1) throw new FormatException("Provider project cache must contain one project.");
                     root = root[0];
                 }
-                var value = ProviderProject.Decode(root, dates, limits.MaximumCollectionEntries);
+                var value = ProviderProject.Decode(root, dates, limits.MaximumCollectionEntries, models.Entry);
                 if (value.Id != projectId) throw Invalid("Cached project identity does not match the requested project.");
                 return value;
             }, out projectStatus, out projectEvidence);
@@ -74,7 +85,8 @@ public static class ProviderCandidates
                 var result = ImmutableArray.CreateBuilder<ProviderVersion>(root.GetArrayLength());
                 foreach (var row in root.EnumerateArray())
                 {
-                    var version = ProviderVersionCache.Decode(row, dates, limits.MaximumCollectionEntries - entries);
+                    models.Version();
+                    var version = ProviderVersionCache.Decode(row, dates, limits.MaximumCollectionEntries - entries, models.Entry);
                     if (version.ProjectId != projectId) throw Invalid("Cached candidate belongs to another project.");
                     entries += version.Files.Length + version.Dependencies.Length + version.Loaders.Length + version.GameVersions.Length;
                     result.Add(version);
@@ -98,7 +110,7 @@ public static class ProviderCandidates
                 modified = File.GetLastWriteTimeUtc(file.SafeFileHandle);
                 if (modified.Value.Ticks <= now.UtcDateTime.Ticks - TimeSpan.TicksPerDay)
                 { status = ProviderCacheStatus.Expired; return null; }
-                var decoded = ProviderVersionCache.ReadDocument(file, limits);
+                var decoded = ProviderVersionCache.ReadDocument(file, limits, models.Bytes);
                 status = ProviderCacheStatus.Empty;
                 if (decoded is null) return null;
                 using var document = decoded.Document;

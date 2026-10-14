@@ -12,15 +12,15 @@ public static class ManagedContentReader
     public static ImmutableArray<ManagedContentItem> Read(ProjectContext project, ContentKind kind, ManagedReadLimits? limits = null) =>
         Read(project, kind, new ReadBudget(limits ?? new()));
 
-    internal static ImmutableArray<ManagedContentItem> Read(ProjectContext project, ContentKind kind, ReadBudget budget) =>
+    internal static ImmutableArray<ManagedContentItem> Read(ProjectContext project, ContentKind kind, ReadBudget budget, bool installFacts = false) =>
         Read(project, [(kind switch
         {
             ContentKind.Mod => "mods", ContentKind.ResourcePack => "resourcepacks", ContentKind.ShaderPack => "shaderpacks",
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
-        }, kind)], budget);
+        }, kind)], budget, installFacts);
 
     private static ImmutableArray<ManagedContentItem> Read(ProjectContext project,
-        (string Directory, ContentKind Kind)[] locations, ReadBudget budget)
+        (string Directory, ContentKind Kind)[] locations, ReadBudget budget, bool installFacts = false)
     {
         var items = ImmutableArray.CreateBuilder<ManagedContentItem>();
         foreach (var (directory, kind) in locations)
@@ -31,7 +31,7 @@ public static class ManagedContentReader
                     var text = TextFile.Read(file.FullName, out var bytes);
                     budget.Text(file.FullName, bytes);
                     if (text.Length == 0) throw new FormatException("The metadata file is empty.");
-                    var document = new TomlDocument(text);
+                    var document = new TomlDocument(text, installFacts);
                     var relative = Path.GetRelativePath(project.Root, file.FullName).Replace('\\', '/');
                     var modrinth = document.String("mod-id", "update.modrinth");
                     var curseforge = document.String("project-id", "update.curseforge");
@@ -42,7 +42,13 @@ public static class ManagedContentReader
                     var side = document.String("side");
                     side = string.IsNullOrEmpty(side) ? "unknown" : side.ToLowerInvariant();
                     items.Add(new(id, kind, name, document.String("filename"), side,
-                        document.String("version", "update.modrinth"), file.FullName, document.RootPin()));
+                        document.String("version", "update.modrinth"), file.FullName, document.RootPin())
+                    { InstallFacts = installFacts ? ManagedInstallFactsReader.Read(document.SemanticFields!) : null });
+                }
+                catch (ManifestLimitException exception)
+                {
+                    throw new DomainException("Content.ReadLimitExceeded", "Managed installation metadata exceeds its resource limit",
+                        "use explicit bounded metadata quotas", "LimitsExceeded", file.FullName, details: exception.Property);
                 }
                 catch (Exception exception) when (exception is FormatException or IOException or UnauthorizedAccessException)
                 {

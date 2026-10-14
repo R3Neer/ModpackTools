@@ -125,6 +125,7 @@ public static partial class ForgeRootManifestParser
         private ManifestRequirement Requirement(string target, TomlDeclarationValue range, string kind = "required", string side = "both")
         {
             if (++requirements > limits.Declarations.MaximumRequirements) throw new ManifestLimitException(nameof(limits.Declarations.MaximumRequirements));
+            allowance?.Requirement();
             return new(target, constraints.Toml(range), kind, side, "mod", VersionScheme.Maven, "manifest", "", [], [], null);
         }
         public void Mods(string text, string name, Func<LoaderManifestEntry, string?> read)

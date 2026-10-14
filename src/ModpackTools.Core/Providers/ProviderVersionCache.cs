@@ -24,6 +24,14 @@ public static class ProviderVersionCache
 {
     public static ProviderCacheObservation Read(string configurationDirectory, string versionId,
         DateTimeOffset now, ProviderCacheReadLimits? limits = null)
+        => ReadCore(configurationDirectory, versionId, now, limits, null);
+
+    internal static ProviderCacheObservation ReadWithBudget(string configurationDirectory, string versionId,
+        DateTimeOffset now, ProviderCacheReadLimits limits, ProviderModelBudget models)
+        => ReadCore(configurationDirectory, versionId, now, limits, models);
+
+    private static ProviderCacheObservation ReadCore(string configurationDirectory, string versionId,
+        DateTimeOffset now, ProviderCacheReadLimits? limits, ProviderModelBudget? models)
     {
         ArgumentNullException.ThrowIfNull(configurationDirectory); ArgumentNullException.ThrowIfNull(versionId);
         limits ??= new();
@@ -40,7 +48,7 @@ public static class ProviderVersionCache
             {
                 modified = File.GetLastWriteTimeUtc(file.SafeFileHandle);
                 if (modified.Value.Ticks <= now.UtcDateTime.Ticks - TimeSpan.TicksPerDay) return Result(ProviderCacheStatus.Expired);
-                var decoded = ReadDocument(file, limits);
+                var decoded = ReadDocument(file, limits, models is null ? null : models.Bytes);
                 if (decoded is null) return Result(ProviderCacheStatus.Empty);
                 using var document = decoded.Document;
                 var root = document.RootElement;
@@ -52,7 +60,8 @@ public static class ProviderVersionCache
                 }
                 if (root.ValueKind == JsonValueKind.Null) return Result(ProviderCacheStatus.Empty);
                 JsonDisplayProjection.Validate(root);
-                var version = Decode(root, decoded.Dates, limits.MaximumCollectionEntries);
+                models?.Version();
+                var version = Decode(root, decoded.Dates, limits.MaximumCollectionEntries, models is null ? null : models.Entry);
                 return new(ProviderCacheStatus.Fresh, path, modified, version, null);
             }
         }
@@ -79,15 +88,15 @@ public static class ProviderVersionCache
             "use positive quotas and a depth between 1 and 1024", target: invalid);
     }
 
-    internal static DecodedCache? ReadDocument(Stream source, ProviderCacheReadLimits limits)
+    internal static DecodedCache? ReadDocument(Stream source, ProviderCacheReadLimits limits, Action<int>? bytesRead = null)
     {
-        using var bounded = new ProviderInput(source, limits.MaximumBytes);
+        using var bounded = new ProviderInput(source, limits.MaximumBytes, bytesRead);
         using var reader = new StreamReader(bounded, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
         return CacheTokenCodec.Read(reader, limits.MaximumDepth, limits.MaximumNormalizedCharacters,
             limits.MaximumTokenCharacters, limits.MaximumNodes);
     }
 
-    internal static ProviderVersion Decode(JsonElement root, CacheDateTable dates, int maximumEntries)
+    internal static ProviderVersion Decode(JsonElement root, CacheDateTable dates, int maximumEntries, Action? entryConsumed = null)
     {
         if (root.ValueKind != JsonValueKind.Object) throw new FormatException("A provider version must be an object.");
         var count = 0;
@@ -148,7 +157,7 @@ public static class ProviderVersionCache
             foreach (var item in field.EnumerateArray())
             {
                 if (count >= maximumEntries) throw Limit("MaximumCollectionEntries", "Provider collections exceed their entry quota.");
-                count++; yield return item;
+                count++; entryConsumed?.Invoke(); yield return item;
             }
         }
         ImmutableArray<string> Strings(string name)
@@ -164,7 +173,7 @@ public static class ProviderVersionCache
     }
     private static DomainException Limit(string target, string detail) => new("Metadata.ProviderCacheLimit", "Provider metadata cache exceeds its resource limit",
         "reduce metadata input or use explicit bounded quotas", "LimitsExceeded", target, details: detail);
-    private sealed class ProviderInput(Stream source, long maximumBytes) : Stream
+    private sealed class ProviderInput(Stream source, long maximumBytes, Action<int>? bytesRead) : Stream
     {
         private long read;
         public override bool CanRead => true;
@@ -176,6 +185,7 @@ public static class ProviderVersionCache
         public override int Read(Span<byte> buffer)
         {
             var count = source.Read(buffer);
+            bytesRead?.Invoke(count);
             if (count > maximumBytes - read) throw new CacheJsonLimitException("Actual provider cache bytes exceed the quota.");
             read += count; return count;
         }

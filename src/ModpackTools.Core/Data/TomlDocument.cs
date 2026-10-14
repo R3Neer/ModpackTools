@@ -9,12 +9,16 @@ internal sealed partial class TomlDocument
     private readonly Dictionary<string, (int Start, int Length)> windows = new(StringComparer.Ordinal);
     private const string FieldStart = "^\\s*";
     private const string FieldEnd = "\\s*=\\s*\"(?<value>(?:\\\\.|[^\"\\\\])*)\"\\s*(?:#.*)?$";
+    public TomlFields? SemanticFields { get; }
 
-    public TomlDocument(string text)
+    public TomlDocument(string text, bool semanticFields = false)
     {
         source = text;
         TomlInputLimits.Validate(text);
-        var syntax = Toml.Parse(text);
+        var syntax = Toml.Parse(text, options: TomlParserOptions.ParseOnly);
+        if (syntax.HasErrors) throw new FormatException(syntax.Diagnostics.ToString());
+        if (semanticFields) SemanticFields = TomlDeclarationReader.ReadParsed(syntax, new());
+        else Toml.Validate(syntax);
         if (syntax.HasErrors) throw new FormatException(syntax.Diagnostics.ToString());
         windows.Add("", Window(0));
         // Published fields are a lexical projection, including apparent headers

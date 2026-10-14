@@ -33,6 +33,13 @@ public sealed class GraphIssue
         Key = key; AuxiliarySortKey = auxiliary; Code = code; Owner = owner?.Id ?? ""; OwnerName = owner?.Name ?? "";
         Requirement = requirement; WarningRequirement = warning; Side = side; Severity = severity; Message = message;
     }
+    private GraphIssue(GraphIssue source, string code, string severity, string message)
+    {
+        Key = source.Key; AuxiliarySortKey = source.AuxiliarySortKey; Owner = source.Owner; OwnerName = source.OwnerName;
+        Requirement = source.Requirement; WarningRequirement = source.WarningRequirement; Side = source.Side;
+        Code = code; Severity = severity; Message = message;
+    }
+    internal GraphIssue Reclassify(string code, string severity, string message) => new(this, code, severity, message);
 }
 public sealed class GraphReport
 {

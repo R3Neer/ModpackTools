@@ -58,8 +58,10 @@ public static partial class ProjectReader
         if (Path.IsPathRooted(index) || !indexPath.StartsWith(Path.TrimEndingDirectorySeparator(root) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
             throw new DomainException("Project.InvalidIndexPath", Path.IsPathRooted(index) ? $"Packwiz index path '{index}' must be relative to the project" : $"Packwiz index path '{index}' escapes project root '{Path.TrimEndingDirectorySeparator(root)}'", "repair the [index] file value in pack.toml", "InvalidData", index);
         var loader = new[] { "fabric", "quilt", "neoforge", "forge" }.FirstOrDefault(candidate => manifest.String(candidate, "versions") is not null);
+        var javaDeclared = descriptor.Entries.TryGetValue("JavaVersion", out var javaVersion);
         return new(id, root, name, version, output, manifest.String("minecraft", "versions"), loader,
-            loader is null ? null : manifest.String(loader, "versions"), index, indexPath);
+            loader is null ? null : manifest.String(loader, "versions"), index, indexPath)
+        { JavaDeclared = javaDeclared, JavaVersion = javaDeclared ? DataScalars.String(javaVersion!) : "" };
     }
 
     public static ProjectCatalog Discover(string registeredRoot)

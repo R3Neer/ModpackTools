@@ -47,7 +47,7 @@ public sealed record ProviderProject(string Id, string Title, string RawKind,
                 "use the canonical provider project ID", target: id);
     }
 
-    internal static ProviderProject Decode(JsonElement root, CacheDateTable dates, int maximumEntries)
+    internal static ProviderProject Decode(JsonElement root, CacheDateTable dates, int maximumEntries, Action? entryConsumed = null)
     {
         if (root.ValueKind != JsonValueKind.Object) throw new FormatException("Provider project must be an object.");
         var id = Scalar("id"); ValidateId(id);
@@ -61,7 +61,7 @@ public sealed record ProviderProject(string Id, string Title, string RawKind,
                 if (environments.Count >= maximumEntries) throw new DomainException("Metadata.ProviderCacheLimit",
                     "Provider environments exceed their entry limit", "use explicit bounded quotas", "LimitsExceeded", "MaximumCollectionEntries");
                 if (item.ValueKind != JsonValueKind.String) throw new FormatException("Provider environments must be strings.");
-                environments.Add(CacheJson.String(new(item), dates));
+                entryConsumed?.Invoke(); environments.Add(CacheJson.String(new(item), dates));
             }
         }
         return new(id, Scalar("title"), Scalar("project_type"), environments.ToImmutable(), Scalar("client_side"), Scalar("server_side"));

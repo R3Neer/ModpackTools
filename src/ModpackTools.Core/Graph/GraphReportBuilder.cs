@@ -15,7 +15,7 @@ public static class GraphReportBuilder
         scope.Input(nodes);
         return scope.Compose(nodes, runtimeOverrides ?? new());
     }
-    private static void ValidatePolicy(GraphReportLimits limits)
+    internal static void ValidatePolicy(GraphReportLimits limits)
     {
         var invalid = limits.MaximumNodes <= 0 ? nameof(limits.MaximumNodes)
             : limits.MaximumMods <= 0 ? nameof(limits.MaximumMods)
