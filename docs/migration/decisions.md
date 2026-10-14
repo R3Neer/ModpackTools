@@ -149,9 +149,14 @@ language claim can promise a faster remote service.
 
 ## D07: locations and update ownership
 
-Source remains in this isolated branch checkout during development. The desired
-future source location `D:\Minecraft\Herramientas\ModpackTools` is conceptual;
-do not move sources or installs now.
+Source development remains in this isolated branch checkout. On2026-10-14 the
+separate reorganization agent completed the user-authorized physical relocation:
+primary repository is `D:\Juegos\Minecraft\Herramientas\ModpackTools`, main025b7f3;
+linked worktree stays `C:\Users\Usuario\Desktop\ReorganizacionPC\work\ModpackTools`
+with repaired Git linkage. The legacy installation is separately located at
+`D:\Desarrollo\Toolchains\PowerShell\Modules\ModpackTools` and the existing Nu
+import points there. These paths were verified read-only. Preserve those changes;
+do not repeat relocation or replace the live installation with the partial Native.
 
 For the new distribution choose a per-user application root under LocalAppData,
 `ModpackTools/app`, with explicit configurable install-root support (including an
