@@ -7,6 +7,7 @@ using System.Text.Json;
 if (args.FirstOrDefault() == "--inspect-configuration-write") return ConfigurationWriteInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-project-registration") return ProjectRegistrationInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-project-creation") return ProjectCreationInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-mod-side") return ModSideInspection.Run(args);
 if (args.FirstOrDefault() == "init") return NativeToolFixture.Init(args);
 if (args.Length == 1 && args[0] == "--verify-project-creation") { ProjectCreationContracts.VerifyAsync().GetAwaiter().GetResult(); Console.WriteLine("Native project creation contracts passed"); return 0; }
 if (args.FirstOrDefault() == "--inspect-category-creation") return CategoryCreationInspection.Run(args);
@@ -324,6 +325,7 @@ CategoryRemovalContracts.VerifyAsync().GetAwaiter().GetResult();
 CategoryCreationContracts.VerifyAsync().GetAwaiter().GetResult();
 ConfigurationWriteContracts.VerifyAsync().GetAwaiter().GetResult();
 ProjectRegistrationContracts.VerifyAsync().GetAwaiter().GetResult();
+ModSideContracts.VerifyAsync().GetAwaiter().GetResult();
 NativeToolContracts.VerifyAsync().GetAwaiter().GetResult();
 ArtifactProviderContracts.VerifyAsync().GetAwaiter().GetResult();
 ProjectHealthContracts.VerifyAsync().GetAwaiter().GetResult();
