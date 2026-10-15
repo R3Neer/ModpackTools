@@ -28,7 +28,7 @@ public static class ProjectCreation
 
     public static async Task<ProjectCreationResult> ExecuteAsync(string catalogRoot, ProjectCreationRequest request,
         PackwizObservation tool, string nativeHost, NativeToolLimits? processLimits = null, CancellationToken cancellation = default,
-        Func<ProjectCreationResult, CancellationToken, ValueTask>? prepareOutput = null)
+        Func<ProjectCreationResult, CancellationToken, ValueTask>? prepareOutput = null, Func<PackwizObservation>? resolveTool = null)
     {
         ValidateRequest(request); cancellation.ThrowIfCancellationRequested();
         var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(catalogRoot));
@@ -41,6 +41,7 @@ public static class ProjectCreation
         if (!StringComparer.OrdinalIgnoreCase.Equals(Path.GetDirectoryName(target), root))
             throw Error("DestinationOutsideRoot", $"Project destination '{target}' is not a direct child of configured root '{root}'", "choose a directory directly below the configured root", target);
         if (Path.Exists(target)) throw Error("DestinationExists", $"Project destination '{target}' already exists and will not be overwritten", "choose a different --path or remove the existing directory deliberately", target, "ResourceExists");
+        tool = resolveTool?.Invoke() ?? tool;
         if (!tool.Available || tool.Path is null) throw new DomainException("Dependency.PackwizNotFound", "Required Packwiz executable is not available", "configure an existing native Packwiz executable", "ObjectNotFound", tool.Path);
         var workspace = Path.Combine(root, ".modpacktools-create-" + Guid.NewGuid().ToString("N"));
         if (Path.Exists(workspace)) throw Error("WorkspaceCollision", "Creation workspace already exists", "retry with a new owned workspace", workspace, "ResourceExists");

@@ -35,7 +35,7 @@ try
     var options = PresentationOptions.Parse(args);
     command = options.Arguments.FirstOrDefault() ?? "";
     commandArguments = options.Arguments.Skip(1).ToArray();
-    if (command.Equals("project", StringComparison.OrdinalIgnoreCase) && commandArguments.FirstOrDefault()?.Equals("register", StringComparison.OrdinalIgnoreCase) == true
+    if (command.Equals("project", StringComparison.OrdinalIgnoreCase) && commandArguments.FirstOrDefault() is { } initialization && new[] { "register", "create" }.Contains(initialization, StringComparer.OrdinalIgnoreCase)
         && !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
     {
         var configurationDirectory = Environment.GetEnvironmentVariable("MODPACKTOOLS_CONFIG_HOME");
@@ -43,7 +43,11 @@ try
         using var cancellation = new CancellationTokenSource();
         ConsoleCancelEventHandler cancel = (_, signal) => { signal.Cancel = true; cancellation.Cancel(); };
         Console.CancelKeyPress += cancel;
-        try { await ProjectRegistrationCommand.RunAsync(command, commandArguments, options.Project, configurationDirectory, cancellation.Token); }
+        try
+        {
+            if (initialization.Equals("create", StringComparison.OrdinalIgnoreCase)) await ProjectCreationCommand.RunAsync(command, commandArguments, options.Project, configurationDirectory, cancellation.Token);
+            else await ProjectRegistrationCommand.RunAsync(command, commandArguments, options.Project, configurationDirectory, cancellation.Token);
+        }
         finally { Console.CancelKeyPress -= cancel; }
         return 0;
     }

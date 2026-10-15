@@ -93,7 +93,7 @@ def owns-native-command [args: list<string>] {
     if (($command | str lowercase) == 'category') and (($operation | str lowercase) in ['assign' 'clear' 'remove' 'create']) {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
-    (($command | str lowercase) == 'project') and (($operation | str lowercase) in ['list' 'current' 'use' 'status' 'register']) and not ($args | any {|token| $token in ['--help' '-h'] })
+    (($command | str lowercase) == 'project') and (($operation | str lowercase) in ['list' 'current' 'use' 'status' 'register' 'create']) and not ($args | any {|token| $token in ['--help' '-h'] })
 }
 
 def validate-string-fields [value: any, names: list<string>, nullable: bool = false] {
@@ -209,9 +209,10 @@ def invoke-native-command [args: list<string>] {
             if $result.command != '--version' or ((field (field (field $result data {}) version {}) version null | describe) != 'string') {
                 error make { msg: 'ModpackTools native executable returned an invalid version result.' }
             }
-        } else if (($args.0 | str lowercase) == 'project') and (($args.1 | str lowercase) == 'register') {
+        } else if (($args.0 | str lowercase) == 'project') and (($args.1 | str lowercase) in ['register' 'create']) {
             if $result.command != $args.0 or ($result.arguments | length) < 2 or $result.arguments.0 != $args.1 or ((field $result data null | describe) !~ '^record') or not ($result.data | columns | is-empty) {
-                error make {msg: 'Native project registration returned an invalid result.'}
+                let message = if ($args.1 | str lowercase) == 'create' {'Native project creation returned an invalid result.'} else {'Native project registration returned an invalid result.'}
+                error make {msg: $message}
             }
         } else if ($args.1 | str lowercase) in ['current' 'use'] {
             let selecting = ($args.1 | str lowercase) == 'use'
