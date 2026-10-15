@@ -2,13 +2,12 @@ using System.Buffers;
 using System.Collections.Immutable;
 using System.IO.Compression;
 using System.Security.Cryptography;
-using System.Runtime.InteropServices;
 using ModpackTools.Core.Artifacts;
 using ModpackTools.Core.Transactions;
 
 namespace ModpackTools.Core.Dependencies;
 
-public static partial class DependencyArchive
+public static class DependencyArchive
 {
     public static PreparedDependency Prepare(string archivePath, string stagingParent, DependencyPackage package,
         DependencyArchiveLimits? limits = null, CancellationToken cancellation = default)
@@ -56,7 +55,7 @@ public static partial class DependencyArchive
             WindowsProjectIdentity.GuardAncestors(stagingParent); System.IO.Directory.CreateDirectory(stagingParent);
             using var parentIdentity = WindowsProjectIdentity.Open(stagingParent);
             stage = Path.Combine(stagingParent, ".modpacktools-package-" + Guid.NewGuid().ToString("N"));
-            if (CreateDirectory(stage, 0) == 0) throw Error("StageCreateFailed", "Dependency staging directory could not be reserved", stage);
+            if (!WindowsDirectoryReservation.TryCreate(stage)) throw Error("StageCreateFailed", "Dependency staging directory could not be reserved", stage);
             stageOwned = true; WindowsProjectIdentity.GuardAncestors(stage);
             var files = ImmutableArray.CreateBuilder<PreparedDependencyFile>();
             foreach (var entry in new[] { executable, license })
@@ -123,7 +122,5 @@ public static partial class DependencyArchive
         var name = part.Split('.')[0].ToUpperInvariant();
         return name is "CON" or "PRN" or "AUX" or "NUL" or "CONIN$" or "CONOUT$" || name.Length == 4 && (name.StartsWith("COM", StringComparison.Ordinal) || name.StartsWith("LPT", StringComparison.Ordinal)) && name[3] is >= '0' and <= '9';
     }
-    [LibraryImport("kernel32.dll", EntryPoint = "CreateDirectoryW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
-    private static partial int CreateDirectory(string path, nint security);
     private static DomainException Error(string id, string message, string? path, string category = "InvalidData") => new("Dependency." + id, message, "retry with the verified Packwiz package", category, path);
 }

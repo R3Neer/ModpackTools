@@ -21,7 +21,7 @@ internal sealed partial class WindowsProjectIdentity : IDisposable
         if (!OperatingSystem.IsWindows()) throw Error("UnsupportedPlatform", "Project transactions require Windows file identity support");
         var absolute = Path.GetFullPath(root); GuardAncestors(absolute);
         // Keep the root open without delete sharing throughout the transaction.
-        var handle = CreateFileW(absolute, 0x80, 3, 0, 3, 0x02000000 | 0x00200000, 0);
+        var handle = CreateFileW(WindowsNativePath.From(absolute), 0x80, 3, 0, 3, 0x02000000 | 0x00200000, 0);
         if (handle.IsInvalid) { var error = Marshal.GetLastPInvokeError(); handle.Dispose(); throw Failure(absolute, error); }
         try
         {

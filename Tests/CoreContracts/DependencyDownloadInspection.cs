@@ -26,7 +26,7 @@ internal static class DependencyDownloadInspection
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException or FormatException or InvalidOperationException or JsonException or KeyNotFoundException)
         { ManagedInspection.WriteFailure("Core.InputReadFailed", error.Message, "InvalidData", null, "check dependency download fixture", null); return 2; }
     }
-    private sealed class FixtureHandler(JsonElement input) : HttpMessageHandler
+    internal sealed class FixtureHandler(JsonElement input) : HttpMessageHandler
     {
         public int Requests { get; private set; }
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellation)

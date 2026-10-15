@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Text.Json;
 
+if (args.FirstOrDefault() == "--inspect-dependency-bootstrap") return DependencyBootstrapInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-dependency-download") return DependencyDownloadInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-dependency-installation") return DependencyInstallationInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-dependency-archive") return DependencyArchiveInspection.Run(args);
