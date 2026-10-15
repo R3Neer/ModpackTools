@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Text.Json;
 
+if (args.FirstOrDefault() == "--inspect-resource-operation") return ResourceOperationInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-forge-manifest") return RootManifestInspection.Run(args, true);
 if (args.FirstOrDefault() == "--inspect-loader-archive-root") return RootManifestInspection.Run(args, archive: true);
 if (args.FirstOrDefault() == "--inspect-loader-archive") return RootManifestInspection.Run(args, archive: true, traversal: true);
@@ -312,6 +313,7 @@ ContentPlanContracts.VerifyAsync().GetAwaiter().GetResult();
 ProjectTransactionContracts.VerifyAsync().GetAwaiter().GetResult();
 ContentMaterializationContracts.Verify();
 ContentClassificationContracts.VerifyAsync().GetAwaiter().GetResult();
+ResourceOperationContracts.VerifyAsync().GetAwaiter().GetResult();
 NativeToolContracts.VerifyAsync().GetAwaiter().GetResult();
 ArtifactProviderContracts.VerifyAsync().GetAwaiter().GetResult();
 ProjectHealthContracts.VerifyAsync().GetAwaiter().GetResult();
