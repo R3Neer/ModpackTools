@@ -23,8 +23,9 @@ Remaining dependency sequence:
    selection/order/references/error priorities and human presentation contracts.
 3. Search-only typed resolver with pins/local/roots, downgrade/cost/backtracking and
    cumulative search limits is accepted in66. Shared checked candidate acquisition
-   is accepted in67; remote ID/slug identification in68. Request/root preparation and bound
-   plans; exclusive source ownership, staging/journal-before-write, commit/rollback
+   is accepted in67; remote ID/slug identification in68; complete observation-based
+   Add/Update/Repair proposals in69. Source-bound plans, exclusive ownership,
+   staging/journal-before-write, commit/rollback
    and recovery. Wire every mutation only after injected-failure/external-edit gates.
 4. Doctor/build/diff/MRPack freshness, project/settings and all remaining grammar.
 5. Paired packaged presentation/Nu adapter, questions/cancellation, versioned Native
