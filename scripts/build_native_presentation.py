@@ -47,7 +47,7 @@ def build(repository: Path, destination: Path) -> None:
         files = {path.name: hashlib.sha256(path.read_bytes()).hexdigest().upper()
                  for path in sorted(staging.iterdir())}
         manifest = {"schema_version": 1, "revision": REVISION, "version": version, "files": files}
-        (staging / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        (staging / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n")
         destination.mkdir(parents=True, exist_ok=True)
         reject_links(destination)
         for path in destination.iterdir():
