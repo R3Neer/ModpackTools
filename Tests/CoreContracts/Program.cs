@@ -9,6 +9,8 @@ if (args.FirstOrDefault() == "--inspect-project-registration") return ProjectReg
 if (args.FirstOrDefault() == "--inspect-project-creation") return ProjectCreationInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-mod-side") return ModSideInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-removal-plan") return RemovalPlanningInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-removal") return RemovalInspection.Run(args);
+if (args.Length == 2 && args[0] == "--verify-removal") { RemovalContracts.VerifyAsync(args[1]).GetAwaiter().GetResult(); Console.WriteLine("Native removal contracts passed"); return 0; }
 if (args.FirstOrDefault() == "init") return NativeToolFixture.Init(args);
 if (args.Length == 1 && args[0] == "--verify-project-creation") { ProjectCreationContracts.VerifyAsync().GetAwaiter().GetResult(); Console.WriteLine("Native project creation contracts passed"); return 0; }
 if (args.FirstOrDefault() == "--inspect-category-creation") return CategoryCreationInspection.Run(args);
