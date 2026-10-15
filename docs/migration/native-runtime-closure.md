@@ -22,13 +22,14 @@ validation/provider slices also have internal acceptance. Legacy remains install
 and still requires PS7.
 Never report full independence while either adapter or setup falls back to PS.
 
-Latest accepted extensions through95: public structured config get/set, project
+Latest accepted extensions through96: public structured config get/set, project
 register/create, mod set-side and complete content remove with direct Nu dispatch.
 Removal includes preview/dry-run, source-bound --yes application, retained-file
 ownership/hash checks and editorial/resource-order cleanup. Internal index
 verification now closes empty/omitted metadata and subdirectory-index gaps;
 bounded MRPack snapshots and complete internal transactional build are accepted.
-Public build/diff/doctor, human/help and native installer/updater remain required.
+Structured public build and direct Nushell dispatch are now accepted as well.
+Diff/doctor, human/help and native installer/updater remain required.
 Checkpoint numbering is not a completion percentage. No live installation swap,
 source move, push, release or activation follows from these local acceptances.
 
