@@ -12,6 +12,7 @@ internal sealed record ExpectedManagedArtifact(string Path, string LocalPath, Ma
 internal sealed record BuildArtifactExpectation(string Name, string Version, ImmutableDictionary<string, string> Dependencies,
     ImmutableDictionary<string, string> PlainFiles, ImmutableArray<ExpectedManagedArtifact> Managed)
 {
+    public string Summary { get; init; } = "";
     public static BuildArtifactExpectation Read(ProjectContext stage, ProjectIndexReport index, ProjectHealthObservation health, CancellationToken cancellation)
         => Read(stage, index, health.Inventory, health.Nodes.Where(node => node.Item.MetadataPath is not null).ToDictionary(node => node.Item.MetadataPath!, node => node.File, StringComparer.OrdinalIgnoreCase), cancellation);
     public static BuildArtifactExpectation Read(ProjectContext stage, ProjectIndexReport index, RawInventorySnapshot inventory, CancellationToken cancellation)
@@ -54,7 +55,7 @@ internal sealed record BuildArtifactExpectation(string Name, string Version, Imm
             var full = TransactionFiles.Within(stage.Root, folder + "/" + item.Filename); var relative = Path.GetRelativePath(indexRoot, full).Replace('\\', '/');
             if (!plain.ContainsKey(relative)) throw Invalid("Local content is missing from the index: " + relative);
         }
-        return new(Required(manifest.Get("name")), Required(manifest.Get("version")), dependencies, plain.ToImmutable(), managed.ToImmutable());
+        return new(Required(manifest.Get("name")), Required(manifest.Get("version")), dependencies, plain.ToImmutable(), managed.ToImmutable()) { Summary = Text(manifest.Get("description")) };
     }
     private static string Text(TomlDeclarationValue value) => value is TomlText text ? text.Value : "";
     private static string Required(TomlDeclarationValue value) => Text(value) is { Length: > 0 } text ? text : throw Invalid("A required build declaration is missing or is not a string");

@@ -18,7 +18,10 @@ public sealed record MrpackManifestFile(string Path, ImmutableDictionary<string,
     ImmutableDictionary<string, string> Environment, long Size);
 public sealed record MrpackArchiveFile(string Path, ImmutableDictionary<string, string> Hashes, long Size);
 public sealed record MrpackDocument(string Name, string Version, ImmutableDictionary<string, string> Dependencies,
-    ImmutableArray<MrpackManifestFile> Files, ImmutableArray<MrpackArchiveFile> Entries, ImmutableArray<MrpackRecord> Records);
+    ImmutableArray<MrpackManifestFile> Files, ImmutableArray<MrpackArchiveFile> Entries, ImmutableArray<MrpackRecord> Records)
+{
+    public string Summary { get; init; } = "";
+}
 public sealed record MrpackComparison(ImmutableArray<MrpackRecord> Added, ImmutableArray<MrpackRecord> Removed, ImmutableArray<MrpackChange> Changed)
 {
     public int Total => checked(Added.Length + Removed.Length + Changed.Length);
@@ -62,6 +65,9 @@ public static class MrpackSnapshot
             var manifestText = reader.ReadToEnd(); Text(manifestText);
             using var json = JsonDocument.Parse(manifestText, new() { MaxDepth = 64 });
             var manifest = json.RootElement; Object(manifest);
+            if (hashes && (!manifest.TryGetProperty("formatVersion", out var format) || !format.TryGetInt32(out var version) || version != 1
+                || !manifest.TryGetProperty("game", out var game) || String(game) != "minecraft")) throw Invalid("MRPack must declare formatVersion 1 and game minecraft");
+            var summary = hashes && manifest.TryGetProperty("summary", out var description) ? String(description) : "";
             foreach (var name in new[] { "name", "versionId" }) Add(new("pack:" + name, "PACK", name, String(manifest.GetProperty(name))));
             var dependencies = manifest.GetProperty("dependencies"); Object(dependencies);
             var dependencyValues = ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal);
@@ -107,7 +113,7 @@ public static class MrpackSnapshot
                 else Add(new("entry:" + name, "ARCHIVE", name, fingerprint));
             }
             cancellation.ThrowIfCancellationRequested(); return new(String(manifest.GetProperty("name")), String(manifest.GetProperty("versionId")), dependencyValues.ToImmutable(),
-                manifestFiles.ToImmutable(), archiveFiles.ToImmutable(), records.ToImmutable());
+                manifestFiles.ToImmutable(), archiveFiles.ToImmutable(), records.ToImmutable()) { Summary = summary };
         }
         catch (OperationCanceledException) { throw new DomainException("Core.OperationCancelled", "MRPack inspection was cancelled", "retry when ready", "OperationStopped"); }
         catch (ArchiveLimitException error) { throw Limit("Archive", error.Message); }

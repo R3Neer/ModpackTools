@@ -23,6 +23,10 @@ public static class SourceTree
     private static readonly EnumerationOptions Enumeration = new() { AttributesToSkip = 0, IgnoreInaccessible = false };
 
     public static SourceTreeSnapshot Read(string root, SourceTreeReadLimits? limits = null, CancellationToken cancellation = default)
+        => ReadCore(root, limits, cancellation, false);
+    public static SourceTreeSnapshot ReadForHealth(string root, SourceTreeReadLimits? limits = null, CancellationToken cancellation = default)
+        => ReadCore(root, limits, cancellation, true);
+    private static SourceTreeSnapshot ReadCore(string root, SourceTreeReadLimits? limits, CancellationToken cancellation, bool health)
     {
         limits ??= new();
         var invalid = limits.MaximumFiles <= 0 ? nameof(limits.MaximumFiles)
@@ -61,6 +65,8 @@ public static class SourceTree
                     if (!entries.MoveNext()) break;
                     var entry = entries.Current;
                     if (IsGit(entry.Name)) continue;
+                    if (health && entry is DirectoryInfo && string.Equals(entry.Name, "dist", StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(Path.TrimEndingDirectorySeparator(directory.FullName), Path.TrimEndingDirectorySeparator(absolute), StringComparison.OrdinalIgnoreCase)) continue;
                     current = entry.FullName;
                     CheckLink(entry);
                     var relative = Path.GetRelativePath(absolute, entry.FullName).Replace('\\', '/');

@@ -6,7 +6,10 @@ using ModpackTools.Core.Transactions;
 
 namespace ModpackTools.Core.Build;
 
-public sealed record ProjectDiffResult(string BaselinePath, DateTime BaselineUtc, MrpackComparison Comparison);
+public sealed record ProjectDiffResult(string BaselinePath, DateTime BaselineUtc, MrpackComparison Comparison)
+{
+    public MrpackDocument? CurrentArtifact { get; init; }
+}
 
 public static class ProjectDiff
 {
@@ -40,10 +43,10 @@ public static class ProjectDiff
             await BuildArtifactValidation.VerifyAsync(expected, current, config, limits.Health?.Artifacts, stage.Loader ?? "", token).ConfigureAwait(false);
             var comparison = MrpackSnapshot.Compare(snapshot, current.Records, cancellation: token);
             token.ThrowIfCancellationRequested(); File.Delete(temporary);
-            return new(TransactionFiles.Within(project.Root, "dist/" + baseline.Name), baseline.LastWriteTimeUtc, comparison);
+            return new(TransactionFiles.Within(project.Root, "dist/" + baseline.Name), baseline.LastWriteTimeUtc, comparison) { CurrentArtifact = current };
         }
     }
-    private static FileInfo Latest(ProjectContext stage, ProjectContext original, CancellationToken cancellation)
+    internal static FileInfo Latest(ProjectContext stage, ProjectContext original, CancellationToken cancellation)
     {
         var dist = TransactionFiles.Within(stage.Root, "dist"); FileInfo? latest = null; var entries = 0;
         if (Directory.Exists(dist))

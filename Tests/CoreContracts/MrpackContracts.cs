@@ -15,6 +15,10 @@ internal static class MrpackContracts
             var oldPath = Write("old.mrpack", first); var reorderedPath = Write("reordered.mrpack", reordered, reverse: true);
             var baseline = MrpackSnapshot.Read(oldPath); var current = MrpackSnapshot.Read(reorderedPath);
             Assert(baseline.Length == 6 && MrpackSnapshot.Compare(baseline, current).Total == 0, "JSON/download/ZIP ordering does not change semantic content");
+            try { _ = MrpackSnapshot.ReadDocument(oldPath); throw new Exception("Distribution with missing game/format header accepted."); }
+            catch (DomainException error) when (error.Id == "ModpackTools.Diff.InvalidArtifact") { }
+            var complete = Write("complete.mrpack", first.Replace("{\"name\"", "{\"formatVersion\":1,\"game\":\"minecraft\",\"summary\":\"Description\",\"name\"", StringComparison.Ordinal));
+            Assert(MrpackSnapshot.ReadDocument(complete).Summary == "Description", "distribution validation retains summary separately from legacy diff projection");
             foreach (var encoding in new Encoding[] { new UTF8Encoding(true, true), new UnicodeEncoding(false, true, true), new UTF32Encoding(false, true, true) })
             {
                 var encoded = Write("bom-" + encoding.WebName + ".mrpack", first, manifestEncoding: encoding);

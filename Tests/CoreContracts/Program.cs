@@ -13,6 +13,9 @@ if (args.FirstOrDefault() == "--inspect-removal") return RemovalInspection.Run(a
 if (args.FirstOrDefault() == "--inspect-project-index") return ProjectIndexInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-mrpack") return MrpackInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-build") return BuildInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-artifact-freshness") return ArtifactFreshnessInspection.Run(args);
+if (args.Length == 2 && args[0] == "--verify-artifact-freshness") { ArtifactFreshnessContracts.VerifyAsync(args[1]).GetAwaiter().GetResult(); Console.WriteLine("Native artifact freshness contracts passed"); return 0; }
+if (args.FirstOrDefault() == "--inspect-health-source") return SourceInspection.Run(args);
 if (args.Length == 2 && args[0] == "--verify-build") { BuildContracts.VerifyAsync(args[1]).GetAwaiter().GetResult(); Console.WriteLine("Native build contracts passed"); return 0; }
 if (args.FirstOrDefault() == "modrinth") return NativeToolFixture.Export(args);
 if (args.Length == 2 && args[0] == "--verify-removal") { RemovalContracts.VerifyAsync(args[1]).GetAwaiter().GetResult(); Console.WriteLine("Native removal contracts passed"); return 0; }

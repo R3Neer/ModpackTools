@@ -18,6 +18,9 @@ internal static class SourceTreeContracts
             var before = SourceTree.Read(directory);
             var health = SourceFingerprint.Health(before, CultureInfo.GetCultureInfo("en-US"));
             var all = SourceFingerprint.All(before);
+            var healthOnly = SourceTree.ReadForHealth(directory, new(MaximumBytes: 3));
+            if (healthOnly.Files.Count != 1 || SourceFingerprint.Health(healthOnly, CultureInfo.GetCultureInfo("en-US")) != health)
+                throw new InvalidOperationException("Health reader hashed dist before excluding it.");
             var time = File.GetLastWriteTimeUtc(Path.Combine(directory, "dist", "artifact"));
             File.WriteAllText(Path.Combine(directory, "dist", "artifact"), "NEW");
             File.SetLastWriteTimeUtc(Path.Combine(directory, "dist", "artifact"), time);
@@ -26,6 +29,9 @@ internal static class SourceTreeContracts
                 || SourceFingerprint.Health(after, CultureInfo.GetCultureInfo("en-US")) != health || SourceFingerprint.All(after) == all
                 || SourceTreeChanges.Compare(before, after).Single().Path != "dist/artifact")
                 throw new InvalidOperationException("Source snapshot lost protected dist, content hashes or health scope.");
+            Directory.CreateDirectory(Path.Combine(directory, "d\u00ADist")); File.WriteAllText(Path.Combine(directory, "d\u00ADist", "kept"), "A");
+            if (!SourceTree.ReadForHealth(directory).Files.ContainsKey("d\u00ADist/kept"))
+                throw new InvalidOperationException("Health scope used cultural equivalence for distinct physical paths.");
             var exclusive = new FileStream(Path.Combine(directory, "a"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
             using (exclusive) Expect(() => SourceTree.Read(directory), "Source.TreeReadFailed");
             Expect(() => SourceTree.Read(directory, new(MaximumBytes: 5)), "Source.TreeReadLimitExceeded");

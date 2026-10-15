@@ -11,7 +11,7 @@ internal static class BuildArtifactValidation
     public static async Task VerifyAsync(BuildArtifactExpectation expected, MrpackDocument actual, string configurationDirectory,
         ArtifactProviderLimits? limits, string loader, CancellationToken cancellation, HttpMessageHandler? handler = null)
     {
-        if (!StringComparer.InvariantCulture.Equals(expected.Name, actual.Name) || !StringComparer.InvariantCulture.Equals(expected.Version, actual.Version)
+        if (!StringComparer.InvariantCulture.Equals(expected.Name, actual.Name) || !StringComparer.InvariantCulture.Equals(expected.Version, actual.Version) || !StringComparer.Ordinal.Equals(expected.Summary, actual.Summary)
             || expected.Dependencies.Count != actual.Dependencies.Count || expected.Dependencies.Any(pair => !actual.Dependencies.TryGetValue(pair.Key, out var version) || version != pair.Value))
             throw Mismatch("Pack identity or loader dependencies differ from the frozen project");
         var files = actual.Files.ToDictionary(file => file.Path, StringComparer.OrdinalIgnoreCase);

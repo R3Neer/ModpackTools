@@ -63,7 +63,7 @@ internal static class SourceInspection
                 }
                 else
                 {
-                    var snapshot = SourceTree.Read(arguments[1], limits);
+                    var snapshot = arguments[0] == "--inspect-health-source" ? SourceTree.ReadForHealth(arguments[1], limits) : SourceTree.Read(arguments[1], limits);
                     writer.WriteStartObject();
                     writer.WriteString("root", snapshot.Root);
                     writer.WriteStartObject("files");
