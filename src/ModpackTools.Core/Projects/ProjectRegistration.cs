@@ -77,11 +77,7 @@ public static class ProjectRegistration
             files.Add(Path.Combine(path, ".modpack", "project.psd1")); files.Add(Path.Combine(path, ".modpack", "metadata.psd1"));
             if (!preserveReadme && !Path.Exists(Path.Combine(stage.Root, "README.md")))
             {
-                using var resource = typeof(ProjectRegistration).Assembly.GetManifestResourceStream("ModpackTools.Core.Projects.ProjectReadme.txt") ?? throw new InvalidOperationException("Missing project README resource.");
-                using var reader = new StreamReader(resource, new UTF8Encoding(false, true));
-                var description = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(project.Loader ?? "Unknown");
-                if (!string.IsNullOrEmpty(project.LoaderVersion)) description += " " + project.LoaderVersion;
-                Write("README.md", string.Format(CultureInfo.CurrentCulture, reader.ReadToEnd(), project.Name, project.Version, project.Id, project.Minecraft, description, manifest.String("version"), project.OutputName));
+                Write("README.md", CreateReadme(project, manifest.String("version")!));
                 files.Add(Path.Combine(path, "README.md"));
             }
             if (!preserveIgnore && !Path.Exists(Path.Combine(stage.Root, ".gitignore"))) { Write(".gitignore", "dist/\n"); files.Add(Path.Combine(path, ".gitignore")); }
@@ -90,6 +86,14 @@ public static class ProjectRegistration
         }
     }
 
+    internal static string CreateReadme(ProjectContext project, string packVersion)
+    {
+        using var resource = typeof(ProjectRegistration).Assembly.GetManifestResourceStream("ModpackTools.Core.Projects.ProjectReadme.txt") ?? throw new InvalidOperationException("Missing project README resource.");
+        using var reader = new StreamReader(resource, new UTF8Encoding(false, true));
+        var description = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(project.Loader ?? "Unknown");
+        if (!string.IsNullOrEmpty(project.LoaderVersion)) description += " " + project.LoaderVersion;
+        return string.Format(CultureInfo.CurrentCulture, reader.ReadToEnd(), project.Name, project.Version, project.Id, project.Minecraft, description, packVersion, project.OutputName);
+    }
     public static void ValidateRequest(ProjectRegistrationRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);

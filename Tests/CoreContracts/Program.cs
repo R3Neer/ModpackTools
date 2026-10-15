@@ -6,6 +6,9 @@ using System.Text.Json;
 
 if (args.FirstOrDefault() == "--inspect-configuration-write") return ConfigurationWriteInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-project-registration") return ProjectRegistrationInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-project-creation") return ProjectCreationInspection.Run(args);
+if (args.FirstOrDefault() == "init") return NativeToolFixture.Init(args);
+if (args.Length == 1 && args[0] == "--verify-project-creation") { ProjectCreationContracts.VerifyAsync().GetAwaiter().GetResult(); Console.WriteLine("Native project creation contracts passed"); return 0; }
 if (args.FirstOrDefault() == "--inspect-category-creation") return CategoryCreationInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-resource-operation") return ResourceOperationInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-forge-manifest") return RootManifestInspection.Run(args, true);

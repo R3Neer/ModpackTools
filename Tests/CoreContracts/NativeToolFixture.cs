@@ -2,6 +2,23 @@ using System.Diagnostics;
 
 internal static class NativeToolFixture
 {
+    public static int Init(string[] args)
+    {
+        string Value(string flag) { var index = Array.IndexOf(args, flag); return index < 0 || index + 1 == args.Length ? "" : args[index + 1]; }
+        var name = Value("--name"); var loader = Value("--modloader"); var version = Value("--" + loader + "-version");
+        if (version.Length == 0) version = "fixture-latest";
+        var evidence = Environment.GetEnvironmentVariable("MODPACKTOOLS_TEST_INIT_ARGUMENTS_PATH");
+        if (!string.IsNullOrEmpty(evidence))
+        {
+            using var stream = File.Create(evidence); using var writer = new System.Text.Json.Utf8JsonWriter(stream);
+            writer.WriteStartArray(); foreach (var argument in args) writer.WriteStringValue(argument); writer.WriteEndArray();
+        }
+        var utf8 = new System.Text.UTF8Encoding(false);
+        File.WriteAllText("pack.toml", $"name=\"{name}\"\nversion=\"{Value("--version")}\"\n[index]\nfile=\"index.toml\"\n[versions]\nminecraft=\"{Value("--mc-version")}\"\n{loader}=\"{version}\"\n", utf8);
+        File.WriteAllText("index.toml", "hash-format=\"sha256\"\nfiles=[]\n", utf8);
+        if (name == "Fail Pack") return Run(["both-fail"]);
+        return 0;
+    }
     public static int Refresh() => File.Exists("fixture-refresh-fail.marker") ? Run(["both-fail"]) : Run(["zero-invalid"]);
     public static int Run(string[] args)
     {
