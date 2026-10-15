@@ -10,12 +10,12 @@ using Newtonsoft.Json;
 namespace ModpackTools.Core.Graph;
 
 internal sealed record GraphFact(string Scope, string Target, bool Present, ImmutableArray<string?> Versions, ImmutableArray<string?> LegacyVersions);
-internal sealed class GraphTextBudget(GraphReportLimits limits)
+internal sealed class GraphTextBudget(GraphReportLimits limits, Action<long>? work = null)
 {
     private int identity, messages, factVersions;
-    public void Identity(int count) { GraphResource.Guard(count > limits.MaximumIdentityCharacters - identity, nameof(limits.MaximumIdentityCharacters)); identity += count; }
-    public void Message(int count) { GraphResource.Guard(count > limits.MaximumMessageCharacters - messages, nameof(limits.MaximumMessageCharacters)); messages += count; }
-    public void FactVersions(int count) { GraphResource.Guard(count > limits.MaximumFactVersions - factVersions, nameof(limits.MaximumFactVersions)); factVersions += count; }
+    public void Identity(int count) { work?.Invoke(Math.Max(1, count)); GraphResource.Guard(count > limits.MaximumIdentityCharacters - identity, nameof(limits.MaximumIdentityCharacters)); identity += count; }
+    public void Message(int count) { work?.Invoke(Math.Max(1, count)); GraphResource.Guard(count > limits.MaximumMessageCharacters - messages, nameof(limits.MaximumMessageCharacters)); messages += count; }
+    public void FactVersions(int count) { work?.Invoke(Math.Max(1, count)); GraphResource.Guard(count > limits.MaximumFactVersions - factVersions, nameof(limits.MaximumFactVersions)); factVersions += count; }
 }
 internal sealed class GraphIdentity(GraphTextBudget budget)
 {

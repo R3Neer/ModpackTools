@@ -58,11 +58,11 @@ public sealed class GraphReport
     }
 }
 
-internal sealed class RequirementEvaluationBudget(int maximumNodes, int maximumVersions)
+internal sealed class RequirementEvaluationBudget(int maximumNodes, int maximumVersions, Action<long>? work = null)
 {
     private int nodes, versions;
-    public void Node() { GraphResource.Guard(nodes >= maximumNodes, "MaximumEvaluatedNodes"); nodes++; }
-    public void Version() { GraphResource.Guard(versions >= maximumVersions, "MaximumEvaluatedVersions"); versions++; }
+    public void Node() { work?.Invoke(1); GraphResource.Guard(nodes >= maximumNodes, "MaximumEvaluatedNodes"); nodes++; }
+    public void Version() { work?.Invoke(1); GraphResource.Guard(versions >= maximumVersions, "MaximumEvaluatedVersions"); versions++; }
 }
 internal static class GraphResource
 {

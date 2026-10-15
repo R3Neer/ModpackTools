@@ -6,6 +6,19 @@ namespace ModpackTools.Core.Graph;
 
 public static class GraphReportBuilder
 {
+    internal static void ValidateInput(GraphEnvironment environment, ImmutableArray<GraphNode> nodes, GraphReportLimits limits, Action<long>? work = null)
+    {
+        ValidatePolicy(limits);
+        new Scope(limits, environment, work).Input(nodes);
+    }
+    internal static GraphReport BuildWithWork(GraphEnvironment environment, ImmutableArray<GraphNode> nodes,
+        RuntimeOverrides? runtimeOverrides, GraphReportLimits limits, Action<long> work)
+    {
+        ValidatePolicy(limits);
+        var scope = new Scope(limits, environment, work);
+        scope.Input(nodes);
+        return scope.Compose(nodes, runtimeOverrides ?? new());
+    }
     public static GraphReport Build(GraphEnvironment environment, ImmutableArray<GraphNode> nodes,
         RuntimeOverrides? runtimeOverrides = null, GraphReportLimits? limits = null)
     {
@@ -49,20 +62,22 @@ public static class GraphReportBuilder
         private readonly GraphIdentity identity;
         private readonly RequirementEvaluationBudget evaluationBudget;
         private readonly RequirementEvaluationLimits evaluationLimits;
+        private readonly Action<long>? work;
         private int inputCharacters, mods, aliases, requirements, warnings, facts;
-        public Scope(GraphReportLimits limits, GraphEnvironment environment)
+        public Scope(GraphReportLimits limits, GraphEnvironment environment, Action<long>? work = null)
         {
-            this.limits = limits; this.environment = environment; textBudget = new(limits); identity = new(textBudget);
-            evaluationBudget = new(limits.MaximumEvaluatedNodes, limits.MaximumEvaluatedVersions);
+            this.limits = limits; this.environment = environment; this.work = work; textBudget = new(limits, work); identity = new(textBudget);
+            evaluationBudget = new(limits.MaximumEvaluatedNodes, limits.MaximumEvaluatedVersions, work);
             evaluationLimits = limits.Evaluation ?? new();
         }
         private void Text(string value)
         {
             ArgumentNullException.ThrowIfNull(value);
+            work?.Invoke(Math.Max(1, value.Length));
             GraphResource.Guard(value.Length > limits.MaximumTextCharacters - inputCharacters, nameof(limits.MaximumTextCharacters)); inputCharacters += value.Length;
         }
-        private static void Count(ref int count, int maximum, string name)
-        { GraphResource.Guard(count >= maximum, name); count++; }
+        private void Count(ref int count, int maximum, string name)
+        { work?.Invoke(1); GraphResource.Guard(count >= maximum, name); count++; }
         public void Input(ImmutableArray<GraphNode> nodes)
         {
             GraphResource.Guard(!nodes.IsDefault && nodes.Length > limits.MaximumNodes, nameof(limits.MaximumNodes));
