@@ -28,8 +28,10 @@ Remaining dependency sequence:
    staging/journal-before-write, commit/rollback and restart recovery are accepted
    in70 (black-box16/16 and white-box8 controls). Stage-only complete plan
    materialization is accepted in71 (black-box6/6 and white-box3 controls), including
-   data-preserving document edits. Refresh/index and public mutation composition
-   remain; wire every mutation only after its own injected-failure/external-edit gates.
+   data-preserving document edits. Real Packwiz refresh/index verification and owned
+   Native process jobs are accepted in72 (black-box7/7 across six scenarios and
+   white-box3 controls). Public mutation composition remains; wire every mutation
+   only after its own injected-failure/external-edit gates.
 4. Doctor/build/diff/MRPack freshness, project/settings and all remaining grammar.
 5. Paired packaged presentation/Nu adapter, questions/cancellation, versioned Native
    installation and separate updater/helper, hashes/resources/licenses, rollback.
