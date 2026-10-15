@@ -79,6 +79,7 @@ def invoke-bridge [request: string] {
 def owns-native-command [args: list<string>] {
     let executable = ($env.MODPACKTOOLS_CORE_PATH? | default '')
     if $executable == '' { return false }
+    if (command-tokens $args | is-empty) or ($args | any {|token| ($token | str lowercase) in ['--help' '-h'] }) {return true}
     let command = ($args | get --optional 0 | default '')
     if not (wants-machine-output $args) {
         return ((($command | str lowercase) == 'doctor') and not ($args | any {|token| ($token | str lowercase) in ['--fix' '--help' '-h'] or ($token | str lowercase | str starts-with '--fix=') }))
@@ -116,6 +117,50 @@ def validate-string-fields [value: any, names: list<string>, nullable: bool = fa
             error make { msg: $'ModpackTools native executable returned an invalid field ($name).' }
         }
     }
+}
+
+def command-tokens [args: list<string>] {
+    mut output = []
+    mut skip_value = false
+    for token in $args {
+        if $skip_value {$skip_value = false; continue}
+        if $token in ['--project' '-p' '--color'] {$skip_value = true; continue}
+        if $token in ['--ascii' '--json' '--no-human'] or ($token | str starts-with '--project=') or ($token | str starts-with '--color=') {continue}
+        $output = ($output | append $token)
+    }
+    $output
+}
+
+def validate-native-help [result: record, args: list<string>] {
+    let effective = (command-tokens $args)
+    let command = ($effective | get --optional 0 | default '')
+    let topic = if $command == '' or ($command | str lowercase) == '--help' {''} else {$command | str lowercase}
+    let presentation = (field $result presentation {})
+    let catalogue = (field $presentation help {})
+    if $result.command != $command or $result.arguments != ($effective | skip 1) or (field $presentation topic null) != $topic {
+        error make {msg: 'Native help does not match the requested topic.'}
+    }
+    validate-string-fields $catalogue ['product' 'version' 'description' 'invocation']
+    for name in ['groups' 'usage' 'notes'] {
+        let values = (field $catalogue $name null)
+        if (($values | describe) !~ '^list') or ($values | any {|value| ($value | describe) != 'string'}) {error make {msg: 'Native help returned invalid text lists.'}}
+    }
+    if ((field $catalogue commands null | describe) !~ '^(list|table)') or ((field $catalogue global-items null | describe) !~ '^(list|table)') {error make {msg: 'Native help returned invalid catalogue entries.'}}
+    for item in $catalogue.global-items {validate-string-fields $item ['label' 'description']}
+    let names = ($catalogue.commands | get name)
+    if ($names | length) != ($names | uniq | length) or ($topic != '' and $topic not-in $names) {error make {msg: 'Native help returned duplicate or missing commands.'}}
+    for entry in $catalogue.commands {
+        validate-string-fields $entry ['name' 'group' 'summary' 'description']
+        if $entry.group not-in $catalogue.groups {error make {msg: 'Native help returned an unknown group.'}}
+        for name in ['usage' 'notes' 'examples'] {
+            let values = (field $entry $name null)
+            if (($values | describe) !~ '^list') or ($values | any {|value| ($value | describe) != 'string'}) {error make {msg: 'Native help returned invalid command text.'}}
+        }
+        if ((field $entry items null | describe) !~ '^(list|table)') {error make {msg: 'Native help returned invalid options.'}}
+        for item in $entry.items {validate-string-fields $item ['label' 'description']}
+    }
+    let expected_data = if $topic == '' {{help: {command: null}}} else {{}}
+    if $result.data != $expected_data {error make {msg: 'Native help changed its structured result.'}}
 }
 
 def validate-native-requirement [value: any] {
@@ -238,7 +283,11 @@ def invoke-native-command [requested_args: list<string>] {
         if 'error' in ($result | columns) {
             error make { msg: 'ModpackTools native executable returned contradictory success fields.' }
         }
-        if ($args | get 0) in ['--version' '-V'] {
+        let help_request = ((command-tokens $args | is-empty) or ('--help' in ($args | each {|token| $token | str lowercase})))
+        if not $help_request and ('presentation' in ($result | columns)) {error make {msg: 'Native executable returned unrequested help presentation.'}}
+        if $help_request {
+            validate-native-help $result $args
+        } else if ($args | get 0) in ['--version' '-V'] {
             if $result.command != '--version' or ((field (field (field $result data {}) version {}) version null | describe) != 'string') {
                 error make { msg: 'ModpackTools native executable returned an invalid version result.' }
             }
@@ -546,6 +595,7 @@ def invoke-native-command [requested_args: list<string>] {
 }
 
 def unwrap-result [envelope: record] {
+    if 'presentation' in ($envelope | columns) {return $envelope.data}
     let command = (field $envelope command '')
     let arguments = (field $envelope arguments [])
     let operation = ($arguments | get --optional 0 | default '')
@@ -643,6 +693,11 @@ export def --env --wrapped main [...args: string] {
         error make { msg: (if $suffix == '' { $message } else { $'($message) [($suffix)]' }) }
     }
 
+    if 'presentation' in ($envelope | columns) {
+        if $machine_output {return (unwrap-result $envelope)}
+        Native-Presentation render $envelope $args
+        return
+    }
     if ((field $envelope command '') == 'project') and (($envelope.arguments | get --optional 0 | default '') == 'use') {
         let use_args = (field $envelope arguments [])
         if not ($use_args | any {|token| $token == '--help' }) {

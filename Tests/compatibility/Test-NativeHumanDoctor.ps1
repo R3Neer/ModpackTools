@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Executable,[Parameter(Mandatory)][string]$NuExecutable,[Parameter(Mandatory)][string]$PackwizExecutable)
+param([Parameter(Mandatory)][string]$Executable,[Parameter(Mandatory)][string]$NuExecutable,[Parameter(Mandatory)][string]$PackwizExecutable,[switch]$IncludeHelp)
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'NativeProcess.ps1')
 $sourceRoot=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
@@ -23,6 +23,14 @@ try {
     [IO.File]::WriteAllText($driver,"use ./Nushell/modpack.nu`ndef main [] {modpack doctor --color always}`n")
     $capture=Invoke-NativeTestProcess $NuExecutable @('--no-config-file',$driver) -TimeoutMilliseconds 30000
     if($capture.Exit -ne 0 -or $capture.Stdout -ne '' -or -not $capture.Stderr.Contains([char]27)){throw 'Explicit always did not override NO_COLOR'}
+    if($IncludeHelp){
+        [IO.File]::WriteAllText($driver,"use ./Nushell/modpack.nu`ndef main [] {modpack --help --ascii --color never}`n")
+        $capture=Invoke-NativeTestProcess $NuExecutable @('--no-config-file',$driver) -TimeoutMilliseconds 30000
+        if($capture.Exit -ne 0 -or $capture.Stdout -ne '' -or $capture.Stderr -notmatch 'MODPACKTOOLS' -or $capture.Stderr -notmatch 'USAGE' -or $capture.Stderr -notmatch 'self-update' -or $capture.Stderr.Contains([char]27)){throw "Native global human help failed: $($capture.Stderr)"}
+        [IO.File]::WriteAllText($driver,"use ./Nushell/modpack.nu`ndef main [] {modpack doctor --help --ascii --color never}`n")
+        $capture=Invoke-NativeTestProcess $NuExecutable @('--no-config-file',$driver) -TimeoutMilliseconds 30000
+        if($capture.Exit -ne 0 -or $capture.Stdout -ne '' -or $capture.Stderr -notmatch 'DOCTOR' -or $capture.Stderr -notmatch '--details' -or $capture.Stderr.Contains([char]27)){throw "Native topic human help failed: $($capture.Stderr)"}
+    }
     Remove-Item -LiteralPath (Join-Path $app 'presentation/r3cli/resources.json')
     [IO.File]::WriteAllText($driver,"use ./Nushell/modpack.nu`ndef main [] {let report = (modpack doctor --no-human); if (`$report.checks | where label == 'R3CLI' | get status) != ['fail'] {error make {msg: 'Missing R3CLI was not diagnosed'}}}`n")
     $capture=Invoke-NativeTestProcess $NuExecutable @('--no-config-file',$driver) -TimeoutMilliseconds 30000

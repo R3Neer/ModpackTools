@@ -10,5 +10,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../ModpackTools.Core/ModpackTools.Core.csproj" />
+    <EmbeddedResource Include="Help/catalogue.json" LogicalName="ModpackTools.HelpCatalogue" />
   </ItemGroup>
 </Project>

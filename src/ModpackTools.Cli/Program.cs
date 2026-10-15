@@ -35,6 +35,11 @@ try
     var options = PresentationOptions.Parse(args);
     command = options.Arguments.FirstOrDefault() ?? "";
     commandArguments = options.Arguments.Skip(1).ToArray();
+    if (HelpCommand.Applies(command, commandArguments))
+    {
+        HelpCommand.Run(command, commandArguments);
+        return 0;
+    }
     if (new[] { "build", "diff", "doctor" }.Contains(command, StringComparer.OrdinalIgnoreCase) && !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
     {
         var configurationDirectory = Environment.GetEnvironmentVariable("MODPACKTOOLS_CONFIG_HOME");

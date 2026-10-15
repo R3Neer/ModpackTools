@@ -6,7 +6,7 @@ $directory = Join-Path ([IO.Path]::GetTempPath()) ('modpacktools-protocol-' + [g
 try {
     $cases = @(
         @{ Text='{"schema_version":1,"arguments":["--version"]}'; Exit=0; Id=$null },
-        @{ Text='{"schema_version":1,"arguments":[]}'; Exit=1; Id='Core.CapabilityUnavailable' },
+        @{ Text='{"schema_version":1,"arguments":[]}'; Exit=0; Id=$null },
         @{ Text=''; Exit=2; Id='Core.InvalidRequest' },
         @{ Text='[]'; Exit=2; Id='Core.InvalidRequest' },
         @{ Text='{"schema_version":2,"arguments":[]}'; Exit=2; Id='Core.InvalidRequest' },

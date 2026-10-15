@@ -19,6 +19,10 @@ def main [request_path: string] {
     }
     let sink = {|text, _stream| print --stderr $text}
     let ui = (r3cli console --colour $request.colour --ascii=$request.ascii --width $request.width --theme-extension $extension --is-terminal $request.terminal --sink $sink)
+    if 'presentation' in ($request.envelope | columns) {
+        r3cli help $ui $request.envelope.presentation.help $request.envelope.presentation.topic
+        return
+    }
     let doctor = $request.envelope.data.doctor
     for section in ['SYSTEM' 'PACKWIZ' 'PROJECT ROOT' 'PROJECT' 'BUILD ARTIFACT' 'OPTIONAL'] {
         let checks = ($doctor.checks | where section == $section)
