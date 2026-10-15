@@ -11,6 +11,7 @@ internal static class ClassificationCommand
     public static async Task RunAsync(string command, string[] arguments, string? requestedProject, string? activeProject,
         string configurationDirectory, CancellationToken cancellation)
     {
+        var remove = arguments[0].Equals("remove", StringComparison.OrdinalIgnoreCase);
         var assign = arguments[0].Equals("assign", StringComparison.OrdinalIgnoreCase);
         var values = ImmutableArray.CreateBuilder<string>(); var dryRun = false; var clearAssignments = false;
         foreach (var token in arguments.Skip(1))
@@ -23,11 +24,18 @@ internal static class ClassificationCommand
             if (name.Equals("dry-run", StringComparison.OrdinalIgnoreCase)) dryRun = true; else clearAssignments = true;
         }
         if (values.Count < (assign ? 2 : 1)) throw new DomainException("Command.InvalidArguments", "The command arguments do not match the expected syntax", $"modpack category {arguments[0]} <selectors...>");
-        if (clearAssignments) throw new DomainException("Option.ForbiddenCombination", "--clear-assignments is only valid for category remove", "modpack category remove --help");
+        if (clearAssignments && !remove) throw new DomainException("Option.ForbiddenCombination", "--clear-assignments is only valid for category remove", "modpack category remove --help");
         var effective = ProjectSelection.EffectiveId(requestedProject, activeProject);
         var project = ProjectSelection.Find(ProjectReader.Discover(ConfigurationReader.ReadRoot(configurationDirectory)), effective);
         var state = Environment.GetEnvironmentVariable("MODPACKTOOLS_STATE_HOME");
         if (string.IsNullOrWhiteSpace(state)) state = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModpackTools", "native-state");
+        if (remove)
+        {
+            using var removalOutput = new TransactionResponse(command, arguments, dryRun, project.Root);
+            var removed = await CategoryRemoval.ExecuteAsync(project, new(values.ToImmutable(), clearAssignments, dryRun), configurationDirectory, Path.GetFullPath(state), DateTimeOffset.UtcNow,
+                cancellation: cancellation, prepareOutput: removalOutput.PrepareAsync<ImmutableArray<string>>).ConfigureAwait(false);
+            removalOutput.Write(removed); return;
+        }
         var request = new ContentClassificationRequest(values.Skip(assign ? 1 : 0).ToImmutableArray(), assign ? values[0] : "unclassified", dryRun);
         using var output = new TransactionResponse(command, arguments, dryRun, project.Root);
         var result = await ContentClassification.ExecuteAsync(project, request, configurationDirectory, Path.GetFullPath(state), DateTimeOffset.UtcNow,

@@ -24,24 +24,7 @@ public static class ContentClassification
         var selectors = BatchSelectorResolver.ResolveFromDirectory(request.Selectors, config, project.Id, now);
         var result = await ProjectTransaction.ExecuteAsync(project, stateDirectory, Prepare, dryRun: request.DryRun,
             expected: expected, limits: limits, cancellation: cancellation, prepareOutput: prepareOutput).ConfigureAwait(false);
-        if (!request.DryRun)
-        {
-            try
-            {
-                // Cache stores Id/Name/Index, so no further inventory/JAR scan is
-                // needed for counts. Retain the established CategoryList order.
-                var view = CategoryList.Compose(project, CategoryList.Prepare(EditorialMetadataReader.Read(project)), []);
-                _ = CategoryReferenceCache.Write(config, view, now);
-            }
-            catch (Exception error) when (error is DomainException or IOException or UnauthorizedAccessException or FormatException)
-            {
-                result = result with
-                {
-                    Diagnostics = result.Diagnostics.Add(new("Metadata.CategoryCacheRefreshFailed",
-                    Path.Combine(config, "last-categories.json"), error.Message))
-                };
-            }
-        }
+        if (!request.DryRun) result = CategoryCacheRefresh.Apply(result, project, config, now);
         return result;
 
         Task<string> Prepare(ProjectContext stage, CancellationToken token)

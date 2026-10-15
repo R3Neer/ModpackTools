@@ -314,6 +314,7 @@ ProjectTransactionContracts.VerifyAsync().GetAwaiter().GetResult();
 ContentMaterializationContracts.Verify();
 ContentClassificationContracts.VerifyAsync().GetAwaiter().GetResult();
 ResourceOperationContracts.VerifyAsync().GetAwaiter().GetResult();
+CategoryRemovalContracts.VerifyAsync().GetAwaiter().GetResult();
 NativeToolContracts.VerifyAsync().GetAwaiter().GetResult();
 ArtifactProviderContracts.VerifyAsync().GetAwaiter().GetResult();
 ProjectHealthContracts.VerifyAsync().GetAwaiter().GetResult();

@@ -52,7 +52,7 @@ try
         return 0;
     }
     if (command.Equals("category", StringComparison.OrdinalIgnoreCase) && commandArguments.FirstOrDefault() is { } classification
-        && new[] { "assign", "clear" }.Contains(classification, StringComparer.OrdinalIgnoreCase)
+        && new[] { "assign", "clear", "remove" }.Contains(classification, StringComparer.OrdinalIgnoreCase)
         && !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
     {
         var configurationDirectory = Environment.GetEnvironmentVariable("MODPACKTOOLS_CONFIG_HOME");

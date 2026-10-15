@@ -90,7 +90,7 @@ def owns-native-command [args: list<string>] {
     if ($command | str lowercase) == 'resource-pack' {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
-    if (($command | str lowercase) == 'category') and (($operation | str lowercase) in ['assign' 'clear']) {
+    if (($command | str lowercase) == 'category') and (($operation | str lowercase) in ['assign' 'clear' 'remove']) {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
     (($command | str lowercase) == 'project') and (($operation | str lowercase) in ['list' 'current' 'use' 'status']) and not ($args | any {|token| $token in ['--help' '-h'] })
@@ -234,7 +234,7 @@ def invoke-native-command [args: list<string>] {
                     error make { msg: 'ModpackTools native executable returned an invalid project summary.' }
                 }
             }
-        } else if ((($result.command | str lowercase) == 'content') and (($args.1 | str lowercase) in ['add' 'update' 'pin' 'unpin'])) or ((($result.command | str lowercase) == 'category') and (($args.1 | str lowercase) in ['assign' 'clear'])) {
+        } else if ((($result.command | str lowercase) == 'content') and (($args.1 | str lowercase) in ['add' 'update' 'pin' 'unpin'])) or ((($result.command | str lowercase) == 'category') and (($args.1 | str lowercase) in ['assign' 'clear' 'remove'])) {
             validate-native-transaction $result $args
         } else if ($result.command | str lowercase) == 'resource-pack' {
             validate-native-transaction $result $args
