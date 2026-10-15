@@ -24,6 +24,19 @@ public static class DependencyResolver
     public static bool IsDowngrade(ResolutionNode before, ResolutionNode after)
         => Downgrade(before, after, () => { });
 
+    internal static void ValidatePolicy(ResolutionLimits limits)
+    {
+        var invalid = limits.MaximumStates <= 0 ? nameof(limits.MaximumStates)
+            : limits.MaximumDomains <= 0 ? nameof(limits.MaximumDomains)
+            : limits.MaximumCandidateVersions <= 0 ? nameof(limits.MaximumCandidateVersions)
+            : limits.MaximumCandidateNodes <= 0 ? nameof(limits.MaximumCandidateNodes)
+            : limits.MaximumWork <= 0 ? nameof(limits.MaximumWork)
+            : limits.MaximumIdentityBytes <= 0 ? nameof(limits.MaximumIdentityBytes)
+            : limits.MaximumRetainedCharacters <= 0 ? nameof(limits.MaximumRetainedCharacters) : null;
+        if (invalid is not null) throw new DomainException("Compatibility.InvalidSearchPolicy", "Dependency search limits must be positive", "use positive search quotas", target: invalid);
+        GraphReportBuilder.ValidatePolicy(limits.Graph ?? new());
+    }
+
     private static bool Downgrade(ResolutionNode before, ResolutionNode after, Action charge)
     {
         var compared = false;
@@ -81,15 +94,7 @@ public static class DependencyResolver
         public Search(ResolutionInput input, IResolutionCandidates source, ResolutionLimits limits, CancellationToken cancellation)
         {
             this.input = input; this.source = source; this.limits = limits; this.cancellation = cancellation;
-            var invalid = limits.MaximumStates <= 0 ? nameof(limits.MaximumStates)
-                : limits.MaximumDomains <= 0 ? nameof(limits.MaximumDomains)
-                : limits.MaximumCandidateVersions <= 0 ? nameof(limits.MaximumCandidateVersions)
-                : limits.MaximumCandidateNodes <= 0 ? nameof(limits.MaximumCandidateNodes)
-                : limits.MaximumWork <= 0 ? nameof(limits.MaximumWork)
-                : limits.MaximumIdentityBytes <= 0 ? nameof(limits.MaximumIdentityBytes)
-                : limits.MaximumRetainedCharacters <= 0 ? nameof(limits.MaximumRetainedCharacters) : null;
-            if (invalid is not null) throw new DomainException("Compatibility.InvalidSearchPolicy", "Dependency search limits must be positive", "use positive search quotas", target: invalid);
-            graphLimits = limits.Graph ?? new(); GraphReportBuilder.ValidatePolicy(graphLimits);
+            ValidatePolicy(limits); graphLimits = limits.Graph ?? new();
             before = Own(input.Before); initial = Own(input.Initial);
             last = input.PreviousReport;
             roots = new(StringComparer.OrdinalIgnoreCase); baseline = new(StringComparer.OrdinalIgnoreCase);

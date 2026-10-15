@@ -107,6 +107,12 @@ public sealed class ResolutionAcquisition : IResolutionCandidates, IAsyncDisposa
 
     public async ValueTask<ResolutionDomain> GetCandidatesAsync(string id, CancellationToken cancellation)
     {
+        var observed = await ObserveCandidatesAsync(id, cancellation).ConfigureAwait(false);
+        return new(observed.Availability, [.. observed.Versions.Select(version => version.Id)]);
+    }
+
+    public async ValueTask<ProviderCandidateObservation> ObserveCandidatesAsync(string id, CancellationToken cancellation = default)
+    {
         ObjectDisposedException.ThrowIf(disposed, this);
         using var registration = cancellation.Register(lifetime.Cancel);
         var acquired = false;
@@ -115,7 +121,7 @@ public sealed class ResolutionAcquisition : IResolutionCandidates, IAsyncDisposa
             await gate.WaitAsync(lifetime.Token).ConfigureAwait(false); acquired = true;
             var observed = await Domain(id).ConfigureAwait(false);
             lifetime.Token.ThrowIfCancellationRequested();
-            return new(observed.Availability, [.. observed.Versions.Select(version => version.Id)]);
+            return observed;
         }
         catch (OperationCanceledException) { throw Cancelled(); }
         finally { if (acquired) gate.Release(); }
@@ -191,6 +197,14 @@ public sealed class ResolutionAcquisition : IResolutionCandidates, IAsyncDisposa
 
     public ProjectContentNode GetMaterializedNode(string id, string versionId) => materialized.TryGetValue(id, out var values) && values.TryGetValue(versionId, out var node)
         ? node : throw new InvalidOperationException("The selected node must be acquired before preparing an installation plan.");
+
+    internal ProjectContentNode ExportSelectedNode(ResolutionNode selected)
+    {
+        var id = selected.Graph.Id;
+        if (materialized.TryGetValue(id, out var versions) && versions.TryGetValue(selected.Graph.VersionId, out var candidate) && ReferenceEquals(candidate.Graph, selected.Graph)) return candidate;
+        if (before.TryGetValue(id, out var observed) && ReferenceEquals(observed.Graph, selected.Graph)) return observed;
+        throw new InvalidOperationException("A selected node must belong to this acquisition invocation.");
+    }
 
     public static ResolutionNode ToResolutionNode(ProjectContentNode node) => new(node.Graph, node.Pinned, node.Item.Source == ContentSource.Local,
         StringComparer.InvariantCultureIgnoreCase.Equals(node.Intent, "explicit"), OrderingDate(node.Version),

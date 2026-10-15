@@ -14,7 +14,10 @@ public sealed record ProjectHealthLimits(InventoryReadLimits? Inventory = null, 
 public sealed record ProjectContentNode(InventoryItem Item, GraphNode Graph, ProviderVersion? Version,
     ProviderFile? File, bool Pinned, string Intent);
 public sealed record ProjectHealthObservation(RawInventorySnapshot Inventory, ImmutableArray<ProjectContentNode> Nodes,
-    GraphReport Report, ImmutableDictionary<string, ProviderCandidateObservation> ProviderAvailability);
+    GraphReport Report, ImmutableDictionary<string, ProviderCandidateObservation> ProviderAvailability)
+{
+    public RuntimeOverrides RuntimeOverrides { get; init; } = new();
+}
 
 public static class ProjectHealth
 {
@@ -127,7 +130,7 @@ public static class ProjectHealth
             reconciled.Add(replacement);
         }
         cancellation.ThrowIfCancellationRequested();
-        return new(inventory, nodes.ToImmutable(), new GraphReport(reconciled.ToImmutable()), availability.ToImmutable());
+        return new(inventory, nodes.ToImmutable(), new GraphReport(reconciled.ToImmutable()), availability.ToImmutable()) { RuntimeOverrides = overrides };
 
         async Task<ProviderVersion?> Version(string id)
         {

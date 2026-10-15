@@ -82,7 +82,7 @@ internal static class CandidateAcquisitionInspection
         { ManagedInspection.WriteFailure("Core.InputReadFailed", exception.Message, "InvalidData", null, "check candidate inspection arguments", null); return 2; }
     }
 
-    private static void WriteNode(Utf8JsonWriter writer, ProjectContentNode node)
+    internal static void WriteNode(Utf8JsonWriter writer, ProjectContentNode node)
     {
         var graph = node.Graph; var item = node.Item;
         writer.WriteStartObject(); writer.WriteString("Id", graph.Id); writer.WriteString("VersionId", graph.VersionId);
