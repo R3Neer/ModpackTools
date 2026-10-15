@@ -29,6 +29,7 @@ if (args.FirstOrDefault() == "--inspect-project-transaction") return ProjectTran
 if (args.FirstOrDefault() == "--inspect-content-materialization") return ContentMaterializationInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-content-operation") return ContentOperationInspection.Run(args);
 if (args.Length == 2 && args[0] == "--verify-content-operations") { ContentOperationContracts.VerifyAsync(args[1]).GetAwaiter().GetResult(); Console.WriteLine("Native complete content operation contracts passed"); return 0; }
+if (args.Length == 2 && args[0] == "--verify-content-pinning") { ContentPinningContracts.VerifyAsync(args[1]).GetAwaiter().GetResult(); Console.WriteLine("Native content pinning contracts passed"); return 0; }
 if (args.FirstOrDefault() == "--inspect-search") return SearchInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-compatible-versions") return CompatibleVersionsInspection.Run(args);
 

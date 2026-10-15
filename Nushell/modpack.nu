@@ -84,7 +84,7 @@ def owns-native-command [args: list<string>] {
     if (($command | str lowercase) in ['content' 'category']) and (($operation | str lowercase) == 'list') {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
-    if (($command | str lowercase) == 'content') and (($operation | str lowercase) in ['versions' 'search' 'add' 'update']) {
+    if (($command | str lowercase) == 'content') and (($operation | str lowercase) in ['versions' 'search' 'add' 'update' 'pin' 'unpin']) {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
     (($command | str lowercase) == 'project') and (($operation | str lowercase) in ['list' 'current' 'use' 'status']) and not ($args | any {|token| $token in ['--help' '-h'] })
@@ -250,7 +250,7 @@ def invoke-native-command [args: list<string>] {
                     error make { msg: 'ModpackTools native executable returned invalid version fields.' }
                 }
             }
-        } else if (($result.command | str lowercase) == 'content') and (($args.1 | str lowercase) in ['add' 'update']) {
+        } else if (($result.command | str lowercase) == 'content') and (($args.1 | str lowercase) in ['add' 'update' 'pin' 'unpin']) {
             let transaction = (field (field $result data {}) transaction {})
             if $result.command != $args.0 or ($result.arguments | length) == 0 or $result.arguments.0 != $args.1 {
                 error make { msg: 'ModpackTools native executable returned an invalid mutation command.' }

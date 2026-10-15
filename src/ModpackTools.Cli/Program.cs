@@ -36,7 +36,7 @@ try
     command = options.Arguments.FirstOrDefault() ?? "";
     commandArguments = options.Arguments.Skip(1).ToArray();
     if (command.Equals("content", StringComparison.OrdinalIgnoreCase) && commandArguments.FirstOrDefault() is { } mutation
-        && new[] { "add", "update" }.Contains(mutation, StringComparer.OrdinalIgnoreCase)
+        && new[] { "add", "update", "pin", "unpin" }.Contains(mutation, StringComparer.OrdinalIgnoreCase)
         && !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
     {
         var configurationDirectory = Environment.GetEnvironmentVariable("MODPACKTOOLS_CONFIG_HOME");
@@ -46,8 +46,11 @@ try
         Console.CancelKeyPress += cancel;
         try
         {
-            await ContentMutationCommand.RunAsync(command, commandArguments, options.Project, context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject,
-            Path.GetFullPath(configurationDirectory), cancellation.Token);
+            var active = context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject;
+            if (mutation.Equals("pin", StringComparison.OrdinalIgnoreCase) || mutation.Equals("unpin", StringComparison.OrdinalIgnoreCase))
+                await PinCommand.RunAsync(command, commandArguments, options.Project, active, Path.GetFullPath(configurationDirectory), cancellation.Token);
+            else
+                await ContentMutationCommand.RunAsync(command, commandArguments, options.Project, active, Path.GetFullPath(configurationDirectory), cancellation.Token);
         }
         finally { Console.CancelKeyPress -= cancel; }
         return 0;
