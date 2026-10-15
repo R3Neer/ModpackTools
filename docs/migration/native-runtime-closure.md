@@ -21,7 +21,9 @@ Remaining dependency sequence:
    content listing is accepted in61.
 2. Validator4/key2 health cache/baselines and remaining public read-only wire, preserving
    selection/order/references/error priorities and human presentation contracts.
-3. Pure resolver domains, pins/intent/downgrade/cost/backtracking/search limit; bound
+3. Search-only typed resolver with pins/local/roots, downgrade/cost/backtracking and
+   cumulative search limits is accepted in66. Candidate acquisition/root preparation
+   and bound
    plans; exclusive source ownership, staging/journal-before-write, commit/rollback
    and recovery. Wire every mutation only after injected-failure/external-edit gates.
 4. Doctor/build/diff/MRPack freshness, project/settings and all remaining grammar.
