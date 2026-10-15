@@ -10,7 +10,9 @@ list (including numeric references) and content versions (complete compatible li
 and choice cache), plus content search (optional project context, complete search
 references), with direct Nushell machine dispatch. Structured native content
 add/update now compose complete transactions; internal repair is ready for doctor
-wiring. These mutations are not yet dispatched by the Nu adapter.
+wiring. Structured Nu add/update dispatch and transaction validation are accepted
+in74, with terminal native failures and preserved parent state (black-box3/3,
+white-box2 controls). Human dispatch remains separate.
 Human/help remain separate. Native declaration/graph/
 validation/provider slices also have internal acceptance. Legacy remains installed
 and still requires PS7.
