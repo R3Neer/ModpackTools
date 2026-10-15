@@ -1,5 +1,6 @@
 const MODULE_DIR = path self .
 const BRIDGE = ($MODULE_DIR | path join 'Invoke-ModpackBridge.ps1')
+use ./Native-Presentation.nu
 
 def field [value: any, name: string, default_value: any = null] {
     if (($value | describe) !~ '^record') { return $default_value }
@@ -77,8 +78,11 @@ def invoke-bridge [request: string] {
 
 def owns-native-command [args: list<string>] {
     let executable = ($env.MODPACKTOOLS_CORE_PATH? | default '')
-    if ($executable == '') or not (wants-machine-output $args) { return false }
+    if $executable == '' { return false }
     let command = ($args | get --optional 0 | default '')
+    if not (wants-machine-output $args) {
+        return ((($command | str lowercase) == 'doctor') and not ($args | any {|token| ($token | str lowercase) in ['--fix' '--help' '-h'] or ($token | str lowercase | str starts-with '--fix=') }))
+    }
     if $command in ['--version' '-V'] { return true }
     let operation = ($args | get --optional 1 | default '')
     if ($command | str lowercase) == 'doctor' {
@@ -657,4 +661,5 @@ export def --env --wrapped main [...args: string] {
     if $machine_output {
         return (unwrap-result $envelope)
     }
+    if (owns-native-command $args) {Native-Presentation render $envelope $args}
 }

@@ -1,1 +1,3 @@
 Private/vendor/R3CLI/* text eol=lf
+# Native package hashes describe exact upstream bytes, including line endings.
+presentation/r3cli/* -text
