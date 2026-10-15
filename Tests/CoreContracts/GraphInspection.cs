@@ -103,6 +103,11 @@ internal static class GraphInspection
 
     internal static GraphReport Read(JsonElement root, GraphReportLimits limits, bool insensitive = true)
     {
+        var model = ReadModel(root, insensitive);
+        return GraphReportBuilder.Build(model.Environment, model.Nodes, model.Overrides, limits);
+    }
+    internal static (GraphEnvironment Environment, ImmutableArray<GraphNode> Nodes, RuntimeOverrides Overrides) ReadModel(JsonElement root, bool insensitive = true)
+    {
         var env = root.GetProperty("Environment");
         var environment = new GraphEnvironment(Text(env, "MinecraftVersion"), Text(env, "Loader"), Text(env, "LoaderVersion"),
             Boolean(env, "JavaDeclared", false), Text(env, "JavaVersion"));
@@ -132,7 +137,7 @@ internal static class GraphInspection
                 Boolean(node, "Enabled", true), mods.ToImmutable(), Requirements(node), warnings.ToImmutable()));
         }
         var overrides = root.TryGetProperty("Overrides", out var presence) ? new RuntimeOverrides(Boolean(presence, "FabricDependencies", false), Boolean(presence, "QuiltOverrides", false)) : new();
-        return GraphReportBuilder.Build(environment, nodes.ToImmutable(), overrides, limits);
+        return (environment, nodes.ToImmutable(), overrides);
         ImmutableArray<ManifestRequirement> Requirements(JsonElement value) => [.. Array(value, "Requirements").Select(child => Requirement(child, 1))];
         ManifestRequirement Requirement(JsonElement value, int depth)
         {
