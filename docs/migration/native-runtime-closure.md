@@ -79,3 +79,8 @@ checks. Physical configuration containment now protects content operations too.
 Cache failure after commit remains a diagnostic with truthful Applied. Definition
 create/remove, resource ordering and the remaining closure sequence above remain
 unfinished; this checkpoint does not establish full PowerShell independence.
+
+Capability77 accepts the internal complete resource-pack enable/move/disable
+transaction and shared order editor: Native Core103, black4/4 and white2. The
+public command must still preserve transaction plus resource_packs machine data
+and Nu validation before it can be declared migrated.
