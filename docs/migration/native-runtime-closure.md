@@ -4,16 +4,19 @@ User reconfirmed2026-10-14: continue to a complete Native AOT ModpackTools,
 including installer, self-update and human/structured Nushell. Physical repository
 relocation was completed independently; it is not an implementation milestone.
 
-Current public native host owns only version and project list/current/use. Native
-inventory/declarations/graph/validation/provider slices have internal acceptance,
-not an implicit public switch. Legacy remains installed and still requires PS7.
+Current public native host owns version, project list/current/use and complete
+structured content list (all filters, references, health and --verify), with direct
+Nushell machine dispatch. Human/help remain separate. Native declaration/graph/
+validation/provider slices also have internal acceptance. Legacy remains installed
+and still requires PS7.
 Never report full independence while either adapter or setup falls back to PS.
 
 Remaining dependency sequence:
 
-1. Provider acquisition and typed project/candidate availability; verified artifact
-   selection/download; complete immutable project observations and health composition.
-2. Validator4/key2 health cache/baselines and complete public read-only wire, preserving
+1. Provider acquisition, project/candidate availability, verified artifacts and
+   complete project health composition are accepted through60. Public structured
+   content listing is accepted in61.
+2. Validator4/key2 health cache/baselines and remaining public read-only wire, preserving
    selection/order/references/error priorities and human presentation contracts.
 3. Pure resolver domains, pins/intent/downgrade/cost/backtracking/search limit; bound
    plans; exclusive source ownership, staging/journal-before-write, commit/rollback
