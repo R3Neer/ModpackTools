@@ -136,17 +136,17 @@ public static class ProviderCandidates
     internal static ImmutableArray<ProviderVersion> Order(ImmutableArray<ProviderVersion> versions)
     {
         var comparer = StringComparer.CurrentCultureIgnoreCase;
-        return [.. versions.Select((version, index) => (Version: version, Index: index, Ticks: Published(version)))
+        return [.. versions.Select((version, index) => (Version: version, Index: index, Ticks: PublicationDate(version).Ticks))
             .OrderByDescending(value => value.Ticks).ThenBy(value => value.Version.Id, comparer).ThenBy(value => value.Index)
             .Select(value => value.Version)];
-        static long Published(ProviderVersion version)
-        {
-            if (version.Published.Value is { } date) return date.Ticks;
-            if (version.Published.Text.Length != 0 && DateTime.TryParse(version.Published.Text, CultureInfo.InvariantCulture,
-                DateTimeStyles.AllowWhiteSpaces, out var parsed)) return parsed.Ticks;
-            throw new DomainException("Metadata.InvalidCandidateDate", "Candidate publication date is invalid",
-                "refresh or inspect provider metadata", "InvalidData", version.Id);
-        }
+    }
+    internal static DateTime PublicationDate(ProviderVersion version)
+    {
+        if (version.Published.Value is { } date) return date;
+        if (version.Published.Text.Length != 0 && DateTime.TryParse(version.Published.Text, CultureInfo.InvariantCulture,
+            DateTimeStyles.AllowWhiteSpaces, out var parsed)) return parsed;
+        throw new DomainException("Metadata.InvalidCandidateDate", "Candidate publication date is invalid",
+            "refresh or inspect provider metadata", "InvalidData", version.Id);
     }
     private sealed record VersionList(ImmutableArray<ProviderVersion> Values);
     private static DomainException Invalid(string details) => new("Metadata.InvalidProviderResponse", "Provider candidate metadata is invalid",

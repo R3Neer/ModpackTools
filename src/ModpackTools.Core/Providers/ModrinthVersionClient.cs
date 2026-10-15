@@ -29,12 +29,14 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
     private readonly string directory;
     private readonly DateTimeOffset now;
     private readonly StringComparer comparer;
+    private readonly bool retainCandidateEvidence;
     private readonly object sync = new();
     private enum ResponseKind { Version, Batch, Project, Candidates, PublicVersions, Search }
     private sealed record ProviderResponse(ProviderProject? Project, ImmutableArray<ProviderVersion> Versions)
     {
         public ImmutableArray<CompatibleVersion> Listings { get; init; } = [];
         public SearchResults? Search { get; init; }
+        public ImmutableDictionary<string, string> CandidateWires { get; init; } = ImmutableDictionary<string, string>.Empty;
     }
     private readonly Dictionary<string, Lazy<Task<ProviderResponse>>> pending = new(StringComparer.Ordinal);
     private readonly List<ProviderAcquisitionDiagnostic> diagnostics = [];
@@ -44,9 +46,11 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
     private DomainException? exhausted;
 
     public ModrinthVersionClient(string configurationDirectory, DateTimeOffset now, ProviderRequestLimits? limits = null,
-        CancellationToken cancellation = default, HttpMessageHandler? handler = null, Uri? baseUri = null, ProviderModelLimits? modelLimits = null)
+        CancellationToken cancellation = default, HttpMessageHandler? handler = null, Uri? baseUri = null, ProviderModelLimits? modelLimits = null,
+        bool retainCandidateEvidence = false)
     {
         this.limits = limits ?? new(); this.now = now;
+        this.retainCandidateEvidence = retainCandidateEvidence;
         var invalid = this.limits.MaximumRequests <= 0 ? nameof(this.limits.MaximumRequests)
             : this.limits.MaximumConcurrency is < 1 or > 64 ? nameof(this.limits.MaximumConcurrency)
             : this.limits.TimeoutMilliseconds <= 0 ? nameof(this.limits.TimeoutMilliseconds)
@@ -143,6 +147,25 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
         return (await Request(ProviderSearch.Endpoint(query, type, limit, project), [], ResponseKind.Search).ConfigureAwait(false)).Search!;
     }
 
+    internal void StoreCandidateVersion(ProviderProject project, string minecraftVersion, string loader, string versionId)
+    {
+        Input();
+        var endpoint = project.CandidateEndpoint(minecraftVersion, loader);
+        lock (sync)
+        {
+            ObjectDisposedException.ThrowIf(disposed, this); CheckBudget();
+            if (!retainCandidateEvidence || !pending.TryGetValue(endpoint, out var response) || !response.IsValueCreated || !response.Value.IsCompletedSuccessfully
+                || !response.Value.Result.CandidateWires.TryGetValue(versionId, out var wire))
+                throw new DomainException("Metadata.CandidateEvidenceUnavailable", "Selected candidate has no owned response evidence",
+                    "acquire the candidate through this planning invocation", "InvalidData", versionId);
+            // This wire is private, captured from the same already validated row.
+            // Revalidation here would silently impose WriteRawValue's depth64.
+            try { Store(writer => writer.WriteRawValue(wire, skipInputValidation: true), "version/" + versionId, lifetime.Token); }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            { throw WriteFailure(exception.Message); }
+        }
+    }
+
     private Task<ProviderResponse> Request(string endpoint, string[] ids, ResponseKind kind)
     {
         lock (sync)
@@ -237,6 +260,7 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
                 var allowed = ids.ToHashSet(StringComparer.Ordinal);
                 var values = ImmutableArray.CreateBuilder<ProviderVersion>(rows.Length);
                 var listings = ImmutableArray.CreateBuilder<CompatibleVersion>(kind == ResponseKind.PublicVersions ? rows.Length : 0);
+                var candidateWires = ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal);
                 ProviderProject? project = null;
                 var collectionEntries = 0;
                 foreach (var row in rows)
@@ -260,10 +284,17 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
                     else if (!allowed.Contains(version.Id)) throw Invalid("Provider returned an identity that was not requested.");
                     values.Add(version);
                     if (kind == ResponseKind.PublicVersions) listings.Add(CompatibleVersion.Capture(version, row, decoded.Dates, CaptureListingWire));
+                    if (kind == ResponseKind.Candidates && retainCandidateEvidence)
+                    {
+                        var wire = CaptureListingWire(row);
+                        if (candidateWires.TryGetValue(version.Id, out var previous) && !StringComparer.Ordinal.Equals(previous, wire))
+                            throw Invalid("Candidate response contains conflicting evidence for the same version identity.");
+                        candidateWires.TryAdd(version.Id, wire);
+                    }
                 }
                 var typedVersions = values.ToImmutable();
                 if (kind == ResponseKind.Candidates) typedVersions = ProviderCandidates.Order(typedVersions);
-                result = new(project, typedVersions) { Listings = [.. listings.OrderByDescending(value => value.PublicationTicks)] };
+                result = new(project, typedVersions) { Listings = [.. listings.OrderByDescending(value => value.PublicationTicks)], CandidateWires = candidateWires.ToImmutable() };
                 token.ThrowIfCancellationRequested();
                 // Every row is valid before the first individually atomic store.
                 if (kind is ResponseKind.Project or ResponseKind.Candidates)
@@ -324,7 +355,9 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
         return System.Text.Encoding.UTF8.GetString(bytes.GetBuffer(), 0, checked((int)bytes.Length));
     }
 
-    private void Store(JsonElement row, string endpoint, CancellationToken token)
+    private void Store(JsonElement row, string endpoint, CancellationToken token) => Store(writer => row.WriteTo(writer), endpoint, token);
+
+    private void Store(Action<Utf8JsonWriter> write, string endpoint, CancellationToken token)
     {
         var path = Path.Combine(directory, TextHash.Compute(endpoint) + ".json");
         var temporary = Path.Combine(directory, ".store-" + Guid.NewGuid().ToString("N") + ".tmp");
@@ -337,7 +370,7 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
                 owned = true;
                 using (var bounded = new StoreOutput(file, decode.MaximumBytes))
                 using (var writer = new Utf8JsonWriter(bounded, new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, MaxDepth = decode.MaximumDepth }))
-                { row.WriteTo(writer); writer.Flush(); }
+                { write(writer); writer.Flush(); }
                 File.SetLastWriteTimeUtc(file.SafeFileHandle, now.UtcDateTime);
             }
             token.ThrowIfCancellationRequested();
