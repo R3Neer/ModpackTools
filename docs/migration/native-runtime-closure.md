@@ -95,3 +95,8 @@ Capability79 accepts public structured category remove and Nu dispatch: Native
 Core106/CLI114, black3/3 and white2, default/protocol/version/Nu checks passed.
 Assignment projection is indexed once; reserved-selector priority and truthful
 postcommit cache errors are independently covered. Category create remains pending.
+
+Capability80 accepts internal complete category creation: Core107, black3/3,
+white2 and Native defaults. Prospective view/output are prepared under the full
+transaction; unknown metadata, supported wrappers and explicit-only automatic
+order are preserved. Public create wire/Nu remains capability81.
