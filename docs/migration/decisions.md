@@ -160,9 +160,12 @@ do not repeat relocation or replace the live installation with the partial Nativ
 
 For the new distribution choose a per-user application root under LocalAppData,
 `ModpackTools/app`, with explicit configurable install-root support (including an
-application directory on D). Keep `config.psd1`, caches, and journals at their
-existing configuration root initially; do not migrate configuration just to move
-the executable. PS adapter module location and Nu config import are separate from
+application directory on D). Keep `config.psd1` and caches at their existing
+configuration root initially; do not migrate configuration just to move the
+executable. Native recovery uses the stable namespace `MODPACKTOOLS_STATE_HOME`
+(default LocalAppData/ModpackTools/native-state), independently of configuration
+relocation; pending recovery must be migrated before changing that namespace.
+PS adapter module location and Nu config import are separate from
 the application root. A source checkout/toolchain is never a runtime installation.
 
 Use versioned application directories, a stable install manifest read by adapters,

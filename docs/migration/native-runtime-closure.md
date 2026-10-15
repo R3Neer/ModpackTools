@@ -8,7 +8,9 @@ Current public native host owns version, project list/current/use/status and com
 structured content list (all filters, references, health and --verify) and category
 list (including numeric references) and content versions (complete compatible listing
 and choice cache), plus content search (optional project context, complete search
-references), with direct Nushell machine dispatch.
+references), with direct Nushell machine dispatch. Structured native content
+add/update now compose complete transactions; internal repair is ready for doctor
+wiring. These mutations are not yet dispatched by the Nu adapter.
 Human/help remain separate. Native declaration/graph/
 validation/provider slices also have internal acceptance. Legacy remains installed
 and still requires PS7.
@@ -30,7 +32,12 @@ Remaining dependency sequence:
    materialization is accepted in71 (black-box6/6 and white-box3 controls), including
    data-preserving document edits. Real Packwiz refresh/index verification and owned
    Native process jobs are accepted in72 (black-box7/7 across six scenarios and
-   white-box3 controls). Public mutation composition remains; wire every mutation
+   white-box3 controls). Complete Add/Update/Repair composition and structured
+   public add/update are accepted in73 (black-box9/9 and white-box3 controls), with
+   pre-publication output preparation and raw before/after graph policy. Public
+   positive checked Add remains a documented isolated-network coverage gap;
+   private complete operation comparisons and an actual public empty update pass.
+   Remaining mutation composition/Nu dispatch remain; wire every mutation
    only after its own injected-failure/external-edit gates.
 4. Doctor/build/diff/MRPack freshness, project/settings and all remaining grammar.
 5. Paired packaged presentation/Nu adapter, questions/cancellation, versioned Native
