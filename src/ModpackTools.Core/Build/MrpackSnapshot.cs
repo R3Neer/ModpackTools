@@ -14,6 +14,11 @@ public sealed record MrpackReadLimits(ArchiveReadLimits? Archive = null, long Ma
     int MaximumManifestBytes = 8 * 1024 * 1024, int MaximumRecords = 200000, int MaximumTextCharacters = 64 * 1024 * 1024);
 public sealed record MrpackRecord(string Key, string Kind, string Path, string Fingerprint);
 public sealed record MrpackChange(string Key, string Kind, string Path, string Before, string After);
+public sealed record MrpackManifestFile(string Path, ImmutableDictionary<string, string> Hashes, ImmutableArray<string> Downloads,
+    ImmutableDictionary<string, string> Environment, long Size);
+public sealed record MrpackArchiveFile(string Path, ImmutableDictionary<string, string> Hashes, long Size);
+public sealed record MrpackDocument(string Name, string Version, ImmutableDictionary<string, string> Dependencies,
+    ImmutableArray<MrpackManifestFile> Files, ImmutableArray<MrpackArchiveFile> Entries, ImmutableArray<MrpackRecord> Records);
 public sealed record MrpackComparison(ImmutableArray<MrpackRecord> Added, ImmutableArray<MrpackRecord> Removed, ImmutableArray<MrpackChange> Changed)
 {
     public int Total => checked(Added.Length + Removed.Length + Changed.Length);
@@ -22,12 +27,17 @@ public sealed record MrpackComparison(ImmutableArray<MrpackRecord> Added, Immuta
 public static class MrpackSnapshot
 {
     public static ImmutableArray<MrpackRecord> Read(string path, MrpackReadLimits? limits = null, CancellationToken cancellation = default)
+        => ReadCore(path, limits, cancellation, false).Records;
+    public static MrpackDocument ReadDocument(string path, MrpackReadLimits? limits = null, CancellationToken cancellation = default)
+        => ReadCore(path, limits, cancellation, true);
+    private static MrpackDocument ReadCore(string path, MrpackReadLimits? limits, CancellationToken cancellation, bool hashes)
     {
         limits ??= new(); var archiveLimits = limits.Archive ?? new(); archiveLimits.Validate();
         if (limits.MaximumExpandedBytes <= 0 || limits.MaximumManifestBytes is <= 0 or > 8 * 1024 * 1024 || limits.MaximumRecords <= 0 || limits.MaximumTextCharacters <= 0)
             throw new DomainException("Diff.InvalidReadPolicy", "MRPack reader quotas must be positive and bounded", "use explicit bounded MRPack quotas");
         if (!File.Exists(path)) throw new DomainException("Diff.ArtifactNotFound", $"MRPack file '{path}' does not exist", "modpack build", "ObjectNotFound", path);
         var records = ImmutableArray.CreateBuilder<MrpackRecord>(); var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase); long expanded = 0; long text = 0;
+        var manifestFiles = ImmutableArray.CreateBuilder<MrpackManifestFile>(); var archiveFiles = ImmutableArray.CreateBuilder<MrpackArchiveFile>();
         try
         {
             cancellation.ThrowIfCancellationRequested(); WindowsProjectIdentity.GuardAncestors(path);
@@ -54,25 +64,29 @@ public static class MrpackSnapshot
             var manifest = json.RootElement; Object(manifest);
             foreach (var name in new[] { "name", "versionId" }) Add(new("pack:" + name, "PACK", name, String(manifest.GetProperty(name))));
             var dependencies = manifest.GetProperty("dependencies"); Object(dependencies);
+            var dependencyValues = ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal);
             foreach (var dependency in dependencies.EnumerateObject().OrderBy(value => value.Name, StringComparer.CurrentCultureIgnoreCase).ThenBy(value => value.Name, StringComparer.Ordinal))
-                Add(new("dependency:" + dependency.Name, "DEPENDENCY", dependency.Name, String(dependency.Value)));
+            { var value = String(dependency.Value); dependencyValues.Add(dependency.Name, value); Add(new("dependency:" + dependency.Name, "DEPENDENCY", dependency.Name, value)); }
             var files = manifest.GetProperty("files"); if (files.ValueKind != JsonValueKind.Array) throw Invalid("MRPack files must be an array");
             foreach (var item in files.EnumerateArray())
             {
                 cancellation.ThrowIfCancellationRequested(); Object(item); var name = String(item.GetProperty("path")); Relative(name);
                 var parts = new StringBuilder();
-                Properties(item.GetProperty("hashes"), "hash:");
+                var fileHashes = Properties(item.GetProperty("hashes"), "hash:");
                 var downloads = item.GetProperty("downloads"); if (downloads.ValueKind != JsonValueKind.Array) throw Invalid("MRPack downloads must be an array");
-                foreach (var download in downloads.EnumerateArray().Select(String).Order(StringComparer.CurrentCultureIgnoreCase).ThenBy(value => value, StringComparer.Ordinal)) Line("download=" + download);
-                if (item.TryGetProperty("env", out var environment)) Properties(environment, "env:");
+                var downloadValues = downloads.EnumerateArray().Select(String).Order(StringComparer.CurrentCultureIgnoreCase).ThenBy(value => value, StringComparer.Ordinal).ToImmutableArray();
+                foreach (var download in downloadValues) Line("download=" + download);
+                var environments = item.TryGetProperty("env", out var environment) ? Properties(environment, "env:") : ImmutableDictionary<string, string>.Empty;
                 if (!item.GetProperty("fileSize").TryGetInt64(out var size) || size < 0) throw Invalid("MRPack fileSize must be a nonnegative Int64");
                 Line("size=" + size.ToString(CultureInfo.InvariantCulture));
+                manifestFiles.Add(new(name, fileHashes, downloadValues, environments, size));
                 Add(new("manifest:" + name, Kind(name, false), name, Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(parts.ToString()))).ToLowerInvariant()));
-                void Properties(JsonElement value, string prefix)
+                ImmutableDictionary<string, string> Properties(JsonElement value, string prefix)
                 {
-                    Object(value);
+                    Object(value); var values = ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal);
                     foreach (var property in value.EnumerateObject().OrderBy(value => value.Name, StringComparer.CurrentCultureIgnoreCase).ThenBy(value => value.Name, StringComparer.Ordinal))
-                        Line(prefix + property.Name + "=" + String(property.Value));
+                    { var text = String(property.Value); values.Add(property.Name, text); Line(prefix + property.Name + "=" + text); }
+                    return values.ToImmutable();
                 }
                 void Line(string value) { Text(value); if (parts.Length != 0) parts.Append('\n'); parts.Append(value); }
             }
@@ -80,13 +94,20 @@ public static class MrpackSnapshot
             {
                 cancellation.ThrowIfCancellationRequested(); var name = entry.FullName;
                 if (name == "modrinth.index.json" || name.EndsWith('/')) continue;
-                using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256); ReadEntry(entry, chunk => hash.AppendData(chunk));
+                using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+                using var sha1 = hashes ? IncrementalHash.CreateHash(HashAlgorithmName.SHA1) : null;
+                using var sha512 = hashes ? IncrementalHash.CreateHash(HashAlgorithmName.SHA512) : null;
+                using var md5 = hashes ? IncrementalHash.CreateHash(HashAlgorithmName.MD5) : null;
+                ReadEntry(entry, chunk => { hash.AppendData(chunk); sha1?.AppendData(chunk); sha512?.AppendData(chunk); md5?.AppendData(chunk); });
                 var fingerprint = Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
+                if (hashes) archiveFiles.Add(new(name, ImmutableDictionary<string, string>.Empty.Add("sha256", fingerprint)
+                    .Add("sha1", Convert.ToHexString(sha1!.GetHashAndReset())).Add("sha512", Convert.ToHexString(sha512!.GetHashAndReset())).Add("md5", Convert.ToHexString(md5!.GetHashAndReset())), entry.Length));
                 if (name.StartsWith("overrides/", StringComparison.Ordinal))
                 { var relative = name[10..]; Add(new("override:" + relative, Kind(relative, true), relative, fingerprint)); }
                 else Add(new("entry:" + name, "ARCHIVE", name, fingerprint));
             }
-            cancellation.ThrowIfCancellationRequested(); return records.ToImmutable();
+            cancellation.ThrowIfCancellationRequested(); return new(String(manifest.GetProperty("name")), String(manifest.GetProperty("versionId")), dependencyValues.ToImmutable(),
+                manifestFiles.ToImmutable(), archiveFiles.ToImmutable(), records.ToImmutable());
         }
         catch (OperationCanceledException) { throw new DomainException("Core.OperationCancelled", "MRPack inspection was cancelled", "retry when ready", "OperationStopped"); }
         catch (ArchiveLimitException error) { throw Limit("Archive", error.Message); }

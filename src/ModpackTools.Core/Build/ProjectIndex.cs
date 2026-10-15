@@ -14,7 +14,9 @@ public sealed record ProjectIndexLimits(int MaximumRows = 100000, int MaximumEnt
 public sealed record ProjectIndexReport(int Rows, ImmutableArray<string> Issues)
 {
     public bool Valid => Issues.IsEmpty;
+    public ImmutableArray<ProjectIndexFile> Files { get; init; } = [];
 }
+public sealed record ProjectIndexFile(string Path, string RelativePath, bool Metadata, string Sha256);
 
 public static class ProjectIndex
 {
@@ -27,6 +29,7 @@ public static class ProjectIndex
             || limits.MaximumDocumentBytes is <= 0 or > 8 * 1024 * 1024 || limits.MaximumIssues <= 0 || limits.MaximumDetailCharacters <= 0 || limits.MaximumPathCharacters <= 0)
             throw new DomainException("Build.InvalidIndexPolicy", "Index verification quotas must be positive and bounded", "use explicit bounded index quotas");
         var issues = ImmutableArray.CreateBuilder<string>(); var rows = 0; long bytes = 0; var detailCharacters = 0;
+        var observed = ImmutableArray.CreateBuilder<ProjectIndexFile>();
         var digests = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         try
         {
@@ -55,7 +58,11 @@ public static class ProjectIndex
                 var hashAlgorithm = Algorithm(row.Contains("hash-format") ? Text(row.Get("hash-format")) : defaultAlgorithm);
                 if (!File.Exists(path)) Issue("Index references missing file " + name);
                 else if (hashAlgorithm.Name is null) Issue("Unsupported hash algorithm for " + name);
-                else if (!Equal(Text(row.Get("hash")), Digest(path, hashAlgorithm))) Issue("Index hash is stale for " + name);
+                else
+                {
+                    if (!Equal(Text(row.Get("hash")), Digest(path, hashAlgorithm))) Issue("Index hash is stale for " + name);
+                    observed.Add(new(path, name, metadata, digests[path]["SHA256"]));
+                }
             }
             foreach (var path in Metadata().Order(StringComparer.Ordinal))
             {
@@ -67,7 +74,7 @@ public static class ProjectIndex
         catch (OperationCanceledException) { throw new DomainException("Core.OperationCancelled", "Index verification was cancelled", "retry when ready", "OperationStopped"); }
         catch (ManifestLimitException error) { throw Limit(error.Property); }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or FormatException or DecoderFallbackException) { Issue(error.Message); }
-        return new(rows, issues.ToImmutable());
+        return new(rows, issues.ToImmutable()) { Files = observed.ToImmutable() };
 
         void Issue(string message)
         {
@@ -101,10 +108,12 @@ public static class ProjectIndex
             using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, FileOptions.SequentialScan);
             WindowsProjectIdentity.AssertStreamBytes(file.SafeFileHandle, limits.MaximumHashedBytes - bytes, path);
             using var hash = IncrementalHash.CreateHash(name); var buffer = ArrayPool<byte>.Shared.Rent(65536);
+            using var sha256 = name == HashAlgorithmName.SHA256 ? null : IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
             try
             {
-                int count; while ((count = file.Read(buffer, 0, 65536)) != 0) { Charge(count); hash.AppendData(buffer, 0, count); }
-                cancellation.ThrowIfCancellationRequested(); var digest = Convert.ToHexString(hash.GetHashAndReset()); values.Add(name.Name!, digest); return digest;
+                int count; while ((count = file.Read(buffer, 0, 65536)) != 0) { Charge(count); hash.AppendData(buffer, 0, count); sha256?.AppendData(buffer, 0, count); }
+                cancellation.ThrowIfCancellationRequested(); var digest = Convert.ToHexString(hash.GetHashAndReset()); values.Add(name.Name!, digest);
+                if (sha256 is not null) values.TryAdd("SHA256", Convert.ToHexString(sha256.GetHashAndReset())); return digest;
             }
             finally { ArrayPool<byte>.Shared.Return(buffer); }
         }

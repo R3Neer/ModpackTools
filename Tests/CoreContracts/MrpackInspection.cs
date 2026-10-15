@@ -45,7 +45,7 @@ internal static class MrpackInspection
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException or FormatException or InvalidOperationException or JsonException or KeyNotFoundException)
         { ManagedInspection.WriteFailure("Core.InputReadFailed", error.Message, "InvalidData", null, "check MRPack fixture input", null); return 2; }
     }
-    private static void Records(Utf8JsonWriter writer, string name, ImmutableArray<MrpackRecord> items)
+    internal static void Records(Utf8JsonWriter writer, string name, ImmutableArray<MrpackRecord> items)
     {
         writer.WriteStartArray(name); foreach (var item in items)
         { writer.WriteStartObject(); writer.WriteString("Key", item.Key); writer.WriteString("Kind", item.Kind); writer.WriteString("Path", item.Path); writer.WriteString("Fingerprint", item.Fingerprint); writer.WriteEndObject(); }

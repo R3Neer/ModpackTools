@@ -19,7 +19,25 @@ internal static class NativeToolFixture
         if (name == "Fail Pack") return Run(["both-fail"]);
         return 0;
     }
-    public static int Refresh() => File.Exists("fixture-refresh-fail.marker") ? Run(["both-fail"]) : Run(["zero-invalid"]);
+    public static int Refresh() => Environment.GetEnvironmentVariable("MODPACKTOOLS_TEST_PACKWIZ_PATH") is { Length: > 0 } ? Forward(["refresh"])
+        : File.Exists("fixture-refresh-fail.marker") ? Run(["both-fail"]) : Run(["zero-invalid"]);
+    public static int Export(string[] args)
+    {
+        if (args is not ["modrinth", "export", "--output", var output]) return 9;
+        if (Environment.GetEnvironmentVariable("MODPACKTOOLS_TEST_EXPORT_ARCHIVE_PATH") is not { Length: > 0 } preset) return Forward(args);
+        var root = Path.GetFullPath(Environment.CurrentDirectory).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        if (!Path.IsPathFullyQualified(output) || !Path.GetFullPath(output).StartsWith(root, StringComparison.OrdinalIgnoreCase)
+            || !output.EndsWith(".mrpack", StringComparison.Ordinal)) return 9;
+        File.Copy(preset, output, overwrite: false); return 0;
+    }
+    private static int Forward(string[] args)
+    {
+        var executable = Environment.GetEnvironmentVariable("MODPACKTOOLS_TEST_PACKWIZ_PATH");
+        if (string.IsNullOrEmpty(executable) || !File.Exists(executable)) return 9;
+        var start = new ProcessStartInfo(executable) { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = Environment.CurrentDirectory };
+        foreach (var argument in args) start.ArgumentList.Add(argument);
+        using var process = Process.Start(start) ?? throw new IOException("Fixture Packwiz failed to start."); process.WaitForExit(); return process.ExitCode;
+    }
     public static int Run(string[] args)
     {
         var mode = args.FirstOrDefault() ?? "zero-invalid";

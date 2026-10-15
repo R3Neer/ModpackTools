@@ -12,6 +12,9 @@ if (args.FirstOrDefault() == "--inspect-removal-plan") return RemovalPlanningIns
 if (args.FirstOrDefault() == "--inspect-removal") return RemovalInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-project-index") return ProjectIndexInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-mrpack") return MrpackInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-build") return BuildInspection.Run(args);
+if (args.Length == 2 && args[0] == "--verify-build") { BuildContracts.VerifyAsync(args[1]).GetAwaiter().GetResult(); Console.WriteLine("Native build contracts passed"); return 0; }
+if (args.FirstOrDefault() == "modrinth") return NativeToolFixture.Export(args);
 if (args.Length == 2 && args[0] == "--verify-removal") { RemovalContracts.VerifyAsync(args[1]).GetAwaiter().GetResult(); Console.WriteLine("Native removal contracts passed"); return 0; }
 if (args.FirstOrDefault() == "init") return NativeToolFixture.Init(args);
 if (args.Length == 1 && args[0] == "--verify-project-creation") { ProjectCreationContracts.VerifyAsync().GetAwaiter().GetResult(); Console.WriteLine("Native project creation contracts passed"); return 0; }
