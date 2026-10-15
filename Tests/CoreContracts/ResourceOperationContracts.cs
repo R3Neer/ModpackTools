@@ -22,12 +22,13 @@ internal static class ResourceOperationContracts
             var project = ProjectReader.Read(root); var config = Path.Combine(directory, "config"); var state = Path.Combine(directory, "state");
             var request = new ResourcePackOperationRequest(ResourcePackOperation.Enable, ["b.zip", "Pack b", "c.zip"], 2); var before = Fingerprint();
             var preview = await Execute(request with { DryRun = true });
-            Assert(!preview.Applied && preview.Result.SequenceEqual(["file/a.zip", "file/b.zip", "file/c.zip", "vanilla"]) && Fingerprint() == before, "dry block removes selected before positioning and deduplicates aliases");
+            Assert(!preview.Applied && preview.Result.Order.SequenceEqual(["file/a.zip", "file/b.zip", "file/c.zip", "vanilla"]) && Fingerprint() == before, "dry block removes selected before positioning and deduplicates aliases");
             var applied = await ResourcePackOperationRunner.ExecuteAsync(project, request, config, state, DateTimeOffset.UtcNow, expected: preview.Expectation);
             Assert(applied.Applied && applied.Changes.Length == 1 && applied.Changes[0].Path == "config/defaultoptions-common.toml", "only order configuration changes");
-            Assert(ResourcePackOrderReader.Read(project).SequenceEqual(preview.Result) && File.ReadAllText(path).Contains("# keep tail\nunknown=\"$&\"", StringComparison.Ordinal), "reverse storage and unknown syntax retained");
+            Assert(ResourcePackOrderReader.Read(project).SequenceEqual(preview.Result.Order) && File.ReadAllText(path).Contains("# keep tail\nunknown=\"$&\"", StringComparison.Ordinal), "reverse storage and unknown syntax retained");
             var disabled = await Execute(new(ResourcePackOperation.Disable, ["b.zip", "c.zip"]));
-            Assert(disabled.Applied && disabled.Result.SequenceEqual(["file/a.zip", "vanilla"]), "disable removes whole block preserving remaining order");
+            Assert(disabled.Applied && disabled.Result.Order.SequenceEqual(["file/a.zip", "vanilla"]), "disable removes whole block preserving remaining order");
+            Assert(disabled.Result.Resources.Inactive.All(item => item.MetadataPath is null || item.MetadataPath.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)), "owned result metadata paths refer to protected source, never temporary stage");
             before = Fingerprint();
             try { _ = await Execute(new(ResourcePackOperation.Move, ["b.zip"], 999)); throw new Exception("Disabled move accepted."); }
             catch (DomainException error) when (error.Id == "ModpackTools.ResourcePack.NotEnabled") { }
@@ -36,7 +37,7 @@ internal static class ResourceOperationContracts
             var noOp = await Execute(new(ResourcePackOperation.Disable, ["b.zip"]));
             Assert(!noOp.Applied && noOp.Changes.IsEmpty && Fingerprint() == before && !File.Exists(path), "no-op without configuration does not create it");
             string Fingerprint() => SourceFingerprint.All(SourceTree.Read(root));
-            Task<ModpackTools.Core.Transactions.TransactionResult<System.Collections.Immutable.ImmutableArray<string>>> Execute(ResourcePackOperationRequest value)
+            Task<ModpackTools.Core.Transactions.TransactionResult<ResourcePackOperationResult>> Execute(ResourcePackOperationRequest value)
                 => ResourcePackOperationRunner.ExecuteAsync(project, value, config, state, DateTimeOffset.UtcNow);
         }
         finally { Directory.Delete(directory, true); }

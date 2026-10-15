@@ -35,6 +35,22 @@ try
     var options = PresentationOptions.Parse(args);
     command = options.Arguments.FirstOrDefault() ?? "";
     commandArguments = options.Arguments.Skip(1).ToArray();
+    if (command.Equals("resource-pack", StringComparison.OrdinalIgnoreCase) && !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
+    {
+        var configurationDirectory = Environment.GetEnvironmentVariable("MODPACKTOOLS_CONFIG_HOME");
+        if (string.IsNullOrWhiteSpace(configurationDirectory)) configurationDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModpackTools");
+        using var cancellation = new CancellationTokenSource();
+        ConsoleCancelEventHandler cancel = (_, signal) => { signal.Cancel = true; cancellation.Cancel(); };
+        Console.CancelKeyPress += cancel;
+        try
+        {
+            await ResourcePackCommand.RunAsync(command, commandArguments, options.Project,
+                context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject,
+                Path.GetFullPath(configurationDirectory), cancellation.Token);
+        }
+        finally { Console.CancelKeyPress -= cancel; }
+        return 0;
+    }
     if (command.Equals("category", StringComparison.OrdinalIgnoreCase) && commandArguments.FirstOrDefault() is { } classification
         && new[] { "assign", "clear" }.Contains(classification, StringComparer.OrdinalIgnoreCase)
         && !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))

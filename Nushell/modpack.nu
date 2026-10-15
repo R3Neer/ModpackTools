@@ -87,6 +87,9 @@ def owns-native-command [args: list<string>] {
     if (($command | str lowercase) == 'content') and (($operation | str lowercase) in ['versions' 'search' 'add' 'update' 'pin' 'unpin']) {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
+    if ($command | str lowercase) == 'resource-pack' {
+        return (not ($args | any {|token| $token in ['--help' '-h'] }))
+    }
     if (($command | str lowercase) == 'category') and (($operation | str lowercase) in ['assign' 'clear']) {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
@@ -233,6 +236,24 @@ def invoke-native-command [args: list<string>] {
             }
         } else if ((($result.command | str lowercase) == 'content') and (($args.1 | str lowercase) in ['add' 'update' 'pin' 'unpin'])) or ((($result.command | str lowercase) == 'category') and (($args.1 | str lowercase) in ['assign' 'clear'])) {
             validate-native-transaction $result $args
+        } else if ($result.command | str lowercase) == 'resource-pack' {
+            validate-native-transaction $result $args
+            let data = (field $result data {})
+            if $data.transaction.dry_run {
+                if 'resource_packs' in ($data | columns) { error make {msg: 'Native resource dry-run returned inventory.'} }
+            } else {
+                if ((field $data resource_packs null | describe) !~ '^(list|table)') { error make {msg: 'Native resource operation returned invalid inventory.'} }
+                for item in $data.resource_packs {
+                    validate-string-fields $item ['id' 'type' 'source' 'state']
+                    validate-string-fields $item ['name' 'side' 'filename' 'category' 'version_id' 'project_id' 'slug'] true
+                    if $item.type != 'resourcepack' or $item.state not-in ['active' 'inactive'] or ((field $item pinned null | describe) != 'bool') or not ('number' in ($item | columns)) or $item.number != null or not ('priority' in ($item | columns)) {
+                        error make {msg: 'Native resource operation returned invalid item fields.'}
+                    }
+                    if ($item.state == 'active' and (((field $item priority null | describe) != 'int') or ($item.priority < 1))) or ($item.state == 'inactive' and $item.priority != null) {
+                        error make {msg: 'Native resource operation returned invalid priority.'}
+                    }
+                }
+            }
         } else if ($result.command | str lowercase) == 'category' {
             let categories = (field (field $result data {}) categories {})
             let project = (field $categories project {})

@@ -10,10 +10,14 @@ internal sealed class TransactionResponse(string command, string[] arguments, bo
 {
     private NativeOutputBuffer? buffer;
     private PublicTransactionChange[]? changes;
+    private PublicInventoryItem[]? resources;
 
-    public ValueTask PrepareAsync<T>(TransactionPreview<T> preview, CancellationToken token)
+    public ValueTask PrepareAsync<T>(TransactionPreview<T> preview, CancellationToken token) => PrepareAsync(preview, token, null);
+
+    public ValueTask PrepareAsync<T>(TransactionPreview<T> preview, CancellationToken token, PublicInventoryItem[]? resourcePacks)
     {
         token.ThrowIfCancellationRequested();
+        resources = resourcePacks;
         changes = preview.Changes.Select(change => new PublicTransactionChange(change.Before is null ? "add" : change.After is null ? "remove" : "change", change.Path, null)).ToArray();
         Serialize(new(!dryRun && changes.Length != 0, dryRun, false, changes.Length, changes));
         // Reserve for fifteen bounded diagnostics plus summary, including full
@@ -44,7 +48,7 @@ internal sealed class TransactionResponse(string command, string[] arguments, bo
     {
         buffer?.Dispose(); buffer = new("Content transaction", "reduce the requested batch before applying it");
         using var writer = new Utf8JsonWriter(buffer);
-        JsonSerializer.Serialize(writer, new TransactionEnvelope(1, true, command, arguments, new(transaction)), WireJsonContext.Default.TransactionEnvelope);
+        JsonSerializer.Serialize(writer, new TransactionEnvelope(1, true, command, arguments, new(transaction, resources)), WireJsonContext.Default.TransactionEnvelope);
     }
     public void Dispose() => buffer?.Dispose();
 }

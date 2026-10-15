@@ -45,6 +45,16 @@ def main [stub_executable: string] {
             error make {msg: 'Malformed transaction accepted or changed parent state'}
         }
     }
+    let resource_transaction = {applied: false, dry_run: false, preview: false, change_count: 0, changes: []}
+    let row = {number: null, id: 'vanilla', name: 'Vanilla', type: 'resourcepack', side: null, source: 'builtin', filename: null, category: null, pinned: false, state: 'active', priority: 1, version_id: null, project_id: null, slug: null}
+    let resource = {schema_version: 1, ok: true, command: 'resource-pack', arguments: ['disable' 'example'], data: {transaction: $resource_transaction, resource_packs: [$row]}}
+    $resource | to json | save --force $response_path
+    if (modpack resource-pack disable example --no-human) != $resource_transaction { error make {msg: 'Native Nu resource transaction unwrap failed'} }
+    for reply in [($resource | reject data.resource_packs) ($resource | update data.resource_packs.0.priority '1') ($resource | update data.resource_packs.0.pinned null)] {
+        $reply | to json | save --force $response_path
+        let failure = try { modpack resource-pack disable example --no-human; null } catch {|err| $err.msg }
+        if $failure == null or $env.MODPACKTOOLS_PROJECT != 'fixture' { error make {msg: 'Malformed native resource inventory accepted or changed parent'} }
+    }
     rm --force $response_path
     hide-env --ignore-errors MODPACKTOOLS_TEST_RESPONSE_PATH MODPACKTOOLS_TEST_RESPONSE_EXIT
     $env.MODPACKTOOLS_CORE_PATH = $previous_core

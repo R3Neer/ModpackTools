@@ -8,12 +8,14 @@ namespace ModpackTools.Core.Resolution;
 public enum ResourcePackOperation { Enable, Move, Disable }
 public sealed record ResourcePackOperationRequest(ResourcePackOperation Operation, ImmutableArray<string> Selectors, int Position = 0, bool DryRun = false);
 
+public sealed record ResourcePackOperationResult(ImmutableArray<string> Order, ResourcePackView Resources);
+
 public static class ResourcePackOperationRunner
 {
-    public static Task<TransactionResult<ImmutableArray<string>>> ExecuteAsync(ProjectContext project, ResourcePackOperationRequest request,
+    public static Task<TransactionResult<ResourcePackOperationResult>> ExecuteAsync(ProjectContext project, ResourcePackOperationRequest request,
         string configurationDirectory, string stateDirectory, DateTimeOffset now, TransactionLimits? limits = null,
         TransactionExpectation? expected = null, CancellationToken cancellation = default,
-        Func<TransactionPreview<ImmutableArray<string>>, CancellationToken, ValueTask>? prepareOutput = null)
+        Func<TransactionPreview<ResourcePackOperationResult>, CancellationToken, ValueTask>? prepareOutput = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         if (!Enum.IsDefined(request.Operation) || request.Selectors.IsDefaultOrEmpty || request.Selectors.Length > 1024
@@ -23,7 +25,7 @@ public static class ResourcePackOperationRunner
         return ProjectTransaction.ExecuteAsync(project, stateDirectory, Prepare, dryRun: request.DryRun,
             expected: expected, limits: limits, cancellation: cancellation, prepareOutput: prepareOutput);
 
-        Task<ImmutableArray<string>> Prepare(ProjectContext stage, CancellationToken token)
+        Task<ResourcePackOperationResult> Prepare(ProjectContext stage, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
             var snapshot = InventoryReader.Read(stage);
@@ -42,7 +44,10 @@ public static class ResourcePackOperationRunner
             }
             token.ThrowIfCancellationRequested();
             ResourceOrderEditor.Write(stage, order, snapshot.ResourceView.Active.Select(item => item.Id));
-            return Task.FromResult(order.ToImmutableArray());
+            var ids = order.ToImmutableArray();
+            var physical = snapshot.Resources.Select(item => item.MetadataPath is { } path
+                ? item with { MetadataPath = TransactionFiles.Within(project.Root, Path.GetRelativePath(stage.Root, path)) } : item).ToImmutableArray();
+            return Task.FromResult(new ResourcePackOperationResult(ids, ResourcePackActivation.Compose(physical, ids, snapshot.Metadata)));
         }
     }
 }

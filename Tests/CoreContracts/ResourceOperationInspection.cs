@@ -24,7 +24,7 @@ internal static class ResourceOperationInspection
             using (var writer = new Utf8JsonWriter(output))
             {
                 writer.WriteStartObject(); writer.WriteBoolean("Applied", result.Applied); writer.WriteStartArray("Order");
-                foreach (var id in result.Result) writer.WriteStringValue(id); writer.WriteEndArray();
+                foreach (var id in result.Result.Order) writer.WriteStringValue(id); writer.WriteEndArray();
                 writer.WriteStartArray("Changes"); foreach (var change in result.Changes)
                 { writer.WriteStartObject(); writer.WriteString("Path", change.Path); writer.WriteString("Before", change.Before); writer.WriteString("After", change.After); writer.WriteEndObject(); }
                 writer.WriteEndArray(); writer.WriteEndObject();
