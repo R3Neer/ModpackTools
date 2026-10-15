@@ -87,7 +87,7 @@ def owns-native-command [args: list<string>] {
     if (($command | str lowercase) == 'content') and (($operation | str lowercase) in ['versions' 'search' 'add' 'update' 'pin' 'unpin' 'remove']) {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
-    if ($command | str lowercase) in ['resource-pack' 'config' 'mod' 'build'] {
+    if ($command | str lowercase) in ['resource-pack' 'config' 'mod' 'build' 'diff'] {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
     if (($command | str lowercase) == 'category') and (($operation | str lowercase) in ['assign' 'clear' 'remove' 'create']) {
@@ -227,6 +227,28 @@ def invoke-native-command [args: list<string>] {
         if ($args | get 0) in ['--version' '-V'] {
             if $result.command != '--version' or ((field (field (field $result data {}) version {}) version null | describe) != 'string') {
                 error make { msg: 'ModpackTools native executable returned an invalid version result.' }
+            }
+        } else if ($args.0 | str lowercase) == 'diff' {
+            let diff = (field (field $result data {}) diff {})
+            if $result.command != $args.0 or not ($result.arguments | is-empty) or ((field $diff total null | describe) != 'int') or $diff.total < 0 {
+                error make {msg: 'Native diff returned invalid statistics.'}
+            }
+            mut count = 0
+            for name in ['added' 'changed' 'removed'] {
+                if not ($name in ($diff | columns)) {error make {msg: 'Native diff omitted a change section.'}}
+                let value = ($diff | get $name)
+                let rows = if $value == null {[]} else if (($value | describe) =~ '^record') {[$value]} else {$value}
+                if (($rows | describe) !~ '^(list|table)') {error make {msg: 'Native diff returned invalid changes.'}}
+                let ghost = if (($value | describe) =~ '^record') {('kind' in ($value | columns)) and ('path' in ($value | columns)) and ($value.kind == null) and ($value.path == null)} else {false}
+                if not $ghost {
+                    for row in $rows {validate-string-fields $row ['kind' 'path']}
+                    $count = $count + ($rows | length)
+                }
+            }
+            if $count != $diff.total {error make {msg: 'Native diff returned contradictory counts.'}}
+            if 'diagnostics' in ($result.data | columns) {
+                if (($result.data.diagnostics | describe) !~ '^(list|table)') {error make {msg: 'Native diff diagnostics are invalid.'}}
+                for diagnostic in $result.data.diagnostics {validate-string-fields $diagnostic ['code' 'path' 'message']}
             }
         } else if ($args.0 | str lowercase) == 'build' {
             if $result.command != $args.0 or ($result.arguments | any {|token| $token not-in $args}) {

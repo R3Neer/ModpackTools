@@ -35,14 +35,18 @@ try
     var options = PresentationOptions.Parse(args);
     command = options.Arguments.FirstOrDefault() ?? "";
     commandArguments = options.Arguments.Skip(1).ToArray();
-    if (command.Equals("build", StringComparison.OrdinalIgnoreCase) && !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
+    if (new[] { "build", "diff" }.Contains(command, StringComparer.OrdinalIgnoreCase) && !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
     {
         var configurationDirectory = Environment.GetEnvironmentVariable("MODPACKTOOLS_CONFIG_HOME");
         if (string.IsNullOrWhiteSpace(configurationDirectory)) configurationDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModpackTools");
         using var cancellation = new CancellationTokenSource();
         ConsoleCancelEventHandler cancel = (_, signal) => { signal.Cancel = true; cancellation.Cancel(); };
         Console.CancelKeyPress += cancel;
-        try { await BuildCommand.RunAsync(command, commandArguments, options.Project, context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject, configurationDirectory, cancellation.Token); }
+        try
+        {
+            if (command.Equals("build", StringComparison.OrdinalIgnoreCase)) await BuildCommand.RunAsync(command, commandArguments, options.Project, context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject, configurationDirectory, cancellation.Token);
+            else await DiffCommand.RunAsync(command, commandArguments, options.Project, context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject, configurationDirectory, cancellation.Token);
+        }
         finally { Console.CancelKeyPress -= cancel; }
         return 0;
     }

@@ -13,6 +13,12 @@ internal sealed record BuildArtifactExpectation(string Name, string Version, Imm
     ImmutableDictionary<string, string> PlainFiles, ImmutableArray<ExpectedManagedArtifact> Managed)
 {
     public static BuildArtifactExpectation Read(ProjectContext stage, ProjectIndexReport index, ProjectHealthObservation health, CancellationToken cancellation)
+        => Read(stage, index, health.Inventory, health.Nodes.Where(node => node.Item.MetadataPath is not null).ToDictionary(node => node.Item.MetadataPath!, node => node.File, StringComparer.OrdinalIgnoreCase), cancellation);
+    public static BuildArtifactExpectation Read(ProjectContext stage, ProjectIndexReport index, RawInventorySnapshot inventory, CancellationToken cancellation)
+        => Read(stage, index, inventory, inventory.Mods.Concat(inventory.Resources).Concat(inventory.Shaders).Where(item => item.MetadataPath is not null)
+            .ToDictionary(item => item.MetadataPath!, _ => (ProviderFile?)null, StringComparer.OrdinalIgnoreCase), cancellation);
+    private static BuildArtifactExpectation Read(ProjectContext stage, ProjectIndexReport index, RawInventorySnapshot inventory,
+        IReadOnlyDictionary<string, ProviderFile?> providers, CancellationToken cancellation)
     {
         if (!index.Valid) throw new ArgumentException("Build expectations require a verified index.", nameof(index));
         var manifest = TomlDeclarationReader.Read(TextFile.Read(TransactionFiles.Within(stage.Root, "pack.toml")), new());
@@ -23,7 +29,6 @@ internal sealed record BuildArtifactExpectation(string Name, string Version, Imm
         dependencies = dependencies.Add(loaders[0] switch { "fabric" => "fabric-loader", "quilt" => "quilt-loader", var value => value }, Required(versions.Get(loaders[0])));
         var indexRoot = Path.GetDirectoryName(stage.IndexPath)!; var plain = ImmutableDictionary.CreateBuilder<string, string>(StringComparer.OrdinalIgnoreCase);
         var managed = ImmutableArray.CreateBuilder<ExpectedManagedArtifact>(); var destinations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var providers = health.Nodes.Where(node => node.Item.MetadataPath is not null).ToDictionary(node => node.Item.MetadataPath!, node => node.File, StringComparer.OrdinalIgnoreCase);
         foreach (var file in index.Files)
         {
             cancellation.ThrowIfCancellationRequested();
@@ -42,7 +47,7 @@ internal sealed record BuildArtifactExpectation(string Name, string Version, Imm
         }
         foreach (var destination in destinations)
             if (plain.ContainsKey(destination)) throw Invalid("Plain and managed artifacts share a destination: " + destination);
-        foreach (var item in health.Inventory.Mods.Concat(health.Inventory.Resources).Concat(health.Inventory.Shaders).Where(item => item.Source == ContentSource.Local))
+        foreach (var item in inventory.Mods.Concat(inventory.Resources).Concat(inventory.Shaders).Where(item => item.Source == ContentSource.Local))
         {
             cancellation.ThrowIfCancellationRequested();
             var folder = item.Kind switch { ContentKind.Mod => "mods", ContentKind.ResourcePack => "resourcepacks", _ => "shaderpacks" };
