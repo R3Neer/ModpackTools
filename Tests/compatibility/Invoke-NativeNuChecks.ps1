@@ -32,6 +32,18 @@ try {
     if($LASTEXITCODE -ne 0){throw 'Native Nu registration check failed'}
     & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuCreation.nu') ([IO.Path]::GetFullPath($StubExecutable))
     if($LASTEXITCODE -ne 0){throw 'Native Nu creation check failed'}
+    $sideMods=Join-Path $projects 'Nu Native Pack-1.21.1/mods'
+    [void][IO.Directory]::CreateDirectory($sideMods)
+    $jar=[IO.File]::Create((Join-Path $sideMods 'side_fixture.jar'))
+    try {
+        $archive=[IO.Compression.ZipArchive]::new($jar,[IO.Compression.ZipArchiveMode]::Create,$true)
+        try {
+            $writer=[IO.StreamWriter]::new($archive.CreateEntry('fabric.mod.json').Open(),[Text.UTF8Encoding]::new($false))
+            try {$writer.Write('{"schemaVersion":1,"id":"side_fixture","name":"Side Fixture","version":"1.0.0","environment":"*"}')} finally {$writer.Dispose()}
+        } finally {$archive.Dispose()}
+    } finally {$jar.Dispose()}
+    & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuModSide.nu') ([IO.Path]::GetFullPath($StubExecutable))
+    if($LASTEXITCODE -ne 0){throw 'Native Nu mod side check failed'}
 } finally {
     $env:MODPACKTOOLS_CORE_PATH=$previousCore; $env:MODPACKTOOLS_CONFIG_HOME=$previousConfig; $env:MODPACKTOOLS_STATE_HOME=$previousState
     $resolved=[IO.Path]::GetFullPath($fixture)

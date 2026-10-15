@@ -35,6 +35,22 @@ try
     var options = PresentationOptions.Parse(args);
     command = options.Arguments.FirstOrDefault() ?? "";
     commandArguments = options.Arguments.Skip(1).ToArray();
+    if (command.Equals("mod", StringComparison.OrdinalIgnoreCase) && !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
+    {
+        var configurationDirectory = Environment.GetEnvironmentVariable("MODPACKTOOLS_CONFIG_HOME");
+        if (string.IsNullOrWhiteSpace(configurationDirectory)) configurationDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModpackTools");
+        using var cancellation = new CancellationTokenSource();
+        ConsoleCancelEventHandler cancel = (_, signal) => { signal.Cancel = true; cancellation.Cancel(); };
+        Console.CancelKeyPress += cancel;
+        try
+        {
+            await ModSideCommand.RunAsync(command, commandArguments, options.Project,
+                context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject,
+                configurationDirectory, cancellation.Token);
+        }
+        finally { Console.CancelKeyPress -= cancel; }
+        return 0;
+    }
     if (command.Equals("project", StringComparison.OrdinalIgnoreCase) && commandArguments.FirstOrDefault() is { } initialization && new[] { "register", "create" }.Contains(initialization, StringComparer.OrdinalIgnoreCase)
         && !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
     {
