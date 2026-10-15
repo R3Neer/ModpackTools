@@ -81,6 +81,9 @@ def owns-native-command [args: list<string>] {
     let command = ($args | get --optional 0 | default '')
     if $command in ['--version' '-V'] { return true }
     let operation = ($args | get --optional 1 | default '')
+    if (($command | str lowercase) == 'content') and (($operation | str lowercase) == 'list') {
+        return (not ($args | any {|token| $token in ['--help' '-h'] }))
+    }
     (($command | str lowercase) == 'project') and (($operation | str lowercase) in ['list' 'current' 'use']) and not ($args | any {|token| $token in ['--help' '-h'] })
 }
 
@@ -96,6 +99,31 @@ def validate-string-fields [value: any, names: list<string>, nullable: bool = fa
         if ($item != null or not $nullable) and (($item | describe) != 'string') {
             error make { msg: $'ModpackTools native executable returned an invalid field ($name).' }
         }
+    }
+}
+
+def validate-native-requirement [value: any] {
+    mut pending = [$value]
+    mut depth = 1
+    while not ($pending | is-empty) {
+        if $depth > 64 { error make { msg: 'ModpackTools native requirement exceeds the depth limit.' } }
+        $pending = ($pending | each --flatten {|node|
+            validate-string-fields $node ['Target' 'Kind' 'Side' 'Scope' 'Source' 'SuggestedVersionId']
+            if not ('Range' in ($node | columns)) or ((field $node Maven null | describe) != 'bool') {
+                error make { msg: 'ModpackTools native executable returned an invalid requirement.' }
+            }
+            for name in ['Any' 'All'] {
+                if ((field $node $name null | describe) !~ '^(list|table)') {
+                    error make { msg: 'ModpackTools native executable returned invalid requirement alternatives.' }
+                }
+            }
+            if not ('Unless' in ($node | columns)) {
+                error make { msg: 'ModpackTools native executable omitted a requirement guard.' }
+            }
+            let children = ($node.Any | append $node.All)
+            if $node.Unless == null { $children } else { $children | append $node.Unless }
+        })
+        $depth = $depth + 1
     }
 }
 
@@ -150,6 +178,65 @@ def invoke-native-command [args: list<string>] {
             validate-string-fields $session ['active_project'] (not $selecting)
             if $selecting and (($session.active_project | str trim) == '' or not ($result.arguments.1 in ($args | skip 2))) {
                 error make { msg: 'ModpackTools native executable returned an invalid selected project.' }
+            }
+        } else if ($result.command | str lowercase) == 'content' {
+            let data = (field $result data {})
+            let inventory = (field $data inventory {})
+            let summary = (field $data summary {})
+            let health = (field $data health {})
+            if $result.command != $args.0 or ($result.arguments | length) == 0 or $result.arguments.0 != $args.1 {
+                error make { msg: 'ModpackTools native executable returned an invalid content command.' }
+            }
+            validate-string-fields (field $data project {}) ['id' 'root' 'output_name']
+            validate-string-fields (field $data project {}) ['name' 'version' 'minecraft' 'loader' 'loader_version'] true
+            for name in ['mods' 'resources_enabled' 'resources_disabled' 'shaders'] {
+                if ((field $summary $name null | describe) != 'int') or (field $summary $name (-1)) < 0 {
+                    error make { msg: 'ModpackTools native executable returned an invalid inventory summary.' }
+                }
+            }
+            for name in ['errors' 'warnings' 'unknown'] {
+                if ((field $health $name null | describe) !~ '^(list|table)') {
+                    error make { msg: 'ModpackTools native executable returned invalid health data.' }
+                }
+                for issue in (field $health $name []) {
+                    validate-string-fields $issue ['Key' 'Code' 'Owner' 'OwnerName' 'Side' 'Severity' 'Message']
+                    let severity = if $name == 'errors' { 'error' } else if $name == 'warnings' { 'warning' } else { 'unknown' }
+                    if not ('Requirement' in ($issue | columns)) or $issue.Severity != $severity {
+                        error make { msg: 'ModpackTools native executable returned an invalid health issue.' }
+                    }
+                    if $issue.Requirement != null and (($issue.Requirement | describe) != 'string') {
+                        validate-native-requirement $issue.Requirement
+                    }
+                }
+            }
+            for name in ['filters' 'included_types'] {
+                if ((field $inventory $name []) | any {|value| ($value | describe) != 'string' }) {
+                    error make { msg: 'ModpackTools native executable returned invalid content labels.' }
+                }
+            }
+            for name in ['items' 'filters' 'included_types'] {
+                if ((field $inventory $name null | describe) !~ '^(list|table)') {
+                    error make { msg: 'ModpackTools native executable returned invalid content data.' }
+                }
+            }
+            if ((field $inventory total_matches null | describe) != 'int') or $inventory.total_matches != ($inventory.items | length) {
+                error make { msg: 'ModpackTools native executable returned an invalid content count.' }
+            }
+            for item in $inventory.items {
+                validate-string-fields $item ['id' 'type' 'source']
+                validate-string-fields $item ['name' 'side' 'filename' 'category' 'state' 'version_id' 'project_id' 'slug'] true
+                for name in ['number' 'priority'] {
+                    if not ($name in ($item | columns)) {
+                        error make { msg: 'ModpackTools native executable omitted content numbering.' }
+                    }
+                    let value = (field $item $name null)
+                    if $value != null and (($value | describe) != 'int' or $value < 1) {
+                        error make { msg: 'ModpackTools native executable returned invalid content numbering.' }
+                    }
+                }
+                if ((field $item pinned null | describe) != 'bool') {
+                    error make { msg: 'ModpackTools native executable returned an invalid pin state.' }
+                }
             }
         } else {
             let projects = (field (field $result data {}) projects {})

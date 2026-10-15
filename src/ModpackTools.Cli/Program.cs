@@ -33,6 +33,25 @@ try
     var options = PresentationOptions.Parse(args);
     command = options.Arguments.FirstOrDefault() ?? "";
     commandArguments = options.Arguments.Skip(1).ToArray();
+    if (command.Equals("content", StringComparison.OrdinalIgnoreCase) &&
+        commandArguments.FirstOrDefault()?.Equals("list", StringComparison.OrdinalIgnoreCase) == true &&
+        !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
+    {
+        var configurationDirectory = Environment.GetEnvironmentVariable("MODPACKTOOLS_CONFIG_HOME");
+        if (string.IsNullOrWhiteSpace(configurationDirectory))
+            configurationDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModpackTools");
+        using var cancellation = new CancellationTokenSource();
+        ConsoleCancelEventHandler cancel = (_, signal) => { signal.Cancel = true; cancellation.Cancel(); };
+        Console.CancelKeyPress += cancel;
+        try
+        {
+            await ContentListCommand.RunAsync(command, commandArguments, options.Project,
+                context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject,
+                Path.GetFullPath(configurationDirectory), cancellation.Token);
+        }
+        finally { Console.CancelKeyPress -= cancel; }
+        return 0;
+    }
     if (command.Equals("--version", StringComparison.OrdinalIgnoreCase))
     {
         var version = ProductVersion.Read(commandArguments, options.Project);
@@ -91,6 +110,13 @@ try
         return 0;
     }
 }
+catch (OperationCanceledException)
+{
+    var cancelled = FailureEnvelope.Create(command, commandArguments,
+        Failure.From("ModpackTools.Core.OperationCancelled", "Content listing was cancelled. Try: retry when ready.", "OperationStopped", null));
+    Console.WriteLine(JsonSerializer.Serialize(cancelled, WireJsonContext.Default.FailureEnvelope));
+    return 1;
+}
 catch (DomainException exception)
 {
     var message = Sentence(exception.Message);
@@ -110,7 +136,7 @@ catch (Exception exception) when (exception is IOException or UnauthorizedAccess
 }
 
 var failure = FailureEnvelope.Create(command, commandArguments,
-    Failure.From("Core.CapabilityUnavailable", "This native host currently supports version, project list, project current and project use.", "InvalidOperation", null));
+    Failure.From("Core.CapabilityUnavailable", "This native host currently supports version, project list, project current, project use and content list.", "InvalidOperation", null));
 Console.WriteLine(JsonSerializer.Serialize(failure, WireJsonContext.Default.FailureEnvelope));
 return 1;
 
