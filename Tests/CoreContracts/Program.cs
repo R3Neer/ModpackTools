@@ -20,6 +20,11 @@ if (args.FirstOrDefault() == "--inspect-solution-search") return SolutionSearchI
 if (args.FirstOrDefault() == "--inspect-candidate-acquisition") return CandidateAcquisitionInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-project-lookup") return ProjectLookupInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-content-plan") return ContentPlanInspection.Run(args);
+if (args.Length == 1 && args[0] == "--tool-child") return ModpackTools.Core.Processes.NativeToolChild.RunAsync().GetAwaiter().GetResult();
+if (args.FirstOrDefault() == "--tool-fixture") return NativeToolFixture.Run(args.Skip(1).ToArray());
+if (args.Length == 1 && args[0] == "refresh") return NativeToolFixture.Run(["zero-invalid"]);
+if (args.FirstOrDefault() == "--inspect-packwiz-refresh") return PackwizRefreshInspection.Run(args);
+if (args.Length == 1 && args[0] == "--verify-native-tools") { NativeToolContracts.VerifyAsync(nativeProcessCases: true).GetAwaiter().GetResult(); Console.WriteLine("Native process ownership contracts passed"); return 0; }
 if (args.FirstOrDefault() == "--inspect-project-transaction") return ProjectTransactionInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-content-materialization") return ContentMaterializationInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-search") return SearchInspection.Run(args);
@@ -303,6 +308,7 @@ ProjectLookupContracts.VerifyAsync().GetAwaiter().GetResult();
 ContentPlanContracts.VerifyAsync().GetAwaiter().GetResult();
 ProjectTransactionContracts.VerifyAsync().GetAwaiter().GetResult();
 ContentMaterializationContracts.Verify();
+NativeToolContracts.VerifyAsync().GetAwaiter().GetResult();
 ArtifactProviderContracts.VerifyAsync().GetAwaiter().GetResult();
 ProjectHealthContracts.VerifyAsync().GetAwaiter().GetResult();
 ImportedLookupContracts.Verify();

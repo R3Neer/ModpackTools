@@ -51,6 +51,7 @@ public static partial class ProjectTransaction
             if (Directory.Exists(workspace) || File.Exists(workspace)) throw WindowsProjectIdentity.Error("WorkspaceCollision", "Transaction workspace already exists", workspace);
             Directory.CreateDirectory(workspace); var owner = new TransactionOwner(Path.GetFileName(workspace), identity.Value, "preparing");
             TransactionJournalStore.WriteOwner(workspace, owner, limits);
+            var retainStage = false;
             try
             {
                 var stage = Path.Combine(workspace, "stage"); Directory.CreateDirectory(stage); var completed = 0;
@@ -156,9 +157,23 @@ public static partial class ProjectTransaction
                 CleanupCompleted(home, workspace, identity.Value, limits, diagnostics);
                 return new(result, changes, true, expectation, diagnostics.ToImmutable());
             }
+            catch (Exception error) when (error.Data["ModpackTools.RetainStage"] is true)
+            {
+                // A native tool owner could not prove all descendants stopped.
+                // Preserve the stage instead of racing a possibly active writer.
+                retainStage = true;
+                try { TransactionJournalStore.WriteOwner(workspace, owner with { Status = "retained" }, limits); }
+                catch (Exception marker) when (marker is IOException or UnauthorizedAccessException or DomainException)
+                {
+                    var failure = WindowsProjectIdentity.Error("StageRetentionMarkerFailed", "Stage was preserved but its retention marker could not be saved", workspace,
+                        "Primary: " + FailureSummary(error) + Environment.NewLine + "Retention marker: " + FailureSummary(marker));
+                    failure.Data["ModpackTools.RetainStage"] = true; throw failure;
+                }
+                throw;
+            }
             finally
             {
-                CleanupCompleted(home, workspace, identity.Value, limits, diagnostics);
+                if (!retainStage) CleanupCompleted(home, workspace, identity.Value, limits, diagnostics);
             }
         }
         catch (OperationCanceledException) { throw new DomainException("Core.OperationCancelled", "Project transaction was cancelled", "inspect any retained recovery state before retrying", "OperationStopped"); }

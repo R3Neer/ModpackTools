@@ -12,7 +12,7 @@ internal static class TransactionJournalStore
         var root = document.RootElement; Shape(root, "SchemaVersion", "TransactionId", "Project", "Status"); Version(root);
         var owner = new TransactionOwner(Text(root, "TransactionId"), Project(root.GetProperty("Project")), Text(root, "Status"));
         if (owner.TransactionId != Path.GetFileName(workspace) || !Guid.TryParseExact(owner.TransactionId, "N", out _) || owner.Project != project
-            || owner.Status is not ("preparing" or "pending" or "rolledback" or "committed")) throw Invalid(workspace);
+            || owner.Status is not ("preparing" or "pending" or "rolledback" or "committed" or "retained")) throw Invalid(workspace);
         return owner;
     }
 

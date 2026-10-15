@@ -7,6 +7,7 @@ using ModpackTools.Core.Projects;
 using ModpackTools.Core.Inventory;
 
 Console.OutputEncoding = new UTF8Encoding(false);
+if (args.Length == 1 && args[0] == "--tool-child") return await ModpackTools.Core.Processes.NativeToolChild.RunAsync();
 InvocationContext? context = null;
 try
 {

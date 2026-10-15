@@ -58,6 +58,7 @@ public static partial class ProjectTransaction
                 diagnostics.Add(new("Transaction.UnownedWorkspace", directory.FullName, "Directory has no recognized ownership marker and was preserved")); continue;
             }
             var owner = ReadOwned(directory.FullName, identity.Value, limits);
+            if (owner.Status == "retained") throw WindowsProjectIdentity.Error("ActiveToolRetained", "A previous tool could not be confirmed stopped; its stage was retained", directory.FullName);
             var journalPath = Path.Combine(directory.FullName, "journal.json");
             TransactionJournal? journal = null;
             if (File.Exists(journalPath))
@@ -67,6 +68,7 @@ public static partial class ProjectTransaction
                 { throw TransactionJournalStore.Invalid(journalPath, error.Message); }
             }
             else if (owner.Status == "pending") throw WindowsProjectIdentity.Error("MissingJournal", "Pending transaction journal is missing; workspace was preserved", directory.FullName);
+            else if (owner.Status == "preparing") throw WindowsProjectIdentity.Error("PreparationInterrupted", "Previous preparation has no confirmed safe close; its stage was preserved", directory.FullName);
             owned.Add((directory.FullName, owner, journal));
         }
         // Parse and bind every owned journal before restoring or deleting a workspace.
@@ -137,6 +139,7 @@ public static partial class ProjectTransaction
         try
         {
             var owner = ReadOwned(workspace, project, limits); var journalPath = Path.Combine(workspace, "journal.json");
+            if (owner.Status == "retained") return;
             if (File.Exists(journalPath))
             {
                 if (!permitCommittedJournal || TransactionJournalStore.ReadJournal(workspace, owner, limits).Status != "committed") return;
