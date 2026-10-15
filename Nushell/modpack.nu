@@ -84,6 +84,9 @@ def owns-native-command [args: list<string>] {
     if (($command | str lowercase) in ['content' 'category']) and (($operation | str lowercase) == 'list') {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
+    if (($command | str lowercase) == 'content') and (($operation | str lowercase) == 'versions') {
+        return (not ($args | any {|token| $token in ['--help' '-h'] }))
+    }
     (($command | str lowercase) == 'project') and (($operation | str lowercase) in ['list' 'current' 'use' 'status']) and not ($args | any {|token| $token in ['--help' '-h'] })
 }
 
@@ -210,6 +213,22 @@ def invoke-native-command [args: list<string>] {
                 }
                 if $item.number < 1 or not ('order' in ($item | columns)) or ($item.order != null and ($item.order | describe) != 'int') or ((field $item unclassified null | describe) != 'bool') {
                     error make { msg: 'ModpackTools native executable returned invalid category fields.' }
+                }
+            }
+        } else if (($result.command | str lowercase) == 'content') and (($args.1 | str lowercase) == 'versions') {
+            let data = (field $result data {})
+            let versions = (field $data versions {})
+            validate-string-fields (field $data project {}) ['id' 'root' 'output_name']
+            validate-string-fields (field $data project {}) ['name' 'version' 'minecraft' 'loader' 'loader_version'] true
+            validate-string-fields $versions ['item_name' 'item_type']
+            if $result.command != $args.0 or ($result.arguments | length) != 2 or $result.arguments.0 != $args.1 or not ($result.arguments.1 in ($args | skip 2)) or ((field $versions items null | describe) !~ '^(list|table)') {
+                error make { msg: 'ModpackTools native executable returned an invalid version list.' }
+            }
+            for item in $versions.items {
+                validate-string-fields $item ['id' 'version' 'version_type' 'published']
+                validate-string-fields $item ['filename'] true
+                if ((field $item number null | describe) != 'int') or (field $item number 0) < 1 or ((field $item installed null | describe) != 'bool') {
+                    error make { msg: 'ModpackTools native executable returned invalid version fields.' }
                 }
             }
         } else if ($result.command | str lowercase) == 'content' {

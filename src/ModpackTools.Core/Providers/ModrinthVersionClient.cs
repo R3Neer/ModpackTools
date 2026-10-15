@@ -4,6 +4,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using ModpackTools.Core.Data;
 using ModpackTools.Core.Source;
+using ModpackTools.Core.Inventory;
 
 namespace ModpackTools.Core.Providers;
 
@@ -11,7 +12,8 @@ public sealed record ProviderRequestLimits(int MaximumRequests = 1000, int Maxim
     int TimeoutMilliseconds = 60000, long MaximumResponseBytes = 16 * 1024 * 1024,
     long MaximumTotalResponseBytes = 64 * 1024 * 1024, int MaximumInputIds = 10000,
     int MaximumEndpointCharacters = 32768, int MaximumTotalEndpointCharacters = 1024 * 1024,
-    int MaximumReturnedVersions = 10000, ProviderCacheReadLimits? Decode = null);
+    int MaximumReturnedVersions = 10000, ProviderCacheReadLimits? Decode = null,
+    long MaximumListingWireBytes = 32 * 1024 * 1024);
 public sealed record ProviderRequestStatistics(int Requests, long Bytes);
 public sealed record ProviderAcquisitionDiagnostic(string Code, string Path, string Message);
 
@@ -27,11 +29,12 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
     private readonly DateTimeOffset now;
     private readonly StringComparer comparer;
     private readonly object sync = new();
-    private enum ResponseKind { Version, Batch, Project, Candidates }
-    private sealed record ProviderResponse(ProviderProject? Project, ImmutableArray<ProviderVersion> Versions);
+    private enum ResponseKind { Version, Batch, Project, Candidates, PublicVersions }
+    private sealed record ProviderResponse(ProviderProject? Project, ImmutableArray<ProviderVersion> Versions)
+    { public ImmutableArray<CompatibleVersion> Listings { get; init; } = []; }
     private readonly Dictionary<string, Lazy<Task<ProviderResponse>>> pending = new(StringComparer.Ordinal);
     private readonly List<ProviderAcquisitionDiagnostic> diagnostics = [];
-    private long bytes, endpointCharacters;
+    private long bytes, endpointCharacters, listingWireBytes;
     private int requests, versions, inputIds;
     private bool disposed;
     private DomainException? exhausted;
@@ -48,7 +51,8 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
             : this.limits.MaximumInputIds <= 0 ? nameof(this.limits.MaximumInputIds)
             : this.limits.MaximumEndpointCharacters <= 0 ? nameof(this.limits.MaximumEndpointCharacters)
             : this.limits.MaximumTotalEndpointCharacters <= 0 ? nameof(this.limits.MaximumTotalEndpointCharacters)
-            : this.limits.MaximumReturnedVersions <= 0 ? nameof(this.limits.MaximumReturnedVersions) : null;
+            : this.limits.MaximumReturnedVersions <= 0 ? nameof(this.limits.MaximumReturnedVersions)
+            : this.limits.MaximumListingWireBytes <= 0 ? nameof(this.limits.MaximumListingWireBytes) : null;
         if (invalid is not null) throw new DomainException("Metadata.InvalidProviderRequestPolicy", "Provider request limits are invalid",
             "use positive quotas and concurrency between 1 and 64", target: invalid);
         decode = this.limits.Decode ?? new(); ProviderVersionCache.Validate(decode);
@@ -121,6 +125,13 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
         return (await Request(project.CandidateEndpoint(minecraftVersion, loader), [project.Id], ResponseKind.Candidates).ConfigureAwait(false)).Versions;
     }
 
+    public async Task<ImmutableArray<CompatibleVersion>> GetCompatibleVersionsAsync(string projectId, ContentKind kind,
+        string minecraftVersion, string loader)
+    {
+        Input();
+        return (await Request(CompatibleVersion.Endpoint(projectId, kind, minecraftVersion, loader), [projectId], ResponseKind.PublicVersions).ConfigureAwait(false)).Listings;
+    }
+
     private Task<ProviderResponse> Request(string endpoint, string[] ids, ResponseKind kind)
     {
         lock (sync)
@@ -191,9 +202,9 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
                 using var document = decoded.Document;
                 var root = document.RootElement;
                 JsonDisplayProjection.Validate(root);
-                if (kind == ResponseKind.Candidates && root.ValueKind is not (JsonValueKind.Array or JsonValueKind.Null))
+                if (kind is ResponseKind.Candidates or ResponseKind.PublicVersions && root.ValueKind is not (JsonValueKind.Array or JsonValueKind.Null))
                     throw Invalid("Provider candidate response must be an array or null.");
-                var batch = kind is ResponseKind.Batch or ResponseKind.Candidates;
+                var batch = kind is ResponseKind.Batch or ResponseKind.Candidates or ResponseKind.PublicVersions;
                 var rowCount = root.ValueKind == JsonValueKind.Array ? root.GetArrayLength() : root.ValueKind == JsonValueKind.Null && batch ? 0 : 1;
                 if (!batch && rowCount != 1) throw Invalid("Provider single response must contain exactly one object.");
                 lock (sync)
@@ -208,6 +219,7 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
                 var rows = root.ValueKind == JsonValueKind.Array ? root.EnumerateArray().ToArray() : rowCount == 0 ? [] : new[] { root };
                 var allowed = ids.ToHashSet(StringComparer.Ordinal);
                 var values = ImmutableArray.CreateBuilder<ProviderVersion>(rows.Length);
+                var listings = ImmutableArray.CreateBuilder<CompatibleVersion>(kind == ResponseKind.PublicVersions ? rows.Length : 0);
                 ProviderProject? project = null;
                 var collectionEntries = 0;
                 foreach (var row in rows)
@@ -220,8 +232,8 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
                     }
                     models.Version();
                     var version = ProviderVersionCache.Decode(row, decoded.Dates,
-                        kind == ResponseKind.Candidates ? decode.MaximumCollectionEntries - collectionEntries : decode.MaximumCollectionEntries, models.Entry);
-                    if (kind == ResponseKind.Candidates)
+                        kind is ResponseKind.Candidates or ResponseKind.PublicVersions ? decode.MaximumCollectionEntries - collectionEntries : decode.MaximumCollectionEntries, models.Entry);
+                    if (kind is ResponseKind.Candidates or ResponseKind.PublicVersions)
                     {
                         if (!allowed.Contains(version.ProjectId)) throw Invalid("Provider candidate belongs to another project.");
                         var entries = (long)version.Files.Length + version.Dependencies.Length + version.Loaders.Length + version.GameVersions.Length;
@@ -230,15 +242,16 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
                     }
                     else if (!allowed.Contains(version.Id)) throw Invalid("Provider returned an identity that was not requested.");
                     values.Add(version);
+                    if (kind == ResponseKind.PublicVersions) listings.Add(CompatibleVersion.Capture(version, row, decoded.Dates, CaptureListingWire));
                 }
                 var typedVersions = values.ToImmutable();
                 if (kind == ResponseKind.Candidates) typedVersions = ProviderCandidates.Order(typedVersions);
-                result = new(project, typedVersions);
+                result = new(project, typedVersions) { Listings = [.. listings.OrderByDescending(value => value.PublicationTicks)] };
                 token.ThrowIfCancellationRequested();
                 // Every row is valid before the first individually atomic store.
                 if (kind is ResponseKind.Project or ResponseKind.Candidates)
                     Store(root, endpoint, token);
-                else for (var index = 0; index < rows.Length; index++)
+                else if (kind != ResponseKind.PublicVersions) for (var index = 0; index < rows.Length; index++)
                 {
                     token.ThrowIfCancellationRequested();
                     lock (sync) CheckBudget();
@@ -255,7 +268,7 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
                 : new DomainException("Versions.RequestTimeout", "Provider lookup exceeded its deadline", "check the connection or use an explicit bounded timeout", "OperationTimeout");
         }
         catch (HttpRequestException exception)
-        { throw new DomainException("Versions.RequestFailed", "Modrinth request could not be completed", "check the network connection and retry", "ConnectionError", details: exception.Message); }
+        { throw new DomainException("Versions.RequestFailed", kind == ResponseKind.PublicVersions ? "Modrinth version lookup could not be completed" : "Modrinth request could not be completed", "check the network connection and retry", "ConnectionError", details: exception.Message); }
         catch (CacheJsonLimitException exception) { throw Resource("Decode", exception.Message); }
         catch (DomainException exception) when (exception.Id == "ModpackTools.Metadata.ProviderCacheLimit")
         { throw Resource("Decode", exception.Details); }
@@ -272,6 +285,26 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
             if (owned) Cleanup(temporary);
             if (acquired) gate.Release();
         }
+    }
+
+    private string CaptureListingWire(JsonElement value)
+    {
+        using var bytes = new MemoryStream();
+        using (var bounded = new StoreOutput(bytes, long.MaxValue, count =>
+        {
+            lock (sync)
+            {
+                if (count > limits.MaximumListingWireBytes - listingWireBytes) throw Resource(nameof(limits.MaximumListingWireBytes));
+                listingWireBytes += count;
+            }
+        }))
+        using (var writer = new Utf8JsonWriter(bounded, new() { MaxDepth = decode.MaximumDepth }))
+        {
+            // PowerShell's @($null) retains one null dependency occurrence.
+            if (value.ValueKind == JsonValueKind.Null) { writer.WriteStartArray(); writer.WriteNullValue(); writer.WriteEndArray(); }
+            else value.WriteTo(writer);
+        }
+        return System.Text.Encoding.UTF8.GetString(bytes.GetBuffer(), 0, checked((int)bytes.Length));
     }
 
     private void Store(JsonElement row, string endpoint, CancellationToken token)
@@ -302,7 +335,7 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
     }
 
     private void CheckBudget() { if (exhausted is not null) throw exhausted; }
-    private sealed class StoreOutput(Stream destination, long maximumBytes) : Stream
+    private sealed class StoreOutput(Stream destination, long maximumBytes, Action<int>? charge = null) : Stream
     {
         private long written;
         public override bool CanRead => false;
@@ -314,6 +347,7 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
         public override void Write(ReadOnlySpan<byte> buffer)
         {
             if (buffer.Length > maximumBytes - written) throw Resource("CacheBytes");
+            charge?.Invoke(buffer.Length);
             destination.Write(buffer); written += buffer.Length;
         }
         public override void Flush() => destination.Flush();

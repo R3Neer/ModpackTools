@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Globalization;
 using ModpackTools.Core;
 using ModpackTools.Core.Projects;
+using ModpackTools.Core.Providers;
 
 namespace ModpackTools.Cli;
 
@@ -24,6 +25,14 @@ internal sealed record CategoryListEnvelope(int SchemaVersion, bool Ok, string C
 internal sealed record PublicSummary(int Mods, int ResourcesEnabled, int ResourcesDisabled, int Shaders);
 internal sealed record ProjectStatusData(PublicProject Project, PublicSummary Summary);
 internal sealed record ProjectStatusEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, ProjectStatusData Data);
+internal sealed record PublicVersion(int Number, string Id, string Version, string VersionType, string? Filename, string Published, bool Installed)
+{
+    public static PublicVersion From(CompatibleVersionRow row) => new(row.Number, row.Candidate.Version.Id,
+        row.Candidate.Version.VersionNumber, row.Candidate.VersionType, row.Candidate.Filename, row.Candidate.Version.Published.Text, row.Installed);
+}
+internal sealed record PublicVersionList(string ItemName, string ItemType, PublicVersion[] Items);
+internal sealed record VersionListData(PublicProject Project, PublicVersionList Versions);
+internal sealed record VersionListEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, VersionListData Data);
 internal sealed record FailureEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, Failure Error)
 {
     public static FailureEnvelope Create(string command, string[] arguments, Failure error) => new(1, false, command, arguments, error);
@@ -56,6 +65,7 @@ internal sealed record Failure(string Id, string Message, string Category, JsonE
 [JsonSerializable(typeof(SessionEnvelope))]
 [JsonSerializable(typeof(CategoryListEnvelope))]
 [JsonSerializable(typeof(ProjectStatusEnvelope))]
+[JsonSerializable(typeof(VersionListEnvelope))]
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(long))]
 [JsonSerializable(typeof(decimal))]

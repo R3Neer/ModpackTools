@@ -5,7 +5,8 @@ namespace ModpackTools.Core.Data;
 internal static class AtomicJsonCacheFile
 {
     public static void Write(string directory, string path, long maximumBytes, Action<Utf8JsonWriter> serialize,
-        Func<DomainException> limit, Func<string?, DomainException> failed)
+        Func<DomainException> limit, Func<string?, DomainException> failed,
+        Action? beforeCommit = null, JsonWriterOptions writerOptions = default)
     {
         var temporary = Path.Combine(directory, "." + Path.GetFileName(path) + "." + Guid.NewGuid().ToString("N") + ".tmp");
         var ownTemporary = false;
@@ -17,10 +18,11 @@ internal static class AtomicJsonCacheFile
             {
                 ownTemporary = true;
                 using var bounded = new CacheOutput(file, maximumBytes, limit);
-                using var writer = new Utf8JsonWriter(bounded);
+                using var writer = new Utf8JsonWriter(bounded, writerOptions);
                 serialize(writer);
                 writer.Flush();
             }
+            beforeCommit?.Invoke();
             File.Move(temporary, path, overwrite: true);
             ownTemporary = false;
             return;
