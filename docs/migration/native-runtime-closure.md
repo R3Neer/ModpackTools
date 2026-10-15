@@ -40,9 +40,11 @@ Remaining dependency sequence:
    Native process jobs are accepted in72 (black-box7/7 across six scenarios and
    white-box3 controls). Complete Add/Update/Repair composition and structured
    public add/update are accepted in73 (black-box9/9 and white-box3 controls), with
-   pre-publication output preparation and raw before/after graph policy. Public
-   positive checked Add remains a documented isolated-network coverage gap;
-   private complete operation comparisons and an actual public empty update pass.
+   pre-publication output preparation and raw before/after graph policy. Positive
+   public checked Add is additionally accepted in87 using actual Modrinth Fabric
+   API and Packwiz on synthetic data, preview/apply/verified inventory and a
+   nonempty index with matching row hashes and complete physical metadata coverage.
+   Other providers/loaders remain final installed acceptance work.
    Remaining mutation composition/Nu dispatch remain; wire every mutation
    only after its own injected-failure/external-edit gates.
 4. Doctor/build/diff/MRPack freshness, project/settings and all remaining grammar.
@@ -125,3 +127,5 @@ Capability86 accepts internal Native project creation: Core111, black3/3, white2
 
 
 Capability87 accepts public project create and Nushell: CLI118, black3/3 functional (documented harness-only startup warning), white2/2, full parent public gates including stderr-clean actual realPackwiz Nu creation. Public positive Modrinth Add preview/apply/verified listing and nonempty index coverage/hash validation also passed on separate synthetic data. Human/help, remaining mutations/build/diff/doctor and installer/updater remain pending.
+
+Capability88 accepts internal mod distribution side transaction: Core112, black3/3, white2/2, native contracts. AST managed sides, local PSD batches, effective readback, raw graph policy and actual managed refresh/index hashes are covered. Public mod set-side wiring remains pending.
