@@ -22,7 +22,7 @@ public static class SourceTree
 {
     private static readonly EnumerationOptions Enumeration = new() { AttributesToSkip = 0, IgnoreInaccessible = false };
 
-    public static SourceTreeSnapshot Read(string root, SourceTreeReadLimits? limits = null)
+    public static SourceTreeSnapshot Read(string root, SourceTreeReadLimits? limits = null, CancellationToken cancellation = default)
     {
         limits ??= new();
         var invalid = limits.MaximumFiles <= 0 ? nameof(limits.MaximumFiles)
@@ -38,12 +38,13 @@ public static class SourceTree
         var budget = new TreeBudget(absolute, limits);
         try
         {
+            cancellation.ThrowIfCancellationRequested();
             var attributes = File.GetAttributes(absolute);
             FileSystemInfo first = (attributes & FileAttributes.Directory) != 0 ? new DirectoryInfo(absolute) : new FileInfo(absolute);
             CheckLink(first, root);
             if (first is FileInfo file)
             {
-                if (!IsGit(file.Name)) ReadFile(file, ".", files, budget);
+                if (!IsGit(file.Name)) ReadFile(file, ".", files, budget, cancellation);
                 return new(absolute, files);
             }
             var pending = new Stack<DirectoryInfo>();
@@ -51,9 +52,11 @@ public static class SourceTree
             pending.Push((DirectoryInfo)first);
             while (pending.TryPop(out var directory))
             {
+                cancellation.ThrowIfCancellationRequested();
                 using var entries = directory.EnumerateFileSystemInfos("*", Enumeration).GetEnumerator();
                 while (true)
                 {
+                    cancellation.ThrowIfCancellationRequested();
                     current = directory.FullName;
                     if (!entries.MoveNext()) break;
                     var entry = entries.Current;
@@ -66,7 +69,7 @@ public static class SourceTree
                         budget.Directory(child.FullName, relative);
                         pending.Push(child);
                     }
-                    else ReadFile((FileInfo)entry, relative, files, budget);
+                    else ReadFile((FileInfo)entry, relative, files, budget, cancellation);
                 }
             }
             return new(absolute, files);
@@ -90,7 +93,7 @@ public static class SourceTree
         $"Source path '{path}' aliases another protected path", "rename colliding source paths before transacting the project",
         "InvalidOperation", path, details: "Existing spelling: " + original);
 
-    private static void ReadFile(FileInfo file, string relative, Dictionary<string, string> files, TreeBudget budget)
+    private static void ReadFile(FileInfo file, string relative, Dictionary<string, string> files, TreeBudget budget, CancellationToken cancellation)
     {
         budget.File(file.FullName, relative);
         using var stream = new FileStream(file.FullName, FileMode.Open, FileAccess.Read, FileShare.Read, 64 * 1024, FileOptions.SequentialScan);
@@ -101,6 +104,7 @@ public static class SourceTree
             int count;
             while ((count = stream.Read(buffer, 0, 64 * 1024)) != 0)
             {
+                cancellation.ThrowIfCancellationRequested();
                 budget.Bytes(count, file.FullName);
                 hash.AppendData(buffer.AsSpan(0, count));
             }
