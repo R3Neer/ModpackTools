@@ -114,3 +114,5 @@ black3/3 and white two controls/three calls, warning-free AOT and Native default
 Native ownership, exact-byte snapshot/rehash, destination ADS preservation on the
 tested Windows filesystem and typed failures are covered. Public config CLI/Nu
 remains capability83. This does not activate or modify any personal configuration.
+
+Capability83 accepts public structured config get/set and Nushell: CLI116/Core109, black3/3, white2/2 and parent native/protocol/version/Nu gates. Original empty data contract and global context/error priorities are preserved. No personal configuration was activated. Remaining closure above still applies.
