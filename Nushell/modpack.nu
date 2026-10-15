@@ -84,7 +84,7 @@ def owns-native-command [args: list<string>] {
     if (($command | str lowercase) in ['content' 'category']) and (($operation | str lowercase) == 'list') {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
-    if (($command | str lowercase) == 'content') and (($operation | str lowercase) in ['versions' 'search']) {
+    if (($command | str lowercase) == 'content') and (($operation | str lowercase) in ['versions' 'search' 'add' 'update']) {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
     (($command | str lowercase) == 'project') and (($operation | str lowercase) in ['list' 'current' 'use' 'status']) and not ($args | any {|token| $token in ['--help' '-h'] })
@@ -249,6 +249,36 @@ def invoke-native-command [args: list<string>] {
                 if ((field $item number null | describe) != 'int') or (field $item number 0) < 1 or ((field $item installed null | describe) != 'bool') {
                     error make { msg: 'ModpackTools native executable returned invalid version fields.' }
                 }
+            }
+        } else if (($result.command | str lowercase) == 'content') and (($args.1 | str lowercase) in ['add' 'update']) {
+            let transaction = (field (field $result data {}) transaction {})
+            if $result.command != $args.0 or ($result.arguments | length) == 0 or $result.arguments.0 != $args.1 {
+                error make { msg: 'ModpackTools native executable returned an invalid mutation command.' }
+            }
+            for name in ['applied' 'dry_run' 'preview'] {
+                if ((field $transaction $name null | describe) != 'bool') {
+                    error make { msg: 'ModpackTools native executable returned an invalid transaction state.' }
+                }
+            }
+            if ((field $transaction changes null | describe) !~ '^(list|table)') or ((field $transaction change_count null | describe) != 'int') {
+                error make { msg: 'ModpackTools native executable returned invalid transaction changes.' }
+            }
+            let should_apply = (not $transaction.dry_run) and ($transaction.change_count > 0)
+            if $transaction.change_count < 0 or $transaction.change_count != ($transaction.changes | length) or $transaction.preview or $transaction.applied != $should_apply {
+                error make { msg: 'ModpackTools native executable returned contradictory transaction fields.' }
+            }
+            for change in $transaction.changes {
+                validate-string-fields $change ['action' 'path']
+                validate-string-fields $change ['reason'] true
+                if not ($change.action in ['add' 'remove' 'change']) {
+                    error make { msg: 'ModpackTools native executable returned an invalid file action.' }
+                }
+            }
+            if 'diagnostics' in ($transaction | columns) {
+                if (($transaction.diagnostics | describe) !~ '^(list|table)') {
+                    error make { msg: 'ModpackTools native executable returned invalid transaction diagnostics.' }
+                }
+                for diagnostic in $transaction.diagnostics { validate-string-fields $diagnostic ['code' 'path' 'message'] }
             }
         } else if ($result.command | str lowercase) == 'content' {
             let data = (field $result data {})

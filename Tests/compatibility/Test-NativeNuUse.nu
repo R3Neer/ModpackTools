@@ -23,6 +23,11 @@ def main [stub_executable: string] {
     $env.MODPACKTOOLS_CORE_PATH = $stub_executable
     $env.MODPACKTOOLS_TEST_RESPONSE_PATH = $response_path
     let good = {schema_version: 1, ok: true, command: 'project', arguments: ['use' 'fixture'], data: {active_project: 'fixture'}}
+    $env.MODPACKTOOLS_TEST_RESPONSE_EXIT = '0'
+    $good | to json | save --force $response_path
+    if (modpack project use fixture --no-human) != {active_project: 'fixture'} {
+        error make {msg: 'Native Nu response peer did not return its valid control'}
+    }
     for index in 0..11 {
         $env.MODPACKTOOLS_TEST_RESPONSE_EXIT = if $index == 7 { '1' } else { '0' }
         let reply = match $index {
