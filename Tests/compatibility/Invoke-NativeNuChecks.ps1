@@ -58,6 +58,8 @@ try {
     if($LASTEXITCODE -ne 0){throw 'Native Nu build check failed'}
     & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuDiff.nu') ([IO.Path]::GetFullPath($StubExecutable)) ([IO.Path]::GetFullPath($PackwizExecutable))
     if($LASTEXITCODE -ne 0){throw 'Native Nu diff check failed'}
+    & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuDoctor.nu') ([IO.Path]::GetFullPath($StubExecutable)) ([IO.Path]::GetFullPath($PackwizExecutable))
+    if($LASTEXITCODE -ne 0){throw 'Native Nu doctor check failed'}
 } finally {
     $env:MODPACKTOOLS_CORE_PATH=$previousCore; $env:MODPACKTOOLS_CONFIG_HOME=$previousConfig; $env:MODPACKTOOLS_STATE_HOME=$previousState
     $env:APPDATA=$previousAppData; $env:LOCALAPPDATA=$previousLocalAppData

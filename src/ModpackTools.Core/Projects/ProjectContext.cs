@@ -9,3 +9,4 @@ public sealed record ProjectContext(string Id, string Root, string? Name, string
 }
 
 public sealed record ProjectCatalog(string Root, ProjectContext[] Projects);
+public sealed record ProjectCatalogLimits(int MaximumDirectories = 100000, int MaximumProjects = 10000, long MaximumSourceBytes = 64 * 1024 * 1024);

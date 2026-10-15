@@ -81,6 +81,9 @@ def owns-native-command [args: list<string>] {
     let command = ($args | get --optional 0 | default '')
     if $command in ['--version' '-V'] { return true }
     let operation = ($args | get --optional 1 | default '')
+    if ($command | str lowercase) == 'doctor' {
+        return (not ($args | any {|token| ($token | str lowercase) in ['--fix' '--help' '-h'] or ($token | str lowercase | str starts-with '--fix=') }))
+    }
     if (($command | str lowercase) in ['content' 'category']) and (($operation | str lowercase) == 'list') {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
@@ -234,6 +237,25 @@ def invoke-native-command [requested_args: list<string>] {
         if ($args | get 0) in ['--version' '-V'] {
             if $result.command != '--version' or ((field (field (field $result data {}) version {}) version null | describe) != 'string') {
                 error make { msg: 'ModpackTools native executable returned an invalid version result.' }
+            }
+        } else if ($args.0 | str lowercase) == 'doctor' {
+            let doctor = (field (field $result data {}) doctor {})
+            if $result.command != $args.0 or ((field $doctor checks null | describe) !~ '^(list|table)') {
+                error make {msg: 'Native doctor returned invalid checks.'}
+            }
+            for name in ['failures' 'warnings'] {
+                if ((field $doctor $name null | describe) != 'int') or ($doctor | get $name) < 0 {error make {msg: 'Native doctor returned invalid counts.'}}
+            }
+            for check in $doctor.checks {
+                validate-string-fields $check ['section' 'status' 'label' 'value' 'detail']
+                if $check.status not-in ['pass' 'fail' 'warn' 'info'] or ((field $check items null | describe) !~ '^(list|table)') {error make {msg: 'Native doctor returned an invalid check.'}}
+                for item in $check.items {
+                    validate-string-fields $item ['Status' 'Text']
+                    if $item.Status not-in ['pass' 'fail' 'warn' 'info'] {error make {msg: 'Native doctor returned an invalid detail.'}}
+                }
+            }
+            if $doctor.failures != ($doctor.checks | where status == 'fail' | length) or $doctor.warnings != ($doctor.checks | where status == 'warn' | length) {
+                error make {msg: 'Native doctor returned contradictory counts.'}
             }
         } else if ($args.0 | str lowercase) == 'diff' {
             let diff = (field (field $result data {}) diff {})

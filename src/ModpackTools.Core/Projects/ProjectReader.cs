@@ -64,12 +64,32 @@ public static partial class ProjectReader
         { JavaDeclared = javaDeclared, JavaVersion = javaDeclared ? DataScalars.String(javaVersion!) : "" };
     }
 
-    public static ProjectCatalog Discover(string registeredRoot)
+    public static ProjectCatalog Discover(string registeredRoot) => Discover(registeredRoot, null);
+    public static ProjectCatalog Discover(string registeredRoot, ProjectCatalogLimits? limits, CancellationToken cancellation = default)
     {
+        if (limits is not null && (limits.MaximumDirectories <= 0 || limits.MaximumProjects <= 0 || limits.MaximumSourceBytes <= 0))
+            throw new DomainException("Project.InvalidCatalogPolicy", "Project catalog quotas must be positive", "use bounded project catalog quotas");
         var root = Path.GetFullPath(registeredRoot);
-        var projects = Directory.EnumerateDirectories(root, "*", new EnumerationOptions { AttributesToSkip = FileAttributes.Hidden, IgnoreInaccessible = false })
-            .Where(directory => File.Exists(Path.Combine(directory, ".modpack", "project.psd1")))
-            .Select(Read).ToArray();
+        var entries = 0; var found = new List<ProjectContext>(); long sourceBytes = 0;
+        foreach (var directory in Directory.EnumerateDirectories(root, "*", new EnumerationOptions { AttributesToSkip = FileAttributes.Hidden, IgnoreInaccessible = false }))
+        {
+            cancellation.ThrowIfCancellationRequested();
+            if (limits is not null && ++entries > limits.MaximumDirectories) throw new DomainException("Project.CatalogLimit", "Project discovery exceeds its directory quota", "use bounded project catalog quotas", "LimitsExceeded", "MaximumDirectories");
+            if (!File.Exists(Path.Combine(directory, ".modpack", "project.psd1"))) continue;
+            if (limits is not null && found.Count >= limits.MaximumProjects) throw new DomainException("Project.CatalogLimit", "Project discovery exceeds its project quota", "use bounded project catalog quotas", "LimitsExceeded", "MaximumProjects");
+            if (limits is not null)
+                foreach (var relative in new[] { ".modpack/project.psd1", "pack.toml" })
+                {
+                    var path = Path.Combine(directory, relative);
+                    Transactions.WindowsProjectIdentity.GuardAncestors(path);
+                    if (!File.Exists(path)) continue;
+                    var length = new FileInfo(path).Length;
+                    if (length > limits.MaximumSourceBytes - sourceBytes) throw new DomainException("Project.CatalogLimit", "Project discovery exceeds its aggregate source byte quota", "use bounded project catalog quotas", "LimitsExceeded", "MaximumSourceBytes");
+                    sourceBytes += length;
+                }
+            found.Add(Read(directory));
+        }
+        var projects = found.ToArray();
         var duplicates = projects.GroupBy(project => project.Id, StringComparer.OrdinalIgnoreCase).Where(group => group.Count() > 1).ToArray();
         if (duplicates.Length != 0)
         {

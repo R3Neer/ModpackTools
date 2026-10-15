@@ -35,7 +35,7 @@ try
     var options = PresentationOptions.Parse(args);
     command = options.Arguments.FirstOrDefault() ?? "";
     commandArguments = options.Arguments.Skip(1).ToArray();
-    if (new[] { "build", "diff" }.Contains(command, StringComparer.OrdinalIgnoreCase) && !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
+    if (new[] { "build", "diff", "doctor" }.Contains(command, StringComparer.OrdinalIgnoreCase) && !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
     {
         var configurationDirectory = Environment.GetEnvironmentVariable("MODPACKTOOLS_CONFIG_HOME");
         if (string.IsNullOrWhiteSpace(configurationDirectory)) configurationDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModpackTools");
@@ -45,6 +45,7 @@ try
         try
         {
             if (command.Equals("build", StringComparison.OrdinalIgnoreCase)) await BuildCommand.RunAsync(command, commandArguments, options.Project, context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject, configurationDirectory, cancellation.Token);
+            else if (command.Equals("doctor", StringComparison.OrdinalIgnoreCase)) await DoctorCommand.RunAsync(command, commandArguments, options.Project, context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject, configurationDirectory, cancellation.Token);
             else await DiffCommand.RunAsync(command, commandArguments, options.Project, context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject, configurationDirectory, cancellation.Token);
         }
         finally { Console.CancelKeyPress -= cancel; }
