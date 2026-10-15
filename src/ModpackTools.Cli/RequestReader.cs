@@ -4,7 +4,7 @@ namespace ModpackTools.Cli;
 
 internal sealed class ProtocolException(string message) : Exception(message);
 internal sealed record InvocationContext(string? ActiveProject);
-internal sealed record NativeRequest(string[] Arguments, InvocationContext? Context);
+internal sealed record NativeRequest(string[] Arguments, InvocationContext? Context, string? ReviewToken);
 
 internal static class RequestReader
 {
@@ -50,7 +50,7 @@ internal static class RequestReader
         {
             if (!names.Add(property.Name))
                 throw new ProtocolException($"Duplicate request field '{property.Name}'.");
-            if (property.Name is not ("schema_version" or "arguments" or "context"))
+            if (property.Name is not ("schema_version" or "arguments" or "context" or "review_token"))
                 throw new ProtocolException($"Unknown request field '{property.Name}'.");
         }
 
@@ -94,6 +94,14 @@ internal static class RequestReader
                 throw new ProtocolException("Context active_project cannot contain NUL.");
             context = new(activeProject);
         }
-        return new(result, context);
+        string? reviewToken = null;
+        if (root.TryGetProperty("review_token", out var review))
+        {
+            if (review.ValueKind != JsonValueKind.String || review.GetString() is not { Length: 64 } text ||
+                text.Any(character => !char.IsAsciiHexDigit(character)))
+                throw new ProtocolException("Request review_token must be exactly 64 hexadecimal characters.");
+            reviewToken = text;
+        }
+        return new(result, context, reviewToken);
     }
 }

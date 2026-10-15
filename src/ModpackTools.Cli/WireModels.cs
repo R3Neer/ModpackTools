@@ -57,7 +57,8 @@ internal sealed record PublicInventoryItem(int? Number, string Id, string? Name,
     string? Category, bool Pinned, string State, int? Priority, string? VersionId, string? ProjectId = null, string? Slug = null);
 internal sealed record TransactionData(PublicTransaction Transaction,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] PublicInventoryItem[]? ResourcePacks = null);
-internal sealed record TransactionEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, TransactionData Data);
+internal sealed record TransactionEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, TransactionData Data,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] RemovalPresentation? Presentation = null);
 internal sealed record FailureEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, Failure Error)
 {
     public static FailureEnvelope Create(string command, string[] arguments, Failure error) => new(1, false, command, arguments, error);

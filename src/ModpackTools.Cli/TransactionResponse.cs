@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ModpackTools.Core;
 using ModpackTools.Core.Transactions;
+using ModpackTools.Core.Resolution;
 
 namespace ModpackTools.Cli;
 
@@ -11,6 +12,13 @@ internal sealed class TransactionResponse(string command, string[] arguments, bo
     private NativeOutputBuffer? buffer;
     private PublicTransactionChange[]? changes;
     private PublicInventoryItem[]? resources;
+    private RemovalPresentation? presentation;
+
+    public ValueTask PrepareRemovalAsync(TransactionPreview<RemovalPlan> preview, CancellationToken token)
+    {
+        presentation = RemovalPresentation.From(preview);
+        return PrepareAsync(preview, token);
+    }
 
     public ValueTask PrepareAsync<T>(TransactionPreview<T> preview, CancellationToken token) => PrepareAsync(preview, token, null);
 
@@ -43,7 +51,7 @@ internal sealed class TransactionResponse(string command, string[] arguments, bo
     {
         buffer?.Dispose(); buffer = new("Content transaction", "reduce the requested batch before applying it");
         using var writer = new Utf8JsonWriter(buffer);
-        JsonSerializer.Serialize(writer, new TransactionEnvelope(1, true, command, arguments, new(transaction, resources)), WireJsonContext.Default.TransactionEnvelope);
+        JsonSerializer.Serialize(writer, new TransactionEnvelope(1, true, command, arguments, new(transaction, resources), presentation), WireJsonContext.Default.TransactionEnvelope);
     }
     public void Dispose() => buffer?.Dispose();
 }

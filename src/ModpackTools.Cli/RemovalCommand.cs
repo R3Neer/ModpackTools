@@ -10,7 +10,7 @@ namespace ModpackTools.Cli;
 internal static class RemovalCommand
 {
     public static async Task RunAsync(string command, string[] arguments, string? requestedProject, string? activeProject,
-        string configurationDirectory, CancellationToken cancellation)
+        string configurationDirectory, CancellationToken cancellation, bool includePresentation = false, string? reviewToken = null)
     {
         var values = new List<string>(); var options = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         for (var index = 1; index < arguments.Length; index++)
@@ -47,13 +47,15 @@ internal static class RemovalCommand
         state = Path.GetFullPath(state); var dryRun = options.ContainsKey("dry-run");
         using var previewOutput = new TransactionResponse(command, arguments, dryRun, project.Root, isPreview: !dryRun);
         var preview = await RemovalOperation.ExecuteAsync(project, new(planning, true), configurationDirectory, state, now, ResolveTool, Environment.ProcessPath!,
-            cancellation: cancellation, prepareOutput: previewOutput.PrepareAsync<RemovalPlan>).ConfigureAwait(false);
+            cancellation: cancellation, prepareOutput: includePresentation ? previewOutput.PrepareRemovalAsync : previewOutput.PrepareAsync<RemovalPlan>).ConfigureAwait(false);
+        if (reviewToken is not null)
+            RemovalPresentation.From(new(preview.Result, preview.Changes, preview.Expectation)).AssertReviewed(reviewToken);
         // Machine mode never reads terminal input. Explicit --yes authorizes the
         // reviewed, source-bound application; otherwise return its safe preview.
         if (dryRun || preview.Changes.IsEmpty || !options.ContainsKey("yes")) { previewOutput.Write(preview); return; }
         using var output = new TransactionResponse(command, arguments, false, project.Root);
         var result = await RemovalOperation.ExecuteAsync(project, new(planning), configurationDirectory, state, now, ResolveTool, Environment.ProcessPath!,
-            expected: preview.Expectation, cancellation: cancellation, prepareOutput: output.PrepareAsync<RemovalPlan>).ConfigureAwait(false);
+            expected: preview.Expectation, cancellation: cancellation, prepareOutput: includePresentation ? output.PrepareRemovalAsync : output.PrepareAsync<RemovalPlan>).ConfigureAwait(false);
         output.Write(result);
         PackwizObservation ResolveTool() => PackwizRefresh.Resolve(ConfigurationReader.ReadPackwizPath(configurationDirectory), Environment.GetEnvironmentVariable("PATH"),
             Path.Combine(configurationDirectory, "tools", "packwiz", "dfd8b68", "packwiz.exe"), "dfd8b68");
