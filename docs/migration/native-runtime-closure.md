@@ -116,3 +116,5 @@ tested Windows filesystem and typed failures are covered. Public config CLI/Nu
 remains capability83. This does not activate or modify any personal configuration.
 
 Capability83 accepts public structured config get/set and Nushell: CLI116/Core109, black3/3, white2/2 and parent native/protocol/version/Nu gates. Original empty data contract and global context/error priorities are preserved. No personal configuration was activated. Remaining closure above still applies.
+
+Capability84 accepts internal transactional existing-project registration: Core110, black3/3, white2/2, warning-free AOT/default native gates. Catalog ownership serializes cross-child duplicate IDs; protected files and caller-output failure are covered. Public register wiring remains pending.
