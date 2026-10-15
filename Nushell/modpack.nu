@@ -87,7 +87,7 @@ def owns-native-command [args: list<string>] {
         if $name == '--version' or $command == '-V' {return true}
         if $name == 'doctor' {return (not ($args | any {|token| ($token | str lowercase) == '--fix' or ($token | str lowercase | str starts-with '--fix=') }))}
         if $name == 'project' {return ($operation in ['list' 'current' 'use' 'status'])}
-        if $name == 'content' {return ($operation in ['list' 'search' 'versions'])}
+        if $name == 'content' {return ($operation in ['list' 'search' 'versions' 'remove'])}
         if $name == 'category' {return ($operation == 'list')}
         if $name == 'config' {return ($operation == 'get')}
         return ($name == 'diff')
@@ -155,7 +155,7 @@ def order-global-options [args: list<string>] {
 def validate-read-presentation [result: record, args: list<string>] {
     let command = ($args.0 | str lowercase)
     let operation = ($args | get --optional 1 | default '' | str lowercase)
-    let expected = if $command == 'content' and $operation == 'list' {'inventory'} else if $command == 'config' and $operation == 'get' {'configuration'} else if $command == 'project' and $operation == 'use' {'session'} else if $command == 'diff' {'diff'} else {null}
+    let expected = if $command == 'content' and $operation == 'list' {'inventory'} else if $command == 'content' and $operation == 'remove' {'removal'} else if $command == 'config' and $operation == 'get' {'configuration'} else if $command == 'project' and $operation == 'use' {'session'} else if $command == 'diff' {'diff'} else {null}
     let presentation = (field $result presentation null)
     if '--no-human' in $args or $expected == null {
         if $presentation != null {error make {msg: 'Native executable returned unrequested presentation.'}}
@@ -163,6 +163,23 @@ def validate-read-presentation [result: record, args: list<string>] {
     }
     if (field $presentation kind null) != $expected {error make {msg: 'Native executable returned mismatched read presentation.'}}
     match $expected {
+        'removal' => {
+            validate-string-fields $presentation ['kind' 'review_token']
+            if $presentation.review_token !~ '^[0-9a-fA-F]{64}$' {error make {msg: 'Native removal returned an invalid review identifier.'}}
+            for name in ['requested' 'items' 'health_items'] {if ((field $presentation $name null | describe) !~ '^(list|table)') {error make {msg: 'Native removal returned invalid presentation lists.'}}}
+            if ($presentation.requested | is-empty) or ($presentation.requested | any {|id| ($id | describe) != 'string' or $id == ''}) {error make {msg: 'Native removal returned invalid requested identities.'}}
+            for item in $presentation.items {
+                validate-string-fields $item ['id' 'name' 'reason']
+                validate-string-fields $item ['version_id'] true
+                if $item.id == '' or $item.reason not-in ['requested' 'dependent' 'unused dependency'] {error make {msg: 'Native removal returned an invalid planned item.'}}
+            }
+            let identities = ($presentation.items | get id)
+            if ($identities | uniq | length) != ($identities | length) or ($presentation.requested | any {|id| $id not-in $identities}) {error make {msg: 'Native removal returned contradictory selected identities.'}}
+            for item in $presentation.health_items {
+                validate-string-fields $item ['status' 'text']
+                if $item.status not-in ['pass' 'fail' 'warn' 'info'] {error make {msg: 'Native removal returned an invalid health status.'}}
+            }
+        }
         'inventory' => {
             for name in ['groups' 'health_items'] {if ((field $presentation $name null | describe) !~ '^(list|table)') {error make {msg: 'Native inventory presentation returned invalid lists.'}}}
             for group in $presentation.groups {
@@ -308,7 +325,7 @@ def validate-native-transaction [result: record, args: list<string>] {
     }
 }
 
-def invoke-native-command [requested_args: list<string>] {
+def invoke-native-command [requested_args: list<string>, review_token: any = null] {
     let args = ($requested_args | each {|token| match $token {
         '-n' => '--dry-run'
         '-y' => '--yes'
@@ -324,7 +341,7 @@ def invoke-native-command [requested_args: list<string>] {
     let request_path = ($nu.temp-dir | path join $'modpacktools-((random uuid)).native.json')
     # The child inherits Nu's exported environment, including ENV_CONVERSIONS.
     # A raw JSON snapshot would bypass those conversions for session values.
-    let request = {schema_version: 1, arguments: $native_args}
+    let request = ({schema_version: 1, arguments: $native_args} | merge (if $review_token == null {{}} else {{review_token: $review_token}}))
     $request | to json | save --force $request_path
     let capture = try {
         ^$executable --request-path $request_path | complete
@@ -730,15 +747,26 @@ def unwrap-result [envelope: record] {
 # Unmigrated commands use the PowerShell engine. The bridge always requests one JSON
 # envelope internally. Normal Nu usage consumes that machine payload silently and
 # leaves only R3CLI presentation visible; --no-human exposes the parsed Nu value.
+def assert-success [envelope: record] {
+    if (field $envelope ok false) {return}
+    let failure = (field $envelope error {})
+    let message = (field $failure message 'ModpackTools failed.')
+    let suffix = ([(field $failure id '') (field $failure category '')] | where {|value| $value != ''} | str join ' · ')
+    error make {msg: (if $suffix == '' {$message} else {$'($message) [($suffix)]'})}
+}
+
 export def --env --wrapped main [...args: string] {
     validate-nu-option-style $args
     let args = (order-global-options $args)
     let machine_output = (wants-machine-output $args)
+    let native_removal = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'content') and (($args | get --optional 1 | default '' | str lowercase) == 'remove') and (not ($args | any {|token| $token in ['--help' '-h']}))
+    # Even explicit --yes first validates and renders a nonmutating observation.
+    let first_args = if $native_removal {$args | where {|token| $token not-in ['--yes' '-y']}} else {$args}
     let request = ({
         arguments: $args
         human_stderr_terminal: (is-terminal --stderr)
     } | to json)
-    let raw = if (owns-native-command $args) { invoke-native-command $args } else { invoke-bridge $request }
+    let raw = if (owns-native-command $args) { invoke-native-command $first_args } else { invoke-bridge $request }
     let text = ($raw | str trim)
 
     if $text == '' {
@@ -751,21 +779,31 @@ export def --env --wrapped main [...args: string] {
         error make { msg: $'ModpackTools returned invalid JSON: ($err.msg)' }
     }
 
-    if not (field $envelope ok false) {
-        let failure = (field $envelope error {})
-        let message = (field $failure message 'ModpackTools failed.')
-        let id = (field $failure id '')
-        let category = (field $failure category '')
-        let suffix = ([
-            (if $id == '' { null } else { $id })
-            (if $category == '' { null } else { $category })
-        ] | compact | str join ' · ')
-        error make { msg: (if $suffix == '' { $message } else { $'($message) [($suffix)]' }) }
-    }
+    assert-success $envelope
 
     if 'help' in (field $envelope presentation {} | columns) {
         if $machine_output {return (unwrap-result $envelope)}
         Native-Presentation render $envelope $args
+        return
+    }
+    if $native_removal {
+        Native-Presentation render $envelope $args
+        if $envelope.data.transaction.dry_run or $envelope.data.transaction.change_count == 0 {return}
+        let approved = if ($args | any {|token| $token in ['--yes' '-y']}) {true} else if not (is-terminal --stdin) {false} else {
+            Native-Presentation render $envelope $args 'Apply this removal? [y/N]'
+            let answer = (try {input --reedline} catch {null})
+            $answer != null and (($answer | str trim | str lowercase) in ['y' 'yes'])
+        }
+        if not $approved {
+            Native-Presentation render $envelope $args 'Removal cancelled; no project changes applied.'
+            return
+        }
+        let applied = (invoke-native-command ($first_args | append '--yes') $envelope.presentation.review_token | from json)
+        assert-success $applied
+        try {Native-Presentation render $applied $args} catch {|err|
+            let receipt = if $applied.data.transaction.applied {'Removal was applied, but its presentation failed.'} else {'Removal returned without applying changes, but its presentation failed.'}
+            error make {msg: $'($receipt) ($err.msg)'}
+        }
         return
     }
     if ((field $envelope command '') == 'project') and (($envelope.arguments | get --optional 0 | default '') == 'use') {

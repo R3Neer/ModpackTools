@@ -2,29 +2,32 @@ using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 using ModpackTools.Core;
+using ModpackTools.Core.Diagnostics;
 using ModpackTools.Core.Resolution;
 using ModpackTools.Core.Transactions;
 
 namespace ModpackTools.Cli;
 
-internal sealed record RemovalDisplayRow(string Id, string Name, string Reason);
-internal sealed record RemovalPresentation(string Kind, string ReviewToken, string[] Requested, RemovalDisplayRow[] Items)
+internal sealed record RemovalDisplayRow(string Id, string Name, string? VersionId, string Reason);
+internal sealed record RemovalPresentation(string Kind, string ReviewToken, string[] Requested, RemovalDisplayRow[] Items, DoctorItem[] HealthItems)
 {
     public static RemovalPresentation From(TransactionPreview<RemovalPlan> preview)
     {
-        var items = preview.Result.Changes.Select(change => new RemovalDisplayRow(change.Id, change.Before.Item.Name, change.Reason)).ToArray();
+        var items = preview.Result.Changes.Select(change => new RemovalDisplayRow(change.Id, change.Before.Item.Name, change.Before.Graph.VersionId, change.Reason)).ToArray();
         var requested = preview.Result.Requested.ToArray();
+        var health = HealthDisplay.Read(preview.Result.Report, false, new(), compact: true).ToArray();
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         // Length-prefixed UTF-8 fields distinguish null, empty and boundaries.
         // Hash both the protected source and all facts shown for approval.
-        Add("ModpackTools/removal-review/v1");
+        Add("ModpackTools/removal-review/v2");
         Add(preview.Expectation.Project.CanonicalRoot); Add(preview.Expectation.Project.FileIdentity);
         Add(preview.Expectation.BeforeFingerprint);
         Count(preview.Expectation.Changes.Length);
         foreach (var change in preview.Expectation.Changes) { Add(change.Path); Add(change.Before); Add(change.After); }
         Count(requested.Length); foreach (var id in requested) Add(id);
-        Count(items.Length); foreach (var item in items) { Add(item.Id); Add(item.Name); Add(item.Reason); }
-        return new("removal", Convert.ToHexString(hash.GetHashAndReset()), requested, items);
+        Count(items.Length); foreach (var item in items) { Add(item.Id); Add(item.Name); Add(item.VersionId); Add(item.Reason); }
+        Count(health.Length); foreach (var item in health) { Add(item.Status); Add(item.Text); }
+        return new("removal", Convert.ToHexString(hash.GetHashAndReset()), requested, items, health);
 
         void Count(int value)
         {

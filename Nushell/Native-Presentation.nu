@@ -15,7 +15,7 @@ def validate-package [] {
     }
 }
 
-export def render [envelope: record, args: list<string>] {
+export def render [envelope: record, args: list<string>, notice: string = ''] {
     if $envelope.command == '--version' {
         print --stderr $'ModpackTools ($envelope.data.version.version)'
         return
@@ -30,7 +30,7 @@ export def render [envelope: record, args: list<string>] {
     let configuration = ($env.MODPACKTOOLS_CONFIG_HOME? | default ($env.LOCALAPPDATA | path join 'ModpackTools'))
     let width = (try {term size | get columns} catch {80})
     let request_path = ($nu.temp-dir | path join $'modpacktools-human-((random uuid)).json')
-    let request = {envelope: $envelope, colour: ($colour | str lowercase), ascii: ('--ascii' in $args), terminal: (is-terminal --stderr), width: (if $width > 0 {$width} else {80}), theme_path: ($configuration | path join 'theme.toml')}
+    let request = {envelope: $envelope, notice: $notice, colour: ($colour | str lowercase), ascii: ('--ascii' in $args), terminal: (is-terminal --stderr), width: (if $width > 0 {$width} else {80}), theme_path: ($configuration | path join 'theme.toml')}
     $request | to json | save --force $request_path
     let capture = try {^$nu.current-exe --no-config-file $RENDERER $request_path | complete} catch {|err|
         rm --force $request_path
