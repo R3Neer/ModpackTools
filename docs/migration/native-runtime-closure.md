@@ -108,3 +108,9 @@ protocol/version/fresh Nu including real create/list parity and peer guards.
 All structured category operations are now native. SourceCore107 is unchanged.
 Human presentation, other mutations/settings/project operations and the native
 installer/updater remain necessary for complete PowerShell-free operation.
+
+Capability82 accepts the internal atomic configuration writer: Core108,
+black3/3 and white two controls/three calls, warning-free AOT and Native defaults.
+Native ownership, exact-byte snapshot/rehash, destination ADS preservation on the
+tested Windows filesystem and typed failures are covered. Public config CLI/Nu
+remains capability83. This does not activate or modify any personal configuration.
