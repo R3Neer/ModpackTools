@@ -122,3 +122,6 @@ Capability84 accepts internal transactional existing-project registration: Core1
 Capability85 accepts public structured project register and Nushell: CLI117, black3/3, white2/2 and full parent public gates. Original empty machine data and error priorities are preserved. Project create and remaining runtime/install/update closure remain pending.
 
 Capability86 accepts internal Native project creation: Core111, black3/3, white2/2, native contracts and actual Packwiz explicit Fabric initialization on isolated data. Final publication is one non-overwriting directory move after preparation/output/fingerprint validation. Public create wiring remains pending; process-crash private workspace inspection remains explicit.
+
+
+Capability87 accepts public project create and Nushell: CLI118, black3/3 functional (documented harness-only startup warning), white2/2, full parent public gates including stderr-clean actual realPackwiz Nu creation. Public positive Modrinth Add preview/apply/verified listing and nonempty index coverage/hash validation also passed on separate synthetic data. Human/help, remaining mutations/build/diff/doctor and installer/updater remain pending.
