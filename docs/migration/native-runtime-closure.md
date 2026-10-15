@@ -90,3 +90,8 @@ Native Core104/CLI112, black four calls in three scenarios, white two controls,
 protocol/version/fresh Nu passed. Resource rows are prepared before publication
 without rescanning inventory, and dry-run omits resource_packs as the original.
 Human presentation and the remaining installation/runtime closure remain pending.
+
+Capability79 accepts public structured category remove and Nu dispatch: Native
+Core106/CLI114, black3/3 and white2, default/protocol/version/Nu checks passed.
+Assignment projection is indexed once; reserved-selector priority and truthful
+postcommit cache errors are independently covered. Category create remains pending.
