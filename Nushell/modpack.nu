@@ -90,7 +90,7 @@ def owns-native-command [args: list<string>] {
     if ($command | str lowercase) == 'resource-pack' {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
-    if (($command | str lowercase) == 'category') and (($operation | str lowercase) in ['assign' 'clear' 'remove']) {
+    if (($command | str lowercase) == 'category') and (($operation | str lowercase) in ['assign' 'clear' 'remove' 'create']) {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
     (($command | str lowercase) == 'project') and (($operation | str lowercase) in ['list' 'current' 'use' 'status']) and not ($args | any {|token| $token in ['--help' '-h'] })
@@ -255,11 +255,16 @@ def invoke-native-command [args: list<string>] {
                 }
             }
         } else if ($result.command | str lowercase) == 'category' {
-            let categories = (field (field $result data {}) categories {})
+            let category_data = (field $result data {})
+            let categories = (field $category_data categories {})
+            if 'diagnostics' in ($category_data | columns) {
+                if (($category_data.diagnostics | describe) !~ '^(list|table)') { error make {msg: 'Native category diagnostics are invalid.'} }
+                for diagnostic in $category_data.diagnostics { validate-string-fields $diagnostic ['code' 'path' 'message'] }
+            }
             let project = (field $categories project {})
             validate-string-fields $project ['id' 'root' 'output_name']
             validate-string-fields $project ['name' 'version' 'minecraft' 'loader' 'loader_version'] true
-            if $result.command != $args.0 or ($result.arguments | length) != 1 or $result.arguments.0 != $args.1 or ((field $categories items null | describe) !~ '^(list|table)') {
+            if $result.command != $args.0 or ($result.arguments | length) == 0 or $result.arguments.0 != $args.1 or (($args.1 | str lowercase) == 'list' and ($result.arguments | length) != 1) or (($args.1 | str lowercase) == 'create' and ($result.arguments | length) < 2) or ((field $categories items null | describe) !~ '^(list|table)') {
                 error make { msg: 'ModpackTools native executable returned an invalid category list.' }
             }
             for item in $categories.items {

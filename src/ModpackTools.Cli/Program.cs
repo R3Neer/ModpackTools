@@ -52,7 +52,7 @@ try
         return 0;
     }
     if (command.Equals("category", StringComparison.OrdinalIgnoreCase) && commandArguments.FirstOrDefault() is { } classification
-        && new[] { "assign", "clear", "remove" }.Contains(classification, StringComparer.OrdinalIgnoreCase)
+        && new[] { "assign", "clear", "remove", "create" }.Contains(classification, StringComparer.OrdinalIgnoreCase)
         && !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
     {
         var configurationDirectory = Environment.GetEnvironmentVariable("MODPACKTOOLS_CONFIG_HOME");
@@ -62,9 +62,14 @@ try
         Console.CancelKeyPress += cancel;
         try
         {
-            await ClassificationCommand.RunAsync(command, commandArguments, options.Project,
-                context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject,
-                Path.GetFullPath(configurationDirectory), cancellation.Token);
+            if (classification.Equals("create", StringComparison.OrdinalIgnoreCase))
+                await CategoryCreationCommand.RunAsync(command, commandArguments, options.Project,
+                    context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject,
+                    Path.GetFullPath(configurationDirectory), cancellation.Token);
+            else
+                await ClassificationCommand.RunAsync(command, commandArguments, options.Project,
+                    context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject,
+                    Path.GetFullPath(configurationDirectory), cancellation.Token);
         }
         finally { Console.CancelKeyPress -= cancel; }
         return 0;

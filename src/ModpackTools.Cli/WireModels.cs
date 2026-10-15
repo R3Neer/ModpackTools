@@ -4,6 +4,7 @@ using System.Globalization;
 using ModpackTools.Core;
 using ModpackTools.Core.Projects;
 using ModpackTools.Core.Providers;
+using ModpackTools.Core.Inventory;
 
 namespace ModpackTools.Cli;
 
@@ -19,8 +20,13 @@ internal sealed record ProjectListEnvelope(int SchemaVersion, bool Ok, string Co
 internal sealed record SessionData(string? ActiveProject);
 internal sealed record SessionEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, SessionData Data);
 internal sealed record PublicCategory(int Number, string Id, string Name, int? Order, int ModCount, bool Unclassified);
-internal sealed record PublicCategories(PublicProject Project, PublicCategory[] Items);
-internal sealed record CategoryListData(PublicCategories Categories);
+internal sealed record PublicCategories(PublicProject Project, PublicCategory[] Items)
+{
+    public static PublicCategories From(CategoryListView view) => new(PublicProject.From(view.Project),
+        view.Categories.Select(row => new PublicCategory(row.ReferenceNumber, row.Id, row.Name, row.Order, row.ModCount, row.IsUnclassified)).ToArray());
+}
+internal sealed record CategoryListData(PublicCategories Categories,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] PublicTransactionDiagnostic[]? Diagnostics = null);
 internal sealed record CategoryListEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, CategoryListData Data);
 internal sealed record PublicSummary(int Mods, int ResourcesEnabled, int ResourcesDisabled, int Shaders);
 internal sealed record ProjectStatusData(PublicProject Project, PublicSummary Summary);

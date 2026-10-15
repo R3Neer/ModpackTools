@@ -34,12 +34,7 @@ internal sealed class TransactionResponse(string command, string[] arguments, bo
         // work may replace Applied=true with an unapplied result.
         if (!result.Diagnostics.IsEmpty)
         {
-            var diagnostics = result.Diagnostics.Take(15).Select(diagnostic => new PublicTransactionDiagnostic(
-                diagnostic.Code[..Math.Min(64, diagnostic.Code.Length)], diagnostic.Path,
-                diagnostic.Message[..Math.Min(2048, diagnostic.Message.Length)])).ToList();
-            if (result.Diagnostics.Length > 15)
-                diagnostics.Add(new("Transaction.AdditionalDiagnostics", root, $"{result.Diagnostics.Length - 15} additional transaction diagnostics; inspect native recovery state"));
-            Serialize(new(result.Applied, dryRun, false, changes.Length, changes, [.. diagnostics]));
+            Serialize(new(result.Applied, dryRun, false, changes.Length, changes, ResponseDiagnostics.Bounded(result.Diagnostics, root)));
         }
         Console.OpenStandardOutput().Write(buffer.GetBuffer(), 0, checked((int)buffer.Length)); Console.WriteLine();
     }
