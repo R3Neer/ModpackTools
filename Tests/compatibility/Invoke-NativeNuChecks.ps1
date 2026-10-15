@@ -50,6 +50,8 @@ try {
     } finally {$jar.Dispose()}
     & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuModSide.nu') ([IO.Path]::GetFullPath($StubExecutable))
     if($LASTEXITCODE -ne 0){throw 'Native Nu mod side check failed'}
+    & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuAliases.nu') ([IO.Path]::GetFullPath($PackwizExecutable))
+    if($LASTEXITCODE -ne 0){throw 'Native Nu short alias check failed'}
     & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuRemoval.nu') ([IO.Path]::GetFullPath($StubExecutable)) ([IO.Path]::GetFullPath($PackwizExecutable))
     if($LASTEXITCODE -ne 0){throw 'Native Nu removal check failed'}
     & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuBuild.nu') ([IO.Path]::GetFullPath($StubExecutable)) ([IO.Path]::GetFullPath($PackwizExecutable))

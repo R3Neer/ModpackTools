@@ -187,7 +187,14 @@ def validate-native-transaction [result: record, args: list<string>] {
     }
 }
 
-def invoke-native-command [args: list<string>] {
+def invoke-native-command [requested_args: list<string>] {
+    let args = ($requested_args | each {|token| match $token {
+        '-n' => '--dry-run'
+        '-y' => '--yes'
+        '-V' => '--version'
+        '-h' => '--help'
+        _ => $token
+    }})
     let executable = $env.MODPACKTOOLS_CORE_PATH
     if not ($executable | path exists) {
         error make { msg: 'The configured ModpackTools native executable does not exist.' }
