@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text.Json;
 
 if (args.FirstOrDefault() == "--inspect-configuration-write") return ConfigurationWriteInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-project-registration") return ProjectRegistrationInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-category-creation") return CategoryCreationInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-resource-operation") return ResourceOperationInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-forge-manifest") return RootManifestInspection.Run(args, true);
@@ -319,6 +320,7 @@ ResourceOperationContracts.VerifyAsync().GetAwaiter().GetResult();
 CategoryRemovalContracts.VerifyAsync().GetAwaiter().GetResult();
 CategoryCreationContracts.VerifyAsync().GetAwaiter().GetResult();
 ConfigurationWriteContracts.VerifyAsync().GetAwaiter().GetResult();
+ProjectRegistrationContracts.VerifyAsync().GetAwaiter().GetResult();
 NativeToolContracts.VerifyAsync().GetAwaiter().GetResult();
 ArtifactProviderContracts.VerifyAsync().GetAwaiter().GetResult();
 ProjectHealthContracts.VerifyAsync().GetAwaiter().GetResult();
