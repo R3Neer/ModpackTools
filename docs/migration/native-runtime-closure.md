@@ -84,3 +84,9 @@ Capability77 accepts the internal complete resource-pack enable/move/disable
 transaction and shared order editor: Native Core103, black4/4 and white2. The
 public command must still preserve transaction plus resource_packs machine data
 and Nu validation before it can be declared migrated.
+
+Capability78 accepts public structured resource-pack enable/move/disable and Nu:
+Native Core104/CLI112, black four calls in three scenarios, white two controls,
+protocol/version/fresh Nu passed. Resource rows are prepared before publication
+without rescanning inventory, and dry-run omits resource_packs as the original.
+Human presentation and the remaining installation/runtime closure remain pending.
