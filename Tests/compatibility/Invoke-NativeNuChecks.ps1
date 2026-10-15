@@ -54,6 +54,22 @@ try {
     if($LASTEXITCODE -ne 0){throw 'Native Nu short alias check failed'}
     & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuHumanReceipts.nu') ([IO.Path]::GetFullPath($PackwizExecutable))
     if($LASTEXITCODE -ne 0){throw 'Native Nu human transaction receipt check failed'}
+    # Add only owned offline fixtures; no real Default Options/modpack is used.
+    foreach($fixtureEntry in @(
+        @{Path=(Join-Path $sideMods 'defaultoptions-fixture.jar');Entry='fabric.mod.json';Text='{"schemaVersion":1,"id":"defaultoptions","name":"Default Options","version":"1.0.0","environment":"*"}'},
+        @{Path=(Join-Path $projects 'Nu Native Pack-1.21.1/resourcepacks/alpha.zip');Entry='pack.mcmeta';Text='{"pack":{"pack_format":34,"description":"Alpha UI fixture"}}'},
+        @{Path=(Join-Path $projects 'Nu Native Pack-1.21.1/resourcepacks/beta.zip');Entry='pack.mcmeta';Text='{"pack":{"pack_format":34,"description":"Beta UI fixture"}}'}
+    )){
+        [void][IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($fixtureEntry.Path))
+        $archive=[IO.Compression.ZipArchive]::new([IO.File]::Create($fixtureEntry.Path),[IO.Compression.ZipArchiveMode]::Create)
+        try{$writer=[IO.StreamWriter]::new($archive.CreateEntry($fixtureEntry.Entry).Open(),[Text.UTF8Encoding]::new($false));try{$writer.Write($fixtureEntry.Text)}finally{$writer.Dispose()}}finally{$archive.Dispose()}
+    }
+    $resourceConfiguration=Join-Path $projects 'Nu Native Pack-1.21.1/config/defaultoptions-common.toml'
+    [void][IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($resourceConfiguration))
+    if(Test-Path -LiteralPath $resourceConfiguration){throw 'Resource fixture must own a new Default Options configuration'}
+    [IO.File]::WriteAllText($resourceConfiguration,"# Owned offline fixture`ndefaultResourcePacks = []`nunknownSentinel = 'preserve me'`n",[Text.UTF8Encoding]::new($false))
+    & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuHumanResources.nu')
+    if($LASTEXITCODE -ne 0){throw 'Native Nu human resource check failed'}
     & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuRemoval.nu') ([IO.Path]::GetFullPath($StubExecutable)) ([IO.Path]::GetFullPath($PackwizExecutable))
     if($LASTEXITCODE -ne 0){throw 'Native Nu removal check failed'}
     & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuBuild.nu') ([IO.Path]::GetFullPath($StubExecutable)) ([IO.Path]::GetFullPath($PackwizExecutable))

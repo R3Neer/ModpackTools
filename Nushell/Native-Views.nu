@@ -116,6 +116,11 @@ def transaction-summary [ui: record, transaction: record] {
 export def render [ui: record, envelope: record] {
     let data = $envelope.data
     let operation = ($envelope.arguments | get --optional 0 | default '' | str lowercase)
+    if ($envelope.command | str lowercase) == 'resource-pack' {
+        transaction-summary $ui $data.transaction
+        if not $data.transaction.dry_run {resources $ui $data.resource_packs 1 true}
+        return
+    }
     if (($envelope.command | str lowercase) == 'category' and $operation in ['assign' 'clear' 'remove']) or (($envelope.command | str lowercase) == 'mod') or (($envelope.command | str lowercase) == 'content' and $operation in ['pin' 'unpin']) {
         transaction-summary $ui $data.transaction
         return

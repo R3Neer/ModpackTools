@@ -90,6 +90,7 @@ def owns-native-command [args: list<string>] {
         if $name == 'content' {return ($operation in ['list' 'search' 'versions' 'remove' 'pin' 'unpin'])}
         if $name == 'category' {return ($operation in ['list' 'assign' 'clear' 'remove'])}
         if $name == 'mod' {return ($operation == 'set-side')}
+        if $name == 'resource-pack' {return ($operation in ['enable' 'move' 'disable'])}
         if $name == 'config' {return ($operation == 'get')}
         return ($name == 'diff')
     }
@@ -759,7 +760,7 @@ def assert-success [envelope: record] {
 def is-transaction-receipt [args: list<string>] {
     let command = ($args | get --optional 0 | default '' | str lowercase)
     let operation = ($args | get --optional 1 | default '' | str lowercase)
-    ($command == 'category' and $operation in ['assign' 'clear' 'remove']) or ($command == 'mod' and $operation == 'set-side') or ($command == 'content' and $operation in ['pin' 'unpin'])
+    ($command == 'category' and $operation in ['assign' 'clear' 'remove']) or ($command == 'mod' and $operation == 'set-side') or ($command == 'content' and $operation in ['pin' 'unpin']) or ($command == 'resource-pack' and $operation in ['enable' 'move' 'disable'])
 }
 
 export def --env --wrapped main [...args: string] {
