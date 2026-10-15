@@ -20,6 +20,7 @@ def main [request_path: string] {
     }
     let sink = {|text, _stream| print --stderr $text}
     let ui = (r3cli console --colour $request.colour --ascii=$request.ascii --width $request.width --theme-extension $extension --is-terminal $request.terminal --sink $sink)
+    if ($request | get --optional validate_only | default false) {return}
     let notice = ($request | get --optional notice | default '')
     if $notice != '' {r3cli status $ui info $notice; return}
     if 'help' in ($request.envelope | get --optional presentation | default {} | columns) {

@@ -102,9 +102,24 @@ def inventory [ui: record, envelope: record] {
     if ($view.items | any {|item| $item.number != null}) {r3cli status $ui info 'Use these numbers with resource-pack, category, mod, or content operations. Content add uses search result numbers.'}
 }
 
+def transaction-summary [ui: record, transaction: record] {
+    for change in $transaction.changes {
+        let action = if $transaction.applied {match $change.action {add => 'Added', remove => 'Removed', _ => 'Changed'}} else {match $change.action {add => 'Would add', remove => 'Would remove', _ => 'Would change'}}
+        r3cli status $ui info $'($action) ($change.path)'
+    }
+    let count = ($transaction.change_count | into string)
+    let summary = if $transaction.dry_run {'Dry run: ' + $count + ' file change(s) would be applied; nothing was changed.'} else if $transaction.preview {$count + ' file change(s) planned; nothing has been changed.'} else if $transaction.applied {$count + ' file change(s) applied.'} else if $transaction.change_count == 0 {'No file changes were needed.'} else {$count + ' file change(s) were not applied.'}
+    r3cli status $ui (if $transaction.applied or (not $transaction.dry_run and not $transaction.preview and $transaction.change_count == 0) {'success'} else {'info'}) $summary
+    for item in ($transaction | get --optional diagnostics | default []) {r3cli status $ui warning $'($item.code): ($item.path) · ($item.message)'}
+}
+
 export def render [ui: record, envelope: record] {
     let data = $envelope.data
     let operation = ($envelope.arguments | get --optional 0 | default '' | str lowercase)
+    if (($envelope.command | str lowercase) == 'category' and $operation in ['assign' 'clear' 'remove']) or (($envelope.command | str lowercase) == 'mod') or (($envelope.command | str lowercase) == 'content' and $operation in ['pin' 'unpin']) {
+        transaction-summary $ui $data.transaction
+        return
+    }
     match ($envelope.command | str lowercase) {
         'project' => {
             match $operation {
@@ -146,14 +161,7 @@ export def render [ui: record, envelope: record] {
                     }
                     for item in $envelope.presentation.health_items {r3cli status $ui (if $item.status == 'fail' {'error'} else if $item.status == 'warn' {'warning'} else {'info'}) $item.text}
                 }
-                for change in $transaction.changes {
-                    let action = if $transaction.applied {match $change.action {add => 'Added', remove => 'Removed', _ => 'Changed'}} else {match $change.action {add => 'Would add', remove => 'Would remove', _ => 'Would change'}}
-                    r3cli status $ui info $'($action) ($change.path)'
-                }
-                let count = ($transaction.change_count | into string)
-                let summary = if $transaction.dry_run {'Dry run: ' + $count + ' file change(s) would be applied; nothing was changed.'} else if $transaction.preview {$count + ' file change(s) planned; nothing has been changed.'} else if $transaction.applied {$count + ' file change(s) applied.'} else if $transaction.change_count == 0 {'No file changes were needed.'} else {$count + ' file change(s) were not applied.'}
-                r3cli status $ui (if $transaction.applied {'success'} else {'info'}) $summary
-                for item in ($transaction | get --optional diagnostics | default []) {r3cli status $ui warning $'($item.code): ($item.path) · ($item.message)'}
+                transaction-summary $ui $transaction
                 return
             }
             if $operation == 'list' {inventory $ui $envelope; return}

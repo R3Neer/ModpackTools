@@ -87,8 +87,9 @@ def owns-native-command [args: list<string>] {
         if $name == '--version' or $command == '-V' {return true}
         if $name == 'doctor' {return (not ($args | any {|token| ($token | str lowercase) == '--fix' or ($token | str lowercase | str starts-with '--fix=') }))}
         if $name == 'project' {return ($operation in ['list' 'current' 'use' 'status'])}
-        if $name == 'content' {return ($operation in ['list' 'search' 'versions' 'remove'])}
-        if $name == 'category' {return ($operation == 'list')}
+        if $name == 'content' {return ($operation in ['list' 'search' 'versions' 'remove' 'pin' 'unpin'])}
+        if $name == 'category' {return ($operation in ['list' 'assign' 'clear' 'remove'])}
+        if $name == 'mod' {return ($operation == 'set-side')}
         if $name == 'config' {return ($operation == 'get')}
         return ($name == 'diff')
     }
@@ -755,13 +756,21 @@ def assert-success [envelope: record] {
     error make {msg: (if $suffix == '' {$message} else {$'($message) [($suffix)]'})}
 }
 
+def is-transaction-receipt [args: list<string>] {
+    let command = ($args | get --optional 0 | default '' | str lowercase)
+    let operation = ($args | get --optional 1 | default '' | str lowercase)
+    ($command == 'category' and $operation in ['assign' 'clear' 'remove']) or ($command == 'mod' and $operation == 'set-side') or ($command == 'content' and $operation in ['pin' 'unpin'])
+}
+
 export def --env --wrapped main [...args: string] {
     validate-nu-option-style $args
     let args = (order-global-options $args)
     let machine_output = (wants-machine-output $args)
+    let native_receipt = (not $machine_output) and (owns-native-command $args) and (is-transaction-receipt $args) and (not ($args | any {|token| $token in ['--help' '-h']}))
     let native_removal = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'content') and (($args | get --optional 1 | default '' | str lowercase) == 'remove') and (not ($args | any {|token| $token in ['--help' '-h']}))
     # Even explicit --yes first validates and renders a nonmutating observation.
     let first_args = if $native_removal {$args | where {|token| $token not-in ['--yes' '-y']}} else {$args}
+    if $native_receipt {Native-Presentation preflight $args}
     let request = ({
         arguments: $args
         human_stderr_terminal: (is-terminal --stderr)
@@ -825,5 +834,10 @@ export def --env --wrapped main [...args: string] {
     if $machine_output {
         return (unwrap-result $envelope)
     }
-    if (owns-native-command $args) {Native-Presentation render $envelope $args}
+    if $native_receipt {
+        try {Native-Presentation render $envelope $args} catch {|err|
+            let receipt = if $envelope.data.transaction.applied {'The transaction was applied, but its presentation failed.'} else {'The transaction returned without applying changes, but its presentation failed.'}
+            error make {msg: $'($receipt) ($err.msg)'}
+        }
+    } else if (owns-native-command $args) {Native-Presentation render $envelope $args}
 }
