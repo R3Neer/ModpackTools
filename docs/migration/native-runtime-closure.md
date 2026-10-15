@@ -5,8 +5,9 @@ including installer, self-update and human/structured Nushell. Physical reposito
 relocation was completed independently; it is not an implementation milestone.
 
 Current public native host owns version, project list/current/use and complete
-structured content list (all filters, references, health and --verify), with direct
-Nushell machine dispatch. Human/help remain separate. Native declaration/graph/
+structured content list (all filters, references, health and --verify) and category
+list (including numeric references), with direct Nushell machine dispatch.
+Human/help remain separate. Native declaration/graph/
 validation/provider slices also have internal acceptance. Legacy remains installed
 and still requires PS7.
 Never report full independence while either adapter or setup falls back to PS.
