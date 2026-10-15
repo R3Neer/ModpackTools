@@ -10,6 +10,7 @@ if (args.FirstOrDefault() == "--inspect-project-creation") return ProjectCreatio
 if (args.FirstOrDefault() == "--inspect-mod-side") return ModSideInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-removal-plan") return RemovalPlanningInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-removal") return RemovalInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-project-index") return ProjectIndexInspection.Run(args);
 if (args.Length == 2 && args[0] == "--verify-removal") { RemovalContracts.VerifyAsync(args[1]).GetAwaiter().GetResult(); Console.WriteLine("Native removal contracts passed"); return 0; }
 if (args.FirstOrDefault() == "init") return NativeToolFixture.Init(args);
 if (args.Length == 1 && args[0] == "--verify-project-creation") { ProjectCreationContracts.VerifyAsync().GetAwaiter().GetResult(); Console.WriteLine("Native project creation contracts passed"); return 0; }
@@ -330,6 +331,7 @@ ConfigurationWriteContracts.VerifyAsync().GetAwaiter().GetResult();
 ProjectRegistrationContracts.VerifyAsync().GetAwaiter().GetResult();
 ModSideContracts.VerifyAsync().GetAwaiter().GetResult();
 RemovalPlanningContracts.Verify();
+ProjectIndexContracts.Verify();
 NativeToolContracts.VerifyAsync().GetAwaiter().GetResult();
 ArtifactProviderContracts.VerifyAsync().GetAwaiter().GetResult();
 ProjectHealthContracts.VerifyAsync().GetAwaiter().GetResult();
