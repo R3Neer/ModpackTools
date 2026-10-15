@@ -17,33 +17,7 @@ internal static class CategoryListInspection
             using var bytes = new MemoryStream();
             using (var writer = new Utf8JsonWriter(bytes))
             {
-                writer.WriteStartObject();
-                writer.WriteStartObject("Project");
-                writer.WriteString("Id", view.Project.Id);
-                writer.WriteString("Root", view.Project.Root);
-                writer.WriteString("DisplayName", view.Project.Name);
-                writer.WriteString("DisplayVersion", view.Project.Version);
-                writer.WriteString("OutputName", view.Project.OutputName);
-                writer.WriteString("MinecraftVersion", view.Project.Minecraft);
-                writer.WriteString("Loader", view.Project.Loader);
-                writer.WriteString("LoaderVersion", view.Project.LoaderVersion);
-                writer.WriteString("IndexFile", view.Project.IndexFile);
-                writer.WriteEndObject();
-                writer.WriteStartArray("Categories");
-                foreach (var row in view.Categories)
-                {
-                    writer.WriteStartObject();
-                    writer.WriteString("Id", row.Id);
-                    writer.WriteString("Name", row.Name);
-                    if (row.Order is { } order) writer.WriteNumber("Order", order); else writer.WriteNull("Order");
-                    writer.WriteNumber("ModCount", row.ModCount);
-                    if (row.IsUnclassified) writer.WriteBoolean("IsUnclassified", true);
-                    writer.WriteNumber("ReferenceNumber", row.ReferenceNumber);
-                    writer.WriteEndObject();
-                }
-                writer.WriteEndArray();
-                writer.WriteNumber("DefinedCategoryCount", view.DefinedCategoryCount);
-                writer.WriteEndObject();
+                Write(writer, view);
             }
             Console.OpenStandardOutput().Write(bytes.GetBuffer(), 0, checked((int)bytes.Length));
             return 0;
@@ -59,5 +33,35 @@ internal static class CategoryListInspection
                 "check category-view inspection arguments and input access permissions", null);
             return 2;
         }
+    }
+    public static void Write(Utf8JsonWriter writer, CategoryListView view)
+    {
+        writer.WriteStartObject();
+        writer.WriteStartObject("Project");
+        writer.WriteString("Id", view.Project.Id);
+        writer.WriteString("Root", view.Project.Root);
+        writer.WriteString("DisplayName", view.Project.Name);
+        writer.WriteString("DisplayVersion", view.Project.Version);
+        writer.WriteString("OutputName", view.Project.OutputName);
+        writer.WriteString("MinecraftVersion", view.Project.Minecraft);
+        writer.WriteString("Loader", view.Project.Loader);
+        writer.WriteString("LoaderVersion", view.Project.LoaderVersion);
+        writer.WriteString("IndexFile", view.Project.IndexFile);
+        writer.WriteEndObject();
+        writer.WriteStartArray("Categories");
+        foreach (var row in view.Categories)
+        {
+            writer.WriteStartObject();
+            writer.WriteString("Id", row.Id);
+            writer.WriteString("Name", row.Name);
+            if (row.Order is { } order) writer.WriteNumber("Order", order); else writer.WriteNull("Order");
+            writer.WriteNumber("ModCount", row.ModCount);
+            if (row.IsUnclassified) writer.WriteBoolean("IsUnclassified", true);
+            writer.WriteNumber("ReferenceNumber", row.ReferenceNumber);
+            writer.WriteEndObject();
+        }
+        writer.WriteEndArray();
+        writer.WriteNumber("DefinedCategoryCount", view.DefinedCategoryCount);
+        writer.WriteEndObject();
     }
 }
