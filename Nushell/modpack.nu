@@ -81,7 +81,7 @@ def owns-native-command [args: list<string>] {
     let command = ($args | get --optional 0 | default '')
     if $command in ['--version' '-V'] { return true }
     let operation = ($args | get --optional 1 | default '')
-    if (($command | str lowercase) == 'content') and (($operation | str lowercase) == 'list') {
+    if (($command | str lowercase) in ['content' 'category']) and (($operation | str lowercase) == 'list') {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
     (($command | str lowercase) == 'project') and (($operation | str lowercase) in ['list' 'current' 'use']) and not ($args | any {|token| $token in ['--help' '-h'] })
@@ -178,6 +178,25 @@ def invoke-native-command [args: list<string>] {
             validate-string-fields $session ['active_project'] (not $selecting)
             if $selecting and (($session.active_project | str trim) == '' or not ($result.arguments.1 in ($args | skip 2))) {
                 error make { msg: 'ModpackTools native executable returned an invalid selected project.' }
+            }
+        } else if ($result.command | str lowercase) == 'category' {
+            let categories = (field (field $result data {}) categories {})
+            let project = (field $categories project {})
+            validate-string-fields $project ['id' 'root' 'output_name']
+            validate-string-fields $project ['name' 'version' 'minecraft' 'loader' 'loader_version'] true
+            if $result.command != $args.0 or ($result.arguments | length) != 1 or $result.arguments.0 != $args.1 or ((field $categories items null | describe) !~ '^(list|table)') {
+                error make { msg: 'ModpackTools native executable returned an invalid category list.' }
+            }
+            for item in $categories.items {
+                validate-string-fields $item ['id' 'name']
+                for name in ['number' 'mod_count'] {
+                    if ((field $item $name null | describe) != 'int') or (field $item $name (-1)) < 0 {
+                        error make { msg: 'ModpackTools native executable returned an invalid category count.' }
+                    }
+                }
+                if $item.number < 1 or not ('order' in ($item | columns)) or ($item.order != null and ($item.order | describe) != 'int') or ((field $item unclassified null | describe) != 'bool') {
+                    error make { msg: 'ModpackTools native executable returned invalid category fields.' }
+                }
             }
         } else if ($result.command | str lowercase) == 'content' {
             let data = (field $result data {})

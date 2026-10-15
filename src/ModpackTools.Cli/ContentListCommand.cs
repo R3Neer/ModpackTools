@@ -41,7 +41,7 @@ internal static class ContentListCommand
         cancellation.ThrowIfCancellationRequested();
         InventoryReferenceCache.Write(configurationDirectory, view, now);
         var health = await ProjectHealth.ReadAsync(project, configurationDirectory, now, values.ContainsKey("verify"), cancellation: cancellation).ConfigureAwait(false);
-        using var output = new OutputBuffer();
+        using var output = new NativeOutputBuffer("Content list", "use narrower content filters");
         using (var writer = new Utf8JsonWriter(output, new() { MaxDepth = 256 }))
         {
             writer.WriteStartObject(); writer.WriteNumber("schema_version", 1); writer.WriteBoolean("ok", true);
@@ -165,12 +165,5 @@ internal static class ContentListCommand
         writer.WriteStartArray("Any"); if (!value.Any.IsDefault) foreach (var child in value.Any) Requirement(writer, child); writer.WriteEndArray();
         writer.WriteStartArray("All"); if (!value.All.IsDefault) foreach (var child in value.All) Requirement(writer, child); writer.WriteEndArray();
         writer.WritePropertyName("Unless"); if (value.Unless is { } unless) Requirement(writer, unless); else writer.WriteNullValue(); writer.WriteEndObject();
-    }
-    private sealed class OutputBuffer : MemoryStream
-    {
-        private void Guard(int count)
-        { if (count > 64L * 1024 * 1024 - Length) throw new DomainException("Core.OutputLimit", "Content list output exceeds64MiB", "use narrower content filters", "LimitsExceeded"); }
-        public override void Write(byte[] buffer, int offset, int count) { Guard(count); base.Write(buffer, offset, count); }
-        public override void Write(ReadOnlySpan<byte> buffer) { Guard(buffer.Length); base.Write(buffer); }
     }
 }

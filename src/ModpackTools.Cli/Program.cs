@@ -4,6 +4,7 @@ using ModpackTools.Core;
 using ModpackTools.Cli;
 using ModpackTools.Core.Data;
 using ModpackTools.Core.Projects;
+using ModpackTools.Core.Inventory;
 
 Console.OutputEncoding = new UTF8Encoding(false);
 InvocationContext? context = null;
@@ -33,6 +34,46 @@ try
     var options = PresentationOptions.Parse(args);
     command = options.Arguments.FirstOrDefault() ?? "";
     commandArguments = options.Arguments.Skip(1).ToArray();
+    if (command.Equals("category", StringComparison.OrdinalIgnoreCase) &&
+        commandArguments.FirstOrDefault()?.Equals("list", StringComparison.OrdinalIgnoreCase) == true &&
+        !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
+    {
+        foreach (var argument in commandArguments.Skip(1))
+            if (argument.StartsWith("--", StringComparison.Ordinal))
+            {
+                var name = argument[2..].Split('=', 2)[0];
+                throw new DomainException("Option.Unknown", $"Option '--{name}' is not recognized for this command", "run the command with --help", target: name);
+            }
+        if (commandArguments.Length != 1)
+            throw new DomainException("Command.InvalidArguments", "The command arguments do not match the expected syntax", "modpack category list",
+                targetData: commandArguments.Length == 2 ? new TextTarget(commandArguments[1]) : new TextListTarget(commandArguments.Skip(1).ToArray()));
+        var activeProject = context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject;
+        var effectiveId = ProjectSelection.EffectiveId(options.Project, activeProject);
+        var configurationDirectory = Environment.GetEnvironmentVariable("MODPACKTOOLS_CONFIG_HOME");
+        if (string.IsNullOrWhiteSpace(configurationDirectory))
+            configurationDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModpackTools");
+        configurationDirectory = Path.GetFullPath(configurationDirectory);
+        var catalog = ProjectReader.Discover(ConfigurationReader.ReadRoot(configurationDirectory));
+        var project = ProjectSelection.Find(catalog, effectiveId);
+        using var cancellation = new CancellationTokenSource();
+        ConsoleCancelEventHandler cancel = (_, signal) => { signal.Cancel = true; cancellation.Cancel(); };
+        Console.CancelKeyPress += cancel;
+        try
+        {
+            var view = CategoryList.Read(project);
+            cancellation.Token.ThrowIfCancellationRequested();
+            CategoryReferenceCache.Write(configurationDirectory, view, DateTimeOffset.UtcNow);
+            var rows = view.Categories.Select(row => new PublicCategory(row.ReferenceNumber, row.Id, row.Name, row.Order, row.ModCount, row.IsUnclassified)).ToArray();
+            var envelope = new CategoryListEnvelope(1, true, command, commandArguments, new(new(PublicProject.From(project), rows)));
+            using var output = new NativeOutputBuffer("Category list", "reduce the category list before retrying");
+            using (var writer = new Utf8JsonWriter(output)) JsonSerializer.Serialize(writer, envelope, WireJsonContext.Default.CategoryListEnvelope);
+            cancellation.Token.ThrowIfCancellationRequested();
+            Console.OpenStandardOutput().Write(output.GetBuffer(), 0, checked((int)output.Length));
+            Console.WriteLine();
+        }
+        finally { Console.CancelKeyPress -= cancel; }
+        return 0;
+    }
     if (command.Equals("content", StringComparison.OrdinalIgnoreCase) &&
         commandArguments.FirstOrDefault()?.Equals("list", StringComparison.OrdinalIgnoreCase) == true &&
         !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
@@ -113,7 +154,7 @@ try
 catch (OperationCanceledException)
 {
     var cancelled = FailureEnvelope.Create(command, commandArguments,
-        Failure.From("ModpackTools.Core.OperationCancelled", "Content listing was cancelled. Try: retry when ready.", "OperationStopped", null));
+        Failure.From("ModpackTools.Core.OperationCancelled", "Listing was cancelled. Try: retry when ready.", "OperationStopped", null));
     Console.WriteLine(JsonSerializer.Serialize(cancelled, WireJsonContext.Default.FailureEnvelope));
     return 1;
 }
@@ -136,7 +177,7 @@ catch (Exception exception) when (exception is IOException or UnauthorizedAccess
 }
 
 var failure = FailureEnvelope.Create(command, commandArguments,
-    Failure.From("Core.CapabilityUnavailable", "This native host currently supports version, project list, project current, project use and content list.", "InvalidOperation", null));
+    Failure.From("Core.CapabilityUnavailable", "This native host currently supports version, project list, project current, project use, content list and category list.", "InvalidOperation", null));
 Console.WriteLine(JsonSerializer.Serialize(failure, WireJsonContext.Default.FailureEnvelope));
 return 1;
 
