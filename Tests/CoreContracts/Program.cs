@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Text.Json;
 
+if (args.FirstOrDefault() == "--inspect-dependency-archive") return DependencyArchiveInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-configuration-write") return ConfigurationWriteInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-project-registration") return ProjectRegistrationInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-project-creation") return ProjectCreationInspection.Run(args);
