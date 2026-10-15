@@ -26,8 +26,10 @@ Remaining dependency sequence:
    is accepted in67; remote ID/slug identification in68; complete observation-based
    Add/Update/Repair proposals in69. Source-bound plans, exclusive ownership,
    staging/journal-before-write, commit/rollback and restart recovery are accepted
-   in70 (black-box16/16 and white-box8 controls). Materialize plans and wire every
-   mutation only after its own injected-failure/external-edit gates.
+   in70 (black-box16/16 and white-box8 controls). Stage-only complete plan
+   materialization is accepted in71 (black-box6/6 and white-box3 controls), including
+   data-preserving document edits. Refresh/index and public mutation composition
+   remain; wire every mutation only after its own injected-failure/external-edit gates.
 4. Doctor/build/diff/MRPack freshness, project/settings and all remaining grammar.
 5. Paired packaged presentation/Nu adapter, questions/cancellation, versioned Native
    installation and separate updater/helper, hashes/resources/licenses, rollback.
