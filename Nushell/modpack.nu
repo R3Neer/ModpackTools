@@ -82,7 +82,7 @@ def owns-native-command [args: list<string>] {
     if $command in ['--version' '-V'] { return true }
     let operation = ($args | get --optional 1 | default '')
     if ($command | str lowercase) == 'doctor' {
-        return (not ($args | any {|token| ($token | str lowercase) in ['--fix' '--help' '-h'] or ($token | str lowercase | str starts-with '--fix=') }))
+        return (not ($args | any {|token| ($token | str lowercase) in ['--help' '-h'] }))
     }
     if (($command | str lowercase) in ['content' 'category']) and (($operation | str lowercase) == 'list') {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
@@ -257,6 +257,33 @@ def invoke-native-command [requested_args: list<string>] {
             if $doctor.failures != ($doctor.checks | where status == 'fail' | length) or $doctor.warnings != ($doctor.checks | where status == 'warn' | length) {
                 error make {msg: 'Native doctor returned contradictory counts.'}
             }
+            let folded = ($args | each {|token| $token | str lowercase})
+            if '--fix' in $folded {
+                let repair = (field $doctor repair {})
+                for name in ['applied' 'dry_run' 'preview' 'packwiz_installed' 'configuration_updated' 'project_applied'] {
+                    if ((field $repair $name null | describe) != 'bool') {error make {msg: 'Native doctor returned invalid repair state.'}}
+                }
+                if ((field $repair changes null | describe) !~ '^(list|table)') or ((field $repair diagnostics null | describe) !~ '^(list|table)') or ((field $repair change_count null | describe) != 'int') {
+                    error make {msg: 'Native doctor returned invalid repair changes.'}
+                }
+                if $repair.change_count < 0 or $repair.change_count != ($repair.changes | length) or $repair.dry_run != ('--dry-run' in $folded) or $repair.preview != (('--yes' not-in $folded) and ('--dry-run' not-in $folded)) or $repair.applied != ($repair.packwiz_installed or $repair.configuration_updated or $repair.project_applied) or ($repair.applied and ($repair.dry_run or $repair.preview)) or ($repair.project_applied and $repair.change_count == 0) {
+                    error make {msg: 'Native doctor returned contradictory repair state.'}
+                }
+                let packwiz_path = (field $repair packwiz_path null)
+                if ($packwiz_path != null and ($packwiz_path | describe) != 'string') or (($repair.packwiz_installed or $repair.configuration_updated) and ($packwiz_path == null or $packwiz_path == '')) {
+                    error make {msg: 'Native doctor returned invalid installed dependency path.'}
+                }
+                for change in $repair.changes {
+                    validate-string-fields $change ['kind' 'path']
+                    if $change.kind not-in ['add' 'change' 'remove'] or $change.path == '' {error make {msg: 'Native doctor returned an invalid repair change.'}}
+                }
+                for diagnostic in $repair.diagnostics {
+                    validate-string-fields $diagnostic ['code' 'path' 'message']
+                    if ((field $diagnostic retained_evidence null | describe) != 'bool') or ((field $diagnostic truncated null | describe) != 'bool') or ((field $diagnostic details null) != null and (($diagnostic.details | describe) != 'string')) {
+                        error make {msg: 'Native doctor returned invalid repair diagnostics.'}
+                    }
+                }
+            } else if 'repair' in ($doctor | columns) {error make {msg: 'Native doctor returned unrequested repair state.'}}
         } else if ($args.0 | str lowercase) == 'diff' {
             let diff = (field (field $result data {}) diff {})
             if $result.command != $args.0 or not ($result.arguments | is-empty) or ((field $diff total null | describe) != 'int') or $diff.total < 0 {
