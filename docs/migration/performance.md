@@ -32,7 +32,41 @@ Reproducer: [Measure-RawInventory.ps1](benchmarks/Measure-RawInventory.ps1).
 Raw samples, environment, executable SHA and fixture manifest:
 [raw-inventory-results.json](benchmarks/raw-inventory-results.json).
 
-## Environment and workload
+## Project health composition checkpoint, 2026-10-14
+
+Health60 (d0f2ee9) was measured on synthetic Fabric fixtures against legacy
+025b7f3. Both build inventory and the provider-validated dependency report. The
+loaded PowerShell module emits a common projection; a fresh Native AOT inspector
+also emits richer node/version/file data. This includes native process startup
+and serialization. No startup medians were subtracted.
+
+| Fixture / engine | Median ms | p95 ms | n |
+|---|---:|---:|---:|
+| 20 local JARs / loaded PowerShell | 78.6119 | 88.6501 | 21 |
+| 20 local JARs / fresh Native AOT | 56.6265 | 66.2016 | 21 |
+| 100 managed, verified cached JARs / loaded PowerShell | 529.7347 | 660.8835 | 21 |
+| 100 managed, verified cached JARs / fresh Native AOT | 246.4223 | 259.6175 | 21 |
+
+Observed median ratios are 1.39x and 2.15x. Each JAR contains 256 KiB of
+deterministic padding; the managed fixture verifies SHA512. Common projections
+were compared before timing; timed samples checked exit status, stderr and stable
+output length, not full output equality on every run. Full fixture manifests and
+four legacy source hashes remained unchanged, independently checked by white-box
+review. Samples alternate engine order. Fixture creation and manifest hashing
+warm OS caches; even the retained first observations are not disk-cold.
+
+These are simple healthy graphs without nested JARs. No network, persisted health
+cache/fingerprint, public host, Nushell, renderer, transaction or live-memory
+measurement is included. This exploratory 21-sample series does not satisfy the
+31-sample public-command acceptance gates below. It measures implemented health
+composition, not complete installed-tool performance. No competing agent builds
+or tests were intentionally started during the series; the host was not dedicated.
+
+Reproducer: [Measure-ProjectHealth.ps1](benchmarks/Measure-ProjectHealth.ps1).
+Raw samples, first observations, executable hash, environment and manifests:
+[project-health-results.json](benchmarks/project-health-results.json).
+
+## Original evaluation environment and workload
 
 - Windows 11 Home 10.0.26200; Intel i7-12650H, 10 cores/16 threads; 16005 MiB RAM.
 - PowerShell 7.6.6; custom Nu 0.116.2; unmodified ModpackTools `025b7f3` / 4.0.2.
