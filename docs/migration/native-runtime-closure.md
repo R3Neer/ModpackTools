@@ -15,6 +15,8 @@ in74, with terminal native failures and preserved parent state (black-box3/3,
 white-box2 controls). Human dispatch remains separate.
 Structured content pin/unpin and its Nu path are accepted in75 (black-box5/5,
 white-box2), sharing pre-pending transaction output with add/update.
+Structured category list/create/remove/assign/clear and resource-pack enable/move/disable
+now have complete CLI/Nu acceptance through81.
 Human/help remain separate. Native declaration/graph/
 validation/provider slices also have internal acceptance. Legacy remains installed
 and still requires PS7.
@@ -100,3 +102,9 @@ Capability80 accepts internal complete category creation: Core107, black3/3,
 white2 and Native defaults. Prospective view/output are prepared under the full
 transaction; unknown metadata, supported wrappers and explicit-only automatic
 order are preserved. Public create wire/Nu remains capability81.
+
+Capability81 accepts public category create: CLI115, black3/3 and white2/2,
+protocol/version/fresh Nu including real create/list parity and peer guards.
+All structured category operations are now native. SourceCore107 is unchanged.
+Human presentation, other mutations/settings/project operations and the native
+installer/updater remain necessary for complete PowerShell-free operation.
