@@ -82,7 +82,15 @@ def owns-native-command [args: list<string>] {
     if (command-tokens $args | is-empty) or ($args | any {|token| ($token | str lowercase) in ['--help' '-h'] }) {return true}
     let command = ($args | get --optional 0 | default '')
     if not (wants-machine-output $args) {
-        return ((($command | str lowercase) == 'doctor') and not ($args | any {|token| ($token | str lowercase) in ['--fix' '--help' '-h'] or ($token | str lowercase | str starts-with '--fix=') }))
+        let name = ($command | str lowercase)
+        let operation = ($args | get --optional 1 | default '' | str lowercase)
+        if $name == '--version' or $command == '-V' {return true}
+        if $name == 'doctor' {return (not ($args | any {|token| ($token | str lowercase) == '--fix' or ($token | str lowercase | str starts-with '--fix=') }))}
+        if $name == 'project' {return ($operation in ['list' 'current' 'use' 'status'])}
+        if $name == 'content' {return ($operation in ['list' 'search' 'versions'])}
+        if $name == 'category' {return ($operation == 'list')}
+        if $name == 'config' {return ($operation == 'get')}
+        return ($name == 'diff')
     }
     if $command in ['--version' '-V'] { return true }
     let operation = ($args | get --optional 1 | default '')
@@ -129,6 +137,67 @@ def command-tokens [args: list<string>] {
         $output = ($output | append $token)
     }
     $output
+}
+
+def order-global-options [args: list<string>] {
+    mut domain = []
+    mut global = []
+    mut value = false
+    for token in $args {
+        if $value {$global = ($global | append $token); $value = false; continue}
+        if $token in ['--project' '-p' '--color'] {$global = ($global | append $token); $value = true; continue}
+        if $token in ['--ascii' '--json' '--no-human'] or ($token | str starts-with '--project=') or ($token | str starts-with '--color=') {$global = ($global | append $token); continue}
+        $domain = ($domain | append $token)
+    }
+    $domain | append $global
+}
+
+def validate-read-presentation [result: record, args: list<string>] {
+    let command = ($args.0 | str lowercase)
+    let operation = ($args | get --optional 1 | default '' | str lowercase)
+    let expected = if $command == 'content' and $operation == 'list' {'inventory'} else if $command == 'config' and $operation == 'get' {'configuration'} else if $command == 'project' and $operation == 'use' {'session'} else if $command == 'diff' {'diff'} else {null}
+    let presentation = (field $result presentation null)
+    if '--no-human' in $args or $expected == null {
+        if $presentation != null {error make {msg: 'Native executable returned unrequested presentation.'}}
+        return
+    }
+    if (field $presentation kind null) != $expected {error make {msg: 'Native executable returned mismatched read presentation.'}}
+    match $expected {
+        'inventory' => {
+            for name in ['groups' 'health_items'] {if ((field $presentation $name null | describe) !~ '^(list|table)') {error make {msg: 'Native inventory presentation returned invalid lists.'}}}
+            for group in $presentation.groups {
+                validate-string-fields $group ['name']
+                if ((field $group rows null | describe) !~ '^(list|table)') {error make {msg: 'Native inventory presentation returned invalid group rows.'}}
+                for row in $group.rows {
+                    if ((field $row index null | describe) != 'int') or $row.index < 0 or $row.index >= ($result.data.inventory.items | length) or $row.side not-in ['client' 'server' 'both' 'unknown'] or ((field $row invalid_category null) != null and (($row.invalid_category | describe) != 'string')) {
+                        error make {msg: 'Native inventory presentation returned an invalid row reference.'}
+                    }
+                    if ($result.data.inventory.items | get $row.index | get type) != 'mod' {error make {msg: 'Native inventory presentation referenced a non-mod row.'}}
+                }
+                let row_indices = ($group.rows | get index)
+                if ($row_indices | length) != ($row_indices | uniq | length) {error make {msg: 'Native inventory presentation duplicated an occurrence within one group.'}}
+            }
+            let indices = ($presentation.groups | each --flatten {|group| $group.rows | get index})
+            # Imported category keys may differ under the metadata culture while
+            # sharing the inventory comparer. Preserve both named legacy groups,
+            # but require complete occurrence coverage and no within-group copies.
+            if ($indices | uniq | length) != ($result.data.inventory.items | where type == 'mod' | length) {error make {msg: 'Native inventory presentation lost mod occurrences.'}}
+            for item in $presentation.health_items {
+                validate-string-fields $item ['status' 'text']
+                if $item.status not-in ['pass' 'fail' 'warn' 'info'] {error make {msg: 'Native inventory presentation returned an invalid status.'}}
+            }
+        }
+        'configuration' => {
+            validate-string-fields $presentation ['name' 'value']
+            if $presentation.name != ($args.2 | str lowercase) or ((field $presentation source null) != null and (($presentation.source | describe) != 'string')) {error make {msg: 'Native configuration presentation mismatched its setting.'}}
+        }
+        'session' => {validate-string-fields $presentation ['name'] true}
+        'diff' => {
+            validate-string-fields $presentation ['baseline' 'built_utc']
+            validate-string-fields $presentation.project ['id' 'root']
+            validate-string-fields $presentation.project ['name'] true
+        }
+    }
 }
 
 def validate-native-help [result: record, args: list<string>] {
@@ -284,7 +353,7 @@ def invoke-native-command [requested_args: list<string>] {
             error make { msg: 'ModpackTools native executable returned contradictory success fields.' }
         }
         let help_request = ((command-tokens $args | is-empty) or ('--help' in ($args | each {|token| $token | str lowercase})))
-        if not $help_request and ('presentation' in ($result | columns)) {error make {msg: 'Native executable returned unrequested help presentation.'}}
+        if not $help_request {validate-read-presentation $result $args}
         if $help_request {
             validate-native-help $result $args
         } else if ($args | get 0) in ['--version' '-V'] {
@@ -595,7 +664,7 @@ def invoke-native-command [requested_args: list<string>] {
 }
 
 def unwrap-result [envelope: record] {
-    if 'presentation' in ($envelope | columns) {return $envelope.data}
+    if 'help' in (field $envelope presentation {} | columns) {return $envelope.data}
     let command = (field $envelope command '')
     let arguments = (field $envelope arguments [])
     let operation = ($arguments | get --optional 0 | default '')
@@ -663,6 +732,7 @@ def unwrap-result [envelope: record] {
 # leaves only R3CLI presentation visible; --no-human exposes the parsed Nu value.
 export def --env --wrapped main [...args: string] {
     validate-nu-option-style $args
+    let args = (order-global-options $args)
     let machine_output = (wants-machine-output $args)
     let request = ({
         arguments: $args
@@ -693,12 +763,13 @@ export def --env --wrapped main [...args: string] {
         error make { msg: (if $suffix == '' { $message } else { $'($message) [($suffix)]' }) }
     }
 
-    if 'presentation' in ($envelope | columns) {
+    if 'help' in (field $envelope presentation {} | columns) {
         if $machine_output {return (unwrap-result $envelope)}
         Native-Presentation render $envelope $args
         return
     }
     if ((field $envelope command '') == 'project') and (($envelope.arguments | get --optional 0 | default '') == 'use') {
+        if not $machine_output and (owns-native-command $args) {Native-Presentation render $envelope $args}
         let use_args = (field $envelope arguments [])
         if not ($use_args | any {|token| $token == '--help' }) {
             let active_project = (data-field (field $envelope data {}) active_project)

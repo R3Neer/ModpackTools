@@ -3,6 +3,7 @@ using System.Text.Json;
 using ModpackTools.Core;
 using ModpackTools.Core.Artifacts;
 using ModpackTools.Core.Data;
+using ModpackTools.Core.Diagnostics;
 using ModpackTools.Core.Graph;
 using ModpackTools.Core.Inventory;
 using ModpackTools.Core.Projects;
@@ -16,7 +17,7 @@ internal static class ContentListCommand
     private static readonly string[] ValueOptions = ["type", "category", "side", "source", "state", "match"];
 
     public static async Task RunAsync(string command, string[] arguments, string? projectId, string? activeProject,
-        string configurationDirectory, CancellationToken cancellation)
+        string configurationDirectory, CancellationToken cancellation, bool includePresentation = false)
     {
         var values = Parse(arguments.Skip(1).ToArray());
         var effectiveId = ProjectSelection.EffectiveId(projectId, activeProject);
@@ -75,7 +76,14 @@ internal static class ContentListCommand
                 foreach (var item in view.InactiveResources) Physical(writer, item, "inactive");
                 writer.WriteEndArray();
             }
-            writer.WriteEndObject(); writer.WriteEndObject();
+            writer.WriteEndObject();
+            if (includePresentation)
+            {
+                writer.WritePropertyName("presentation");
+                JsonSerializer.Serialize(writer, new InventoryPresentation("inventory", InventoryPresentation.Group(view),
+                    [.. HealthDisplay.Read(health.Report, false, new(), compact: true)]), WireJsonContext.Default.InventoryPresentation);
+            }
+            writer.WriteEndObject();
         }
         cancellation.ThrowIfCancellationRequested();
         Console.OpenStandardOutput().Write(output.GetBuffer(), 0, checked((int)output.Length));

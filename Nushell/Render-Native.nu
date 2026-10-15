@@ -1,4 +1,5 @@
 use ../presentation/r3cli
+use ./Native-Views.nu
 
 def kind [status: string] {
     match $status {pass => 'success', fail => 'error', warn => 'warning', _ => 'info'}
@@ -19,8 +20,12 @@ def main [request_path: string] {
     }
     let sink = {|text, _stream| print --stderr $text}
     let ui = (r3cli console --colour $request.colour --ascii=$request.ascii --width $request.width --theme-extension $extension --is-terminal $request.terminal --sink $sink)
-    if 'presentation' in ($request.envelope | columns) {
+    if 'help' in ($request.envelope | get --optional presentation | default {} | columns) {
         r3cli help $ui $request.envelope.presentation.help $request.envelope.presentation.topic
+        return
+    }
+    if ($request.envelope.command | str lowercase) != 'doctor' {
+        Native-Views render $ui $request.envelope
         return
     }
     let doctor = $request.envelope.data.doctor

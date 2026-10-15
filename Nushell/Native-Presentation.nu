@@ -16,6 +16,10 @@ def validate-package [] {
 }
 
 export def render [envelope: record, args: list<string>] {
+    if $envelope.command == '--version' {
+        print --stderr $'ModpackTools ($envelope.data.version.version)'
+        return
+    }
     validate-package
     mut colour = 'auto'
     for index in 0..<($args | length) {

@@ -11,7 +11,7 @@ try {
     [void][IO.Directory]::CreateDirectory((Join-Path $app 'Nushell'));[void][IO.Directory]::CreateDirectory($configuration)
     Copy-Item -LiteralPath $Executable -Destination (Join-Path $app 'modpacktools.exe')
     Copy-Item -LiteralPath (Join-Path $sourceRoot 'presentation') -Destination $app -Recurse
-    foreach($name in @('modpack.nu','Native-Presentation.nu','Render-Native.nu')){Copy-Item -LiteralPath (Join-Path $sourceRoot "Nushell/$name") -Destination (Join-Path $app "Nushell/$name")}
+    foreach($name in @('modpack.nu','Native-Presentation.nu','Render-Native.nu','Native-Views.nu')){Copy-Item -LiteralPath (Join-Path $sourceRoot "Nushell/$name") -Destination (Join-Path $app "Nushell/$name")}
     [IO.File]::WriteAllText((Join-Path $configuration 'config.psd1'),"@{PackwizPath='$($PackwizExecutable.Replace("'","''"))'}")
     $env:MODPACKTOOLS_CORE_PATH=Join-Path $app 'modpacktools.exe';$env:MODPACKTOOLS_CONFIG_HOME=$configuration;$env:MODPACKTOOLS_STATE_HOME=Join-Path $root 'state';$env:PATH=''
     Remove-Item Env:MODPACKTOOLS_PROJECT -ErrorAction SilentlyContinue

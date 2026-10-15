@@ -51,7 +51,7 @@ try
         {
             if (command.Equals("build", StringComparison.OrdinalIgnoreCase)) await BuildCommand.RunAsync(command, commandArguments, options.Project, context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject, configurationDirectory, cancellation.Token);
             else if (command.Equals("doctor", StringComparison.OrdinalIgnoreCase)) await DoctorCommand.RunAsync(command, commandArguments, options.Project, context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject, configurationDirectory, cancellation.Token);
-            else await DiffCommand.RunAsync(command, commandArguments, options.Project, context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject, configurationDirectory, cancellation.Token);
+            else await DiffCommand.RunAsync(command, commandArguments, options.Project, context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject, configurationDirectory, cancellation.Token, !options.NoHuman);
         }
         finally { Console.CancelKeyPress -= cancel; }
         return 0;
@@ -95,7 +95,7 @@ try
         using var cancellation = new CancellationTokenSource();
         ConsoleCancelEventHandler cancel = (_, signal) => { signal.Cancel = true; cancellation.Cancel(); };
         Console.CancelKeyPress += cancel;
-        try { await ConfigurationCommand.RunAsync(command, commandArguments, options.Project, configurationDirectory, cancellation.Token); }
+        try { await ConfigurationCommand.RunAsync(command, commandArguments, options.Project, configurationDirectory, cancellation.Token, !options.NoHuman); }
         finally { Console.CancelKeyPress -= cancel; }
         return 0;
     }
@@ -291,7 +291,7 @@ try
         {
             await ContentListCommand.RunAsync(command, commandArguments, options.Project,
                 context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject,
-                Path.GetFullPath(configurationDirectory), cancellation.Token);
+                Path.GetFullPath(configurationDirectory), cancellation.Token, !options.NoHuman);
         }
         finally { Console.CancelKeyPress -= cancel; }
         return 0;
@@ -320,7 +320,7 @@ try
             configurationDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModpackTools");
         var catalog = ProjectReader.Discover(ConfigurationReader.ReadRoot(Path.GetFullPath(configurationDirectory)));
         var selected = ProjectSelection.Find(catalog, effectiveId);
-        var envelope = new SessionEnvelope(1, true, command, commandArguments, new(selected.Id));
+        var envelope = new SessionEnvelope(1, true, command, commandArguments, new(selected.Id), options.NoHuman ? null : new("session", selected.Name));
         Console.WriteLine(JsonSerializer.Serialize(envelope, WireJsonContext.Default.SessionEnvelope));
         return 0;
     }

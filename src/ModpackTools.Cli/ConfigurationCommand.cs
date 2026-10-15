@@ -8,7 +8,7 @@ namespace ModpackTools.Cli;
 internal static class ConfigurationCommand
 {
     private const string Usage = "modpack config get <root|packwiz> | modpack config set <root|packwiz> <value>";
-    public static async Task RunAsync(string command, string[] arguments, string? requestedProject, string configurationDirectory, CancellationToken cancellation)
+    public static async Task RunAsync(string command, string[] arguments, string? requestedProject, string configurationDirectory, CancellationToken cancellation, bool includePresentation = false)
     {
         if (requestedProject is not null) throw new DomainException("Option.ForbiddenCombination", "Option '--project' is not valid for this operation", "modpack config --help", target: requestedProject);
         if (arguments.Length is < 2 or > 3) throw new DomainException("Command.InvalidArguments", "The command arguments do not match the expected syntax", Usage,
@@ -28,10 +28,21 @@ internal static class ConfigurationCommand
             _ = await ConfigurationStore.SetAsync(configurationDirectory, new(name == "root" ? ConfigurationSetting.Root : ConfigurationSetting.Packwiz, arguments[2]), cancellation).ConfigureAwait(false);
         else
         {
-            if (name == "root") _ = ConfigurationReader.ReadRoot(configurationDirectory);
-            else _ = PackwizRefresh.Resolve(ConfigurationReader.ReadPackwizPath(configurationDirectory), Environment.GetEnvironmentVariable("PATH"),
-                Path.Combine(configurationDirectory, "tools", "packwiz", "dfd8b68", "packwiz.exe"), "dfd8b68");
+            ConfigurationPresentation? presentation;
+            if (name == "root") presentation = new("configuration", name, ConfigurationReader.ReadRoot(configurationDirectory), null);
+            else
+            {
+                var tool = PackwizRefresh.Resolve(ConfigurationReader.ReadPackwizPath(configurationDirectory), Environment.GetEnvironmentVariable("PATH"),
+                    Path.Combine(configurationDirectory, "tools", "packwiz", "dfd8b68", "packwiz.exe"), "dfd8b68");
+                presentation = new("configuration", name, tool.Available ? tool.Path! : "Not found", tool.Source);
+            }
             cancellation.ThrowIfCancellationRequested();
+            if (includePresentation)
+            {
+                output.SetLength(0); output.Position = 0;
+                using var writer = new Utf8JsonWriter(output);
+                JsonSerializer.Serialize(writer, new ConfigurationEnvelope(1, true, command, arguments, new(), presentation), WireJsonContext.Default.ConfigurationEnvelope);
+            }
         }
         // The original machine contract is data={}; prepare its entire bytes
         // before a set. Human key/value presentation is a separate adapter concern.

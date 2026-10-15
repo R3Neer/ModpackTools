@@ -20,7 +20,8 @@ internal sealed record ProjectList(string Root, PublicProject[] Items);
 internal sealed record ProjectListData(ProjectList Projects);
 internal sealed record ProjectListEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, ProjectListData Data);
 internal sealed record SessionData(string? ActiveProject);
-internal sealed record SessionEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, SessionData Data);
+internal sealed record SessionEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, SessionData Data,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] SessionPresentation? Presentation = null);
 internal sealed record PublicCategory(int Number, string Id, string Name, int? Order, int ModCount, bool Unclassified);
 internal sealed record PublicCategories(PublicProject Project, PublicCategory[] Items)
 {
@@ -85,6 +86,9 @@ internal sealed record Failure(string Id, string Message, string Category, JsonE
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower)]
 [JsonSerializable(typeof(EmptySuccessEnvelope))]
 [JsonSerializable(typeof(HelpEnvelope))]
+[JsonSerializable(typeof(ConfigurationEnvelope))]
+[JsonSerializable(typeof(InventoryPresentation))]
+[JsonSerializable(typeof(DiffPresentation))]
 [JsonSerializable(typeof(VersionEnvelope))]
 [JsonSerializable(typeof(FailureEnvelope))]
 [JsonSerializable(typeof(ProjectListEnvelope))]

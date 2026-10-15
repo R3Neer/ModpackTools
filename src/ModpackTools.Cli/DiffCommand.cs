@@ -11,7 +11,7 @@ namespace ModpackTools.Cli;
 internal static class DiffCommand
 {
     public static async Task RunAsync(string command, string[] arguments, string? requestedProject, string? activeProject,
-        string configurationDirectory, CancellationToken cancellation)
+        string configurationDirectory, CancellationToken cancellation, bool includePresentation = false)
     {
         foreach (var token in arguments)
             if (token.StartsWith("--", StringComparison.Ordinal)) throw new DomainException("Option.Unknown", $"Option '--{token[2..].Split('=')[0]}' is not recognized for this command", "run the command with --help", target: token[2..].Split('=')[0]);
@@ -24,16 +24,17 @@ internal static class DiffCommand
         using var output = new NativeOutputBuffer("Diff", "reduce the compared project");
         var result = await ProjectDiff.CompareAsync(project, configurationDirectory, Path.GetFullPath(state), ResolveTool, Environment.ProcessPath!,
             cancellation: cancellation, prepareOutput: Prepare).ConfigureAwait(false);
-        if (!result.Diagnostics.IsEmpty) Serialize(result.Result.Comparison, ResponseDiagnostics.Bounded(result.Diagnostics, project.Root));
+        if (!result.Diagnostics.IsEmpty) Serialize(result.Result, ResponseDiagnostics.Bounded(result.Diagnostics, project.Root));
         Console.OpenStandardOutput().Write(output.GetBuffer(), 0, checked((int)output.Length)); Console.WriteLine();
         ValueTask Prepare(TransactionPreview<ProjectDiffResult> preview, CancellationToken token)
         {
-            token.ThrowIfCancellationRequested(); Serialize(preview.Result.Comparison, null);
+            token.ThrowIfCancellationRequested(); Serialize(preview.Result, null);
             if (output.Length > 60L * 1024 * 1024) throw new DomainException("Core.OutputLimit", "Diff output leaves no diagnostic reserve", "reduce the compared project", "LimitsExceeded");
             return ValueTask.CompletedTask;
         }
-        void Serialize(MrpackComparison comparison, PublicTransactionDiagnostic[]? diagnostics)
+        void Serialize(ProjectDiffResult result, PublicTransactionDiagnostic[]? diagnostics)
         {
+            var comparison = result.Comparison;
             output.SetLength(0); output.Position = 0; using var writer = new Utf8JsonWriter(output);
             writer.WriteStartObject(); writer.WriteNumber("schema_version", 1); writer.WriteBoolean("ok", true); writer.WriteString("command", command);
             writer.WriteStartArray("arguments"); foreach (var argument in arguments) writer.WriteStringValue(argument); writer.WriteEndArray();
@@ -48,7 +49,13 @@ internal static class DiffCommand
                 { writer.WriteStartObject(); writer.WriteString("code", diagnostic.Code); writer.WriteString("path", diagnostic.Path); writer.WriteString("message", diagnostic.Message); writer.WriteEndObject(); }
                 writer.WriteEndArray();
             }
-            writer.WriteEndObject(); writer.WriteEndObject();
+            writer.WriteEndObject();
+            if (includePresentation)
+            {
+                writer.WritePropertyName("presentation");
+                JsonSerializer.Serialize(writer, new DiffPresentation("diff", PublicProject.From(project), Path.GetFileName(result.BaselinePath), result.BaselineUtc), WireJsonContext.Default.DiffPresentation);
+            }
+            writer.WriteEndObject();
             void Rows(string name, (string Kind, string Path)[] items)
             {
                 writer.WritePropertyName(name);

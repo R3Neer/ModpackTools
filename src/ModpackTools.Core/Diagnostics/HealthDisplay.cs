@@ -4,9 +4,9 @@ using ModpackTools.Core.Graph;
 
 namespace ModpackTools.Core.Diagnostics;
 
-internal static partial class HealthDisplay
+public static partial class HealthDisplay
 {
-    public static ImmutableArray<DoctorItem> Read(GraphReport report, bool details, DoctorLimits limits)
+    public static ImmutableArray<DoctorItem> Read(GraphReport report, bool details, DoctorLimits limits, bool compact = false)
     {
         var items = ImmutableArray.CreateBuilder<DoctorItem>(); var characters = 0;
         void Add(string status, string text)
@@ -35,6 +35,17 @@ internal static partial class HealthDisplay
             return string.Join(separator, parts);
         }
         var recommendations = Merge(report.Warnings);
+        if (compact)
+        {
+            if (recommendations.Length != 0) Add("warn", $"{recommendations.Length} optional dependency recommendation(s).");
+            var incomplete = Merge(report.Unknown);
+            if (incomplete.Length != 0)
+            {
+                Add("warn", $"{incomplete.Length} requirement(s) could not be verified from the available metadata.");
+                Add("warn", "Verification is incomplete; Fabric Loader may still reject this pack during startup.");
+            }
+            return items.ToImmutable();
+        }
         if (recommendations.Length != 0)
         {
             Add("warn", $"{recommendations.Length} optional dependency recommendation(s).");
