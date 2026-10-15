@@ -311,6 +311,7 @@ ProjectLookupContracts.VerifyAsync().GetAwaiter().GetResult();
 ContentPlanContracts.VerifyAsync().GetAwaiter().GetResult();
 ProjectTransactionContracts.VerifyAsync().GetAwaiter().GetResult();
 ContentMaterializationContracts.Verify();
+ContentClassificationContracts.VerifyAsync().GetAwaiter().GetResult();
 NativeToolContracts.VerifyAsync().GetAwaiter().GetResult();
 ArtifactProviderContracts.VerifyAsync().GetAwaiter().GetResult();
 ProjectHealthContracts.VerifyAsync().GetAwaiter().GetResult();

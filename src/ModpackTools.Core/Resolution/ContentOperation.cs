@@ -29,9 +29,7 @@ public static class ContentOperation
             || planning.Selectors.Any(value => string.IsNullOrEmpty(value) || value.Length > policy.MaximumSelectorCharacters)
             || planning.To?.Length > policy.MaximumSelectorCharacters || planning.Operation == ContentPlanOperation.Update && !planning.All && planning.Selectors.IsEmpty)
             throw new DomainException("Content.InvalidPlanRequest", "Content operation request is invalid", "use bounded selectors");
-        var config = Path.GetFullPath(configurationDirectory);
-        if (StringComparer.OrdinalIgnoreCase.Equals(config, Path.GetFullPath(project.Root)) || TransactionFiles.IsBelow(config, project.Root))
-            throw new DomainException("Transaction.UnsafeConfigurationDirectory", "Content configuration/cache must be outside the protected project", "choose a separate configuration directory", "InvalidOperation", config);
+        var config = MutationConfiguration.Resolve(project, configurationDirectory);
         var selectors = planning.Selectors;
         if (planning.Operation == ContentPlanOperation.Add)
         {

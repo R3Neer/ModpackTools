@@ -199,7 +199,7 @@ public static partial class ProjectTransaction
             if (tree.MaximumBytes <= 0 || tree.MaximumDirectories <= 0 || tree.MaximumFiles <= 0 || tree.MaximumPathCharacters <= 0) invalid ??= "Tree";
         if (invalid is not null) throw new DomainException("Transaction.InvalidPolicy", "Transaction resource limits are invalid", "use positive bounded quotas", target: invalid);
     }
-    private static string CanonicalFutureDirectory(string path)
+    internal static string CanonicalFutureDirectory(string path)
     {
         var absolute = Path.GetFullPath(path); WindowsProjectIdentity.GuardAncestors(absolute); var suffix = new Stack<string>();
         var current = absolute;

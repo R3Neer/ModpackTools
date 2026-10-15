@@ -14,6 +14,11 @@ internal static class RequestedContentOptions
         if (requested.IsEmpty) return;
         var snapshot = InventoryReader.Read(stage);
         var targets = ModClassificationSelector.Resolve(snapshot, requested);
+        Classify(stage, snapshot, targets, category);
+    }
+
+    internal static void Classify(ProjectContext stage, RawInventorySnapshot snapshot, ImmutableArray<InventoryItem> targets, string category)
+    {
         var metadata = snapshot.Metadata; var mods = metadata.Mods.Entries;
         foreach (var target in targets)
         {
