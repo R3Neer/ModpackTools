@@ -13,6 +13,8 @@ add/update now compose complete transactions; internal repair is ready for docto
 wiring. Structured Nu add/update dispatch and transaction validation are accepted
 in74, with terminal native failures and preserved parent state (black-box3/3,
 white-box2 controls). Human dispatch remains separate.
+Structured content pin/unpin and its Nu path are accepted in75 (black-box5/5,
+white-box2), sharing pre-pending transaction output with add/update.
 Human/help remain separate. Native declaration/graph/
 validation/provider slices also have internal acceptance. Legacy remains installed
 and still requires PS7.
@@ -42,6 +44,10 @@ Remaining dependency sequence:
    Remaining mutation composition/Nu dispatch remain; wire every mutation
    only after its own injected-failure/external-edit gates.
 4. Doctor/build/diff/MRPack freshness, project/settings and all remaining grammar.
+   Packwiz dfd8b68 treats the index parent as its traversal root. A subdirectory
+   index can omit root metadata while pack-to-index hashing still passes. Final
+   acceptance requires a nonempty index, actual row hashes and detection of
+   omitted physical content; an empty index is not proof of metadata freshness.
 5. Paired packaged presentation/Nu adapter, questions/cancellation, versioned Native
    installation and separate updater/helper, hashes/resources/licenses, rollback.
 6. Complete installed acceptance and workload performance gates; no release/push
