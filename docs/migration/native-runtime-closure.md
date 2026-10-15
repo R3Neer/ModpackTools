@@ -4,7 +4,7 @@ User reconfirmed2026-10-14: continue to a complete Native AOT ModpackTools,
 including installer, self-update and human/structured Nushell. Physical repository
 relocation was completed independently; it is not an implementation milestone.
 
-Current public native host owns version, project list/current/use and complete
+Current public native host owns version, project list/current/use/status and complete
 structured content list (all filters, references, health and --verify) and category
 list (including numeric references), with direct Nushell machine dispatch.
 Human/help remain separate. Native declaration/graph/
