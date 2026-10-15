@@ -8,6 +8,8 @@ using ModpackTools.Core.Inventory;
 
 namespace ModpackTools.Cli;
 
+internal sealed record EmptyData;
+internal sealed record EmptySuccessEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, EmptyData Data);
 internal sealed record VersionData(VersionInfo Version);
 internal sealed record VersionEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, VersionData Data);
 internal sealed record PublicProject(string Id, string? Name, string? Version, string? Minecraft, string? Loader, string? LoaderVersion, string Root, string OutputName)
@@ -81,6 +83,7 @@ internal sealed record Failure(string Id, string Message, string Category, JsonE
 }
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower)]
+[JsonSerializable(typeof(EmptySuccessEnvelope))]
 [JsonSerializable(typeof(VersionEnvelope))]
 [JsonSerializable(typeof(FailureEnvelope))]
 [JsonSerializable(typeof(ProjectListEnvelope))]

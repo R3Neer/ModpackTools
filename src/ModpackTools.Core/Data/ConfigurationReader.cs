@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace ModpackTools.Core.Data;
 
 public static class ConfigurationReader
@@ -27,7 +29,7 @@ public static class ConfigurationReader
         if (File.Exists(path))
         {
             try { data = PsdReader.Parse(TextFile.Read(path)); }
-            catch (FormatException exception)
+            catch (Exception exception) when (exception is FormatException or DecoderFallbackException)
             {
                 throw new DomainException("Configuration.InvalidFile", $"Configuration file '{path}' is not a valid PSD1 file",
                     $"repair or remove '{path}', then run modpack config set root <directory>", "InvalidData", path, details: exception.Message);

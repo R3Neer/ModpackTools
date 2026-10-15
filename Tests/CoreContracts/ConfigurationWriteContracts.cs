@@ -42,6 +42,8 @@ internal static class ConfigurationWriteContracts
             try { _ = await ConfigurationStore.SetAsync(config, new(ConfigurationSetting.Root, Path.Combine(directory, "missing-root"))); throw new Exception("Invalid UTF8 accepted."); }
             catch (DomainException error) when (error.Id == "ModpackTools.Configuration.InvalidFile") { }
             Assert(File.ReadAllBytes(path).SequenceEqual(new byte[] { 0xff, 0xff }), "invalid UTF8 receives typed data failure before value validation and remains intact");
+            try { _ = ConfigurationReader.ReadRoot(config); throw new Exception("Reader accepted invalid UTF8."); }
+            catch (DomainException error) when (error.Id == "ModpackTools.Configuration.InvalidFile") { }
             var missingConfig = Path.Combine(directory, "not-created-config");
             try { _ = await ConfigurationStore.SetAsync(missingConfig, new(ConfigurationSetting.Root, Path.Combine(directory, "missing-root"))); throw new Exception("Missing root accepted."); }
             catch (DomainException error) when (error.Id == "ModpackTools.Configuration.InvalidRoot") { }

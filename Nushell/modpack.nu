@@ -87,7 +87,7 @@ def owns-native-command [args: list<string>] {
     if (($command | str lowercase) == 'content') and (($operation | str lowercase) in ['versions' 'search' 'add' 'update' 'pin' 'unpin']) {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
-    if ($command | str lowercase) == 'resource-pack' {
+    if ($command | str lowercase) in ['resource-pack' 'config'] {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
     if (($command | str lowercase) == 'category') and (($operation | str lowercase) in ['assign' 'clear' 'remove' 'create']) {
@@ -253,6 +253,10 @@ def invoke-native-command [args: list<string>] {
                         error make {msg: 'Native resource operation returned invalid priority.'}
                     }
                 }
+            }
+        } else if ($result.command | str lowercase) == 'config' {
+            if $result.command != $args.0 or ($result.arguments | length) < 2 or $result.arguments.0 != $args.1 or ((field $result data null | describe) !~ '^record') or not ($result.data | columns | is-empty) {
+                error make {msg: 'Native configuration command returned an invalid result.'}
             }
         } else if ($result.command | str lowercase) == 'category' {
             let category_data = (field $result data {})
