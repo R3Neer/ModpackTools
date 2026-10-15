@@ -84,7 +84,7 @@ def owns-native-command [args: list<string>] {
     if (($command | str lowercase) in ['content' 'category']) and (($operation | str lowercase) == 'list') {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
-    (($command | str lowercase) == 'project') and (($operation | str lowercase) in ['list' 'current' 'use']) and not ($args | any {|token| $token in ['--help' '-h'] })
+    (($command | str lowercase) == 'project') and (($operation | str lowercase) in ['list' 'current' 'use' 'status']) and not ($args | any {|token| $token in ['--help' '-h'] })
 }
 
 def validate-string-fields [value: any, names: list<string>, nullable: bool = false] {
@@ -178,6 +178,20 @@ def invoke-native-command [args: list<string>] {
             validate-string-fields $session ['active_project'] (not $selecting)
             if $selecting and (($session.active_project | str trim) == '' or not ($result.arguments.1 in ($args | skip 2))) {
                 error make { msg: 'ModpackTools native executable returned an invalid selected project.' }
+            }
+        } else if ($args.1 | str lowercase) == 'status' {
+            let data = (field $result data {})
+            let project = (field $data project {})
+            let summary = (field $data summary {})
+            if $result.command != $args.0 or ($result.arguments | length) != 1 or $result.arguments.0 != $args.1 {
+                error make { msg: 'ModpackTools native executable returned an invalid project status.' }
+            }
+            validate-string-fields $project ['id' 'root' 'output_name']
+            validate-string-fields $project ['name' 'version' 'minecraft' 'loader' 'loader_version'] true
+            for name in ['mods' 'resources_enabled' 'resources_disabled' 'shaders'] {
+                if ((field $summary $name null | describe) != 'int') or (field $summary $name (-1)) < 0 {
+                    error make { msg: 'ModpackTools native executable returned an invalid project summary.' }
+                }
             }
         } else if ($result.command | str lowercase) == 'category' {
             let categories = (field (field $result data {}) categories {})

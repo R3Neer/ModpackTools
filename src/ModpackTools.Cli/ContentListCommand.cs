@@ -21,13 +21,7 @@ internal static class ContentListCommand
         var values = Parse(arguments.Skip(1).ToArray());
         var effectiveId = ProjectSelection.EffectiveId(projectId, activeProject);
         var project = ProjectSelection.Find(ProjectReader.Discover(ConfigurationReader.ReadRoot(configurationDirectory)), effectiveId);
-        foreach (var relative in new[] { "pack.toml", project.IndexFile, ".modpack/project.psd1", ".modpack/metadata.psd1" })
-        {
-            var path = Path.GetFullPath(Path.Combine(project.Root, relative));
-            if (!File.Exists(path)) throw new DomainException("Project.Incomplete",
-                $"Project '{project.Id}' is incomplete because '{relative}' is missing", "restore the missing file or recreate the project",
-                "InvalidData", path, details: $"Project root: '{project.Root}'");
-        }
+        ProjectStructure.Assert(project);
         cancellation.ThrowIfCancellationRequested();
         // Keep the raw view's lexical fields and error order. Health consumes semantic
         // install facts only after selection and publication of numbered references.

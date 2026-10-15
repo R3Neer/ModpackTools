@@ -21,6 +21,9 @@ internal sealed record PublicCategory(int Number, string Id, string Name, int? O
 internal sealed record PublicCategories(PublicProject Project, PublicCategory[] Items);
 internal sealed record CategoryListData(PublicCategories Categories);
 internal sealed record CategoryListEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, CategoryListData Data);
+internal sealed record PublicSummary(int Mods, int ResourcesEnabled, int ResourcesDisabled, int Shaders);
+internal sealed record ProjectStatusData(PublicProject Project, PublicSummary Summary);
+internal sealed record ProjectStatusEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, ProjectStatusData Data);
 internal sealed record FailureEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, Failure Error)
 {
     public static FailureEnvelope Create(string command, string[] arguments, Failure error) => new(1, false, command, arguments, error);
@@ -52,6 +55,7 @@ internal sealed record Failure(string Id, string Message, string Category, JsonE
 [JsonSerializable(typeof(ProjectListEnvelope))]
 [JsonSerializable(typeof(SessionEnvelope))]
 [JsonSerializable(typeof(CategoryListEnvelope))]
+[JsonSerializable(typeof(ProjectStatusEnvelope))]
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(long))]
 [JsonSerializable(typeof(decimal))]
