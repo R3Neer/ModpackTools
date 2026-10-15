@@ -16,6 +16,7 @@ if (args.FirstOrDefault() == "--inspect-provider-acquisition") return ProviderAc
 if (args.FirstOrDefault() == "--inspect-provider-candidates") return ProviderCandidateInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-artifact") return ArtifactProviderInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-project-health") return ProjectHealthInspection.Run(args);
+if (args.FirstOrDefault() == "--inspect-search") return SearchInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-compatible-versions") return CompatibleVersionsInspection.Run(args);
 
 if (args.FirstOrDefault() == "--inspect-psd-lookup")
@@ -289,6 +290,7 @@ ProviderCacheContracts.Verify();
 ProviderAcquisitionContracts.VerifyAsync().GetAwaiter().GetResult();
 ProviderCandidateContracts.VerifyAsync().GetAwaiter().GetResult();
 CompatibleVersionContracts.VerifyAsync().GetAwaiter().GetResult();
+SearchContracts.VerifyAsync().GetAwaiter().GetResult();
 ArtifactProviderContracts.VerifyAsync().GetAwaiter().GetResult();
 ProjectHealthContracts.VerifyAsync().GetAwaiter().GetResult();
 ImportedLookupContracts.Verify();

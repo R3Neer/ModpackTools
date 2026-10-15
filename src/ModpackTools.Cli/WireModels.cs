@@ -33,6 +33,13 @@ internal sealed record PublicVersion(int Number, string Id, string Version, stri
 internal sealed record PublicVersionList(string ItemName, string ItemType, PublicVersion[] Items);
 internal sealed record VersionListData(PublicProject Project, PublicVersionList Versions);
 internal sealed record VersionListEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, VersionListData Data);
+internal sealed record PublicSearchHit(int Number, string Id, string Slug, string Name, string Type, string Author, long Downloads, string Description)
+{
+    public static PublicSearchHit From(SearchHit hit) => new(hit.Number, hit.ProjectId, hit.Slug, hit.Title, hit.Type, hit.Author, hit.Downloads, hit.Description);
+}
+internal sealed record PublicSearch(string Query, string Type, long TotalHits, PublicSearchHit[] Results);
+internal sealed record SearchData(PublicProject? Project, PublicSearch Search);
+internal sealed record SearchEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, SearchData Data);
 internal sealed record FailureEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, Failure Error)
 {
     public static FailureEnvelope Create(string command, string[] arguments, Failure error) => new(1, false, command, arguments, error);
@@ -66,6 +73,7 @@ internal sealed record Failure(string Id, string Message, string Category, JsonE
 [JsonSerializable(typeof(CategoryListEnvelope))]
 [JsonSerializable(typeof(ProjectStatusEnvelope))]
 [JsonSerializable(typeof(VersionListEnvelope))]
+[JsonSerializable(typeof(SearchEnvelope))]
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(long))]
 [JsonSerializable(typeof(decimal))]

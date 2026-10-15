@@ -5,6 +5,7 @@ using System.Text.Json;
 using ModpackTools.Core.Data;
 using ModpackTools.Core.Source;
 using ModpackTools.Core.Inventory;
+using ModpackTools.Core.Projects;
 
 namespace ModpackTools.Core.Providers;
 
@@ -13,7 +14,7 @@ public sealed record ProviderRequestLimits(int MaximumRequests = 1000, int Maxim
     long MaximumTotalResponseBytes = 64 * 1024 * 1024, int MaximumInputIds = 10000,
     int MaximumEndpointCharacters = 32768, int MaximumTotalEndpointCharacters = 1024 * 1024,
     int MaximumReturnedVersions = 10000, ProviderCacheReadLimits? Decode = null,
-    long MaximumListingWireBytes = 32 * 1024 * 1024);
+    long MaximumListingWireBytes = 32 * 1024 * 1024, int MaximumSearchResults = 10000);
 public sealed record ProviderRequestStatistics(int Requests, long Bytes);
 public sealed record ProviderAcquisitionDiagnostic(string Code, string Path, string Message);
 
@@ -29,9 +30,12 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
     private readonly DateTimeOffset now;
     private readonly StringComparer comparer;
     private readonly object sync = new();
-    private enum ResponseKind { Version, Batch, Project, Candidates, PublicVersions }
+    private enum ResponseKind { Version, Batch, Project, Candidates, PublicVersions, Search }
     private sealed record ProviderResponse(ProviderProject? Project, ImmutableArray<ProviderVersion> Versions)
-    { public ImmutableArray<CompatibleVersion> Listings { get; init; } = []; }
+    {
+        public ImmutableArray<CompatibleVersion> Listings { get; init; } = [];
+        public SearchResults? Search { get; init; }
+    }
     private readonly Dictionary<string, Lazy<Task<ProviderResponse>>> pending = new(StringComparer.Ordinal);
     private readonly List<ProviderAcquisitionDiagnostic> diagnostics = [];
     private long bytes, endpointCharacters, listingWireBytes;
@@ -52,7 +56,8 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
             : this.limits.MaximumEndpointCharacters <= 0 ? nameof(this.limits.MaximumEndpointCharacters)
             : this.limits.MaximumTotalEndpointCharacters <= 0 ? nameof(this.limits.MaximumTotalEndpointCharacters)
             : this.limits.MaximumReturnedVersions <= 0 ? nameof(this.limits.MaximumReturnedVersions)
-            : this.limits.MaximumListingWireBytes <= 0 ? nameof(this.limits.MaximumListingWireBytes) : null;
+            : this.limits.MaximumListingWireBytes <= 0 ? nameof(this.limits.MaximumListingWireBytes)
+            : this.limits.MaximumSearchResults <= 0 ? nameof(this.limits.MaximumSearchResults) : null;
         if (invalid is not null) throw new DomainException("Metadata.InvalidProviderRequestPolicy", "Provider request limits are invalid",
             "use positive quotas and concurrency between 1 and 64", target: invalid);
         decode = this.limits.Decode ?? new(); ProviderVersionCache.Validate(decode);
@@ -132,6 +137,12 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
         return (await Request(CompatibleVersion.Endpoint(projectId, kind, minecraftVersion, loader), [projectId], ResponseKind.PublicVersions).ConfigureAwait(false)).Listings;
     }
 
+    public async Task<SearchResults> SearchAsync(string query, string type, int limit, ProjectContext? project)
+    {
+        Input();
+        return (await Request(ProviderSearch.Endpoint(query, type, limit, project), [], ResponseKind.Search).ConfigureAwait(false)).Search!;
+    }
+
     private Task<ProviderResponse> Request(string endpoint, string[] ids, ResponseKind kind)
     {
         lock (sync)
@@ -202,6 +213,12 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
                 using var document = decoded.Document;
                 var root = document.RootElement;
                 JsonDisplayProjection.Validate(root);
+                if (kind == ResponseKind.Search)
+                {
+                    result = new(null, []) { Search = ProviderSearch.Decode(root, decoded.Dates, limits.MaximumSearchResults, models.Entry) };
+                    token.ThrowIfCancellationRequested();
+                    return result;
+                }
                 if (kind is ResponseKind.Candidates or ResponseKind.PublicVersions && root.ValueKind is not (JsonValueKind.Array or JsonValueKind.Null))
                     throw Invalid("Provider candidate response must be an array or null.");
                 var batch = kind is ResponseKind.Batch or ResponseKind.Candidates or ResponseKind.PublicVersions;
@@ -265,10 +282,10 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
             lock (sync) if (exhausted is not null) throw exhausted;
             throw lifetime.IsCancellationRequested
                 ? new DomainException("Core.OperationCancelled", "Provider lookup was cancelled", "retry when ready", "OperationStopped")
-                : new DomainException("Versions.RequestTimeout", "Provider lookup exceeded its deadline", "check the connection or use an explicit bounded timeout", "OperationTimeout");
+                : new DomainException(kind == ResponseKind.Search ? "Search.RequestTimeout" : "Versions.RequestTimeout", "Provider lookup exceeded its deadline", "check the connection or use an explicit bounded timeout", "OperationTimeout");
         }
         catch (HttpRequestException exception)
-        { throw new DomainException("Versions.RequestFailed", kind == ResponseKind.PublicVersions ? "Modrinth version lookup could not be completed" : "Modrinth request could not be completed", "check the network connection and retry", "ConnectionError", details: exception.Message); }
+        { throw new DomainException(kind == ResponseKind.Search ? "Search.RequestFailed" : "Versions.RequestFailed", kind == ResponseKind.Search ? "Modrinth search could not be completed" : kind == ResponseKind.PublicVersions ? "Modrinth version lookup could not be completed" : "Modrinth request could not be completed", "check the network connection and retry", "ConnectionError", details: exception.Message); }
         catch (CacheJsonLimitException exception) { throw Resource("Decode", exception.Message); }
         catch (DomainException exception) when (exception.Id == "ModpackTools.Metadata.ProviderCacheLimit")
         { throw Resource("Decode", exception.Details); }
@@ -279,7 +296,7 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
         catch (Exception exception) when (exception is JsonException or Newtonsoft.Json.JsonException or FormatException or InvalidOperationException or InvalidCastException or OverflowException)
         { throw Invalid(exception.Message); }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        { throw receiving ? new DomainException("Versions.RequestFailed", "Provider response body could not be read", "check the network connection and retry", "ConnectionError", details: exception.Message) : WriteFailure(exception.Message); }
+        { throw receiving ? new DomainException(kind == ResponseKind.Search ? "Search.RequestFailed" : "Versions.RequestFailed", "Provider response body could not be read", "check the network connection and retry", "ConnectionError", details: exception.Message) : WriteFailure(exception.Message); }
         finally
         {
             if (owned) Cleanup(temporary);

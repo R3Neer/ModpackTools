@@ -84,7 +84,7 @@ def owns-native-command [args: list<string>] {
     if (($command | str lowercase) in ['content' 'category']) and (($operation | str lowercase) == 'list') {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
-    if (($command | str lowercase) == 'content') and (($operation | str lowercase) == 'versions') {
+    if (($command | str lowercase) == 'content') and (($operation | str lowercase) in ['versions' 'search']) {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
     (($command | str lowercase) == 'project') and (($operation | str lowercase) in ['list' 'current' 'use' 'status']) and not ($args | any {|token| $token in ['--help' '-h'] })
@@ -213,6 +213,25 @@ def invoke-native-command [args: list<string>] {
                 }
                 if $item.number < 1 or not ('order' in ($item | columns)) or ($item.order != null and ($item.order | describe) != 'int') or ((field $item unclassified null | describe) != 'bool') {
                     error make { msg: 'ModpackTools native executable returned invalid category fields.' }
+                }
+            }
+        } else if (($result.command | str lowercase) == 'content') and (($args.1 | str lowercase) == 'search') {
+            let data = (field $result data {})
+            if not ('project' in ($data | columns)) { error make { msg: 'ModpackTools native search omitted project context.' } }
+            let project = $data.project
+            if $project != null {
+                validate-string-fields $project ['id' 'root' 'output_name']
+                validate-string-fields $project ['name' 'version' 'minecraft' 'loader' 'loader_version'] true
+            }
+            let search = (field $data search {})
+            validate-string-fields $search ['query' 'type']
+            if $result.command != $args.0 or ($result.arguments | length) < 2 or $result.arguments.0 != $args.1 or ((field $search total_hits null | describe) != 'int') or ((field $search results null | describe) !~ '^(list|table)') {
+                error make { msg: 'ModpackTools native executable returned invalid search results.' }
+            }
+            for item in $search.results {
+                validate-string-fields $item ['id' 'slug' 'name' 'type' 'author' 'description']
+                if ((field $item number null | describe) != 'int') or (field $item number 0) < 1 or ((field $item downloads null | describe) != 'int') {
+                    error make { msg: 'ModpackTools native executable returned invalid search fields.' }
                 }
             }
         } else if (($result.command | str lowercase) == 'content') and (($args.1 | str lowercase) == 'versions') {
