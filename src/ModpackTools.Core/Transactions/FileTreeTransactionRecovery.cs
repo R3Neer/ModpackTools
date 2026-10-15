@@ -4,7 +4,7 @@ using ModpackTools.Core.Source;
 
 namespace ModpackTools.Core.Transactions;
 
-public static partial class ProjectTransaction
+public static partial class FileTreeTransaction
 {
     private static ImmutableArray<string> CreatedDirectories(string root, ImmutableArray<SourceChange> changes, SourceTreeReadLimits limits)
     {
