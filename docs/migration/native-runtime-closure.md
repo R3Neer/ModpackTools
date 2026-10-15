@@ -72,3 +72,10 @@ No real modpack/game/profile operation substitutes for isolated acceptance.
 Every green capability is committed before the next, after warning-free Native
 publication and applicable independent reviews. Migration records stay in separate
 commits for selective future product integration; main remains unchanged.
+
+Capability76 accepts structured category assign/clear and Nu machine dispatch:
+black-box4/4, white-box2, final Core102/CLI111 and parent alias/clock/regression
+checks. Physical configuration containment now protects content operations too.
+Cache failure after commit remains a diagnostic with truthful Applied. Definition
+create/remove, resource ordering and the remaining closure sequence above remain
+unfinished; this checkpoint does not establish full PowerShell independence.
