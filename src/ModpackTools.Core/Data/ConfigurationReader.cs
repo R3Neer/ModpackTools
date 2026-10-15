@@ -4,6 +4,24 @@ public static class ConfigurationReader
 {
     public static string ReadRoot(string configurationDirectory)
     {
+        var data = ReadData(configurationDirectory);
+        var root = data is not null && data.Entries.TryGetValue("Root", out var value) ? DataScalars.String(value) : "";
+        if (string.IsNullOrWhiteSpace(root))
+            throw new DomainException("Configuration.MissingRoot", "No modpack root is configured", "modpack config set root <directory>", "ObjectNotFound");
+        root = Path.GetFullPath(root);
+        if (!Directory.Exists(root))
+            throw new DomainException("Configuration.RootNotFound", $"Configured modpack root '{root}' does not exist", "modpack config set root <existing-directory>", "ObjectNotFound", root);
+        return root;
+    }
+
+    public static string? ReadPackwizPath(string configurationDirectory)
+    {
+        var data = ReadData(configurationDirectory);
+        return data is not null && data.Entries.TryGetValue("PackwizPath", out var value) ? DataScalars.String(value) : null;
+    }
+
+    private static PsdTable? ReadData(string configurationDirectory)
+    {
         var path = Path.Combine(configurationDirectory, "config.psd1");
         PsdTable? data = null;
         if (File.Exists(path))
@@ -15,12 +33,6 @@ public static class ConfigurationReader
                     $"repair or remove '{path}', then run modpack config set root <directory>", "InvalidData", path, details: exception.Message);
             }
         }
-        var root = data is not null && data.Entries.TryGetValue("Root", out var value) ? DataScalars.String(value) : "";
-        if (string.IsNullOrWhiteSpace(root))
-            throw new DomainException("Configuration.MissingRoot", "No modpack root is configured", "modpack config set root <directory>", "ObjectNotFound");
-        root = Path.GetFullPath(root);
-        if (!Directory.Exists(root))
-            throw new DomainException("Configuration.RootNotFound", $"Configured modpack root '{root}' does not exist", "modpack config set root <existing-directory>", "ObjectNotFound", root);
-        return root;
+        return data;
     }
 }

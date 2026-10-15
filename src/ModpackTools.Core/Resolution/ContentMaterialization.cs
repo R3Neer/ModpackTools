@@ -54,7 +54,7 @@ public static class ContentMaterialization
                 if (existing is null && (File.Exists(destination) || Directory.Exists(destination))) throw Error("PathCollision", "Planned metadata collides with an existing path", destination);
                 _ = TransactionFiles.Within(Path.GetDirectoryName(destination)!, file.Filename);
                 var text = existing is null ? "" : TextFile.Read(destination);
-                var side = node.Item.Side is "client" or "server" or "both" ? node.Item.Side : "both";
+                var side = node.Item.Side.ToLowerInvariant() is "client" or "server" or "both" ? node.Item.Side : "both";
                 var algorithm = file.Sha512.Length != 0 ? "sha512" : "sha1"; var hash = algorithm == "sha512" ? file.Sha512 : file.Sha1;
                 var edits = new TomlStringEdit[] { new("", "name", node.Item.Name), new("", "filename", file.Filename), new("", "side", side),
                     new("download", "url", file.Url), new("download", "hash-format", algorithm), new("download", "hash", hash),

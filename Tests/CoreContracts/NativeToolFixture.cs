@@ -2,6 +2,7 @@ using System.Diagnostics;
 
 internal static class NativeToolFixture
 {
+    public static int Refresh() => File.Exists("fixture-refresh-fail.marker") ? Run(["both-fail"]) : Run(["zero-invalid"]);
     public static int Run(string[] args)
     {
         var mode = args.FirstOrDefault() ?? "zero-invalid";

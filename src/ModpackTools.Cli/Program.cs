@@ -35,6 +35,23 @@ try
     var options = PresentationOptions.Parse(args);
     command = options.Arguments.FirstOrDefault() ?? "";
     commandArguments = options.Arguments.Skip(1).ToArray();
+    if (command.Equals("content", StringComparison.OrdinalIgnoreCase) && commandArguments.FirstOrDefault() is { } mutation
+        && new[] { "add", "update" }.Contains(mutation, StringComparer.OrdinalIgnoreCase)
+        && !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
+    {
+        var configurationDirectory = Environment.GetEnvironmentVariable("MODPACKTOOLS_CONFIG_HOME");
+        if (string.IsNullOrWhiteSpace(configurationDirectory)) configurationDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModpackTools");
+        using var cancellation = new CancellationTokenSource();
+        ConsoleCancelEventHandler cancel = (_, signal) => { signal.Cancel = true; cancellation.Cancel(); };
+        Console.CancelKeyPress += cancel;
+        try
+        {
+            await ContentMutationCommand.RunAsync(command, commandArguments, options.Project, context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject,
+            Path.GetFullPath(configurationDirectory), cancellation.Token);
+        }
+        finally { Console.CancelKeyPress -= cancel; }
+        return 0;
+    }
     if (command.Equals("content", StringComparison.OrdinalIgnoreCase) &&
         commandArguments.FirstOrDefault()?.Equals("search", StringComparison.OrdinalIgnoreCase) == true &&
         !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))

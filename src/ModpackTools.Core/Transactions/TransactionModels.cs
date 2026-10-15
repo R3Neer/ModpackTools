@@ -10,6 +10,7 @@ public enum TransactionPhase { LeaseAcquired, RecoveryCompleted, StageFileCopied
 public sealed record TransactionEvent(TransactionPhase Phase, string Workspace, string? RelativePath = null, int CompletedFiles = 0);
 public sealed record TransactionDiagnostic(string Code, string Path, string Message);
 public sealed record TransactionExpectation(ProjectPhysicalIdentity Project, string BeforeFingerprint, ImmutableArray<SourceChange> Changes);
+public sealed record TransactionPreview<T>(T Result, ImmutableArray<SourceChange> Changes, TransactionExpectation Expectation);
 // T is the callback's owned result. It must not rely on temporary stage paths
 // remaining available after ExecuteAsync returns.
 public sealed record TransactionResult<T>(T Result, ImmutableArray<SourceChange> Changes, bool Applied,

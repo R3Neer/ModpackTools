@@ -40,6 +40,12 @@ internal sealed record PublicSearchHit(int Number, string Id, string Slug, strin
 internal sealed record PublicSearch(string Query, string Type, long TotalHits, PublicSearchHit[] Results);
 internal sealed record SearchData(PublicProject? Project, PublicSearch Search);
 internal sealed record SearchEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, SearchData Data);
+internal sealed record PublicTransactionChange(string Action, string Path, string? Reason);
+internal sealed record PublicTransactionDiagnostic(string Code, string Path, string Message);
+internal sealed record PublicTransaction(bool Applied, bool DryRun, bool Preview, int ChangeCount, PublicTransactionChange[] Changes,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] PublicTransactionDiagnostic[]? Diagnostics = null);
+internal sealed record TransactionData(PublicTransaction Transaction);
+internal sealed record TransactionEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, TransactionData Data);
 internal sealed record FailureEnvelope(int SchemaVersion, bool Ok, string Command, string[] Arguments, Failure Error)
 {
     public static FailureEnvelope Create(string command, string[] arguments, Failure error) => new(1, false, command, arguments, error);
@@ -74,6 +80,7 @@ internal sealed record Failure(string Id, string Message, string Category, JsonE
 [JsonSerializable(typeof(ProjectStatusEnvelope))]
 [JsonSerializable(typeof(VersionListEnvelope))]
 [JsonSerializable(typeof(SearchEnvelope))]
+[JsonSerializable(typeof(TransactionEnvelope))]
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(long))]
 [JsonSerializable(typeof(decimal))]

@@ -15,7 +15,8 @@ public static partial class ProjectTransaction
         Func<ProjectContext, CancellationToken, Task<T>> prepareStage,
         Func<ProjectContext, CancellationToken, Task>? verifyStage = null, bool dryRun = false,
         TransactionExpectation? expected = null, TransactionLimits? limits = null, CancellationToken cancellation = default,
-        Func<TransactionEvent, ValueTask>? observer = null)
+        Func<TransactionEvent, ValueTask>? observer = null,
+        Func<TransactionPreview<T>, CancellationToken, ValueTask>? prepareOutput = null)
     {
         ArgumentNullException.ThrowIfNull(original); ArgumentNullException.ThrowIfNull(prepareStage);
         limits ??= new(); ValidatePolicy(limits);
@@ -80,6 +81,10 @@ public static partial class ProjectTransaction
                 foreach (var path in before.Files.Keys)
                     if (Directory.Exists(TransactionFiles.Within(stage, path))) throw WindowsProjectIdentity.Error("UnsupportedTopology", "A protected file became a staged directory", path);
                 var directories = CreatedDirectories(root, changes, treeLimits);
+                // Materialize the owned public result before publishing pending;
+                // output quotas/serialization must not fail after applying a plan.
+                if (prepareOutput is not null) await prepareOutput(new(result, changes, expectation), cancellation).ConfigureAwait(false);
+                cancellation.ThrowIfCancellationRequested();
                 if (dryRun || changes.IsEmpty)
                 {
                     CleanupCompleted(home, workspace, identity.Value, limits, diagnostics);

@@ -17,6 +17,7 @@ public sealed record ProjectHealthObservation(RawInventorySnapshot Inventory, Im
     GraphReport Report, ImmutableDictionary<string, ProviderCandidateObservation> ProviderAvailability)
 {
     public RuntimeOverrides RuntimeOverrides { get; init; } = new();
+    public GraphReport RawReport { get; init; } = Report;
 }
 
 public static class ProjectHealth
@@ -130,7 +131,7 @@ public static class ProjectHealth
             reconciled.Add(replacement);
         }
         cancellation.ThrowIfCancellationRequested();
-        return new(inventory, nodes.ToImmutable(), new GraphReport(reconciled.ToImmutable()), availability.ToImmutable()) { RuntimeOverrides = overrides };
+        return new(inventory, nodes.ToImmutable(), new GraphReport(reconciled.ToImmutable()), availability.ToImmutable()) { RuntimeOverrides = overrides, RawReport = report };
 
         async Task<ProviderVersion?> Version(string id)
         {

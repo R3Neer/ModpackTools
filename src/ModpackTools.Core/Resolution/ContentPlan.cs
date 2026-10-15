@@ -47,6 +47,12 @@ public sealed partial record ContentPlan(ImmutableArray<ProjectContentNode> Node
         (limits.Choices ?? new()).Validate(); DependencyResolver.ValidatePolicy(limits.Search ?? new());
         await using var source = await ResolutionAcquisition.CreateAsync(project, configurationDirectory, now,
             limits.Acquisition, cancellation, providerHandler, artifactHandler, providerBaseUri).ConfigureAwait(false);
+        return await PrepareWithSourceAsync(project, request, configurationDirectory, now, source, limits, cancellation).ConfigureAwait(false);
+    }
+
+    internal static async Task<ContentPlan> PrepareWithSourceAsync(ProjectContext project, ContentPlanRequest request,
+        string configurationDirectory, DateTimeOffset now, ResolutionAcquisition source, ContentPlanLimits limits, CancellationToken cancellation)
+    {
         var observation = source.InitialObservation!; var baseline = observation.Report;
         var before = source.Before.ToDictionary(node => node.Graph.Id, StringComparer.OrdinalIgnoreCase);
         var nodes = before.ToDictionary(pair => pair.Key, pair => ResolutionAcquisition.ToResolutionNode(pair.Value), StringComparer.OrdinalIgnoreCase);

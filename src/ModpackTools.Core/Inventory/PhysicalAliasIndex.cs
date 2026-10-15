@@ -19,14 +19,17 @@ internal sealed class PhysicalAliasIndex
             Add(item.Filename, item);
             if (!string.IsNullOrEmpty(item.MetadataPath))
             {
-                var stem = Path.GetFileName(item.MetadataPath);
-                // The legacy regex's $ also matches before one final LF.
-                var end = stem.EndsWith('\n') ? stem.Length - 1 : stem.Length;
-                if (stem.AsSpan(0, end).EndsWith(".pw.toml", StringComparison.OrdinalIgnoreCase))
-                    stem = stem[..(end - 8)] + stem[end..];
-                Add(stem, item);
+                Add(MetadataStem(item.MetadataPath), item);
             }
         }
+    }
+
+    internal static string MetadataStem(string path)
+    {
+        var stem = Path.GetFileName(path);
+        // The legacy regex's $ also matches before one final LF.
+        var end = stem.EndsWith('\n') ? stem.Length - 1 : stem.Length;
+        return stem.AsSpan(0, end).EndsWith(".pw.toml", StringComparison.OrdinalIgnoreCase) ? stem[..(end - 8)] + stem[end..] : stem;
     }
 
     private void Add(string? alias, InventoryItem item)

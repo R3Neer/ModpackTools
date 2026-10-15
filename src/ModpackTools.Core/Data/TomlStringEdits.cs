@@ -5,11 +5,15 @@ using Tomlyn.Syntax;
 namespace ModpackTools.Core.Data;
 
 internal sealed record TomlStringEdit(string Section, string Key, string Value);
+internal sealed record TomlLiteralEdit(string Section, string Key, string Literal);
 
 // The parser owns structural boundaries. Replacement text is always literal.
 internal static class TomlStringEdits
 {
     public static string Apply(string source, IReadOnlyList<TomlStringEdit> values, int maximumCharacters)
+        => ApplyLiterals(source, values.Select(value => new TomlLiteralEdit(value.Section, value.Key, Quote(value.Value, maximumCharacters))).ToArray(), maximumCharacters);
+
+    internal static string ApplyLiterals(string source, IReadOnlyList<TomlLiteralEdit> values, int maximumCharacters)
     {
         TomlInputLimits.Validate(source);
         var syntax = Toml.Parse(source, options: TomlParserOptions.ParseOnly);
@@ -34,7 +38,7 @@ internal static class TomlStringEdits
         foreach (var value in values)
         {
             var section = value.Section.Replace('.', '\0');
-            var encoded = Encode(value.Value, maximumCharacters);
+            var encoded = value.Literal;
             var key = Join(section, value.Key);
             if (fields.TryGetValue(key, out var field))
             {
@@ -84,7 +88,7 @@ internal static class TomlStringEdits
         StringValueSyntax { Value: { } text } => text,
         _ => throw new FormatException("Unsupported TOML key.")
     };
-    private static string Encode(string value, int maximum)
+    internal static string Quote(string value, int maximum)
     {
         var result = new StringBuilder(); Append(result, "\"", maximum);
         foreach (var character in value)
