@@ -60,7 +60,7 @@ internal static class ResourcePackCommand
         ValueTask Prepare(TransactionPreview<ResourcePackOperationResult> preview, CancellationToken token)
             => output.PrepareAsync(preview, token, dryRun ? null : Rows(preview.Result.Resources));
     }
-    private static PublicInventoryItem[] Rows(ResourcePackView view)
+    internal static PublicInventoryItem[] Rows(ResourcePackView view)
     {
         var rows = new List<PublicInventoryItem>(view.Active.Length + view.Inactive.Length);
         foreach (var item in view.Active) rows.Add(new(null, item.Id, item.Name.Length == 0 ? null : item.Name, "resourcepack", null,

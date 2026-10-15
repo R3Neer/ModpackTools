@@ -87,7 +87,7 @@ def owns-native-command [args: list<string>] {
     if (($command | str lowercase) == 'content') and (($operation | str lowercase) in ['versions' 'search' 'add' 'update' 'pin' 'unpin' 'remove']) {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
-    if ($command | str lowercase) in ['resource-pack' 'config' 'mod'] {
+    if ($command | str lowercase) in ['resource-pack' 'config' 'mod' 'build'] {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
     if (($command | str lowercase) == 'category') and (($operation | str lowercase) in ['assign' 'clear' 'remove' 'create']) {
@@ -133,6 +133,22 @@ def validate-native-requirement [value: any] {
             if $node.Unless == null { $children } else { $children | append $node.Unless }
         })
         $depth = $depth + 1
+    }
+}
+
+def validate-native-health [health: any] {
+    for name in ['errors' 'warnings' 'unknown'] {
+        if ((field $health $name null | describe) !~ '^(list|table)') {
+            error make {msg: 'ModpackTools native executable returned invalid health data.'}
+        }
+        for issue in (field $health $name []) {
+            validate-string-fields $issue ['Key' 'Code' 'Owner' 'OwnerName' 'Side' 'Severity' 'Message']
+            let severity = if $name == 'errors' {'error'} else if $name == 'warnings' {'warning'} else {'unknown'}
+            if not ('Requirement' in ($issue | columns)) or $issue.Severity != $severity {
+                error make {msg: 'ModpackTools native executable returned an invalid health issue.'}
+            }
+            if $issue.Requirement != null and (($issue.Requirement | describe) != 'string') {validate-native-requirement $issue.Requirement}
+        }
     }
 }
 
@@ -211,6 +227,42 @@ def invoke-native-command [args: list<string>] {
         if ($args | get 0) in ['--version' '-V'] {
             if $result.command != '--version' or ((field (field (field $result data {}) version {}) version null | describe) != 'string') {
                 error make { msg: 'ModpackTools native executable returned an invalid version result.' }
+            }
+        } else if ($args.0 | str lowercase) == 'build' {
+            if $result.command != $args.0 or ($result.arguments | any {|token| $token not-in $args}) {
+                error make {msg: 'Native build returned an invalid command.'}
+            }
+            let data = (field $result data {})
+            validate-native-health (field $data health null)
+            let dry = ($args | any {|token| ($token | str lowercase) in ['--dry-run' '-n']})
+            if $dry != ($result.arguments | any {|token| ($token | str lowercase) == '--dry-run'}) {error make {msg: 'Native build returned contradictory arguments.'}}
+            if $dry {
+                if 'build' in ($data | columns) or 'resource_packs' in ($data | columns) {error make {msg: 'Native build dry-run returned a published artifact.'}}
+            } else {
+                let build = (field $data build {})
+                validate-string-fields $build ['path']
+                if ((field $build dry_run null | describe) != 'bool') or $build.dry_run {error make {msg: 'Native build returned an invalid dry-run state.'}}
+                for name in ['size_bytes' 'mods' 'client_only' 'host_only' 'both' 'resources_enabled' 'shaders'] {
+                    if ((field $build $name null | describe) != 'int') or (field $build $name (-1)) < 0 {error make {msg: 'Native build returned an invalid count.'}}
+                }
+                if $build.mods < ($build.client_only + $build.host_only + $build.both) or ((field $build duration_seconds null | describe) !~ '^(int|float)$') or $build.duration_seconds < 0 {
+                    error make {msg: 'Native build returned contradictory statistics.'}
+                }
+                if ((field $data resource_packs null | describe) !~ '^(list|table)') {error make {msg: 'Native build returned invalid resource inventory.'}}
+                for item in $data.resource_packs {
+                    validate-string-fields $item ['id' 'source' 'state']
+                    validate-string-fields $item ['name' 'type' 'side' 'filename' 'category' 'version_id' 'project_id' 'slug'] true
+                    if $item.type != 'resourcepack' or $item.state not-in ['active' 'inactive'] or ((field $item pinned null | describe) != 'bool') or not ('number' in ($item | columns)) or $item.number != null or not ('priority' in ($item | columns)) {
+                        error make {msg: 'Native build returned invalid resource fields.'}
+                    }
+                    if ($item.state == 'active' and (((field $item priority null | describe) != 'int') or ($item.priority < 1))) or ($item.state == 'inactive' and $item.priority != null) {
+                        error make {msg: 'Native build returned invalid resource priority.'}
+                    }
+                }
+            }
+            if 'diagnostics' in ($data | columns) {
+                if (($data.diagnostics | describe) !~ '^(list|table)') {error make {msg: 'Native build diagnostics are invalid.'}}
+                for diagnostic in $data.diagnostics {validate-string-fields $diagnostic ['code' 'path' 'message']}
             }
         } else if (($args.0 | str lowercase) == 'project') and (($args.1 | str lowercase) in ['register' 'create']) {
             if $result.command != $args.0 or ($result.arguments | length) < 2 or $result.arguments.0 != $args.1 or ((field $result data null | describe) !~ '^record') or not ($result.data | columns | is-empty) {

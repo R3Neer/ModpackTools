@@ -137,7 +137,7 @@ internal static class ContentListCommand
         if (priority is { } p) writer.WriteNumber("priority", p); else writer.WriteNull("priority");
         writer.WriteString("version_id", version); writer.WriteNull("project_id"); writer.WriteNull("slug"); writer.WriteEndObject();
     }
-    private static void Issues(Utf8JsonWriter writer, string name, ImmutableArray<GraphIssue> issues)
+    internal static void Issues(Utf8JsonWriter writer, string name, ImmutableArray<GraphIssue> issues)
     {
         writer.WriteStartArray(name);
         foreach (var issue in issues)
