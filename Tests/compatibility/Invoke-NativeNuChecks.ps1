@@ -28,6 +28,8 @@ try {
     if($LASTEXITCODE -ne 0){throw 'Native Nu categories check failed'}
     & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuConfiguration.nu') ([IO.Path]::GetFullPath($StubExecutable))
     if($LASTEXITCODE -ne 0){throw 'Native Nu configuration check failed'}
+    & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuRegistration.nu') ([IO.Path]::GetFullPath($StubExecutable))
+    if($LASTEXITCODE -ne 0){throw 'Native Nu registration check failed'}
 } finally {
     $env:MODPACKTOOLS_CORE_PATH=$previousCore; $env:MODPACKTOOLS_CONFIG_HOME=$previousConfig; $env:MODPACKTOOLS_STATE_HOME=$previousState
     $resolved=[IO.Path]::GetFullPath($fixture)

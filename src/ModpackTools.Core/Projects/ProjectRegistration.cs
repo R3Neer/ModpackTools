@@ -17,12 +17,7 @@ public static class ProjectRegistration
         ProjectRegistrationRequest request, string stateDirectory, CancellationToken cancellation = default,
         Func<TransactionPreview<ProjectRegistrationResult>, CancellationToken, ValueTask>? prepareOutput = null)
     {
-        ArgumentNullException.ThrowIfNull(request);
-        if (string.IsNullOrEmpty(request.Id) || request.Id.Length > 4096 ||
-            !Regex.IsMatch(request.Id, "^[a-z][a-z0-9-]*$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking))
-            throw Error("InvalidId", $"Project ID '{request.Id}' is invalid; allowed characters: lowercase letters, numbers, hyphens", "choose an ID such as my-pack", request.Id);
-        if (string.IsNullOrWhiteSpace(request.Path))
-            throw Error("InvalidPath", "Packwiz project path cannot be empty", "modpack project register <id> --path <existing-directory>", request.Path);
+        ValidateRequest(request);
         cancellation.ThrowIfCancellationRequested();
         var root = Path.TrimEndingDirectorySeparator(System.IO.Path.GetFullPath(catalogRoot));
         var path = System.IO.Path.GetFullPath(request.Path);
@@ -95,6 +90,15 @@ public static class ProjectRegistration
         }
     }
 
+    public static void ValidateRequest(ProjectRegistrationRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (string.IsNullOrEmpty(request.Id) || request.Id.Length > 4096 ||
+            !Regex.IsMatch(request.Id, "^[a-z][a-z0-9-]*$", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking))
+            throw Error("InvalidId", $"Project ID '{request.Id}' is invalid; allowed characters: lowercase letters, numbers, hyphens", "choose an ID such as my-pack", request.Id);
+        if (string.IsNullOrWhiteSpace(request.Path))
+            throw Error("InvalidPath", "Packwiz project path cannot be empty", "modpack project register <id> --path <existing-directory>", request.Path);
+    }
     private static void ValidateDisplay(string? value, string field, string option)
     {
         if (value is not null && (string.IsNullOrWhiteSpace(value) || value.Length > 4096))
