@@ -6,7 +6,8 @@ relocation was completed independently; it is not an implementation milestone.
 
 Current public native host owns version, project list/current/use/status and complete
 structured content list (all filters, references, health and --verify) and category
-list (including numeric references), with direct Nushell machine dispatch.
+list (including numeric references) and content versions (complete compatible listing
+and choice cache), with direct Nushell machine dispatch.
 Human/help remain separate. Native declaration/graph/
 validation/provider slices also have internal acceptance. Legacy remains installed
 and still requires PS7.
