@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Net;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using ModpackTools.Core.Data;
 using ModpackTools.Core.Source;
 using ModpackTools.Core.Inventory;
@@ -18,7 +19,7 @@ public sealed record ProviderRequestLimits(int MaximumRequests = 1000, int Maxim
 public sealed record ProviderRequestStatistics(int Requests, long Bytes);
 public sealed record ProviderAcquisitionDiagnostic(string Code, string Path, string Message);
 
-public sealed class ModrinthVersionClient : IAsyncDisposable
+public sealed partial class ModrinthVersionClient : IAsyncDisposable
 {
     private readonly HttpClient http;
     private readonly SemaphoreSlim gate;
@@ -31,7 +32,7 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
     private readonly StringComparer comparer;
     private readonly bool retainCandidateEvidence;
     private readonly object sync = new();
-    private enum ResponseKind { Version, Batch, Project, Candidates, PublicVersions, Search }
+    private enum ResponseKind { Version, Batch, Project, ProjectLookup, Candidates, PublicVersions, Search }
     private sealed record ProviderResponse(ProviderProject? Project, ImmutableArray<ProviderVersion> Versions)
     {
         public ImmutableArray<CompatibleVersion> Listings { get; init; } = [];
@@ -127,6 +128,21 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
         return (await Request("project/" + id, [id], ResponseKind.Project).ConfigureAwait(false)).Project!;
     }
 
+    public async Task<ProviderProject> LookupProjectAsync(string selector)
+    {
+        Input();
+        ArgumentNullException.ThrowIfNull(selector);
+        var canonical = selector.Length is >= 1 and <= 256 && selector.All(char.IsAsciiLetterOrDigit);
+        if (!canonical && !ProjectSlugPattern().IsMatch(selector))
+            throw new DomainException("Metadata.InvalidProjectSelector", "Provider project selector must be an ID or slug",
+                "use a canonical project ID or a valid Modrinth slug", target: selector);
+        return (await Request("project/" + Uri.EscapeDataString(selector), [], ResponseKind.ProjectLookup).ConfigureAwait(false)).Project!;
+    }
+
+    // Provider slug contract; canonical IDs retain their separate decoder rules.
+    [GeneratedRegex("""\A[\w!@$()`.+,"\-']{3,64}\z""", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking)]
+    private static partial Regex ProjectSlugPattern();
+
     public async Task<ImmutableArray<ProviderVersion>> GetCandidateVersionsAsync(ProviderProject project,
         string minecraftVersion, string loader)
     {
@@ -171,13 +187,16 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
         lock (sync)
         {
             ObjectDisposedException.ThrowIf(disposed, this); CheckBudget();
-            if (pending.TryGetValue(endpoint, out var existing)) return existing.Value;
+            // Alias lookup permits a different returned canonical ID; canonical reads
+            // must retain their exact identity check before any cache side effect.
+            var key = kind == ResponseKind.ProjectLookup ? "lookup:" + endpoint : endpoint;
+            if (pending.TryGetValue(key, out var existing)) return existing.Value;
             if (pending.Count >= limits.MaximumRequests) throw Resource(nameof(limits.MaximumRequests));
             if (endpoint.Length > limits.MaximumEndpointCharacters) throw Resource(nameof(limits.MaximumEndpointCharacters));
             if (endpoint.Length > limits.MaximumTotalEndpointCharacters - endpointCharacters) throw Resource(nameof(limits.MaximumTotalEndpointCharacters));
             endpointCharacters += endpoint.Length;
             var work = new Lazy<Task<ProviderResponse>>(() => Fetch(endpoint, ids, kind));
-            pending.Add(endpoint, work);
+            pending.Add(key, work);
             return work.Value;
         }
     }
@@ -250,7 +269,7 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
                 lock (sync)
                 {
                     CheckBudget();
-                    if (kind != ResponseKind.Project)
+                    if (kind is not (ResponseKind.Project or ResponseKind.ProjectLookup))
                     {
                         if (rowCount > limits.MaximumReturnedVersions - versions) { exhausted = Resource(nameof(limits.MaximumReturnedVersions)); throw exhausted; }
                         versions += rowCount;
@@ -265,10 +284,10 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
                 var collectionEntries = 0;
                 foreach (var row in rows)
                 {
-                    if (kind == ResponseKind.Project)
+                    if (kind is ResponseKind.Project or ResponseKind.ProjectLookup)
                     {
                         project = ProviderProject.Decode(row, decoded.Dates, decode.MaximumCollectionEntries, models.Entry);
-                        if (!allowed.Contains(project.Id)) throw Invalid("Provider returned a project identity that was not requested.");
+                        if (kind == ResponseKind.Project && !allowed.Contains(project.Id)) throw Invalid("Provider returned a project identity that was not requested.");
                         continue;
                     }
                     models.Version();
@@ -297,7 +316,9 @@ public sealed class ModrinthVersionClient : IAsyncDisposable
                 result = new(project, typedVersions) { Listings = [.. listings.OrderByDescending(value => value.PublicationTicks)], CandidateWires = candidateWires.ToImmutable() };
                 token.ThrowIfCancellationRequested();
                 // Every row is valid before the first individually atomic store.
-                if (kind is ResponseKind.Project or ResponseKind.Candidates)
+                if (kind == ResponseKind.ProjectLookup)
+                    Store(root, "project/" + project!.Id, token);
+                else if (kind is ResponseKind.Project or ResponseKind.Candidates)
                     Store(root, endpoint, token);
                 else if (kind != ResponseKind.PublicVersions) for (var index = 0; index < rows.Length; index++)
                 {

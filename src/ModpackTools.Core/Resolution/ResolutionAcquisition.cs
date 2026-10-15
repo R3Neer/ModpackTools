@@ -26,6 +26,7 @@ public sealed class ResolutionAcquisition : IResolutionCandidates, IAsyncDisposa
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly Dictionary<string, ProjectContentNode> before = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, ProviderCandidateObservation> domains = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, ProviderProject> identified = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Dictionary<string, ProjectContentNode>> materialized = new(StringComparer.OrdinalIgnoreCase);
     private int nodeCount;
     private bool disposed;
@@ -126,8 +127,29 @@ public sealed class ResolutionAcquisition : IResolutionCandidates, IAsyncDisposa
         if (domains.TryGetValue(id, out var existing)) return existing;
         if (domains.Count >= limits.MaximumDomains) throw Limit(nameof(limits.MaximumDomains));
         if (!id.StartsWith("modrinth:", StringComparison.Ordinal)) throw new DomainException("Versions.UnsupportedProvider", "Candidate acquisition requires Modrinth content", "select Modrinth-managed content", "NotImplemented", id);
-        var value = await ProviderCandidates.ObserveAsync(configurationDirectory, id[9..], project.Minecraft ?? "", project.Loader ?? "", now, provider).ConfigureAwait(false);
+        identified.TryGetValue(id, out var supplied);
+        var value = await ProviderCandidates.ObserveAsync(configurationDirectory, id[9..], project.Minecraft ?? "", project.Loader ?? "", now, provider, supplied).ConfigureAwait(false);
         AssertCleanup(); domains.Add(id, value); return value;
+    }
+
+    public async ValueTask<ProviderProject> LookupProjectAsync(string selector, CancellationToken cancellation = default)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        using var registration = cancellation.Register(lifetime.Cancel);
+        var acquired = false;
+        try
+        {
+            await gate.WaitAsync(lifetime.Token).ConfigureAwait(false); acquired = true;
+            ObjectDisposedException.ThrowIf(disposed, this); lifetime.Token.ThrowIfCancellationRequested();
+            var info = await provider.LookupProjectAsync(selector).ConfigureAwait(false);
+            AssertCleanup(); lifetime.Token.ThrowIfCancellationRequested();
+            // First owned evidence wins within an invocation; aliases must not
+            // replace a project already used to construct a candidate domain.
+            identified.TryAdd("modrinth:" + info.Id, info);
+            return info;
+        }
+        catch (OperationCanceledException) { throw Cancelled(); }
+        finally { if (acquired) gate.Release(); }
     }
 
     public async ValueTask<ResolutionNode> GetNodeAsync(string id, string versionId, CancellationToken cancellation)
