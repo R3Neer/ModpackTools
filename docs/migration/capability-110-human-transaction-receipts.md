@@ -36,7 +36,7 @@ both the applied summary and complete diagnostic, with parent state intact.
 Peer evidence proves UI handling only, not a physical pin. Child-process counts
 are source-flow descriptions; no instrumentation or postcommit fault injection.
 
-Reports: assessment/review-blackbox/human-transactions110-final-report.md,
+Reports: assessment/review-blackbox/human-receipts110-final-report.md,
 run r110n-014725; assessment/review-whitebox/capability-110-human-receipts-final.md.
 CLI143 SHA25663EEE752F716742FB89CBB0E43A4426D02A94965BF17EB2B11CAEA7FDF2F2FDC;
 Nu144 main70264BAAADEB15DD9F56FDB9FCA281E21865461F535DB2053FC3A04A8C648F85.
