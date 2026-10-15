@@ -118,7 +118,7 @@ try
         return 0;
     }
     if (command.Equals("content", StringComparison.OrdinalIgnoreCase) && commandArguments.FirstOrDefault() is { } mutation
-        && new[] { "add", "update", "pin", "unpin" }.Contains(mutation, StringComparer.OrdinalIgnoreCase)
+        && new[] { "add", "update", "pin", "unpin", "remove" }.Contains(mutation, StringComparer.OrdinalIgnoreCase)
         && !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
     {
         var configurationDirectory = Environment.GetEnvironmentVariable("MODPACKTOOLS_CONFIG_HOME");
@@ -129,7 +129,9 @@ try
         try
         {
             var active = context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject;
-            if (mutation.Equals("pin", StringComparison.OrdinalIgnoreCase) || mutation.Equals("unpin", StringComparison.OrdinalIgnoreCase))
+            if (mutation.Equals("remove", StringComparison.OrdinalIgnoreCase))
+                await RemovalCommand.RunAsync(command, commandArguments, options.Project, active, configurationDirectory, cancellation.Token);
+            else if (mutation.Equals("pin", StringComparison.OrdinalIgnoreCase) || mutation.Equals("unpin", StringComparison.OrdinalIgnoreCase))
                 await PinCommand.RunAsync(command, commandArguments, options.Project, active, Path.GetFullPath(configurationDirectory), cancellation.Token);
             else
                 await ContentMutationCommand.RunAsync(command, commandArguments, options.Project, active, Path.GetFullPath(configurationDirectory), cancellation.Token);

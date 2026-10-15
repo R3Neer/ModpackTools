@@ -1,14 +1,20 @@
-param([Parameter(Mandatory)][string]$Executable, [Parameter(Mandatory)][string]$NuExecutable, [Parameter(Mandatory)][string]$StubExecutable)
+param([Parameter(Mandatory)][string]$Executable, [Parameter(Mandatory)][string]$NuExecutable, [Parameter(Mandatory)][string]$StubExecutable, [Parameter(Mandatory)][string]$PackwizExecutable)
 $ErrorActionPreference='Stop'
 $fixture=Join-Path ([IO.Path]::GetTempPath()) ('modpacktools-nu-checks-'+[guid]::NewGuid().ToString('N'))
 $previousCore=$env:MODPACKTOOLS_CORE_PATH
 $previousConfig=$env:MODPACKTOOLS_CONFIG_HOME
 $previousState=$env:MODPACKTOOLS_STATE_HOME
+$previousAppData=$env:APPDATA
+$previousLocalAppData=$env:LOCALAPPDATA
 try {
     $configuration=Join-Path $fixture 'configuration'
     $projects=Join-Path $fixture 'projects'
     $pack=Join-Path $projects 'fixture'
     [void][IO.Directory]::CreateDirectory($configuration)
+    $env:APPDATA=Join-Path $fixture 'Roaming'
+    $env:LOCALAPPDATA=Join-Path $fixture 'Local'
+    [void][IO.Directory]::CreateDirectory($env:APPDATA)
+    [void][IO.Directory]::CreateDirectory($env:LOCALAPPDATA)
     [void][IO.Directory]::CreateDirectory((Join-Path $pack '.modpack'))
     [IO.File]::WriteAllText((Join-Path $configuration 'config.psd1'), "@{Root='$($projects.Replace("'","''"))'}")
     [IO.File]::WriteAllText((Join-Path $pack '.modpack/project.psd1'), "@{SchemaVersion=1;Id='fixture'}")
@@ -44,8 +50,11 @@ try {
     } finally {$jar.Dispose()}
     & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuModSide.nu') ([IO.Path]::GetFullPath($StubExecutable))
     if($LASTEXITCODE -ne 0){throw 'Native Nu mod side check failed'}
+    & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuRemoval.nu') ([IO.Path]::GetFullPath($StubExecutable)) ([IO.Path]::GetFullPath($PackwizExecutable))
+    if($LASTEXITCODE -ne 0){throw 'Native Nu removal check failed'}
 } finally {
     $env:MODPACKTOOLS_CORE_PATH=$previousCore; $env:MODPACKTOOLS_CONFIG_HOME=$previousConfig; $env:MODPACKTOOLS_STATE_HOME=$previousState
+    $env:APPDATA=$previousAppData; $env:LOCALAPPDATA=$previousLocalAppData
     $resolved=[IO.Path]::GetFullPath($fixture)
     if(-not $resolved.StartsWith([IO.Path]::GetFullPath([IO.Path]::GetTempPath()),[StringComparison]::OrdinalIgnoreCase) -or [IO.Path]::GetFileName($resolved) -notlike 'modpacktools-nu-checks-*'){throw 'Unsafe fixture cleanup target'}
     Remove-Item -LiteralPath $resolved -Recurse -Force

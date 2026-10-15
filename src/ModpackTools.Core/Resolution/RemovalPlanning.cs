@@ -44,25 +44,14 @@ public static class RemovalPlanning
             GraphReportBuilder.ValidateInput(environment, [.. nodes.Select(node => node.Graph)], graphLimits, Charge);
             var type = InventorySelector.NormalizeType(request.Type);
             var all = new Dictionary<string, ProjectContentNode>(StringComparer.OrdinalIgnoreCase);
-            var aliases = new PhysicalAliasIndex();
             foreach (var node in nodes)
             {
                 Charge(1);
                 if (!all.TryAdd(node.Graph.Id, node)) throw new DomainException("Content.DuplicateIdentity", $"Duplicate content ID '{node.Graph.Id}'", "resolve duplicate physical metadata", "InvalidData", node.Graph.Id);
             }
-            aliases.AddRange([.. nodes.Select(node => node.Item).Where(item => type == InventoryType.All ||
-                type == InventoryType.Mod && item.Kind == ContentKind.Mod || type == InventoryType.ResourcePack && item.Kind == ContentKind.ResourcePack || type == InventoryType.ShaderPack && item.Kind == ContentKind.ShaderPack)]);
-            var requested = ImmutableArray.CreateBuilder<string>(); var requestedSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var selector in request.Selectors)
-            {
-                Charge(1);
-                if (!aliases.TryGet(selector, out var matches)) throw new DomainException("Content.NotFound", $"Content '{selector}' was not found", "run modpack content list and select a physical installed item", "ObjectNotFound");
-                if (matches.Count > 1) throw new DomainException("Content.AmbiguousSelector", $"Content selector '{selector}' is ambiguous", "use a stable ID or --type <mod|resourcepack|shaderpack>",
-                    details: Detail(matches.Items.Select(item => item.Id), ", "));
-                var item = matches.First;
-                if (item.Source is not (ContentSource.Packwiz or ContentSource.Local)) throw new DomainException("Content.NotRemovable", $"Content '{selector}' is not a removable file", "select the owning mod for built-in resources", "InvalidOperation");
-                if (requestedSet.Add(item.Id)) requested.Add(item.Id);
-            }
+            var requested = RemovalSelector.ResolveItems([.. nodes.Select(node => node.Item).Where(item => type == InventoryType.All ||
+                type == InventoryType.Mod && item.Kind == ContentKind.Mod || type == InventoryType.ResourcePack && item.Kind == ContentKind.ResourcePack || type == InventoryType.ShaderPack && item.Kind == ContentKind.ShaderPack)],
+                request.Selectors, Charge, values => Detail(values, ", "));
             var remaining = new Dictionary<string, ProjectContentNode>(all, StringComparer.OrdinalIgnoreCase);
             var baseline = Report(); var accepted = baseline.Errors.Select(issue => issue.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var removed = ImmutableArray.CreateBuilder<RemovalChange>(); var removedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -101,7 +90,7 @@ public static class RemovalPlanning
             foreach (var change in removed)
                 if (change.Before.Pinned) throw new DomainException("Compatibility.Pinned", $"'{change.Before.Item.Name}' is pinned", "modpack content unpin " + change.Id, "InvalidOperation");
             var final = Report(); GraphPolicy.Assert(final, baseline, request.Strict, limits: new(limits.MaximumDetailCharacters));
-            return new(requested.ToImmutable(), remaining.Values.ToImmutableArray(), baseline, final, removed.ToImmutable());
+            return new(requested, remaining.Values.ToImmutableArray(), baseline, final, removed.ToImmutable());
 
             void Remove(string id, string reason)
             {

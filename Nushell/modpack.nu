@@ -84,7 +84,7 @@ def owns-native-command [args: list<string>] {
     if (($command | str lowercase) in ['content' 'category']) and (($operation | str lowercase) == 'list') {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
-    if (($command | str lowercase) == 'content') and (($operation | str lowercase) in ['versions' 'search' 'add' 'update' 'pin' 'unpin']) {
+    if (($command | str lowercase) == 'content') and (($operation | str lowercase) in ['versions' 'search' 'add' 'update' 'pin' 'unpin' 'remove']) {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
     if ($command | str lowercase) in ['resource-pack' 'config' 'mod'] {
@@ -149,8 +149,11 @@ def validate-native-transaction [result: record, args: list<string>] {
     if ((field $transaction changes null | describe) !~ '^(list|table)') or ((field $transaction change_count null | describe) != 'int') {
         error make { msg: 'ModpackTools native executable returned invalid transaction changes.' }
     }
-    let should_apply = (not $transaction.dry_run) and ($transaction.change_count > 0)
-    if $transaction.change_count < 0 or $transaction.change_count != ($transaction.changes | length) or $transaction.preview or $transaction.applied != $should_apply {
+    let folded = ($args | each {|token| $token | str lowercase})
+    let removal = ($folded.0 == 'content') and ($folded.1 == 'remove')
+    let should_preview = $removal and (not $transaction.dry_run) and (('--yes' not-in $folded) or $transaction.change_count == 0)
+    let should_apply = (not $transaction.dry_run) and (not $transaction.preview) and ($transaction.change_count > 0)
+    if $transaction.change_count < 0 or $transaction.change_count != ($transaction.changes | length) or $transaction.preview != $should_preview or $transaction.applied != $should_apply or $transaction.dry_run != ('--dry-run' in $folded) {
         error make { msg: 'ModpackTools native executable returned contradictory transaction fields.' }
     }
     for change in $transaction.changes {
@@ -239,7 +242,7 @@ def invoke-native-command [args: list<string>] {
                     error make { msg: 'ModpackTools native executable returned an invalid project summary.' }
                 }
             }
-        } else if ((($result.command | str lowercase) == 'content') and (($args.1 | str lowercase) in ['add' 'update' 'pin' 'unpin'])) or ((($result.command | str lowercase) == 'category') and (($args.1 | str lowercase) in ['assign' 'clear' 'remove'])) or (($result.command | str lowercase) == 'mod') {
+        } else if ((($result.command | str lowercase) == 'content') and (($args.1 | str lowercase) in ['add' 'update' 'pin' 'unpin' 'remove'])) or ((($result.command | str lowercase) == 'category') and (($args.1 | str lowercase) in ['assign' 'clear' 'remove'])) or (($result.command | str lowercase) == 'mod') {
             validate-native-transaction $result $args
         } else if ($result.command | str lowercase) == 'resource-pack' {
             validate-native-transaction $result $args

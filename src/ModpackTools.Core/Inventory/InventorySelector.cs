@@ -110,7 +110,7 @@ public static class InventorySelector
         return new(type, side.Length == 0 ? null : side, source, state, labels.ToImmutable());
     }
 
-    internal static InventoryType NormalizeType(string value)
+    public static InventoryType NormalizeType(string value)
     {
         if (Culture.Equals(value, "all")) return InventoryType.All;
         if (new[] { "mod", "mods" }.Contains(value, Culture)) return InventoryType.Mod;

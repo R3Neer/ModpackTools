@@ -6,7 +6,7 @@ namespace ModpackTools.Cli;
 
 // Own the final public bytes before pending publication; domain operations do
 // not know about console output, JSON, or presentation options.
-internal sealed class TransactionResponse(string command, string[] arguments, bool dryRun, string root) : IDisposable
+internal sealed class TransactionResponse(string command, string[] arguments, bool dryRun, string root, bool isPreview = false) : IDisposable
 {
     private NativeOutputBuffer? buffer;
     private PublicTransactionChange[]? changes;
@@ -19,7 +19,7 @@ internal sealed class TransactionResponse(string command, string[] arguments, bo
         token.ThrowIfCancellationRequested();
         resources = resourcePacks;
         changes = preview.Changes.Select(change => new PublicTransactionChange(change.Before is null ? "add" : change.After is null ? "remove" : "change", change.Path, null)).ToArray();
-        Serialize(new(!dryRun && changes.Length != 0, dryRun, false, changes.Length, changes));
+        Serialize(new(!dryRun && !isPreview && changes.Length != 0, dryRun, isPreview, changes.Length, changes));
         // Reserve for fifteen bounded diagnostics plus summary, including full
         // Windows paths (32767 UTF16 chars) under worst-case JSON escaping.
         if (buffer!.Length > 60L * 1024 * 1024)
@@ -34,7 +34,7 @@ internal sealed class TransactionResponse(string command, string[] arguments, bo
         // work may replace Applied=true with an unapplied result.
         if (!result.Diagnostics.IsEmpty)
         {
-            Serialize(new(result.Applied, dryRun, false, changes.Length, changes, ResponseDiagnostics.Bounded(result.Diagnostics, root)));
+            Serialize(new(result.Applied, dryRun, isPreview, changes.Length, changes, ResponseDiagnostics.Bounded(result.Diagnostics, root)));
         }
         Console.OpenStandardOutput().Write(buffer.GetBuffer(), 0, checked((int)buffer.Length)); Console.WriteLine();
     }
