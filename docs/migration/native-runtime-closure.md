@@ -120,3 +120,5 @@ Capability83 accepts public structured config get/set and Nushell: CLI116/Core10
 Capability84 accepts internal transactional existing-project registration: Core110, black3/3, white2/2, warning-free AOT/default native gates. Catalog ownership serializes cross-child duplicate IDs; protected files and caller-output failure are covered. Public register wiring remains pending.
 
 Capability85 accepts public structured project register and Nushell: CLI117, black3/3, white2/2 and full parent public gates. Original empty machine data and error priorities are preserved. Project create and remaining runtime/install/update closure remain pending.
+
+Capability86 accepts internal Native project creation: Core111, black3/3, white2/2, native contracts and actual Packwiz explicit Fabric initialization on isolated data. Final publication is one non-overwriting directory move after preparation/output/fingerprint validation. Public create wiring remains pending; process-crash private workspace inspection remains explicit.
