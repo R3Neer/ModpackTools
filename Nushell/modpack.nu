@@ -92,7 +92,7 @@ def owns-native-command [args: list<string>] {
         if $name == 'mod' {return ($operation == 'set-side')}
         if $name == 'resource-pack' {return ($operation in ['enable' 'move' 'disable'])}
         if $name == 'config' {return ($operation in ['get' 'set'])}
-        return ($name == 'diff')
+        return ($name in ['diff' 'build'])
     }
     if $command in ['--version' '-V'] { return true }
     let operation = ($args | get --optional 1 | default '')
@@ -157,7 +157,7 @@ def order-global-options [args: list<string>] {
 def validate-read-presentation [result: record, args: list<string>] {
     let command = ($args.0 | str lowercase)
     let operation = ($args | get --optional 1 | default '' | str lowercase)
-    let expected = if $command == 'content' and $operation == 'list' {'inventory'} else if $command == 'content' and $operation == 'remove' {'removal'} else if $command == 'config' and $operation in ['get' 'set'] {'configuration'} else if $command == 'project' and $operation == 'use' {'session'} else if $command == 'project' and $operation == 'create' {'project-creation'} else if $command == 'project' and $operation == 'register' {'project-registration'} else if $command == 'diff' {'diff'} else {null}
+    let expected = if $command == 'content' and $operation == 'list' {'inventory'} else if $command == 'content' and $operation == 'remove' {'removal'} else if $command == 'config' and $operation in ['get' 'set'] {'configuration'} else if $command == 'project' and $operation == 'use' {'session'} else if $command == 'project' and $operation == 'create' {'project-creation'} else if $command == 'project' and $operation == 'register' {'project-registration'} else if $command == 'build' {'build'} else if $command == 'diff' {'diff'} else {null}
     let presentation = (field $result presentation null)
     if '--no-human' in $args or $expected == null {
         if $presentation != null {error make {msg: 'Native executable returned unrequested presentation.'}}
@@ -179,6 +179,38 @@ def validate-read-presentation [result: record, args: list<string>] {
             if 'diagnostics' in ($presentation | columns) {
                 if (($presentation.diagnostics | describe) !~ '^(list|table)') {error make {msg: 'Native project creation returned invalid diagnostics.'}}
                 for diagnostic in $presentation.diagnostics {validate-string-fields $diagnostic ['code' 'path' 'message']}
+            }
+        }
+        'build' => {
+            validate-string-fields $presentation.project ['id' 'root' 'output_name']
+            validate-string-fields $presentation.project ['name' 'version' 'minecraft' 'loader' 'loader_version'] true
+            for name in ['health_items' 'log' 'mods' 'shaders' 'groups'] {if ((field $presentation $name null | describe) !~ '^(list|table)') {error make {msg: 'Native build returned invalid presentation lists.'}}}
+            if ($presentation.log | any {|line| ($line | describe) != 'string'}) {error make {msg: 'Native build returned invalid log lines.'}}
+            for item in $presentation.health_items {
+                validate-string-fields $item ['status' 'text']
+                if $item.status not-in ['pass' 'fail' 'warn' 'info'] {error make {msg: 'Native build returned invalid health status.'}}
+            }
+            let dry = ($args | any {|token| ($token | str lowercase) in ['--dry-run' '-n']})
+            if $dry {
+                if not ($presentation.log | is-empty) or not ($presentation.mods | is-empty) or not ($presentation.shaders | is-empty) or not ($presentation.groups | is-empty) {error make {msg: 'Native build dry-run returned committed presentation.'}}
+            } else {
+                if ($presentation.mods | length) != $result.data.build.mods or ($presentation.shaders | length) != $result.data.build.shaders {error make {msg: 'Native build presentation mismatched counts.'}}
+                for pair in [{rows: $presentation.mods, kind: mod} {rows: $presentation.shaders, kind: shaderpack}] {
+                    for item in $pair.rows {
+                        validate-string-fields $item ['id' 'name' 'type' 'source' 'state']
+                        validate-string-fields $item ['side' 'filename' 'category' 'version_id'] true
+                        if $item.type != $pair.kind or ((field $item pinned null | describe) != 'bool') or (field $item number null) != null {error make {msg: 'Native build returned invalid inventory presentation.'}}
+                    }
+                }
+                for group in $presentation.groups {
+                    validate-string-fields $group ['name']
+                    if ((field $group rows null | describe) !~ '^(list|table)') {error make {msg: 'Native build returned invalid mod group.'}}
+                    for row in $group.rows {
+                        if ((field $row index null | describe) != 'int') or $row.index < 0 or $row.index >= ($presentation.mods | length) or $row.side not-in ['client' 'server' 'both' 'unknown'] or ((field $row invalid_category null) != null and (($row.invalid_category | describe) != 'string')) {error make {msg: 'Native build returned invalid mod reference.'}}
+                    }
+                    if ($group.rows | get index | uniq | length) != ($group.rows | length) {error make {msg: 'Native build duplicated a mod within one group.'}}
+                }
+                if ($presentation.groups | each --flatten {|group| $group.rows | get index} | uniq | length) != ($presentation.mods | length) {error make {msg: 'Native build presentation lost mod occurrences.'}}
             }
         }
         'removal' => {
@@ -788,10 +820,13 @@ export def --env --wrapped main [...args: string] {
     let native_config_set = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'config') and (($args | get --optional 1 | default '' | str lowercase) == 'set') and (not ($args | any {|token| $token in ['--help' '-h']}))
     let native_project_create = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'project') and (($args | get --optional 1 | default '' | str lowercase) == 'create') and (not ($args | any {|token| $token in ['--help' '-h']}))
     let native_project_register = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'project') and (($args | get --optional 1 | default '' | str lowercase) == 'register') and (not ($args | any {|token| $token in ['--help' '-h']}))
+    let native_build = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'build') and (not ($args | any {|token| $token in ['--help' '-h']}))
     let native_removal = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'content') and (($args | get --optional 1 | default '' | str lowercase) == 'remove') and (not ($args | any {|token| $token in ['--help' '-h']}))
     # Even explicit --yes first validates and renders a nonmutating observation.
     let first_args = if $native_removal {$args | where {|token| $token not-in ['--yes' '-y']}} else {$args}
-    if $native_project_create {
+    if $native_build {
+        Native-Presentation progress $args 'Building project...'
+    } else if $native_project_create {
         Native-Presentation progress $args ("Creating project '" + ($args | get --optional 2 | default '') + "'...")
     } else if $native_project_register {
         Native-Presentation progress $args ("Registering Packwiz project as '" + ($args | get --optional 2 | default '') + "'...")
@@ -859,9 +894,9 @@ export def --env --wrapped main [...args: string] {
     if $machine_output {
         return (unwrap-result $envelope)
     }
-    if $native_receipt or $native_category_create or $native_config_set or $native_project_create or $native_project_register {
+    if $native_receipt or $native_category_create or $native_config_set or $native_project_create or $native_project_register or $native_build {
         try {Native-Presentation render $envelope $args} catch {|err|
-            let receipt = if $native_project_register {'The project was registered, but its presentation failed.'} else if $native_project_create {'The project was created, but its presentation failed.'} else if $native_category_create {'The category was created, but its presentation failed.'} else if $native_config_set {'The configuration was saved, but its presentation failed.'} else if $envelope.data.transaction.applied {'The transaction was applied, but its presentation failed.'} else {'The transaction returned without applying changes, but its presentation failed.'}
+            let receipt = if $native_build {if ('--dry-run' in $envelope.arguments) {'The build dry-run completed without applying changes, but its presentation failed.'} else {'The build was published, but its presentation failed.'}} else if $native_project_register {'The project was registered, but its presentation failed.'} else if $native_project_create {'The project was created, but its presentation failed.'} else if $native_category_create {'The category was created, but its presentation failed.'} else if $native_config_set {'The configuration was saved, but its presentation failed.'} else if $envelope.data.transaction.applied {'The transaction was applied, but its presentation failed.'} else {'The transaction returned without applying changes, but its presentation failed.'}
             error make {msg: $'($receipt) ($err.msg)'}
         }
     } else if (owns-native-command $args) {Native-Presentation render $envelope $args}

@@ -6,14 +6,21 @@ using ModpackTools.Core.Transactions;
 
 namespace ModpackTools.Cli;
 
-internal sealed class BuildResponse(string command, string[] arguments, string root) : IDisposable
+internal sealed class BuildResponse(string command, string[] arguments, string root, bool includePresentation = false) : IDisposable
 {
     private NativeOutputBuffer? buffer;
     private BuildResult? prepared;
+    private BuildPresentation? presentation;
+    private PublicInventoryItem[] resources = [];
     public ValueTask PrepareAsync(TransactionPreview<BuildResult> preview, CancellationToken cancellation)
     {
-        cancellation.ThrowIfCancellationRequested(); prepared = preview.Result; Serialize([]);
-        if (buffer!.Length > 60L * 1024 * 1024) throw new DomainException("Core.OutputLimit", "Build output leaves no diagnostic reserve", "reduce project metadata", "LimitsExceeded");
+        cancellation.ThrowIfCancellationRequested(); prepared = preview.Result;
+        if (includePresentation) presentation = BuildPresentation.From(prepared);
+        if (!prepared.DryRun) resources = ResourcePackCommand.Rows(prepared.Inventory.ResourceView);
+        Serialize([]);
+        var reserve = includePresentation ? 8 * 1024 * 1024 : 4 * 1024 * 1024;
+        if (buffer!.Length > 64L * 1024 * 1024 - reserve) throw new DomainException("Core.OutputLimit", "Build output leaves no diagnostic reserve", "reduce project metadata", "LimitsExceeded");
+        buffer.Capacity = checked((int)buffer.Length + reserve);
         return ValueTask.CompletedTask;
     }
     public void Write(TransactionResult<BuildResult> result)
@@ -24,7 +31,8 @@ internal sealed class BuildResponse(string command, string[] arguments, string r
     }
     private void Serialize(ImmutableArray<TransactionDiagnostic> diagnostics)
     {
-        var result = prepared!; buffer?.Dispose(); buffer = new("Build", "reduce project metadata before building");
+        var result = prepared!; buffer ??= new("Build", "reduce project metadata before building");
+        buffer.SetLength(0); buffer.Position = 0;
         using var writer = new Utf8JsonWriter(buffer, new() { MaxDepth = 256 });
         writer.WriteStartObject(); writer.WriteNumber("schema_version", 1); writer.WriteBoolean("ok", true); writer.WriteString("command", command);
         writer.WriteStartArray("arguments"); foreach (var argument in arguments) writer.WriteStringValue(argument); writer.WriteEndArray();
@@ -32,7 +40,7 @@ internal sealed class BuildResponse(string command, string[] arguments, string r
         ContentListCommand.Issues(writer, "errors", result.Health.Errors); ContentListCommand.Issues(writer, "warnings", result.Health.Warnings); ContentListCommand.Issues(writer, "unknown", result.Health.Unknown); writer.WriteEndObject();
         if (!result.DryRun)
         {
-            writer.WriteStartArray("resource_packs"); foreach (var resource in ResourcePackCommand.Rows(result.Inventory.ResourceView))
+            writer.WriteStartArray("resource_packs"); foreach (var resource in resources)
                 JsonSerializer.Serialize(writer, resource, WireJsonContext.Default.PublicInventoryItem);
             writer.WriteEndArray(); writer.WriteStartObject("build"); writer.WriteString("path", result.Path); writer.WriteNumber("size_bytes", result.Size);
             writer.WriteNumber("duration_seconds", result.Duration.TotalSeconds); writer.WriteBoolean("dry_run", false);
@@ -46,7 +54,13 @@ internal sealed class BuildResponse(string command, string[] arguments, string r
             { writer.WriteStartObject(); writer.WriteString("code", diagnostic.Code); writer.WriteString("path", diagnostic.Path); writer.WriteString("message", diagnostic.Message); writer.WriteEndObject(); }
             writer.WriteEndArray();
         }
-        writer.WriteEndObject(); writer.WriteEndObject();
+        writer.WriteEndObject();
+        if (presentation is not null)
+        {
+            writer.WritePropertyName("presentation");
+            JsonSerializer.Serialize(writer, presentation, WireJsonContext.Default.BuildPresentation);
+        }
+        writer.WriteEndObject();
     }
     public void Dispose() => buffer?.Dispose();
 }

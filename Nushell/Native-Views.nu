@@ -113,8 +113,43 @@ def transaction-summary [ui: record, transaction: record] {
     for item in ($transaction | get --optional diagnostics | default []) {r3cli status $ui warning $'($item.code): ($item.path) · ($item.message)'}
 }
 
+def build-view [ui: record, envelope: record] {
+    let data = $envelope.data
+    let display = $envelope.presentation
+    let health = if not ($data.health.errors | is-empty) {($data.health.errors | length | into string) + ' dependency issue(s)'} else if not ($data.health.unknown | is-empty) {'Incomplete verification'} else if not ($data.health.warnings | is-empty) {'Verified with ' + ($data.health.warnings | length | into string) + ' warning(s)'} else {'Healthy'}
+    r3cli key-value $ui Health $health
+    for item in $display.health_items {r3cli status $ui (if $item.status == 'fail' {'error'} else if $item.status == 'warn' {'warning'} else {'info'}) $item.text}
+    if '--dry-run' in $envelope.arguments {
+        r3cli status $ui info 'Dry run: export validated without changing the project.'
+        for item in ($data | get --optional diagnostics | default []) {r3cli status $ui warning $'($item.code): ($item.path) · ($item.message)'}
+        return
+    }
+    for line in $display.log {r3cli line $ui [{text: $line, role: secondary}]}
+    if ($display.mods | is-empty) {r3cli section $ui MODS 0; r3cli line $ui [{text: '  · None', role: secondary}]} else {
+        r3cli line $ui [{text: '  [C]', role: client} {text: ' Client    ', role: secondary} {text: '[H]', role: host} {text: ' Host    ', role: secondary} {text: '[C]', role: client} {text: '[H]', role: host} {text: ' Both', role: secondary}]
+        for group in $display.groups {
+            r3cli section $ui $'MODS · ($group.name)' ($group.rows | length)
+            for row in $group.rows {
+                let item = ($display.mods | get $row.index)
+                if $row.invalid_category != null {r3cli status $ui warning $"'($item.name)' references the missing category '($row.invalid_category)' and is shown as unclassified."}
+                side-entry $ui $item 0 $row.side
+            }
+        }
+    }
+    resources $ui $data.resource_packs 0 false
+    r3cli section $ui 'SHADER PACKS' ($display.shaders | length)
+    if ($display.shaders | is-empty) {r3cli line $ui [{text: '  · None', role: secondary}]}
+    for item in $display.shaders {side-entry $ui $item 0 'client'}
+    let build = $data.build
+    let size = if $build.size_bytes >= 1073741824 {(($build.size_bytes / 1073741824) | into string --decimals 2) + ' GB'} else if $build.size_bytes >= 1048576 {(($build.size_bytes / 1048576) | into string --decimals 2) + ' MB'} else if $build.size_bytes >= 1024 {(($build.size_bytes / 1024) | into string --decimals 2) + ' KB'} else {($build.size_bytes | into string) + ' B'}
+    r3cli status $ui success 'Status: successful'
+    for row in [[File ($build.path | path basename)] [Size $size] [Duration (($build.duration_seconds | into string --decimals 2) + ' s')] [Mods $build.mods] ['Client only' $build.client_only] ['Host only' $build.host_only] [Both $build.both] [Unknown ($build.mods - $build.client_only - $build.host_only - $build.both)] ['Enabled resources' $build.resources_enabled] [Shaders $build.shaders] [Path $build.path]] {r3cli key-value $ui $row.0 (text $row.1) --width 20}
+    for item in ($data | get --optional diagnostics | default []) {r3cli status $ui warning $'($item.code): ($item.path) · ($item.message)'}
+}
+
 export def render [ui: record, envelope: record] {
     let data = $envelope.data
+    if ($envelope.command | str lowercase) == 'build' {build-view $ui $envelope; return}
     let operation = ($envelope.arguments | get --optional 0 | default '' | str lowercase)
     if ($envelope.command | str lowercase) == 'resource-pack' {
         transaction-summary $ui $data.transaction

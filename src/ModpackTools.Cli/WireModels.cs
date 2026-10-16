@@ -90,6 +90,7 @@ internal sealed record Failure(string Id, string Message, string Category, JsonE
 [JsonSerializable(typeof(ConfigurationEnvelope))]
 [JsonSerializable(typeof(ProjectCreationEnvelope))]
 [JsonSerializable(typeof(ProjectRegistrationEnvelope))]
+[JsonSerializable(typeof(BuildPresentation))]
 [JsonSerializable(typeof(InventoryPresentation))]
 [JsonSerializable(typeof(DiffPresentation))]
 [JsonSerializable(typeof(VersionEnvelope))]

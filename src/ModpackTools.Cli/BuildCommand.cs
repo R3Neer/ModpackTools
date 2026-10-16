@@ -11,7 +11,7 @@ namespace ModpackTools.Cli;
 internal static class BuildCommand
 {
     public static async Task RunAsync(string command, string[] arguments, string? requestedProject, string? activeProject,
-        string configurationDirectory, CancellationToken cancellation)
+        string configurationDirectory, CancellationToken cancellation, bool includePresentation = false)
     {
         var switches = new HashSet<string>(StringComparer.OrdinalIgnoreCase); var values = new List<string>();
         foreach (var token in arguments)
@@ -34,7 +34,7 @@ internal static class BuildCommand
         var project = ProjectSelection.Find(ProjectReader.Discover(ConfigurationReader.ReadRoot(configurationDirectory)), effective);
         var state = Environment.GetEnvironmentVariable("MODPACKTOOLS_STATE_HOME");
         if (string.IsNullOrWhiteSpace(state)) state = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModpackTools", "native-state");
-        var dryRun = switches.Contains("dry-run"); using var output = new BuildResponse(command, arguments, project.Root);
+        var dryRun = switches.Contains("dry-run"); using var output = new BuildResponse(command, arguments, project.Root, includePresentation);
         var result = await BuildOperation.ExecuteAsync(project, new(switches.Contains("no-refresh"), switches.Contains("keep-old"), switches.Contains("raw-log"), switches.Contains("strict"), dryRun),
             configurationDirectory, Path.GetFullPath(state), DateTimeOffset.UtcNow, ResolveTool, Environment.ProcessPath!, cancellation: cancellation, prepareOutput: output.PrepareAsync).ConfigureAwait(false);
         if (switches.Contains("open") && !dryRun)

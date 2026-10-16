@@ -13,6 +13,11 @@ def main [stub_executable: string, packwiz_executable: string] {
     if $applied.dry_run or $applied.size_bytes < 1 or not ($applied.path | path exists) or $env.MODPACKTOOLS_PROJECT != 'nu-created' {
         error make {msg: 'Native Nu build failed or selection changed'}
     }
+    let project_root = (modpack project list --no-human | where id == nu-created | first | get root)
+    let before = (open --raw ($project_root | path join 'pack.toml'))
+    if (modpack build --dry-run --ascii --color never) != null {error make {msg: 'Human build dry-run leaked output'}}
+    if (open --raw ($project_root | path join 'pack.toml')) != $before {error make {msg: 'Human build dry-run changed manifest'}}
+    if (modpack build --ascii --color never) != null or $env.MODPACKTOOLS_PROJECT != 'nu-created' {error make {msg: 'Human build leaked output or changed selection'}}
     let response_path = ($nu.temp-dir | path join $'modpacktools-nu-build-((random uuid)).json')
     $env.MODPACKTOOLS_CORE_PATH = $stub_executable
     $env.MODPACKTOOLS_TEST_RESPONSE_PATH = $response_path

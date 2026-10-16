@@ -56,7 +56,7 @@ try
         Console.CancelKeyPress += cancel;
         try
         {
-            if (command.Equals("build", StringComparison.OrdinalIgnoreCase)) await BuildCommand.RunAsync(command, commandArguments, options.Project, context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject, configurationDirectory, cancellation.Token);
+            if (command.Equals("build", StringComparison.OrdinalIgnoreCase)) await BuildCommand.RunAsync(command, commandArguments, options.Project, context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject, configurationDirectory, cancellation.Token, !options.NoHuman);
             else if (command.Equals("doctor", StringComparison.OrdinalIgnoreCase)) await DoctorCommand.RunAsync(command, commandArguments, options.Project, context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject, configurationDirectory, cancellation.Token);
             else await DiffCommand.RunAsync(command, commandArguments, options.Project, context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject, configurationDirectory, cancellation.Token, !options.NoHuman);
         }
