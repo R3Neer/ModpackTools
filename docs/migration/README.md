@@ -1,7 +1,11 @@
 # Hybrid-core migration: branch-only records
 
-Status: implementation authorized and started; see capability checkpoints in
-[implementation sequence](implementation-plan.md).
+Current status, 2026-10-16: native Windows x64 package implemented and locally
+accepted, including installer/update/Nu without PowerShell. Personal activation
+remains pending explicit user instruction. Read the current
+[activation handoff](native-activation-handoff.md) and
+[public command measurements](performance.md) first. Numbered records preserve
+historical scope; their old pending notes are not the current progress report.
 
 All migration work belongs to `codex/hybrid-core`, forked from
 `025b7f32200484070fe6ec5e5aa1a3ef49c3bfa2` (declared version 4.0.2).

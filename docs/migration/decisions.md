@@ -158,9 +158,11 @@ with repaired Git linkage. The legacy installation is separately located at
 import points there. These paths were verified read-only. Preserve those changes;
 do not repeat relocation or replace the live installation with the partial Native.
 
-For the new distribution choose a per-user application root under LocalAppData,
-`ModpackTools/app`, with explicit configurable install-root support (including an
-application directory on D). Keep `config.psd1` and caches at their existing
+For the new distribution require an explicit application root. The current
+personal proposal is `D:\Juegos\Minecraft\Herramientas\ModpackTools-App`, separate
+from the already relocated source repository; it is not activated by this branch.
+This supersedes the exploratory LocalAppData/app default: a silent default could
+defeat the user's approved domain destination. Keep `config.psd1` and caches at their existing
 configuration root initially; do not migrate configuration just to move the
 executable. Native recovery uses the stable namespace `MODPACKTOOLS_STATE_HOME`
 (default LocalAppData/ModpackTools/native-state), independently of configuration

@@ -70,3 +70,23 @@ Use independent inventories: (a) the real small metadata-only pack recorded in
 the baseline; (b) synthetic scale fixtures with 100/500/1000 items and actual JARs;
 (c) manifest-heavy/nested-loader fixtures; (d) failure/Unicode/link fixtures.
 Do not extrapolate the first pack to all sizes or to online resolution.
+
+## Current closure evidence, 2026-10-16
+
+All public command families have native implementations and Nu has no PowerShell
+fallback. This index distinguishes implementation completion from universal test
+coverage; historical pending notes above refer to their original checkpoints.
+
+| Matrix area | Current evidence and remaining limits |
+|---|---|
+| C01-C11 | Published-native version/protocol and complete fresh Nu suite, strict/malformed response peers, aliases, configuration/session and typed human/help checks. Earlier focused parsing/culture contracts remain in their capability records. |
+| C12-C18 | Typed loader/range/evidence/graph/resolver and mutation checkpoints through99; human plan/receipt acceptance107-117 and fresh Nu classification/resource/removal cases. No new claim that Minecraft starts. |
+| C19-C25 | Preview/approval/dry-run/no-op, full source identity and recovery engine; focused injected failure/external edit/retained journal cases; real Packwiz export and exact indexed artifact validation. No exhaustive OS kill/storage-failure or live provider-service campaign. |
+| C26 | Actual final package installation C-to-D and15 public operations through the installed generated bootstrap, plus hash/role/smoke refusal, update/no-op/rollback and conservative resumable retirement. Personal consumers remain unchanged pending activation. |
+| C27 | Existing cancellation, injected IO, permissions/ownership and resumable retirement controls preserve or retain evidence. No destructive real disk-full test; do not label that unexecuted scenario green. |
+| C28 | Current31-sample public Nu20-local/100-managed latency and value parity; separate fresh core/stable launcher version. Measured latency thresholds pass for these fixtures. Memory,500/1000 scaling and physical-disk cold behavior are not newly certified. |
+
+Current package, routes, concrete test reports and activation gates are in
+[native-activation-handoff.md](native-activation-handoff.md); timing samples and
+scope are in [performance.md](performance.md). The installed legacy engine is
+retained until separately authorized consumer activation/validation succeeds.

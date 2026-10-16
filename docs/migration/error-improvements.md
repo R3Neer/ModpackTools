@@ -462,3 +462,24 @@ under E39. Input occurrence order defines duplicate-owner selection, replacing a
 unspecified hashtable enumeration tie; verified shallow legacy hashes can preserve
 ordinary issue ordering without becoming identity or baseline membership keys.
 Native acceptance and public graph/cache wiring remain pending this contract.
+
+## E41: completed native runtime and distribution failures
+
+Closure through capability131 supersedes incremental CapabilityUnavailable for
+unowned commands: all public families now route natively, and an unknown command
+returns Command.Unknown with an actionable help hint. A missing package core is
+an explicit path/reinstall diagnostic; Nu never attempts a PowerShell fallback.
+
+Cancellation says operation, rather than incorrectly saying listing for every
+command. Self-update preserves original domain ID/category/exact retained target,
+rejects unmanaged hosts and obsolete generation-bound approval before publication,
+and distinguishes a committed update with presentation/cleanup trouble from a
+failed pre-publication operation. Machine successful self-update still returns
+empty data; installation receipts are human presentation, not extra pipeline data.
+
+Native installation errors report prepared paths and actual publication phases.
+Unknown/tampered/open retirement trees remain with exact reasons and resumable
+journals rather than being silently removed. Doctor does not offer PowerShell as
+a native runtime dependency. Scope and acceptance are recorded in capabilities
+120-131; these are explicit diagnostics for new ownership boundaries, not a claim
+that every new native installation failure had a legacy equivalent.
