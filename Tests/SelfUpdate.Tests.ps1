@@ -168,8 +168,18 @@ InModuleScope ModpackTools {
             Mock Get-Module { @([pscustomobject]@{ModuleBase='C:\machine\ModpackTools'}) } -ParameterFilter { $ListAvailable }
             { Get-MpSelfUpdateTarget } | Should Throw 'precedence'
         }
-        It 'rejects installation outside allowed roots' {
-            { Resolve-MpInstallDestination (Join-Path $TestDrive 'unrelated') } | Should Throw 'user PSModulePath'
+        It 'rejects an explicit destination that is not a ModpackTools directory' {
+            { Resolve-MpInstallDestination (Join-Path $TestDrive 'unrelated') } | Should Throw 'ModpackTools directory'
+        }
+        It 'accepts an explicit module destination independently of PSModulePath' {
+            $destination = Join-Path $TestDrive 'custom modules/ModpackTools'
+            (Resolve-MpInstallDestination $destination) | Should Be ([IO.Path]::GetFullPath($destination))
+        }
+        It 'rejects replacing a source worktree even at an explicit module destination' {
+            $destination = Join-Path $TestDrive 'source/ModpackTools'
+            [void][IO.Directory]::CreateDirectory($destination)
+            [IO.File]::WriteAllText((Join-Path $destination '.git'), 'gitdir: elsewhere')
+            { Resolve-MpInstallDestination $destination } | Should Throw 'Git source checkout'
         }
     }
 }

@@ -1,0 +1,68 @@
+using System.Text.Json;
+using ModpackTools.Core;
+using ModpackTools.Core.Transactions;
+using ModpackTools.Core.Resolution;
+
+namespace ModpackTools.Cli;
+
+// Own the final public bytes before pending publication; domain operations do
+// not know about console output, JSON, or presentation options.
+internal sealed class TransactionResponse(string command, string[] arguments, bool dryRun, string root, bool isPreview = false) : IDisposable
+{
+    private NativeOutputBuffer? buffer;
+    private PublicTransactionChange[]? changes;
+    private PublicInventoryItem[]? resources;
+    private RemovalPresentation? presentation;
+    private ContentPlanPresentation? contentPresentation;
+
+    public ValueTask PrepareContentAsync(TransactionPreview<ContentPlan> preview, CancellationToken token)
+    {
+        contentPresentation = ContentPlanPresentation.From(preview.Result);
+        return PrepareAsync(preview, token);
+    }
+
+    public ValueTask PrepareRemovalAsync(TransactionPreview<RemovalPlan> preview, CancellationToken token)
+    {
+        presentation = RemovalPresentation.From(preview);
+        return PrepareAsync(preview, token);
+    }
+
+    public ValueTask PrepareAsync<T>(TransactionPreview<T> preview, CancellationToken token) => PrepareAsync(preview, token, null);
+
+    public ValueTask PrepareAsync<T>(TransactionPreview<T> preview, CancellationToken token, PublicInventoryItem[]? resourcePacks)
+    {
+        token.ThrowIfCancellationRequested();
+        resources = resourcePacks;
+        changes = preview.Changes.Select(change => new PublicTransactionChange(change.Before is null ? "add" : change.After is null ? "remove" : "change", change.Path, null)).ToArray();
+        Serialize(new(!dryRun && !isPreview && changes.Length != 0, dryRun, isPreview, changes.Length, changes));
+        // Reserve for fifteen bounded diagnostics plus summary, including full
+        // Windows paths (32767 UTF16 chars) under worst-case JSON escaping.
+        if (buffer!.Length > 60L * 1024 * 1024)
+            throw new DomainException("Core.OutputLimit", "Content transaction output leaves no diagnostic reserve", "reduce the requested batch", "LimitsExceeded");
+        buffer.Capacity = checked((int)buffer.Length + 4 * 1024 * 1024);
+        return ValueTask.CompletedTask;
+    }
+
+    public void Write<T>(TransactionResult<T> result)
+    {
+        if (buffer is null || changes is null) throw new InvalidOperationException("Transaction output was not prepared.");
+        // Committed is terminal: no cancellation checkpoint or fallible domain
+        // work may replace Applied=true with an unapplied result.
+        if (!result.Diagnostics.IsEmpty)
+        {
+            Serialize(new(result.Applied, dryRun, isPreview, changes.Length, changes, ResponseDiagnostics.Bounded(result.Diagnostics, root)));
+        }
+        Console.OpenStandardOutput().Write(buffer.GetBuffer(), 0, checked((int)buffer.Length)); Console.WriteLine();
+    }
+
+    private void Serialize(PublicTransaction transaction)
+    {
+        buffer ??= new("Content transaction", "reduce the requested batch before applying it");
+        buffer.SetLength(0); buffer.Position = 0;
+        using var writer = new Utf8JsonWriter(buffer);
+        if (contentPresentation is not null)
+            JsonSerializer.Serialize(writer, new ContentPlanEnvelope(1, true, command, arguments, new(transaction, resources), contentPresentation), WireJsonContext.Default.ContentPlanEnvelope);
+        else JsonSerializer.Serialize(writer, new TransactionEnvelope(1, true, command, arguments, new(transaction, resources), presentation), WireJsonContext.Default.TransactionEnvelope);
+    }
+    public void Dispose() => buffer?.Dispose();
+}

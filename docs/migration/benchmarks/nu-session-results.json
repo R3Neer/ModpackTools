@@ -1,0 +1,226 @@
+{
+  "samples": 21,
+  "rows": [
+    {
+      "operation": "version",
+      "sample": 0,
+      "wall_ms": 2724.5091
+    },
+    {
+      "operation": "version",
+      "sample": 1,
+      "wall_ms": 2060.1646
+    },
+    {
+      "operation": "version",
+      "sample": 2,
+      "wall_ms": 2038.1794
+    },
+    {
+      "operation": "version",
+      "sample": 3,
+      "wall_ms": 2043.2847
+    },
+    {
+      "operation": "version",
+      "sample": 4,
+      "wall_ms": 2105.8752
+    },
+    {
+      "operation": "version",
+      "sample": 5,
+      "wall_ms": 2171.5933
+    },
+    {
+      "operation": "version",
+      "sample": 6,
+      "wall_ms": 1977.4432
+    },
+    {
+      "operation": "version",
+      "sample": 7,
+      "wall_ms": 1915.906
+    },
+    {
+      "operation": "version",
+      "sample": 8,
+      "wall_ms": 1952.0427
+    },
+    {
+      "operation": "version",
+      "sample": 9,
+      "wall_ms": 1979.0165
+    },
+    {
+      "operation": "version",
+      "sample": 10,
+      "wall_ms": 1929.1089
+    },
+    {
+      "operation": "version",
+      "sample": 11,
+      "wall_ms": 1953.25
+    },
+    {
+      "operation": "version",
+      "sample": 12,
+      "wall_ms": 1980.9713
+    },
+    {
+      "operation": "version",
+      "sample": 13,
+      "wall_ms": 2060.6473
+    },
+    {
+      "operation": "version",
+      "sample": 14,
+      "wall_ms": 2135.1195
+    },
+    {
+      "operation": "version",
+      "sample": 15,
+      "wall_ms": 1926.5128
+    },
+    {
+      "operation": "version",
+      "sample": 16,
+      "wall_ms": 2067.4699
+    },
+    {
+      "operation": "version",
+      "sample": 17,
+      "wall_ms": 1982.1185
+    },
+    {
+      "operation": "version",
+      "sample": 18,
+      "wall_ms": 2383.883
+    },
+    {
+      "operation": "version",
+      "sample": 19,
+      "wall_ms": 2234.897
+    },
+    {
+      "operation": "version",
+      "sample": 20,
+      "wall_ms": 2146.4694
+    },
+    {
+      "operation": "version",
+      "sample": 21,
+      "wall_ms": 1959.2722
+    },
+    {
+      "operation": "inventory",
+      "sample": 0,
+      "wall_ms": 5468.7712
+    },
+    {
+      "operation": "inventory",
+      "sample": 1,
+      "wall_ms": 6253.668
+    },
+    {
+      "operation": "inventory",
+      "sample": 2,
+      "wall_ms": 5601.841
+    },
+    {
+      "operation": "inventory",
+      "sample": 3,
+      "wall_ms": 5531.308
+    },
+    {
+      "operation": "inventory",
+      "sample": 4,
+      "wall_ms": 4695.9155
+    },
+    {
+      "operation": "inventory",
+      "sample": 5,
+      "wall_ms": 4395.279
+    },
+    {
+      "operation": "inventory",
+      "sample": 6,
+      "wall_ms": 4388.433
+    },
+    {
+      "operation": "inventory",
+      "sample": 7,
+      "wall_ms": 4305.0204
+    },
+    {
+      "operation": "inventory",
+      "sample": 8,
+      "wall_ms": 4434.7126
+    },
+    {
+      "operation": "inventory",
+      "sample": 9,
+      "wall_ms": 4763.2109
+    },
+    {
+      "operation": "inventory",
+      "sample": 10,
+      "wall_ms": 5060.9416
+    },
+    {
+      "operation": "inventory",
+      "sample": 11,
+      "wall_ms": 4875.5453
+    },
+    {
+      "operation": "inventory",
+      "sample": 12,
+      "wall_ms": 5078.0617
+    },
+    {
+      "operation": "inventory",
+      "sample": 13,
+      "wall_ms": 5187.0524
+    },
+    {
+      "operation": "inventory",
+      "sample": 14,
+      "wall_ms": 4753.508
+    },
+    {
+      "operation": "inventory",
+      "sample": 15,
+      "wall_ms": 4805.6811
+    },
+    {
+      "operation": "inventory",
+      "sample": 16,
+      "wall_ms": 4722.7633
+    },
+    {
+      "operation": "inventory",
+      "sample": 17,
+      "wall_ms": 4417.2277
+    },
+    {
+      "operation": "inventory",
+      "sample": 18,
+      "wall_ms": 4855.4739
+    },
+    {
+      "operation": "inventory",
+      "sample": 19,
+      "wall_ms": 5032.4947
+    },
+    {
+      "operation": "inventory",
+      "sample": 20,
+      "wall_ms": 4557.4823
+    },
+    {
+      "operation": "inventory",
+      "sample": 21,
+      "wall_ms": 4455.0706
+    }
+  ],
+  "note": "Measured inside one Nu process; host Nu startup excluded. Config/OS caches already warmed by prior measurements. No network verification."
+}

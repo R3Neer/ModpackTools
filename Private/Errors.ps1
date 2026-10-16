@@ -41,3 +41,14 @@ function Test-MpExpectedError {
     param([Parameter(Mandatory)][System.Exception]$Exception)
     return $Exception.Data.Contains('ModpackTools.ExpectedError') -and $Exception.Data['ModpackTools.ExpectedError'] -eq $true
 }
+
+function Throw-MpNativeFailure {
+    param($Failure, [AllowNull()][object]$TargetOverride)
+    $exception = [InvalidOperationException]::new([string]$Failure.message)
+    $exception.Data['ModpackTools.ExpectedError'] = $true
+    $exception.Data['ModpackTools.ErrorId'] = [string]$Failure.id
+    $exception.Data['ModpackTools.ErrorCategory'] = [int][Management.Automation.ErrorCategory]([string]$Failure.category)
+    if ($PSBoundParameters.ContainsKey('TargetOverride')) { $exception.Data['ModpackTools.TargetObject'] = $TargetOverride }
+    else { $exception.Data['ModpackTools.TargetObject'] = $Failure.target }
+    throw $exception
+}

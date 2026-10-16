@@ -40,6 +40,7 @@ foreach ($file in @(
     'Private/SelfUpdate.ps1'
     'Private/Health.ps1'
     'Private/MachineOutput.ps1'
+    'Private/NativeCore.ps1'
     'Public/modpack.ps1'
 )) {
     . (Join-Path $PSScriptRoot $file)

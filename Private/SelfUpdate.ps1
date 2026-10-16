@@ -41,20 +41,27 @@ function Invoke-MpVersion {
 }
 
 function Get-MpSelfUpdateTarget {
-    $destination = Resolve-MpInstallDestination
+    $roots = @(Get-MpUserModuleRoots)
+    $moduleRootVariable = Get-Variable -Name ModuleRoot -Scope Script -ErrorAction SilentlyContinue
+    $loaded = if ($moduleRootVariable) { [string]$moduleRootVariable.Value } else { '' }
+    $state = if ($loaded -and -not (Test-Path -LiteralPath (Join-Path $loaded '.git'))) { Get-MpInstallationState $loaded } else { $null }
+    $effectiveInstallation = ($loaded -and [IO.Path]::GetFileName($loaded.TrimEnd('\','/')) -eq 'ModpackTools' -and
+        -not (Test-Path -LiteralPath (Join-Path $loaded '.git')) -and ($state -or (Split-Path -Parent $loaded) -in $roots))
+    $destination = if ($effectiveInstallation) { Resolve-MpInstallDestination $loaded } else { Resolve-MpInstallDestination }
     $manifestPath = Join-Path $destination 'ModpackTools.psd1'
     if (-not [IO.File]::Exists($manifestPath)) { Throw-MpError -Message 'No user installation of ModpackTools was found' -Hint 'run Install-ModpackTools.ps1 from a release package first' -ErrorId 'SelfUpdate.NotInstalled' -Category ObjectNotFound }
     # PowerShell may prefer a versioned or machine-wide installation. Never claim
     # to update the effective module when it resolves outside our writable target.
     $available = @(Get-Module -ListAvailable ModpackTools)
-    if ($available.Count -and $available[0].ModuleBase -ne $destination) {
+    if (-not $effectiveInstallation -and $available.Count -and $available[0].ModuleBase -ne $destination) {
         Throw-MpError -Message 'Another installation takes precedence over the update target' -Details $available[0].ModuleBase -Hint 'select a user installation in PSModulePath before running self-update' -ErrorId 'SelfUpdate.ShadowedInstallation' -Category InvalidOperation
     }
-    $others = @(foreach ($root in @(Get-MpUserModuleRoots)) {
+    $others = @(foreach ($root in $roots) {
         $copy = Join-Path $root 'ModpackTools'
         if ($copy -ne $destination -and [IO.File]::Exists((Join-Path $copy 'ModpackTools.psd1'))) { $copy }
     })
-    return [pscustomobject]@{ Path=$destination; Version=[version](Import-PowerShellDataFile $manifestPath).ModuleVersion; Others=$others }
+    if (-not $state) { $state = Get-MpInstallationState $destination }
+    return [pscustomobject]@{ Path=$destination; Version=[version](Import-PowerShellDataFile $manifestPath).ModuleVersion; Others=$others; InstallationState=$state }
 }
 
 function Expand-MpUpdatePackage {
@@ -98,7 +105,13 @@ function Install-MpSelfUpdate {
         if ([version]$manifest.ModuleVersion -ne [version]$Release.Version -or $manifest.GUID -ne 'dc256dd6-6b3d-4bc5-aed0-14dad616642b') { Throw-MpError -Message 'Release package identity or version differs from the selected release' -Hint 'download a valid release package' -ErrorId 'SelfUpdate.InvalidPackage' }
         [void](Test-MpR3Package $package)
         if ((Get-FileHash -LiteralPath (Join-Path $Target.Path 'ModpackTools.psd1')).Hash -ne $Target.ManifestHash) { Throw-MpError -Message 'Installed version changed while the update was being prepared' -Hint 'review the installation and retry' -ErrorId 'SelfUpdate.ConcurrentChange' }
-        $output = Invoke-MpInstallProcess @('-File', (Join-Path $package 'Install-ModpackTools.ps1'), '-Force', '-NonInteractive', '-SkipDoctor', '-InstallPath', $Target.Path, '-ExpectedManifestHash', $Target.ManifestHash)
+        $installerArguments = @('-File', (Join-Path $package 'Install-ModpackTools.ps1'), '-Force', '-NonInteractive', '-SkipDoctor', '-InstallPath', $Target.Path, '-ExpectedManifestHash', $Target.ManifestHash)
+        $installationState = Get-MpPropertyValue $Target 'InstallationState'
+        if ($installationState) {
+            if ($installationState.ConfigureNushellAdapter) { $installerArguments += @('-NushellConfigPath', $installationState.NushellConfigPath) }
+            else { $installerArguments += '-SkipNushellAdapter' }
+        }
+        $output = Invoke-MpInstallProcess $installerArguments
         foreach ($line in @($output -split '\r?\n' | Where-Object { $_ })) { Write-R3Line (Get-MpConsole) @(@{ Text=$line }) }
         if ([version](Import-PowerShellDataFile (Join-Path $Target.Path 'ModpackTools.psd1')).ModuleVersion -ne [version]$Release.Version) { Throw-MpError -Message 'The installed version does not match the release' -Hint 'inspect the installer result' -ErrorId 'SelfUpdate.VerificationFailed' }
     } catch {

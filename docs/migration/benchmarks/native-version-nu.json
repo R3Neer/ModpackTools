@@ -1,0 +1,266 @@
+[
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 0,
+    "ms": 2890.496
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 1,
+    "ms": 2176.399
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 2,
+    "ms": 2212.9438
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 3,
+    "ms": 2172.2134
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 4,
+    "ms": 2046.7264
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 5,
+    "ms": 2192.5869
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 6,
+    "ms": 2143.6413
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 7,
+    "ms": 1997.1018
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 8,
+    "ms": 1991.8366
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 9,
+    "ms": 2072.8994
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 10,
+    "ms": 2152.3913
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 11,
+    "ms": 2023.1357
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 12,
+    "ms": 2203.6103
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 13,
+    "ms": 2226.0315
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 14,
+    "ms": 2351.3454
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 15,
+    "ms": 2095.984
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 16,
+    "ms": 2620.7158
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 17,
+    "ms": 2055.8606
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 18,
+    "ms": 2072.3406
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 19,
+    "ms": 2143.2256
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 20,
+    "ms": 2083.6396
+  },
+  {
+    "adapter": "nu",
+    "native": false,
+    "sample": 21,
+    "ms": 2338.2789
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 0,
+    "ms": 49.5062
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 1,
+    "ms": 39.9664
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 2,
+    "ms": 42.5111
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 3,
+    "ms": 46.124
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 4,
+    "ms": 40.8502
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 5,
+    "ms": 41.0332
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 6,
+    "ms": 41.0784
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 7,
+    "ms": 45.4129
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 8,
+    "ms": 40.2388
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 9,
+    "ms": 69.6305
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 10,
+    "ms": 42.1595
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 11,
+    "ms": 39.7569
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 12,
+    "ms": 53.7726
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 13,
+    "ms": 44.2604
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 14,
+    "ms": 46.5386
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 15,
+    "ms": 43.775
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 16,
+    "ms": 43.8206
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 17,
+    "ms": 45.4116
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 18,
+    "ms": 41.0046
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 19,
+    "ms": 41.3421
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 20,
+    "ms": 46.1003
+  },
+  {
+    "adapter": "nu",
+    "native": true,
+    "sample": 21,
+    "ms": 44.8254
+  }
+]

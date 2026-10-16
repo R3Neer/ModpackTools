@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: release-${{ github.repository }}
@@ -19,7 +20,7 @@ concurrency:
 jobs:
   publish:
     name: Publish stable release
-    if: github.event.workflow_run.conclusion == 'success'
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository && github.event.workflow_run.event != 'pull_request'
     runs-on: windows-latest
     timeout-minutes: 10
 
@@ -45,20 +46,29 @@ jobs:
           "release_exists=$($metadata.ReleaseExists.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
           "tag_exists=$($metadata.TagExists.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
 
-      - name: Build and verify release archive
+      - name: Download and verify the exact CI-tested native package
         id: package
         if: steps.metadata.outputs.release_exists != 'true'
         shell: pwsh
         env:
+          GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+          CI_RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $archive = Join-Path $env:GITHUB_WORKSPACE "ModpackTools-$env:RELEASE_VERSION.zip"
-          $result = ./scripts/build-release-package.ps1 -OutputPath $archive -ExpectedVersion $env:RELEASE_VERSION
-          if (-not (Test-Path -LiteralPath $result -PathType Leaf)) {
-              throw 'Release package builder produced no archive.'
-          }
-          "archive=$result" >> $env:GITHUB_OUTPUT
+          $destination = Join-Path $env:RUNNER_TEMP "native-release-$env:CI_RUN_ID"
+          gh run download $env:CI_RUN_ID --repo $env:GITHUB_REPOSITORY --name "native-win-x64-$env:RELEASE_SHA" --dir $destination
+          if ($LASTEXITCODE) { throw 'Could not download the successful CI artifact' }
+          $name = "ModpackTools-Native-win-x64-$env:RELEASE_VERSION.zip"
+          $archive = Join-Path $destination $name
+          $sums = Join-Path $destination 'SHA256SUMS'
+          $expected = [IO.File]::ReadAllText($sums).TrimEnd("`r", "`n")
+          if ($expected -cnotmatch ('^[0-9A-F]{64}  ' + [regex]::Escape($name) + '$')) { throw 'Unexpected tested artifact checksum record' }
+          if ((Get-FileHash -LiteralPath $archive).Hash -cne $expected.Substring(0,64)) { throw 'Tested native artifact checksum mismatch' }
+          if (@(Get-ChildItem -LiteralPath $destination -File -Recurse).Count -ne 2) { throw 'Unexpected files in tested artifact' }
+          "archive=$archive" >> $env:GITHUB_OUTPUT
+          "sums=$sums" >> $env:GITHUB_OUTPUT
 
       - name: Publish GitHub release
         if: steps.metadata.outputs.release_exists != 'true'
@@ -69,16 +79,20 @@ jobs:
           RELEASE_TITLE: ${{ steps.metadata.outputs.title }}
           RELEASE_NOTES: ${{ steps.metadata.outputs.notes }}
           RELEASE_ARCHIVE: ${{ steps.package.outputs.archive }}
+          RELEASE_SUMS: ${{ steps.package.outputs.sums }}
           RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
           RELEASE_TAG_EXISTS: ${{ steps.metadata.outputs.tag_exists }}
         run: |
           $ErrorActionPreference = 'Stop'
-          if ($env:RELEASE_TAG_EXISTS -eq 'true') {
-              gh release create $env:RELEASE_TAG $env:RELEASE_ARCHIVE --verify-tag --title $env:RELEASE_TITLE --notes-file $env:RELEASE_NOTES
+          if ($env:RELEASE_TAG_EXISTS -ne 'true') {
+              $creation = & gh api --method POST "repos/$env:GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$env:RELEASE_TAG" -f "sha=$env:RELEASE_SHA" 2>&1
+              if ($LASTEXITCODE) { Write-Host 'Tag creation did not succeed; checking the existing remote tag before publishing.' }
           }
-          else {
-              gh release create $env:RELEASE_TAG $env:RELEASE_ARCHIVE --target $env:RELEASE_SHA --title $env:RELEASE_TITLE --notes-file $env:RELEASE_NOTES
-          }
+          git fetch origin ("refs/tags/" + $env:RELEASE_TAG + ":refs/modpacktools-release/" + $env:RELEASE_TAG)
+          if ($LASTEXITCODE) { throw 'Could not verify the publication tag' }
+          $tagCommit = (& git rev-parse ("refs/modpacktools-release/" + $env:RELEASE_TAG + '^{commit}')).Trim()
+          if ($LASTEXITCODE -ne 0 -or $tagCommit -cne $env:RELEASE_SHA) { throw 'Remote tag does not identify the exact tested commit' }
+          gh release create $env:RELEASE_TAG $env:RELEASE_ARCHIVE $env:RELEASE_SUMS --verify-tag --title $env:RELEASE_TITLE --notes-file $env:RELEASE_NOTES
           if ($LASTEXITCODE -ne 0) {
               throw "GitHub release publication failed with exit code $LASTEXITCODE."
           }

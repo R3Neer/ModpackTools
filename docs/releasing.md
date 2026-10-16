@@ -1,48 +1,42 @@
 # Releasing ModpackTools
 
-Stable releases are published by GitHub Actions after the `CI` workflow succeeds on `main`.
+Stable releases are published only after CI succeeds on main. Preparation on a
+branch does not publish anything. A source checkout and a native runtime package
+are different artifacts.
 
-## Release inputs
+## Inputs
 
-A release is defined by two repository files:
+`ProductVersion.Current` is the native product version. It must match ModuleVersion
+in `ModpackTools.psd1`, which the existing release metadata validator reads.
+`docs/releases/X.Y.Z.md` supplies the title and notes. Update both version values
+and the notes together when an actual new release is authorized.
 
-- `ModpackTools.psd1` supplies the stable semantic version through `ModuleVersion`.
-- `docs/releases/<version>.md` supplies the GitHub release title and body. Its first line must be an H1 containing the version, for example `# ModpackTools 3.4.0 — Global search and clearer CLI feedback`.
+## Tested artifact
 
-`scripts/get-release-metadata.ps1` is the shared validator for those inputs. CI executes it before merge; the release workflow executes the same script again with authenticated GitHub checks to determine whether the version tag or release already exists.
+CI uses the pinned SDK and locked dependencies to publish the CLI, Launcher,
+Setup and native contract runner as Windows x64 Native AOT. It runs native
+contracts, protocol, installation/update/retirement, Nu-only/bootstrap and full
+Nu command checks with pinned real Packwiz. PowerShell is a CI test driver;
+it is not included or invoked by the product runtime.
 
-The release workflow treats these files as the release source of truth. Do not create a manual stable release with a version that differs from the manifest.
+The native Setup `pack` command creates exactly the approved payload and canonical
+content manifest. CI checks the returned archive digest and stores the ZIP plus
+SHA256SUMS as artifact `native-win-x64-<tested-commit>` after all checks succeed.
+The release workflow downloads that exact successful run's artifact, validates
+its checksum and expected name, and publishes it without rebuilding.
 
-## Normal release flow
+Native asset name: `ModpackTools-Native-win-x64-X.Y.Z.zip`.
+Tags: `vX.Y.Z`. A legacy-only module asset is not a native update candidate.
+The native updater verifies official release metadata, digest, size, manifest,
+version and executable/integration smoke checks before selecting a new version.
 
-1. Implement and validate the release changes on a branch.
-2. Update user-facing documentation so it describes the resulting behaviour rather than the previous release.
-3. Bump `ModuleVersion` and add `docs/releases/<version>.md`.
-4. Merge the reviewed branch into `main`.
-5. Let `CI` complete on the merged `main` commit.
-6. After successful CI, `.github/workflows/release.yml` validates the metadata against GitHub, builds the installable ZIP from that exact tested commit and creates the `v<version>` tag and GitHub release.
+## Publication
 
-No stable release is published from a failed CI run.
+Merge only reviewed product changes with an explicitly authorized version and
+notes update. After successful main CI, the release workflow checks existing tags
+and releases. An existing release is a no-op; an existing tag is verified rather
+than moved. It publishes the tested ZIP and SHA256SUMS together.
 
-## Release archive
-
-`scripts/build-release-package.ps1` is the single package builder used by both CI and the release workflow. CI runs it before merge, and the release workflow runs the same script again on the tested `main` commit that will be tagged.
-
-The installable ZIP contains the runtime distribution expected by the installer and self-updater:
-
-- `docs/`, `Private/`, `Public/`, and `Nushell/`;
-- both installer entry points;
-- the module manifest and root module;
-- README, licence, theme, and pinned dependency metadata.
-
-The builder expands the generated archive again, validates the packaged module manifest and version, requires exactly one `Install-ModpackTools.ps1`, and checks that the Nushell installer is present before returning the archive for publication.
-
-## Existing tags and releases
-
-If the release already exists, the workflow exits without publishing a duplicate. If the version tag exists but its release does not, the workflow reuses the verified tag instead of moving it.
-
-A later successful `main` CI run with an unchanged released `ModuleVersion` is therefore a no-op for publishing.
-
-## Self-update contract
-
-Stable release tags use `vX.Y.Z` and the installable asset must be named `ModpackTools-X.Y.Z.zip`. `Private/SelfUpdate.ps1` validates both conventions, the GitHub release location, the asset SHA-256 reported by GitHub, the packaged module identity, and the packaged version before replacing an installation.
+Never reinterpret a source ZIP or legacy PowerShell module ZIP as a native package.
+The legacy scripts/build-release-package.ps1 remains a historical baseline helper;
+the native publication path does not call it or either PowerShell installer.

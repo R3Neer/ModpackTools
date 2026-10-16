@@ -1,0 +1,786 @@
+{
+  "product": "MODPACKTOOLS",
+  "version": "4.0.2",
+  "description": "Manage, inspect, update, and build Packwiz modpacks.",
+  "invocation": "modpack",
+  "groups": [
+    "PROJECTS",
+    "CONTENT",
+    "BUILD AND CONFIGURATION"
+  ],
+  "usage": [
+    "modpack [global options] <command> [operation] [arguments] [options]",
+    "modpack <command> --help",
+    "modpack --version"
+  ],
+  "global-items": [
+    {
+      "label": "-h, --help",
+      "description": "Show top-level or command help."
+    },
+    {
+      "label": "-V, --version",
+      "description": "Print the loaded local version without network access."
+    },
+    {
+      "label": "-p, --project <id>",
+      "description": "Use this project instead of the active project; accepted in any position."
+    },
+    {
+      "label": "--color auto|always|never",
+      "description": "Control color; auto follows terminal detection and NO_COLOR."
+    },
+    {
+      "label": "--ascii",
+      "description": "Use ASCII symbols for presentation."
+    },
+    {
+      "label": "--json",
+      "description": "Emit a schema-versioned JSON envelope on stdout in addition to human presentation."
+    },
+    {
+      "label": "--no-human",
+      "description": "Suppress human presentation when --json is enabled. Requires --json."
+    }
+  ],
+  "notes": [
+    "Run modpack <command> --help for operations and examples.",
+    "Options use exact names; command prefixes are not accepted.",
+    "The Nushell adapter enables --json automatically and returns parsed structured values."
+  ],
+  "commands": [
+    {
+      "name": "project",
+      "group": "PROJECTS",
+      "summary": "Manage projects",
+      "description": "List, select, inspect, create, or register Packwiz projects.",
+      "usage": [
+        "modpack project list",
+        "modpack project current",
+        "modpack project use <id>",
+        "modpack project status",
+        "modpack project create <id> --name <name> --minecraft <version> --loader <loader> [options]",
+        "modpack project register <id> [--path <directory>] [options]"
+      ],
+      "items": [
+        {
+          "label": "list",
+          "description": "Show every registered project."
+        },
+        {
+          "label": "current",
+          "description": "Show the active project for this shell session."
+        },
+        {
+          "label": "use <id>",
+          "description": "Select the active project for this shell session."
+        },
+        {
+          "label": "status",
+          "description": "Show identity, versions, paths, and content totals."
+        },
+        {
+          "label": "create <id>",
+          "description": "Create and register a new Packwiz project."
+        },
+        {
+          "label": "register <id>",
+          "description": "Register an existing Packwiz project without changing its technical data."
+        },
+        {
+          "label": "--name <name>",
+          "description": "Display name for a created project."
+        },
+        {
+          "label": "--minecraft <version>",
+          "description": "Minecraft version for a created project."
+        },
+        {
+          "label": "--loader <loader>",
+          "description": "fabric, quilt, forge, or neoforge."
+        },
+        {
+          "label": "--path <directory>",
+          "description": "Directory name for create, or existing project path for register."
+        },
+        {
+          "label": "--loader-version <version>",
+          "description": "Specific loader version for create."
+        },
+        {
+          "label": "--pack-version <version>",
+          "description": "Initial technical Packwiz version for create."
+        },
+        {
+          "label": "--display-name <name>",
+          "description": "Display-name override for register."
+        },
+        {
+          "label": "--display-version <version>",
+          "description": "User-facing version for create or register."
+        },
+        {
+          "label": "--output-name <file>",
+          "description": "MRPack build filename for register."
+        },
+        {
+          "label": "-h, --help",
+          "description": "Show help for this command."
+        },
+        {
+          "label": "-p, --project <id>",
+          "description": "Use this project for project-bound operations."
+        },
+        {
+          "label": "--color auto|always|never",
+          "description": "Control color; auto follows terminal detection and NO_COLOR."
+        },
+        {
+          "label": "--ascii",
+          "description": "Use ASCII symbols for presentation."
+        },
+        {
+          "label": "--json",
+          "description": "Also emit a schema-versioned JSON envelope on stdout."
+        },
+        {
+          "label": "--no-human",
+          "description": "Suppress human presentation. Requires --json."
+        }
+      ],
+      "notes": [
+        "Use global --project/-p with project status. Other project operations select their target explicitly."
+      ],
+      "examples": [
+        "modpack project list",
+        "modpack project use vp26",
+        "modpack -p vp26 project status",
+        "modpack project register legacy --path \"D:\\Minecraft\\Legacy Pack\""
+      ]
+    },
+    {
+      "name": "content",
+      "group": "CONTENT",
+      "summary": "Manage installed and available content",
+      "description": "List, search, add, remove, version, update, pin, or unpin mods, resource packs, and shaders.",
+      "usage": [
+        "modpack content list [filters]",
+        "modpack content search <query> [options]",
+        "modpack content add <selector...> [options]",
+        "modpack content remove <selector...> [options]",
+        "modpack content versions <selector>",
+        "modpack content update <selector...> [options]",
+        "modpack content update --all [options]",
+        "modpack content pin|unpin <selector...> [options]"
+      ],
+      "items": [
+        {
+          "label": "list",
+          "description": "Show the numbered installed-content inventory."
+        },
+        {
+          "label": "search <query>",
+          "description": "Search compatible Modrinth content."
+        },
+        {
+          "label": "add <selector...>",
+          "description": "Install compatible content and dependencies."
+        },
+        {
+          "label": "remove <selector...>",
+          "description": "Preview and remove installed content."
+        },
+        {
+          "label": "versions <selector>",
+          "description": "List compatible Modrinth versions."
+        },
+        {
+          "label": "update <selector...>",
+          "description": "Update selected Packwiz-managed content."
+        },
+        {
+          "label": "pin|unpin <selector...>",
+          "description": "Control automatic version changes."
+        },
+        {
+          "label": "--type <type>",
+          "description": "Filter or scope by all, mod, resourcepack, or shaderpack."
+        },
+        {
+          "label": "--category <id|number>",
+          "description": "Filter listed mods or categorize added mods. Use unclassified to find uncategorized mods."
+        },
+        {
+          "label": "--side <side>",
+          "description": "Filter listed content by client, host, both, or unknown."
+        },
+        {
+          "label": "--source <source>",
+          "description": "Filter listed content by packwiz, local, builtin, or missing."
+        },
+        {
+          "label": "--state <state>",
+          "description": "Filter resource packs by all, active, or inactive."
+        },
+        {
+          "label": "--match <text>",
+          "description": "Keep listed entries whose searchable fields contain text."
+        },
+        {
+          "label": "--verify",
+          "description": "Download missing artifacts and refresh inventory health."
+        },
+        {
+          "label": "--limit <1-50>",
+          "description": "Maximum search results. Default: 10."
+        },
+        {
+          "label": "--all",
+          "description": "Update all matching managed content."
+        },
+        {
+          "label": "--to <version>",
+          "description": "Select an exact update version; requires one selector."
+        },
+        {
+          "label": "--cascade",
+          "description": "Also remove required dependents."
+        },
+        {
+          "label": "--autoremove",
+          "description": "Remove newly unused automatic dependencies."
+        },
+        {
+          "label": "--enable-at <n>",
+          "description": "Enable an added resource-pack batch at priority position n."
+        },
+        {
+          "label": "--strict",
+          "description": "Require complete verification and a clean resulting graph."
+        },
+        {
+          "label": "--allow-downgrade",
+          "description": "Allow dependency resolution to select an older installed version."
+        },
+        {
+          "label": "-n, --dry-run",
+          "description": "Prepare and validate without applying project changes."
+        },
+        {
+          "label": "-y, --yes",
+          "description": "Apply a displayed removal plan without confirmation."
+        },
+        {
+          "label": "-h, --help",
+          "description": "Show help for this command."
+        },
+        {
+          "label": "-p, --project <id>",
+          "description": "Use this project for project-bound operations."
+        },
+        {
+          "label": "--color auto|always|never",
+          "description": "Control color; auto follows terminal detection and NO_COLOR."
+        },
+        {
+          "label": "--ascii",
+          "description": "Use ASCII symbols for presentation."
+        },
+        {
+          "label": "--json",
+          "description": "Also emit a schema-versioned JSON envelope on stdout."
+        },
+        {
+          "label": "--no-human",
+          "description": "Suppress human presentation. Requires --json."
+        }
+      ],
+      "notes": [
+        "Search can run globally. Project-filtered search, inventory, version, and category numbers have separate project-bound contexts.",
+        "Global search numbers may be used after selecting a project; compatibility is still checked when adding.",
+        "Local files cannot be updated or pinned. Pins block explicit changes.",
+        "Multiple selectors are resolved and committed as one transaction."
+      ],
+      "examples": [
+        "modpack content list --match Taverns",
+        "modpack content search sodium --type mod",
+        "modpack content add 2 --category performance",
+        "modpack content remove fabric-api --cascade --autoremove -n",
+        "modpack content update sodium --to 2 --strict"
+      ]
+    },
+    {
+      "name": "category",
+      "group": "CONTENT",
+      "summary": "Manage editorial categories",
+      "description": "Define categories and assign or clear mod classifications.",
+      "usage": [
+        "modpack category list",
+        "modpack category create <id> [--name <name>] [--order <n>]",
+        "modpack category remove <category...> [--clear-assignments]",
+        "modpack category assign <category> <mod...>",
+        "modpack category clear <mod...>"
+      ],
+      "items": [
+        {
+          "label": "list",
+          "description": "Show category definitions and save numbered references."
+        },
+        {
+          "label": "create <id>",
+          "description": "Create a category with a stable lowercase ID."
+        },
+        {
+          "label": "remove <category...>",
+          "description": "Remove unused category definitions."
+        },
+        {
+          "label": "assign <category> <mod...>",
+          "description": "Assign or replace the selected mods category."
+        },
+        {
+          "label": "clear <mod...>",
+          "description": "Clear category assignments from selected mods."
+        },
+        {
+          "label": "--name <name>",
+          "description": "Display name for a new category."
+        },
+        {
+          "label": "--order <n>",
+          "description": "Inventory display order for a new category."
+        },
+        {
+          "label": "--clear-assignments",
+          "description": "Clear assignments while removing a category."
+        },
+        {
+          "label": "-n, --dry-run",
+          "description": "Preview assign, clear, or remove without applying changes."
+        },
+        {
+          "label": "-h, --help",
+          "description": "Show help for this command."
+        },
+        {
+          "label": "-p, --project <id>",
+          "description": "Use this project for project-bound operations."
+        },
+        {
+          "label": "--color auto|always|never",
+          "description": "Control color; auto follows terminal detection and NO_COLOR."
+        },
+        {
+          "label": "--ascii",
+          "description": "Use ASCII symbols for presentation."
+        },
+        {
+          "label": "--json",
+          "description": "Also emit a schema-versioned JSON envelope on stdout."
+        },
+        {
+          "label": "--no-human",
+          "description": "Suppress human presentation. Requires --json."
+        }
+      ],
+      "notes": [
+        "Category numbers come from category list; mod numbers come from content list.",
+        "Categories are editorial metadata and never move or reinstall mods."
+      ],
+      "examples": [
+        "modpack category list",
+        "modpack category create world-generation --name \"WORLD GENERATION\"",
+        "modpack category assign performance sodium lithium",
+        "modpack category clear 3"
+      ]
+    },
+    {
+      "name": "resource-pack",
+      "group": "CONTENT",
+      "summary": "Manage resource-pack activation",
+      "description": "Enable, move, or disable installed resource packs through Default Options.",
+      "usage": [
+        "modpack resource-pack enable <selector...> --position <n> [options]",
+        "modpack resource-pack move <selector...> --position <n> [options]",
+        "modpack resource-pack disable <selector...> [options]"
+      ],
+      "items": [
+        {
+          "label": "<selector...>",
+          "description": "Names, IDs, filenames, or latest content-list numbers."
+        },
+        {
+          "label": "--position <n>",
+          "description": "Minecraft priority for enable or move. Position 1 is highest."
+        },
+        {
+          "label": "-n, --dry-run",
+          "description": "Prepare and validate without applying changes."
+        },
+        {
+          "label": "-h, --help",
+          "description": "Show help for this command."
+        },
+        {
+          "label": "-p, --project <id>",
+          "description": "Use this project for project-bound operations."
+        },
+        {
+          "label": "--color auto|always|never",
+          "description": "Control color; auto follows terminal detection and NO_COLOR."
+        },
+        {
+          "label": "--ascii",
+          "description": "Use ASCII symbols for presentation."
+        },
+        {
+          "label": "--json",
+          "description": "Also emit a schema-versioned JSON envelope on stdout."
+        },
+        {
+          "label": "--no-human",
+          "description": "Suppress human presentation. Requires --json."
+        }
+      ],
+      "notes": [
+        "Default Options must be installed.",
+        "Enable also repositions an active pack; disable never uninstalls it."
+      ],
+      "examples": [
+        "modpack resource-pack enable \"Fresh Animations\" --position 1",
+        "modpack resource-pack move 4 --position 2",
+        "modpack resource-pack disable 4"
+      ]
+    },
+    {
+      "name": "mod",
+      "group": "CONTENT",
+      "summary": "Manage mod-specific metadata",
+      "description": "Change metadata that applies only to installed mods.",
+      "usage": [
+        "modpack mod set-side <client|host|both> <selector...> [options]"
+      ],
+      "items": [
+        {
+          "label": "set-side <side> <selector...>",
+          "description": "Set selected mods distribution side."
+        },
+        {
+          "label": "-n, --dry-run",
+          "description": "Prepare and validate without applying changes."
+        },
+        {
+          "label": "-h, --help",
+          "description": "Show help for this command."
+        },
+        {
+          "label": "-p, --project <id>",
+          "description": "Use this project for project-bound operations."
+        },
+        {
+          "label": "--color auto|always|never",
+          "description": "Control color; auto follows terminal detection and NO_COLOR."
+        },
+        {
+          "label": "--ascii",
+          "description": "Use ASCII symbols for presentation."
+        },
+        {
+          "label": "--json",
+          "description": "Also emit a schema-versioned JSON envelope on stdout."
+        },
+        {
+          "label": "--no-human",
+          "description": "Suppress human presentation. Requires --json."
+        }
+      ],
+      "notes": [
+        "Packwiz content changes its .pw.toml source of truth; local JARs receive a project override."
+      ],
+      "examples": [
+        "modpack mod set-side client sodium",
+        "modpack -p vp26 mod set-side both 3 4"
+      ]
+    },
+    {
+      "name": "build",
+      "group": "BUILD AND CONFIGURATION",
+      "summary": "Generate an MRPack",
+      "description": "Refresh project metadata and export a verified Modrinth .mrpack into dist/.",
+      "usage": [
+        "modpack build [options]"
+      ],
+      "items": [
+        {
+          "label": "--no-refresh",
+          "description": "Skip the Packwiz refresh step; dependency validation still runs."
+        },
+        {
+          "label": "--keep-old",
+          "description": "Keep older .mrpack files in dist/."
+        },
+        {
+          "label": "--open",
+          "description": "Reveal the generated file in File Explorer."
+        },
+        {
+          "label": "--raw-log",
+          "description": "Show complete Packwiz output."
+        },
+        {
+          "label": "--strict",
+          "description": "Require complete verification and no known dependency conflicts."
+        },
+        {
+          "label": "-n, --dry-run",
+          "description": "Validate an export without replacing the latest build."
+        },
+        {
+          "label": "-h, --help",
+          "description": "Show help for this command."
+        },
+        {
+          "label": "-p, --project <id>",
+          "description": "Use this project for project-bound operations."
+        },
+        {
+          "label": "--color auto|always|never",
+          "description": "Control color; auto follows terminal detection and NO_COLOR."
+        },
+        {
+          "label": "--ascii",
+          "description": "Use ASCII symbols for presentation."
+        },
+        {
+          "label": "--json",
+          "description": "Also emit a schema-versioned JSON envelope on stdout."
+        },
+        {
+          "label": "--no-human",
+          "description": "Suppress human presentation. Requires --json."
+        }
+      ],
+      "notes": [
+        "The dist/ artifact is not a source of truth."
+      ],
+      "examples": [
+        "modpack build",
+        "modpack -p vp26 build --keep-old --open"
+      ]
+    },
+    {
+      "name": "diff",
+      "group": "BUILD AND CONFIGURATION",
+      "summary": "Compare with the latest build",
+      "description": "Compare the current project with its newest .mrpack in dist/.",
+      "usage": [
+        "modpack diff"
+      ],
+      "items": [
+        {
+          "label": "-h, --help",
+          "description": "Show help for this command."
+        },
+        {
+          "label": "-p, --project <id>",
+          "description": "Use this project for project-bound operations."
+        },
+        {
+          "label": "--color auto|always|never",
+          "description": "Control color; auto follows terminal detection and NO_COLOR."
+        },
+        {
+          "label": "--ascii",
+          "description": "Use ASCII symbols for presentation."
+        },
+        {
+          "label": "--json",
+          "description": "Also emit a schema-versioned JSON envelope on stdout."
+        },
+        {
+          "label": "--no-human",
+          "description": "Suppress human presentation. Requires --json."
+        }
+      ],
+      "notes": [],
+      "examples": [
+        "modpack diff",
+        "modpack -p vp26 diff"
+      ]
+    },
+    {
+      "name": "doctor",
+      "group": "BUILD AND CONFIGURATION",
+      "summary": "Check and repair the environment",
+      "description": "Check the environment and selected project; --fix previews safe repairs.",
+      "usage": [
+        "modpack doctor [options]"
+      ],
+      "items": [
+        {
+          "label": "--fix",
+          "description": "Offer safe repairs for missing required components and project dependencies."
+        },
+        {
+          "label": "-y, --yes",
+          "description": "Accept recommended repair defaults. Requires --fix."
+        },
+        {
+          "label": "--details",
+          "description": "List every incomplete dependency verification grouped by cause."
+        },
+        {
+          "label": "--strict",
+          "description": "Require complete verification and no known dependency conflicts."
+        },
+        {
+          "label": "--allow-downgrade",
+          "description": "Allow dependency repair to select an older installed version."
+        },
+        {
+          "label": "-n, --dry-run",
+          "description": "Preview repairs without applying changes."
+        },
+        {
+          "label": "-h, --help",
+          "description": "Show help for this command."
+        },
+        {
+          "label": "-p, --project <id>",
+          "description": "Use this project for project-bound operations."
+        },
+        {
+          "label": "--color auto|always|never",
+          "description": "Control color; auto follows terminal detection and NO_COLOR."
+        },
+        {
+          "label": "--ascii",
+          "description": "Use ASCII symbols for presentation."
+        },
+        {
+          "label": "--json",
+          "description": "Also emit a schema-versioned JSON envelope on stdout."
+        },
+        {
+          "label": "--no-human",
+          "description": "Suppress human presentation. Requires --json."
+        }
+      ],
+      "notes": [
+        "Doctor never installs Minecraft or rebuilds an outdated artifact."
+      ],
+      "examples": [
+        "modpack doctor",
+        "modpack -p vp26 doctor --details",
+        "modpack doctor --fix -n"
+      ]
+    },
+    {
+      "name": "config",
+      "group": "BUILD AND CONFIGURATION",
+      "summary": "View or change global configuration",
+      "description": "Read or change ModpackTools global configuration.",
+      "usage": [
+        "modpack config get <root|packwiz>",
+        "modpack config set root <directory>",
+        "modpack config set packwiz <executable|auto>"
+      ],
+      "items": [
+        {
+          "label": "root",
+          "description": "Directory whose direct children contain registered modpacks."
+        },
+        {
+          "label": "packwiz",
+          "description": "Executable override. Use auto to restore discovery."
+        },
+        {
+          "label": "-h, --help",
+          "description": "Show help for this command."
+        },
+        {
+          "label": "--color auto|always|never",
+          "description": "Control color; auto follows terminal detection and NO_COLOR."
+        },
+        {
+          "label": "--ascii",
+          "description": "Use ASCII symbols for presentation."
+        },
+        {
+          "label": "--json",
+          "description": "Also emit a schema-versioned JSON envelope on stdout."
+        },
+        {
+          "label": "--no-human",
+          "description": "Suppress human presentation. Requires --json."
+        }
+      ],
+      "notes": [],
+      "examples": [
+        "modpack config get packwiz",
+        "modpack config set packwiz \"C:\\Tools\\packwiz.exe\"",
+        "modpack config set packwiz auto"
+      ]
+    },
+    {
+      "name": "self-update",
+      "group": "BUILD AND CONFIGURATION",
+      "summary": "Update ModpackTools itself",
+      "description": "Check and install the latest stable official release while preserving configuration and theme.",
+      "usage": [
+        "modpack self-update [--yes]",
+        "modpack self-update --check",
+        "modpack self-update --package ZIP --sha256 HASH [--yes] [--allow-downgrade]"
+      ],
+      "items": [
+        {
+          "label": "--check",
+          "description": "Query the latest stable release without installing it."
+        },
+        {
+          "label": "-y, --yes",
+          "description": "Install without interactive confirmation."
+        },
+        {
+          "label": "--package <ZIP> --sha256 <HASH>",
+          "description": "Select a trusted local native package instead of the official stable release."
+        },
+        {
+          "label": "--allow-downgrade",
+          "description": "Allow an explicitly selected local package with an older public version."
+        },
+        {
+          "label": "-h, --help",
+          "description": "Show help for this command."
+        },
+        {
+          "label": "--color auto|always|never",
+          "description": "Control color; auto follows terminal detection and NO_COLOR."
+        },
+        {
+          "label": "--ascii",
+          "description": "Use ASCII symbols for presentation."
+        },
+        {
+          "label": "--json",
+          "description": "Also emit a schema-versioned JSON envelope on stdout."
+        },
+        {
+          "label": "--no-human",
+          "description": "Suppress human presentation. Requires --json."
+        }
+      ],
+      "notes": [
+        "No project is required.",
+        "Package identity, official URL, SHA256, effective path, theme, and fresh-process help are verified.",
+        "Native packages are installed only into the managed installation running this command. Configuration and theme are preserved.",
+        "Open a new Nushell session after an update. Existing sessions keep their loaded version."
+      ],
+      "examples": [
+        "modpack self-update --check",
+        "modpack self-update",
+        "modpack self-update -y"
+      ]
+    }
+  ]
+}

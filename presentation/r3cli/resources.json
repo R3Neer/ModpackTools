@@ -1,0 +1,45 @@
+{
+  "colours": {
+    "accent": "#FFAA46",
+    "error": "#F55A5A",
+    "heading": "#50CDDC",
+    "process": "#F5C850",
+    "secondary": "#9196A0",
+    "success": "#50C878",
+    "value": "#EBEEF5"
+  },
+  "symbols": {
+    "banner": [
+      "═",
+      "="
+    ],
+    "error": [
+      "✗",
+      "x"
+    ],
+    "inactive": [
+      "○",
+      "o"
+    ],
+    "info": [
+      "•",
+      "*"
+    ],
+    "rule": [
+      "─",
+      "-"
+    ],
+    "step": [
+      "→",
+      ">"
+    ],
+    "success": [
+      "✓",
+      "+"
+    ],
+    "warning": [
+      "!",
+      "!"
+    ]
+  }
+}

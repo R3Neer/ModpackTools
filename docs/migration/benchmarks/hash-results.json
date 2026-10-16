@@ -1,0 +1,560 @@
+{
+  "utc": "2026-10-12T19:50:23.6188813Z",
+  "project": "D:\\Minecraft\\VanillaPlus-26.2",
+  "samples": 21,
+  "workload_identity": "152:28459098:4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228",
+  "summary": [
+    {
+      "language": "rust",
+      "n": 21,
+      "first_ms": 129.8125,
+      "median_ms": 71.3353,
+      "p95_ms": 76.2309
+    },
+    {
+      "language": "go",
+      "n": 21,
+      "first_ms": 98.3066,
+      "median_ms": 76.7175,
+      "p95_ms": 81.2533
+    },
+    {
+      "language": "dotnet_aot",
+      "n": 21,
+      "first_ms": 125.2449,
+      "median_ms": 113.9801,
+      "p95_ms": 123.1898
+    }
+  ],
+  "raw": [
+    {
+      "language": "rust",
+      "sample": 0,
+      "wall_ms": 129.8125,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 0,
+      "wall_ms": 98.3066,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 0,
+      "wall_ms": 125.2449,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 1,
+      "wall_ms": 79.488,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 1,
+      "wall_ms": 100.6675,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 1,
+      "wall_ms": 123.3539,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 2,
+      "wall_ms": 74.4103,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 2,
+      "wall_ms": 74.6634,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 2,
+      "wall_ms": 110.5995,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 3,
+      "wall_ms": 70.958,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 3,
+      "wall_ms": 77.1912,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 3,
+      "wall_ms": 123.1898,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 4,
+      "wall_ms": 72.0835,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 4,
+      "wall_ms": 78.7745,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 4,
+      "wall_ms": 110.9748,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 5,
+      "wall_ms": 71.6658,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 5,
+      "wall_ms": 76.1845,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 5,
+      "wall_ms": 116.4762,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 6,
+      "wall_ms": 72.5088,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 6,
+      "wall_ms": 73.5761,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 6,
+      "wall_ms": 119.5559,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 7,
+      "wall_ms": 69.7807,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 7,
+      "wall_ms": 76.7175,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 7,
+      "wall_ms": 115.592,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 8,
+      "wall_ms": 67.7495,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 8,
+      "wall_ms": 75.491,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 8,
+      "wall_ms": 110.373,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 9,
+      "wall_ms": 71.4157,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 9,
+      "wall_ms": 77.2127,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 9,
+      "wall_ms": 114.2955,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 10,
+      "wall_ms": 71.3353,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 10,
+      "wall_ms": 78.5355,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 10,
+      "wall_ms": 110.8591,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 11,
+      "wall_ms": 69.2931,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 11,
+      "wall_ms": 78.6933,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 11,
+      "wall_ms": 116.0069,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 12,
+      "wall_ms": 67.5615,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 12,
+      "wall_ms": 74.6591,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 12,
+      "wall_ms": 109.3024,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 13,
+      "wall_ms": 68.941,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 13,
+      "wall_ms": 75.0617,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 13,
+      "wall_ms": 123.0509,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 14,
+      "wall_ms": 75.2448,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 14,
+      "wall_ms": 74.5706,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 14,
+      "wall_ms": 112.6935,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 15,
+      "wall_ms": 69.0272,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 15,
+      "wall_ms": 77.699,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 15,
+      "wall_ms": 113.9801,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 16,
+      "wall_ms": 72.0463,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 16,
+      "wall_ms": 73.8598,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 16,
+      "wall_ms": 113.7834,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 17,
+      "wall_ms": 67.9078,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 17,
+      "wall_ms": 79.4525,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 17,
+      "wall_ms": 116.4643,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 18,
+      "wall_ms": 70.6489,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 18,
+      "wall_ms": 74.8188,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 18,
+      "wall_ms": 114.3546,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 19,
+      "wall_ms": 74.8698,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 19,
+      "wall_ms": 74.6763,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 19,
+      "wall_ms": 111.6166,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 20,
+      "wall_ms": 76.2309,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 20,
+      "wall_ms": 79.5157,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 20,
+      "wall_ms": 111.067,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "rust",
+      "sample": 21,
+      "wall_ms": 70.6539,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "go",
+      "sample": 21,
+      "wall_ms": 81.2533,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    },
+    {
+      "language": "dotnet_aot",
+      "sample": 21,
+      "wall_ms": 107.7966,
+      "files": 152,
+      "bytes": 28459098,
+      "fingerprint": "4f6ccd99cf4a460c082ee2722f81d5d042a52e318f149b595e16f4368e6be228"
+    }
+  ],
+  "note": "Process launch plus recursive SHA256 of same files and aggregate fingerprint. .git excluded, dist included. Not a full health/inventory/transaction comparison. Warm OS cache; no network. Runtime-default streaming implementations; not a controlled library/algorithm-only shootout."
+}

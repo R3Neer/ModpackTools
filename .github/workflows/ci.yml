@@ -2,11 +2,9 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -17,126 +15,81 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: PowerShell 7 and Pester
+  native:
+    name: Windows x64 Native AOT and Nushell
     runs-on: windows-latest
-    timeout-minutes: 15
-
+    timeout-minutes: 40
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Install the test dependency
-        shell: pwsh
-        run: |
-          if (-not (Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue)) {
-              Register-PSRepository -Default
-          }
-          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-          Install-Module Pester -RequiredVersion 4.10.1 -Scope CurrentUser -Force -SkipPublisherCheck
-
-      - name: Validate the module manifest
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Test-ModuleManifest -Path ./ModpackTools.psd1 | Out-Null
-
-      - name: Run the test suite
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Import-Module Pester -RequiredVersion 4.10.1 -Force
-          $result = Invoke-Pester -Script ./Tests -PassThru
-          if ($result.FailedCount -gt 0) {
-              throw "$($result.FailedCount) test(s) failed."
-          }
-
-      - name: Verify release metadata and package
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $metadata = ./scripts/get-release-metadata.ps1
-          $archive = Join-Path $env:RUNNER_TEMP "ModpackTools-$($metadata.Version).zip"
-          ./scripts/build-release-package.ps1 -OutputPath $archive -ExpectedVersion $metadata.Version | Out-Null
-          if (-not (Test-Path -LiteralPath $archive -PathType Leaf)) {
-              throw 'Release package builder produced no archive.'
-          }
-
-      - name: Verify repository installation
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          ./Install-ModpackTools.ps1 -Force -NonInteractive -SkipDoctor
-          Import-Module ModpackTools -Force
-          $expected = [version](Import-PowerShellDataFile ./ModpackTools.psd1).ModuleVersion
-          $installed = (Get-Module ModpackTools).Version
-          if ($installed -ne $expected) {
-              throw "Installed version $installed does not match manifest version $expected."
-          }
-          modpack --version
-
-      - name: Verify isolated presentation installation and failed upgrade
-        shell: pwsh
-        run: ./Tests/Invoke-PresentationIntegration.ps1
-
-      - name: Verify self-update and post-replacement rollback
-        shell: pwsh
-        run: ./Tests/Invoke-SelfUpdateIntegration.ps1
-
-  nushell:
-    name: Nushell adapter
-    runs-on: windows-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Install Nushell
-        uses: hustcer/setup-nu@v3
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v4
         with:
-          version: '0.115.1'
-
-      - name: Parse the Nushell adapter and installer
-        shell: nu {0}
+          global-json-file: global.json
+      - uses: hustcer/setup-nu@v3
+        with:
+          version: '0.116.2'
+      - name: Restore locked dependencies and publish native executables
+        shell: pwsh
         run: |
-          let adapter = ($env.GITHUB_WORKSPACE | path join 'Nushell' 'modpack.nu')
-          if not (nu-check --debug --as-module $adapter) {
-              error make { msg: 'Nushell adapter failed nu-check.' }
+          $ErrorActionPreference = 'Stop'
+          $projects = @{
+            contracts = 'Tests/CoreContracts/CoreContracts.csproj'
+            cli = 'src/ModpackTools.Cli/ModpackTools.Cli.csproj'
+            launcher = 'src/ModpackTools.Launcher/ModpackTools.Launcher.csproj'
+            setup = 'src/ModpackTools.Setup/ModpackTools.Setup.csproj'
           }
-          let installer = ($env.GITHUB_WORKSPACE | path join 'install-modpack-tools.nu')
-          if not (nu-check $installer) {
-              error make { msg: 'Nushell installer failed nu-check.' }
+          foreach ($entry in $projects.GetEnumerator()) {
+            dotnet restore $entry.Value --locked-mode
+            if ($LASTEXITCODE) { throw 'Locked restore failed' }
+            dotnet publish $entry.Value -c Release --no-restore -o "artifacts/$($entry.Key)"
+            if ($LASTEXITCODE) { throw 'Native AOT publication failed' }
           }
-
-      - name: Validate the Nushell bridge contract
-        shell: nu {0}
+      - name: Validate native protocol and create the distribution
+        shell: pwsh
         run: |
-          let contract = ($env.GITHUB_WORKSPACE | path join 'Tests' 'Nushell.Contract.nu')
-          nu $contract
-
-      - name: Verify Nushell installer configures Nushell
-        shell: nu {0}
+          $ErrorActionPreference = 'Stop'
+          ./artifacts/contracts/CoreContracts.exe
+          if ($LASTEXITCODE) { throw 'Native core contracts failed' }
+          ./Tests/compatibility/Test-NativeProtocol.ps1 -Executable ./artifacts/cli/modpacktools.exe
+          ./Tests/compatibility/Test-NativeVersion.ps1 -Executable ./artifacts/cli/modpacktools.exe
+          $version = (& ./artifacts/setup/modpacktools-setup.exe --version).Trim()
+          if ($LASTEXITCODE) { throw 'Setup version failed' }
+          $metadata = ./scripts/get-release-metadata.ps1
+          if ($version -cne $metadata.Version) { throw 'Native and release metadata versions differ' }
+          [void][IO.Directory]::CreateDirectory('artifacts/release')
+          $archive = "artifacts/release/ModpackTools-Native-win-x64-$version.zip"
+          $text = & ./artifacts/setup/modpacktools-setup.exe pack --core ./artifacts/cli/modpacktools.exe --launcher ./artifacts/launcher/modpack.exe --assets . --output $archive --json
+          if ($LASTEXITCODE) { throw 'Native package build failed' }
+          $package = $text | ConvertFrom-Json
+          if ((Get-FileHash -LiteralPath $archive).Hash -cne $package.sha256) { throw 'Native package digest mismatch' }
+          [IO.File]::WriteAllText((Join-Path $PWD 'artifacts/release/SHA256SUMS'), "$($package.sha256)  $([IO.Path]::GetFileName($archive))`n", [Text.UTF8Encoding]::new($false))
+      - name: Verify native installation, update, retirement and Nu bootstrap
+        shell: pwsh
         run: |
-          let installer = ($env.GITHUB_WORKSPACE | path join 'install-modpack-tools.nu')
-          ^nu $installer --force --non-interactive --skip-doctor
-          if $env.LAST_EXIT_CODE != 0 {
-              error make { msg: 'The Nushell installer failed.' }
-          }
-          let config = ($env.APPDATA | path join 'nushell' 'config.nu')
-          if not ($config | path exists) {
-              error make { msg: 'The installer did not create the Nushell config file.' }
-          }
-          let text = (open --raw $config)
-          if not ($text | str contains '# >>> ModpackTools Nushell >>>') {
-              error make { msg: 'The installer did not add the ModpackTools Nushell block.' }
-          }
-
-      - name: Verify installed Nushell command in a fresh process
-        shell: nu {0}
+          $ErrorActionPreference = 'Stop'
+          $native = @{Setup='./artifacts/setup/modpacktools-setup.exe'; Launcher='./artifacts/launcher/modpack.exe'; NativeExecutable='./artifacts/cli/modpacktools.exe'; NuExecutable=(Get-Command nu).Source}
+          ./Tests/compatibility/Test-NativeSetup.ps1 @native -Inspector ./artifacts/contracts/CoreContracts.exe
+          ./Tests/compatibility/Test-NativeRetirement.ps1 @native -Inspector ./artifacts/contracts/CoreContracts.exe
+          ./Tests/compatibility/Test-NativeSelfUpdate.ps1 @native
+          ./Tests/compatibility/Test-NativeNuInstaller.ps1 @native
+          $archive = Get-ChildItem -LiteralPath artifacts/release -Filter '*.zip' -File
+          Expand-Archive -LiteralPath $archive.FullName -DestinationPath artifacts/package
+          nu --no-config-file Tests/compatibility/Test-NativeNuOnly.nu (Join-Path $PWD 'artifacts/package')
+          if ($LASTEXITCODE) { throw 'Native-only Nu routing failed' }
+      - name: Verify complete Nu command surface with pinned real Packwiz
+        shell: pwsh
         run: |
-          let config = ($env.APPDATA | path join 'nushell' 'config.nu')
-          ^nu --config $config -c 'let value = (modpack --version --no-human); if (($value.version? | default "") == "") { error make { msg: "Installed ModpackTools wrapper returned no version." } }'
-          if $env.LAST_EXIT_CODE != 0 {
-              error make { msg: 'The installed ModpackTools Nushell wrapper failed in a fresh process.' }
-          }
+          $ErrorActionPreference = 'Stop'
+          $zip = Join-Path $env:RUNNER_TEMP 'packwiz-dfd8b68.zip'
+          Invoke-WebRequest -Uri 'https://github.com/R3Neer/ModpackTools/releases/download/v1.0.0/ModpackTools-Packwiz-win-x64-dfd8b68.zip' -OutFile $zip
+          if ((Get-FileHash -LiteralPath $zip).Hash -cne '899CA7D4DF273BD4F2B916FB7361E5B32B55F092393C2C90FA47B14C38509F31') { throw 'Packwiz archive digest mismatch' }
+          $destination = Join-Path $env:RUNNER_TEMP 'packwiz-dfd8b68'
+          Expand-Archive -LiteralPath $zip -DestinationPath $destination
+          $packwiz = Join-Path $destination 'packwiz.exe'
+          if ((Get-FileHash -LiteralPath $packwiz).Hash -cne '7182F0B513A4FF117CA252B7EAEA2CEDEEDE19DD9A0BED77A10403D75A3C9295') { throw 'Packwiz executable digest mismatch' }
+          ./Tests/compatibility/Invoke-NativeNuChecks.ps1 -Executable ./artifacts/cli/modpacktools.exe -NuExecutable (Get-Command nu).Source -StubExecutable ./artifacts/contracts/CoreContracts.exe -PackwizExecutable $packwiz
+      - name: Retain the exact tested native package
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-win-x64-${{ github.sha }}
+          path: artifacts/release/*
+          if-no-files-found: error
