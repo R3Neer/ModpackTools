@@ -293,7 +293,7 @@ The resolver works on the batch as a whole. It can backtrack across compatible r
 
 Automatic downgrades require `--allow-downgrade`. Pinned content must be explicitly unpinned before an operation may change it.
 
-See [`docs/dependency-engine.md`](docs/dependency-engine.md).
+See `docs/dependency-engine.md` in the source repository.
 
 ## Transaction model
 
@@ -301,15 +301,15 @@ Mutating commands share one transaction layer:
 
 ```text
 resolve
-  â†“
+  |
 validate complete plan
-  â†“
+  |
 stage outside project
-  â†“
+  |
 re-check project fingerprint
-  â†“
+  |
 commit
-  â†“
+  |
 verify / rollback if required
 ```
 
@@ -368,16 +368,16 @@ batch at that position in the same transaction.
 
 ```text
 MyPack/
-â”œâ”€â”€ pack.toml
-â”œâ”€â”€ index.toml
-â”œâ”€â”€ .modpack/
-â”‚   â”œâ”€â”€ project.psd1
-â”‚   â””â”€â”€ metadata.psd1
-â”œâ”€â”€ mods/
-â”œâ”€â”€ config/
-â”œâ”€â”€ resourcepacks/
-â”œâ”€â”€ shaderpacks/
-â””â”€â”€ dist/
+|-- pack.toml
+|-- index.toml
+|-- .modpack/
+    |-- project.psd1
+    |-- metadata.psd1
+|-- mods/
+|-- config/
+|-- resourcepacks/
+|-- shaderpacks/
+|-- dist/
 ```
 
 | Data | Source of truth |
