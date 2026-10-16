@@ -31,6 +31,7 @@ public static class NativeInstallationRoot
         catch (Exception error)
         {
             var retained = Error("RootRetained", "Installation initialization failed; inspect the retained application directory", root, error.Message);
+            retained.Data["ModpackTools.Installation.RootCreated"] = true;
             retained.Data["ModpackTools.RetainStage"] = true; throw retained;
         }
     }
@@ -122,6 +123,20 @@ public sealed class NativeInstallationLease : IAsyncDisposable
         AssertCurrent(); var root = Owner.Root.CanonicalRoot;
         var current = NativeInstallationControl.Read(Path.Combine(root, "control"))?.Current
             ?? throw NativeInstallationRoot.Error("NotReady", "Installation has no active version", root);
+        return Pin(current);
+    }
+    public NativeLaunchPin PinVersion(string buildId)
+    {
+        AssertCurrent(); var root = Owner.Root.CanonicalRoot;
+        var generation = NativeInstallationControl.Read(Path.Combine(root, "control"))
+            ?? throw NativeInstallationRoot.Error("NotReady", "Installation has no active version", root);
+        var selected = generation.Retired.Prepend(generation.Current).SingleOrDefault(value => value.BuildId == buildId)
+            ?? throw NativeInstallationRoot.Error("UnknownVersion", "Requested version is not managed by this installation", buildId);
+        return Pin(selected);
+    }
+    private NativeLaunchPin Pin(NativeVersionReference current)
+    {
+        var root = Owner.Root.CanonicalRoot;
         var version = Path.Combine(root, "versions", current.BuildId);
         using var versionIdentity = WindowsProjectIdentity.Open(version);
         if (versionIdentity.Value.FileIdentity != current.FileIdentity) throw NativeInstallationRoot.Error("VersionChanged", "Active version directory identity changed", version);

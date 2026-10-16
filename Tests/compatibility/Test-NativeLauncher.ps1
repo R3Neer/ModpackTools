@@ -15,7 +15,7 @@ function Invoke-InstallationFixture($Request) {
     [pscustomobject]@{Exit=$capture.Exit;Result=($capture.Stdout|ConvertFrom-Json)}
 }
 function Create-Fixture([string]$Name,[string]$Assets) {
-    $archive=Join-Path $run ($Name+'.zip');$fixture=Invoke-InstallationFixture @{CreateFixture=$true;ArchivePath=$archive;Executable=[IO.Path]::GetFullPath($NativeExecutable);PayloadDirectory=$Assets}
+    $archive=Join-Path $run ($Name+'.zip');$fixture=Invoke-InstallationFixture @{CreateFixture=$true;ArchivePath=$archive;Executable=[IO.Path]::GetFullPath($NativeExecutable);LauncherExecutable=$launcherPath;PayloadDirectory=$Assets}
     if($fixture.Exit -ne 0){throw 'Fixture package creation failed'}
     return $fixture.Result
 }

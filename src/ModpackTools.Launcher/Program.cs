@@ -6,19 +6,24 @@ if (args is ["--launcher-protocol"]) { Console.WriteLine("1"); return 0; }
 try
 {
     var executable = Environment.ProcessPath ?? throw new InvalidOperationException("Launcher executable path is unavailable");
-    var bin = Path.GetDirectoryName(executable)!;
-    if (!StringComparer.OrdinalIgnoreCase.Equals(Path.GetFileName(bin), "bin")) throw new InvalidOperationException("Run the stable launcher from the managed application's bin directory");
+    var directory = Path.GetDirectoryName(executable)!;
+    var stable = StringComparer.OrdinalIgnoreCase.Equals(Path.GetFileName(directory), "bin");
+    var parent = Path.GetDirectoryName(directory)!;
+    if (!stable && !StringComparer.OrdinalIgnoreCase.Equals(Path.GetFileName(parent), "versions")) throw new InvalidOperationException("Run the launcher from its managed application directory");
+    var root = stable ? parent : Path.GetDirectoryName(parent)!;
     NativeLaunchPin pin;
-    await using (var admission = await NativeInstallationRoot.AcquireAsync(Path.GetDirectoryName(bin)!).ConfigureAwait(false))
-        pin = admission.PinCurrent();
+    await using (var admission = await NativeInstallationRoot.AcquireAsync(root).ConfigureAwait(false))
+        pin = stable ? admission.PinCurrent() : admission.PinVersion(Path.GetFileName(directory));
     using (pin)
     {
         var options = args.TakeWhile(argument => argument != "--").ToArray();
         var machine = options.Contains("--no-human", StringComparer.Ordinal);
-        var start = new ProcessStartInfo(machine ? Path.Combine(pin.Directory, "modpacktools.exe") : pin.NuExecutable) { UseShellExecute = false };
-        if (!machine)
+        var start = new ProcessStartInfo(stable ? Path.Combine(pin.Directory, "modpack.exe")
+            : machine ? Path.Combine(pin.Directory, "modpacktools.exe") : pin.NuExecutable)
+        { UseShellExecute = false };
+        if (!stable && !machine)
         { start.ArgumentList.Add("--no-config-file"); start.ArgumentList.Add(Path.Combine(pin.Directory, "cli.nu")); }
-        else if (!options.Contains("--json", StringComparer.Ordinal)) start.ArgumentList.Add("--json");
+        else if (!stable && !options.Contains("--json", StringComparer.Ordinal)) start.ArgumentList.Add("--json");
         foreach (var argument in args) start.ArgumentList.Add(argument);
         using var child = Process.Start(start) ?? throw new IOException("Selected version could not be started");
         Console.CancelKeyPress += (_, eventArgs) => eventArgs.Cancel = true;

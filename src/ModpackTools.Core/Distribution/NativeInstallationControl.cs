@@ -50,7 +50,7 @@ public static class NativeInstallationControl
 
     public static async Task<NativeControlSwitch> SwitchAsync(ProjectPhysicalIdentity controlRoot, string stateDirectory,
         NativePreparedPackage version, string? expectedGeneration, CancellationToken cancellation = default,
-        Func<TransactionEvent, ValueTask>? observer = null)
+        Func<TransactionEvent, ValueTask>? observer = null, Func<string, CancellationToken, Task>? verifyBootstrap = null)
     {
         ArgumentNullException.ThrowIfNull(controlRoot); ArgumentNullException.ThrowIfNull(version);
         NativePackageArchive.Verify(version, cancellation: cancellation);
@@ -91,11 +91,13 @@ public static class NativeInstallationControl
             Write(Path.Combine(stage, "Nushell", "modpack.nu"), bootstrap);
             return Task.FromResult(next);
         }
-        Task VerifyStage(string stage, CancellationToken token)
+        async Task VerifyStage(string stage, CancellationToken token)
         {
-            _ = Read(stage); protectedVersion.AssertCurrent(); NativePackageArchive.Verify(version, cancellation: token);
+            _ = Read(stage);
+            if (verifyBootstrap is not null) await verifyBootstrap(Path.Combine(stage, "Nushell", "modpack.nu"), token).ConfigureAwait(false);
+            protectedVersion.AssertCurrent(); NativePackageArchive.Verify(version, cancellation: token);
             _ = Read(controlRoot.CanonicalRoot);
-            protectedControl.AssertCurrent(); return Task.CompletedTask;
+            protectedControl.AssertCurrent();
         }
     }
 

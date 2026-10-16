@@ -25,6 +25,7 @@ internal static class NativePackageInspection
                     var executable = File.ReadAllBytes(input.GetProperty("Executable").GetString()!);
                     var files = NativePackageManifest.PayloadPaths.ToDictionary(name => name,
                         name => name.EndsWith(".exe", StringComparison.Ordinal) ? executable : Encoding.UTF8.GetBytes("Native package format fixture: " + name + "\n"), StringComparer.Ordinal);
+                    if (input.TryGetProperty("LauncherExecutable", out var launcherExecutable)) files["modpack.exe"] = File.ReadAllBytes(launcherExecutable.GetString()!);
                     if (input.TryGetProperty("PayloadDirectory", out var payloadDirectory))
                         foreach (var name in NativePackageManifest.PayloadPaths.Where(name => !name.EndsWith(".exe", StringComparison.Ordinal)))
                         {

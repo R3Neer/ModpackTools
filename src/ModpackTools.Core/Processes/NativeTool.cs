@@ -10,7 +10,8 @@ public sealed record NativeToolResult(int? ExitCode, string Stdout, string Stder
 public static class NativeTool
 {
     public static async Task<NativeToolResult> RunAsync(string executable, IReadOnlyList<string> arguments, string directory,
-        string nativeHost, NativeToolLimits? limits = null, CancellationToken cancellation = default)
+        string nativeHost, NativeToolLimits? limits = null, CancellationToken cancellation = default,
+        IReadOnlyDictionary<string, string?>? environment = null)
     {
         limits ??= new(); Validate(executable, arguments, directory, limits);
         if (!Path.IsPathFullyQualified(nativeHost) || !File.Exists(nativeHost) || !nativeHost.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
@@ -30,6 +31,14 @@ public static class NativeTool
             }
         };
         process.StartInfo.ArgumentList.Add("--tool-child");
+        if (environment is not null)
+            foreach (var pair in environment)
+            {
+                if (string.IsNullOrEmpty(pair.Key) || pair.Key.Contains('=') || pair.Key.Contains('\0') || pair.Value?.Contains('\0') is true)
+                    throw Error("InvalidEnvironment", "Native child environment contains an invalid entry", pair.Key);
+                if (pair.Value is null) process.StartInfo.Environment.Remove(pair.Key);
+                else process.StartInfo.Environment[pair.Key] = pair.Value;
+            }
         var started = false; var assigned = false; DomainException? failure = null; DomainException? drainFailure = null; NativeToolResult? result = null;
         using var deadline = new CancellationTokenSource(limits.TimeoutMilliseconds);
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellation, deadline.Token);

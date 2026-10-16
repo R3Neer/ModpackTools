@@ -180,7 +180,7 @@ public static class NativePackageArchive
         : name.EndsWith(".nu", StringComparison.Ordinal) ? limits.MaximumNuBytes
         : name.EndsWith(".json", StringComparison.Ordinal) ? limits.MaximumJsonBytes : limits.MaximumTextBytes;
 
-    private static void VerifyNativeExecutable(string path)
+    internal static void VerifyNativeExecutable(string path)
     {
         WindowsProjectIdentity.GuardAncestors(path);
         using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
