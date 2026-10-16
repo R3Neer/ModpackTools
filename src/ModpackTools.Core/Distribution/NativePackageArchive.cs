@@ -205,7 +205,7 @@ public static class NativePackageArchive
         if (seenFiles.Count != files.Count || seenDirectories.Count != directories.Count) throw Error("StageChanged", "Package stage contents are incomplete", stage);
     }
 
-    private static void Cleanup(string stage, ProjectPhysicalIdentity? expected, Dictionary<string, NativePackageFile?> files,
+    internal static void Cleanup(string stage, ProjectPhysicalIdentity? expected, Dictionary<string, NativePackageFile?> files,
         HashSet<string> directories, NativePackageLimits limits)
     {
         using (var identity = WindowsProjectIdentity.Open(stage))
@@ -219,7 +219,7 @@ public static class NativePackageArchive
         System.IO.Directory.Delete(stage, recursive: false);
     }
 
-    private static void CreateDirectories(string stage, string file, HashSet<string> created)
+    internal static void CreateDirectories(string stage, string file, HashSet<string> created)
     {
         foreach (var relative in Ancestors([file]).OrderBy(value => value.Length))
         {
@@ -238,7 +238,7 @@ public static class NativePackageArchive
         return result;
     }
 
-    private static string Copy(Stream source, Stream destination, long length, CancellationToken cancellation, Action<long>? progress = null)
+    internal static string Copy(Stream source, Stream destination, long length, CancellationToken cancellation, Action<long>? progress = null)
     {
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         var buffer = ArrayPool<byte>.Shared.Rent(65536); long total = 0;

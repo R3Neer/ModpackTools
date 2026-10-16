@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using ModpackTools.Core;
 using ModpackTools.Core.Distribution;
+using ModpackTools.Core.Transactions;
 
 internal static class NativePackageInspection
 {
@@ -58,7 +59,26 @@ internal static class NativePackageInspection
                             }
                         });
                     NativePackageArchive.Verify(prepared);
+                    NativePublishedVersion? publication = null;
+                    if (input.TryGetProperty("PublishParent", out var publishParent))
+                    {
+                        var parentPath = publishParent.GetString()!; Directory.CreateDirectory(parentPath);
+                        var parentIdentity = FileTreeTransaction.InspectIdentity(parentPath); var publicationChanged = false;
+                        publication = NativeVersionPublication.PublishAsync(prepared, parentIdentity, cancellation: cancellation.Token, progress: value =>
+                        {
+                            if (publicationChanged || value.Phase != "publish-copied") return;
+                            if (input.TryGetProperty("ChangePublishedFileAndCancel", out var change) && change.GetBoolean())
+                            { File.AppendAllText(value.Path, "foreign publication edit"); publicationChanged = true; cancellation.Cancel(); }
+                            else if (input.TryGetProperty("OccupyVersionTarget", out var occupy) && occupy.GetBoolean())
+                            {
+                                var target = Path.Combine(parentPath, prepared.Manifest.BuildId); Directory.CreateDirectory(target);
+                                File.WriteAllText(Path.Combine(target, "foreign.txt"), "foreign occupied version"); publicationChanged = true;
+                            }
+                        }).GetAwaiter().GetResult();
+                        prepared = publication.Package;
+                    }
                     writer.WriteStartObject(); writer.WriteString("Directory", prepared.Directory); writer.WriteString("BuildId", prepared.Manifest.BuildId);
+                    if (publication is not null) writer.WriteBoolean("Published", publication.Published);
                     writer.WriteString("ArchiveSha256", prepared.ArchiveSha256); writer.WriteString("FileIdentity", prepared.Identity.FileIdentity);
                     writer.WriteStartArray("Files");
                     foreach (var file in prepared.Files)
