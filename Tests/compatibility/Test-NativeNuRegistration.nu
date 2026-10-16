@@ -28,6 +28,18 @@ files=[]
     if $env.MODPACKTOOLS_PROJECT != 'unrelated-active-project' or (open --raw ($pack | path join 'pack.toml')) != $manifest {error make {msg: 'Registration changed session or technical manifest'}}
     let registered = (modpack project list --no-human | where id == registered)
     if ($registered | length) != 1 or $registered.0.name != 'Display 雪' or $registered.0.root != $pack {error make {msg: 'Registered project does not resolve'}}
+    let human_pack = ($catalog | path join 'human existing pack 雪')
+    mkdir $human_pack
+    $manifest | save ($human_pack | path join 'pack.toml')
+    'hash-format="sha256"
+files=[]
+' | save ($human_pack | path join 'index.toml')
+    'Keep my README 雪' | save ($human_pack | path join 'README.md')
+    'custom-ignore/' | save ($human_pack | path join '.gitignore')
+    if (modpack project register human-registered --path $human_pack --display-name 'Human 雪' --ascii --color never) != null {error make {msg: 'Human registration leaked pipeline output'}}
+    if $env.MODPACKTOOLS_PROJECT != 'unrelated-active-project' or (open --raw ($human_pack | path join 'pack.toml')) != $manifest or (open --raw ($human_pack | path join 'README.md')) != 'Keep my README 雪' or (open --raw ($human_pack | path join '.gitignore')) != 'custom-ignore/' {error make {msg: 'Human registration changed preserved inputs/session'}}
+    let human = (modpack project list --no-human | where id == human-registered)
+    if ($human | length) != 1 or $human.0.name != 'Human 雪' or $human.0.root != $human_pack {error make {msg: 'Human registration readback failed'}}
     let response_path = ($nu.temp-dir | path join $'modpacktools-nu-register-((random uuid)).json')
     $env.MODPACKTOOLS_CORE_PATH = $stub_executable
     $env.MODPACKTOOLS_TEST_RESPONSE_PATH = $response_path

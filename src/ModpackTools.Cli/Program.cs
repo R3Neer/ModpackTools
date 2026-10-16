@@ -90,7 +90,7 @@ try
         try
         {
             if (initialization.Equals("create", StringComparison.OrdinalIgnoreCase)) await ProjectCreationCommand.RunAsync(command, commandArguments, options.Project, configurationDirectory, cancellation.Token, !options.NoHuman);
-            else await ProjectRegistrationCommand.RunAsync(command, commandArguments, options.Project, configurationDirectory, cancellation.Token);
+            else await ProjectRegistrationCommand.RunAsync(command, commandArguments, options.Project, configurationDirectory, cancellation.Token, !options.NoHuman);
         }
         finally { Console.CancelKeyPress -= cancel; }
         return 0;

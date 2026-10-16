@@ -1,4 +1,3 @@
-using System.Text.Json;
 using ModpackTools.Core;
 using ModpackTools.Core.Data;
 using ModpackTools.Core.Projects;
@@ -7,7 +6,7 @@ namespace ModpackTools.Cli;
 
 internal static class ProjectRegistrationCommand
 {
-    public static async Task RunAsync(string command, string[] arguments, string? requestedProject, string configurationDirectory, CancellationToken cancellation)
+    public static async Task RunAsync(string command, string[] arguments, string? requestedProject, string configurationDirectory, CancellationToken cancellation, bool includePresentation = false)
     {
         if (requestedProject is not null) throw new DomainException("Option.ForbiddenCombination", "Option '--project' is not valid for this operation", "modpack project register --help", target: requestedProject);
         string[] names = ["path", "display-name", "display-version", "output-name"];
@@ -39,10 +38,9 @@ internal static class ProjectRegistrationCommand
         var root = ConfigurationReader.ReadRoot(Path.GetFullPath(configurationDirectory));
         var state = Environment.GetEnvironmentVariable("MODPACKTOOLS_STATE_HOME");
         if (string.IsNullOrWhiteSpace(state)) state = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModpackTools", "native-state");
-        using var output = new NativeOutputBuffer("Project registration", "reduce registration arguments");
-        using (var writer = new Utf8JsonWriter(output)) JsonSerializer.Serialize(writer,
-            new EmptySuccessEnvelope(1, true, command, arguments, new()), WireJsonContext.Default.EmptySuccessEnvelope);
-        _ = await ProjectRegistration.ExecuteAsync(root, request, Path.GetFullPath(state), cancellation).ConfigureAwait(false);
-        Console.OpenStandardOutput().Write(output.GetBuffer(), 0, checked((int)output.Length)); Console.WriteLine();
+        using var output = new ProjectRegistrationResponse(command, arguments, root, includePresentation);
+        var result = await ProjectRegistration.ExecuteAsync(root, request, Path.GetFullPath(state), cancellation,
+            prepareOutput: output.PrepareAsync).ConfigureAwait(false);
+        output.Write(result);
     }
 }

@@ -128,6 +128,16 @@ export def render [ui: record, envelope: record] {
     match ($envelope.command | str lowercase) {
         'project' => {
             match $operation {
+                'register' => {
+                    let project = $envelope.presentation.project
+                    r3cli status $ui success 'Existing Packwiz project registered with ModpackTools.'
+                    r3cli key-value $ui ID $project.id
+                    r3cli key-value $ui Minecraft (text $project.minecraft)
+                    r3cli key-value $ui Loader ([$project.loader $project.loader_version] | where {|value| $value != null and $value != ''} | str join ' ')
+                    r3cli key-value $ui Root $project.root
+                    r3cli status $ui info ('Created ' + ($envelope.presentation.created_files | length | into string) + ' file(s). Next: modpack project use ' + $project.id)
+                    for item in ($envelope.presentation | get --optional diagnostics | default []) {r3cli status $ui warning $'($item.code): ($item.path) · ($item.message)'}
+                }
                 'create' => {
                     r3cli status $ui success ('Project created at ' + $envelope.presentation.project.root)
                     for item in ($envelope.presentation | get --optional diagnostics | default []) {r3cli status $ui warning $'($item.code): ($item.path) · ($item.message)'}
