@@ -11,7 +11,7 @@ public sealed record DownloadedDependency(string Path, string Sha256, long Lengt
 public static class DependencyDownload
 {
     public static async Task<DownloadedDependency> FetchAsync(Uri uri, string expectedSha256, string stagingParent,
-        DependencyDownloadLimits? limits = null, CancellationToken cancellation = default, HttpMessageHandler? handler = null)
+        DependencyDownloadLimits? limits = null, CancellationToken cancellation = default, HttpMessageHandler? handler = null, Action<long>? progress = null)
     {
         ArgumentNullException.ThrowIfNull(uri);
         limits ??= new();
@@ -59,6 +59,7 @@ public static class DependencyDownload
                             if (count > limits.MaximumBytes - length) throw Error("DownloadLimit", "Dependency response exceeds its byte quota", current.ToString(), "LimitsExceeded");
                             await destination.WriteAsync(buffer.AsMemory(0, count), deadline.Token).ConfigureAwait(false);
                             hash.AppendData(buffer.AsSpan(0, count)); length += count;
+                            progress?.Invoke(length);
                         }
                     }
                     finally { ArrayPool<byte>.Shared.Return(buffer); }

@@ -12,7 +12,7 @@ public static class NativeInstallation
 {
     public static async Task<NativeInstallationResult> ApplyAsync(string archive, string sha256, string root, string? nu,
         string stateDirectory, string nativeHost, bool install, bool allowDowngrade = false,
-        CancellationToken cancellation = default, Action<NativePackageProgress>? progress = null)
+        CancellationToken cancellation = default, Action<NativePackageProgress>? progress = null, string? expectedGeneration = null, string? expectedVersion = null)
     {
         root = FileTreeTransaction.CanonicalFutureDirectory(root); stateDirectory = FileTreeTransaction.CanonicalFutureDirectory(stateDirectory);
         if (StringComparer.OrdinalIgnoreCase.Equals(root, stateDirectory) || TransactionFiles.IsBelow(root, stateDirectory) || TransactionFiles.IsBelow(stateDirectory, root))
@@ -25,6 +25,8 @@ public static class NativeInstallation
         var created = false; var published = false; var binReady = false;
         try
         {
+            if (expectedVersion is not null && prepared.Manifest.Version != expectedVersion)
+                throw Error("VersionMismatch", "Package public version differs from the selected release", prepared.Directory);
             if (StringComparer.OrdinalIgnoreCase.Equals(prepared.Identity.CanonicalRoot, root) || TransactionFiles.IsBelow(prepared.Identity.CanonicalRoot, root)
                 || TransactionFiles.IsBelow(root, prepared.Identity.CanonicalRoot)) throw Error("UnsafePreparation", "Prepared and installed application trees must be separate", prepared.Directory);
             if (StringComparer.OrdinalIgnoreCase.Equals(prepared.Identity.CanonicalRoot, stateDirectory) || TransactionFiles.IsBelow(prepared.Identity.CanonicalRoot, stateDirectory)
@@ -37,6 +39,8 @@ public static class NativeInstallation
             await using var admission = await NativeInstallationRoot.AcquireAsync(root).ConfigureAwait(false);
             NativeRetirement.AssertAvailable(root, prepared.Manifest.BuildId);
             var controlRoot = Path.Combine(root, "control"); var previous = NativeInstallationControl.Read(controlRoot);
+            if (expectedGeneration is not null && previous?.Generation != expectedGeneration)
+                throw Error("GenerationChanged", "Installation changed while its update was being prepared", controlRoot);
             if (previous is not null)
             {
                 var comparison = VersionOrdering.Compare(prepared.Manifest.Version, previous.Current.Version);
