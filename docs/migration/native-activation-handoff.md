@@ -1,5 +1,14 @@
 # Entrega nativa y registro de activación
 
+## Cierre pendiente tras la reorganización
+
+Después de la activación se notificó un fallo de `project use vp26` por contexto
+de configuración/ruta antigua. Una prueba con variables sólo de proceso funcionó;
+no se guardaron esas variables en el perfil porque el usuario lo rechazó y encargó
+la migración a otro agente. Las comprobaciones de activación de abajo son evidencia
+histórica, no sustituyen la aceptación del perfil definitivo tras esa migración.
+Seguir [la lista de integración](integration-readiness.md) antes del merge completo.
+
 ## Actualización: activación ejecutada el16-oct-2026
 
 El usuario autorizó instalar y configurar Nu. Ya está instalada la imagen de este

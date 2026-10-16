@@ -1,4 +1,4 @@
-# Hybrid-core migration: branch-only records
+# Hybrid-core migration records
 
 Current status, 2026-10-16: native Windows x64 package implemented and locally
 accepted, including installer/update/Nu without PowerShell. The user subsequently
@@ -27,14 +27,16 @@ The separate checkout avoids changing the user's `main` checkout or installation
 
 Keep here: architectural alternatives, rationale, migration contracts, differential
 cases, performance baselines, raw evaluation data, transition plan, rollback gates,
-and progress. This branch's `AGENTS.md` is also migration-only.
+and progress. This branch's `AGENTS.md` governs migration work; it is retained
+with these records in the eventual complete merge.
 
 Do not add migration announcements to the product README, public help, release
 notes, or the existing product docs during evaluation. When a capability is
 implemented, update shipped documentation only to describe actual supported
 behavior, requirements, or installation; avoid plans and migration history there.
 
-`main` must receive neither these documents nor their commits. Future integration
-requires explicit authorization and selective replay of product-only commits into
-an integration branch. A final tree with these files deleted is not sufficient if
-a whole-branch merge imports their history. Retain this branch as the audit record.
+The user's clarification is to keep these documents out of `main` only until
+integration. The eventual authorized integration is a complete branch merge,
+including these documents, evaluation tooling and checkpoint history. This
+supersedes the earlier selective product-only replay plan. No merge or push is
+authorized by readiness preparation. See the [integration readiness checklist](integration-readiness.md).

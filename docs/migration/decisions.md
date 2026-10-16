@@ -179,9 +179,13 @@ No public version number/tag/release or external install occurs in this phase.
 
 ## D08: baseline and documentation ownership
 
-Keep 4.0.2 on `main` unchanged. All migration records and evaluation tooling stay
-on `codex/hybrid-core`; do not merge the whole branch into main. Follow the separate
-documentation commits and selective future integration in the commit policy.
+Keep `main` unchanged during branch preparation. The user's clarification is
+that migration records and evaluation tooling remain on `codex/hybrid-core` until
+the eventual complete merge into `main`; they are included in that merge along
+with implementation and checkpoint history. This supersedes the earlier selective
+integration decision. Follow the [commit policy](commit-policy.md) and
+[integration readiness checklist](integration-readiness.md). Merge, push and
+publication still require their applicable authorization.
 Implementation was explicitly authorized after evaluation and reviewer design.
 
 ## Readiness versus future validation

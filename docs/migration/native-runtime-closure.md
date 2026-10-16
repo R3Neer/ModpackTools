@@ -91,7 +91,9 @@ No real modpack/game/profile operation substitutes for isolated acceptance.
 
 Every green capability is committed before the next, after warning-free Native
 publication and applicable independent reviews. Migration records stay in separate
-commits for selective future product integration; main remains unchanged.
+commits for reviewable history. The user's later clarification requires complete
+branch integration, including these records; main remains unchanged until an
+explicitly authorized merge. See [integration readiness](integration-readiness.md).
 
 Capability76 accepts structured category assign/clear and Nu machine dispatch:
 black-box4/4, white-box2, final Core102/CLI111 and parent alias/clock/regression

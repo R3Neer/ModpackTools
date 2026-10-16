@@ -77,8 +77,23 @@ without separate user authorization.
 
 Keep migration docs/benchmarks in `docs(migration)` or `test(evaluation)` commits,
 separate from product code. Updating the progress record does not require adding
-a migration file to a product commit. This enables selective product integration
-without migration documentation entering `main`, including through commit history.
+a migration file to a product commit. This separation supports review; it is not
+an exclusion rule for integration.
+
+## Complete integration into main
+
+The user's clarification supersedes the earlier product-only integration plan:
+keep implementation and migration documentation on `codex/hybrid-core` until
+integration, then merge the complete branch into `main`, including documentation,
+evaluation fixtures and checkpoint history. Do not selectively replay product
+commits, squash the checkpoints, or remove migration records for this purpose.
+
+Preparing the branch does not authorize merging, pushing, tagging or publishing.
+Before the eventual merge, complete the migration-dependent fresh-session checks
+and inspect both checkout states. After the authorized merge, validate the actual
+integrated tree before any separately authorized push. Review release workflow
+triggers before pushing; local integration and public release are separate actions.
+Use the [integration readiness checklist](integration-readiness.md) for the gates.
 
 ## Illustrative granularity
 

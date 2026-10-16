@@ -94,9 +94,10 @@ applied native operation. Each invocation has one writer/transaction owner.
 25. Validate actual configuration compatibility, complete cross-shell operation,
     legacy journals and full C01-C28 before proposing old-install removal.
 
-Retirement, public release/push, moving directories, and selective integration into
-main need destination-specific authorization. Main receives product-only commits,
-not this migration record or its history. A release version is chosen only when
+Retirement, public release/push, moving directories, and integration into
+main need destination-specific authorization. Following the user's clarification,
+the eventual merge includes the complete branch, migration records and history;
+the earlier product-only replay plan is superseded. A release version is chosen only when
 public behavior/distribution changes are finalized.
 
 ## Current completed preparation
