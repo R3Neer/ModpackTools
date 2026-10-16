@@ -1,10 +1,11 @@
 using System.Text.Json;
+using ModpackTools.Core.Diagnostics;
 
 namespace ModpackTools.Cli;
 
 internal sealed class ProtocolException(string message) : Exception(message);
 internal sealed record InvocationContext(string? ActiveProject);
-internal sealed record NativeRequest(string[] Arguments, InvocationContext? Context, string? ReviewToken);
+internal sealed record NativeRequest(string[] Arguments, InvocationContext? Context, string? ReviewToken, DoctorRepairScope? DoctorScope);
 
 internal static class RequestReader
 {
@@ -50,7 +51,7 @@ internal static class RequestReader
         {
             if (!names.Add(property.Name))
                 throw new ProtocolException($"Duplicate request field '{property.Name}'.");
-            if (property.Name is not ("schema_version" or "arguments" or "context" or "review_token"))
+            if (property.Name is not ("schema_version" or "arguments" or "context" or "review_token" or "doctor_scope"))
                 throw new ProtocolException($"Unknown request field '{property.Name}'.");
         }
 
@@ -102,6 +103,13 @@ internal static class RequestReader
                 throw new ProtocolException("Request review_token must be exactly 64 hexadecimal characters.");
             reviewToken = text;
         }
-        return new(result, context, reviewToken);
+        DoctorRepairScope? doctorScope = null;
+        if (root.TryGetProperty("doctor_scope", out var scope))
+        {
+            if (scope.ValueKind != JsonValueKind.String || scope.GetString() is not ("environment" or "project"))
+                throw new ProtocolException("Request doctor_scope must be environment or project.");
+            doctorScope = scope.GetString() == "environment" ? DoctorRepairScope.Environment : DoctorRepairScope.Project;
+        }
+        return new(result, context, reviewToken, doctorScope);
     }
 }

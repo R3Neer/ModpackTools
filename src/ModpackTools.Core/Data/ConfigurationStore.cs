@@ -11,9 +11,20 @@ public sealed record ConfigurationWriteRequest(ConfigurationSetting Setting, str
 public sealed record ConfigurationWritePreview(string Value, string Path, string? BeforeHash, string AfterHash);
 public sealed record ConfigurationWriteResult(string Value, string Path, string Hash);
 
+public sealed record ConfigurationObservation(ProjectPhysicalIdentity Directory, string? Hash);
+
 public static class ConfigurationStore
 {
     private const int MaximumBytes = 8 * 1024 * 1024;
+    public static ConfigurationObservation Observe(string configurationDirectory)
+    {
+        var directory = ProjectTransaction.CanonicalFutureDirectory(configurationDirectory);
+        using var identity = WindowsProjectIdentity.Open(directory);
+        var captured = Capture(Path.Combine(directory, "config.psd1"));
+        identity.AssertCurrent();
+        return new(identity.Value, captured.Hash);
+    }
+
     public static async Task<ConfigurationWriteResult> SetAsync(string configurationDirectory, ConfigurationWriteRequest request,
         CancellationToken cancellation = default, Func<ConfigurationWritePreview, CancellationToken, ValueTask>? prepareOutput = null)
     {

@@ -5,11 +5,13 @@ using ModpackTools.Cli;
 using ModpackTools.Core.Data;
 using ModpackTools.Core.Projects;
 using ModpackTools.Core.Inventory;
+using ModpackTools.Core.Diagnostics;
 
 Console.OutputEncoding = new UTF8Encoding(false);
 if (args.Length == 1 && args[0] == "--tool-child") return await ModpackTools.Core.Processes.NativeToolChild.RunAsync();
 InvocationContext? context = null;
 string? reviewToken = null;
+DoctorRepairScope? doctorScope = null;
 try
 {
     if (args.Length > 0 && args[0] == "--request-path")
@@ -20,6 +22,7 @@ try
         args = request.Arguments;
         context = request.Context;
         reviewToken = request.ReviewToken;
+        doctorScope = request.DoctorScope;
     }
 }
 catch (Exception exception) when (exception is ProtocolException or JsonException or IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
@@ -37,11 +40,17 @@ try
     var options = PresentationOptions.Parse(args);
     command = options.Arguments.FirstOrDefault() ?? "";
     commandArguments = options.Arguments.Skip(1).ToArray();
-    if (reviewToken is not null && (!command.Equals("content", StringComparison.OrdinalIgnoreCase) ||
-        commandArguments.FirstOrDefault()?.Equals("remove", StringComparison.OrdinalIgnoreCase) != true ||
+    if (doctorScope is not null && (!command.Equals("doctor", StringComparison.OrdinalIgnoreCase) ||
+        !commandArguments.Contains("--fix", StringComparer.OrdinalIgnoreCase) || HelpCommand.Applies(command, commandArguments)))
+        throw new DomainException("Doctor.InvalidScope", "Doctor repair scope requires doctor --fix", "submit a doctor repair phase without --help", "InvalidArgument");
+    var reviewedRemoval = command.Equals("content", StringComparison.OrdinalIgnoreCase) &&
+        commandArguments.FirstOrDefault()?.Equals("remove", StringComparison.OrdinalIgnoreCase) == true;
+    var reviewedDoctor = command.Equals("doctor", StringComparison.OrdinalIgnoreCase) && doctorScope == DoctorRepairScope.Project;
+    if (reviewToken is not null && ((!reviewedRemoval && !reviewedDoctor) ||
         !commandArguments.Contains("--yes", StringComparer.OrdinalIgnoreCase) ||
         commandArguments.Contains("--dry-run", StringComparer.OrdinalIgnoreCase) || HelpCommand.Applies(command, commandArguments)))
-        throw new DomainException("Transaction.InvalidReview", "A removal review token requires content remove --yes", "submit the reviewed removal without --dry-run or --help", "InvalidArgument");
+        throw new DomainException("Transaction.InvalidReview", "A review token requires content remove --yes or a project doctor repair --yes",
+            "submit the reviewed operation without --dry-run or --help", "InvalidArgument");
     if (HelpCommand.Applies(command, commandArguments))
     {
         HelpCommand.Run(command, commandArguments);
@@ -57,7 +66,7 @@ try
         try
         {
             if (command.Equals("build", StringComparison.OrdinalIgnoreCase)) await BuildCommand.RunAsync(command, commandArguments, options.Project, context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject, configurationDirectory, cancellation.Token, !options.NoHuman);
-            else if (command.Equals("doctor", StringComparison.OrdinalIgnoreCase)) await DoctorCommand.RunAsync(command, commandArguments, options.Project, context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject, configurationDirectory, cancellation.Token);
+            else if (command.Equals("doctor", StringComparison.OrdinalIgnoreCase)) await DoctorCommand.RunAsync(command, commandArguments, options.Project, context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject, configurationDirectory, cancellation.Token, doctorScope ?? DoctorRepairScope.All, !options.NoHuman, reviewToken);
             else await DiffCommand.RunAsync(command, commandArguments, options.Project, context is null ? Environment.GetEnvironmentVariable("MODPACKTOOLS_PROJECT") : context.ActiveProject, configurationDirectory, cancellation.Token, !options.NoHuman);
         }
         finally { Console.CancelKeyPress -= cancel; }

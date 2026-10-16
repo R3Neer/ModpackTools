@@ -3,13 +3,16 @@ using ModpackTools.Core;
 using ModpackTools.Core.Diagnostics;
 using ModpackTools.Core.Data;
 using ModpackTools.Core.Projects;
+using ModpackTools.Core.Dependencies;
+using ModpackTools.Core.Processes;
 
 namespace ModpackTools.Cli;
 
 internal static class DoctorCommand
 {
     public static async Task RunAsync(string command, string[] arguments, string? requestedProject, string? activeProject,
-        string configurationDirectory, CancellationToken cancellation)
+        string configurationDirectory, CancellationToken cancellation, DoctorRepairScope scope = DoctorRepairScope.All,
+        bool includePresentation = false, string? reviewToken = null)
     {
         var switches = new HashSet<string>(StringComparer.OrdinalIgnoreCase); var values = new List<string>();
         foreach (var token in arguments)
@@ -26,7 +29,9 @@ internal static class DoctorCommand
         if (switches.Contains("yes") && !switches.Contains("fix")) throw new DomainException("Option.RequiredCombination", "Option '--yes' requires '--fix'", "modpack doctor --fix --yes");
         var state = Environment.GetEnvironmentVariable("MODPACKTOOLS_STATE_HOME");
         if (string.IsNullOrWhiteSpace(state)) state = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModpackTools", "native-state");
-        var report = await Doctor.ReadAsync(Path.GetFullPath(configurationDirectory), Path.GetFullPath(state), AppContext.BaseDirectory,
+        var observedConfiguration = scope == DoctorRepairScope.Project ? ConfigurationStore.Observe(configurationDirectory) : null;
+        DoctorProjectReviewPresentation? presentation = null;
+        var report = scope == DoctorRepairScope.Environment ? ReadEnvironment() : await Doctor.ReadAsync(Path.GetFullPath(configurationDirectory), Path.GetFullPath(state), AppContext.BaseDirectory,
             requestedProject, activeProject, DateTimeOffset.UtcNow, Environment.ProcessPath!, switches.Contains("details"), cancellation: cancellation).ConfigureAwait(false);
         var originalReport = report;
         using var output = new NativeOutputBuffer("Doctor", "reduce diagnostic detail before retrying");
@@ -39,22 +44,22 @@ internal static class DoctorCommand
         if (switches.Contains("fix"))
         {
             ProjectContext? project = null;
-            if (!string.IsNullOrWhiteSpace(requestedProject) || !string.IsNullOrWhiteSpace(activeProject))
+            if (scope != DoctorRepairScope.Environment && (!string.IsNullOrWhiteSpace(requestedProject) || !string.IsNullOrWhiteSpace(activeProject)))
             {
                 try { project = ProjectSelection.Find(ProjectReader.Discover(ConfigurationReader.ReadRoot(configurationDirectory), new(100000, 10000), cancellation), ProjectSelection.EffectiveId(requestedProject, activeProject)); }
-                catch (DomainException) { /* The diagnostic report retains the selection/root failure. */ }
+                catch (DomainException) when (scope != DoctorRepairScope.Project) { /* The default report retains the selection/root failure. */ }
             }
             repair = await DoctorRepair.ExecuteAsync(configurationDirectory, Path.GetFullPath(state), Path.GetTempPath(),
-                Environment.ProcessPath!, project, new(switches.Contains("yes"), switches.Contains("dry-run"), switches.Contains("strict"), switches.Contains("allow-downgrade")),
+                Environment.ProcessPath!, project, new(switches.Contains("yes"), switches.Contains("dry-run"), switches.Contains("strict"), switches.Contains("allow-downgrade"), scope),
                 DateTimeOffset.UtcNow, cancellation, (receipt, token) =>
                 {
                     token.ThrowIfCancellationRequested(); Serialize(originalReport, receipt); CheckReserve(); return ValueTask.CompletedTask;
-                }).ConfigureAwait(false);
+                }, reviewProject: scope == DoctorRepairScope.Project ? ReviewProject : null).ConfigureAwait(false);
             if (repair.Applied && !repair.Diagnostics.Any(value => value.RetainedEvidence))
             {
                 try
                 {
-                    report = await Doctor.ReadAsync(configurationDirectory, Path.GetFullPath(state), AppContext.BaseDirectory, requestedProject, activeProject,
+                    report = scope == DoctorRepairScope.Environment ? ReadEnvironment() : await Doctor.ReadAsync(configurationDirectory, Path.GetFullPath(state), AppContext.BaseDirectory, requestedProject, activeProject,
                     DateTimeOffset.UtcNow, Environment.ProcessPath!, switches.Contains("details"), cancellation: cancellation).ConfigureAwait(false);
                 }
                 catch (Exception error) when (error is DomainException or IOException or UnauthorizedAccessException or OperationCanceledException)
@@ -73,6 +78,25 @@ internal static class DoctorCommand
         }
         if (repair?.Applied != true) cancellation.ThrowIfCancellationRequested();
         Console.OpenStandardOutput().Write(output.GetBuffer(), 0, checked((int)output.Length)); Console.WriteLine();
+
+        ValueTask ReviewProject(DoctorRepairResult receipt, PackwizObservation tool, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            if (ConfigurationStore.Observe(configurationDirectory) != observedConfiguration)
+                throw new DomainException("Transaction.ReviewChanged", "Configuration changed during project repair review; no reviewed project changes were applied",
+                    "review the configuration and run doctor --fix again", "ResourceBusy");
+            var current = DoctorProjectReviewPresentation.From(receipt, observedConfiguration!, tool,
+                switches.Contains("strict"), switches.Contains("allow-downgrade"));
+            current.AssertReviewed(reviewToken);
+            presentation = current;
+            return ValueTask.CompletedTask;
+        }
+        DoctorReport ReadEnvironment()
+        {
+            var tool = PackwizRefresh.Resolve(ConfigurationReader.ReadPackwizPath(configurationDirectory), Environment.GetEnvironmentVariable("PATH"),
+                Path.Combine(configurationDirectory, "tools", "packwiz", DependencyPackage.Packwiz.Version, "packwiz.exe"), DependencyPackage.Packwiz.Version);
+            return new([new("PACKWIZ", tool.Available ? "pass" : "fail", "Executable", tool.Available ? "Available" : "Not found", tool.Path ?? "", [])]);
+        }
 
         void CheckReserve()
         {
@@ -119,7 +143,13 @@ internal static class DoctorCommand
                     }
                     writer.WriteEndArray(); writer.WriteEndObject();
                 }
-                writer.WriteEndObject(); writer.WriteEndObject(); writer.WriteEndObject();
+                writer.WriteEndObject(); writer.WriteEndObject();
+                if (includePresentation && presentation is not null)
+                {
+                    writer.WritePropertyName("presentation");
+                    JsonSerializer.Serialize(writer, presentation, WireJsonContext.Default.DoctorProjectReviewPresentation);
+                }
+                writer.WriteEndObject();
             }
         }
     }
