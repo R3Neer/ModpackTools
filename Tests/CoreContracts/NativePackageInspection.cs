@@ -38,7 +38,7 @@ internal static class NativePackageInspection
                         if (text.Length is < 1 or > 64 || text.Any(character => !char.IsAsciiLetterOrDigit(character))) throw new ArgumentException("FixtureMarker must be bounded ASCII alphanumeric text.");
                         files["Nushell/modpack.nu"] = Encoding.UTF8.GetBytes("export def package-marker [] { '" + text + "' }\n");
                     }
-                    var manifest = NativePackageManifest.Create("4.0.2", files.Select(pair => new NativePackageFile(pair.Key, pair.Value.Length, Convert.ToHexString(SHA256.HashData(pair.Value)))));
+                    var manifest = NativePackageManifest.Create(ProductVersion.Current.Version, files.Select(pair => new NativePackageFile(pair.Key, pair.Value.Length, Convert.ToHexString(SHA256.HashData(pair.Value)))));
                     var manifestBytes = manifest.ToBytes();
                     if (input.TryGetProperty("CorruptPayload", out var corrupt)) files[corrupt.GetString()!] = Encoding.UTF8.GetBytes("corrupted payload\n");
                     if (input.TryGetProperty("ManifestText", out var replacement)) manifestBytes = Encoding.UTF8.GetBytes(replacement.GetString()!);

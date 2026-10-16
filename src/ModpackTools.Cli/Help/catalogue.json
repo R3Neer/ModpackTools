@@ -1,6 +1,6 @@
 {
   "product": "MODPACKTOOLS",
-  "version": "4.0.2",
+  "version": "5.0.0",
   "description": "Manage, inspect, update, and build Packwiz modpacks.",
   "invocation": "modpack",
   "groups": [

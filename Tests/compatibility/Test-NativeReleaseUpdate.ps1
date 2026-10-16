@@ -1,5 +1,8 @@
 param([Parameter(Mandatory)][string]$Inspector,[Parameter(Mandatory)][string]$Setup,[Parameter(Mandatory)][string]$FirstZip,[Parameter(Mandatory)][string]$SecondZip,[Parameter(Mandatory)][string]$NuExecutable)
 $ErrorActionPreference='Stop'
+$expectedVersion=[string](Import-PowerShellDataFile (Join-Path $PSScriptRoot '../../ModpackTools.psd1')).ModuleVersion
+$parsedVersion=[version]$expectedVersion
+$differentVersion='{0}.{1}.{2}' -f $parsedVersion.Major,$parsedVersion.Minor,($parsedVersion.Build+1)
 . (Join-Path $PSScriptRoot 'NativeProcess.ps1')
 $inspectorPath=[IO.Path]::GetFullPath($Inspector);$setupPath=[IO.Path]::GetFullPath($Setup);$firstPath=[IO.Path]::GetFullPath($FirstZip);$secondPath=[IO.Path]::GetFullPath($SecondZip)
 $temporary=[IO.Path]::GetFullPath([IO.Path]::GetTempPath());$run=Join-Path $temporary ('modpacktools-native release-update-'+[guid]::NewGuid().ToString('N'))
@@ -27,12 +30,12 @@ try {
     $capture=Invoke-NativeTestProcess $setupPath @('install','--root',$app,'--nu',$NuExecutable,'--package',$firstPath,'--sha256',$firstHash,'--state',$state,'--json') -TimeoutMilliseconds 240000
     if($capture.Exit -ne 0 -or $capture.Stderr){throw "Release-update prerequisite install failed: $($capture.Stdout) $($capture.Stderr)"}
     $installed=$capture.Stdout|ConvertFrom-Json;$before=Snapshot $app;$stable=Snapshot (Join-Path $app 'bin')
-    $mismatch=Invoke-Update mismatch '4.0.3' $installed.generation
+    $mismatch=Invoke-Update mismatch $differentVersion $installed.generation
     if($mismatch.Exit -ne 1 -or $mismatch.Result.id -cne 'ModpackTools.Installation.VersionMismatch' -or $mismatch.Result.download_calls -ne 1 -or $mismatch.Result.retain_stage -or $mismatch.Result.version_published -or (Snapshot $app) -cne $before){throw "Selected release/version mismatch changed installation: $($mismatch.Result|ConvertTo-Json -Compress)"}
     if(@(Get-ChildItem -LiteralPath $privateTemp -Force).Count){throw 'Failed release/version binding leaked owned temporary data'}
-    $stale=Invoke-Update stale '4.0.2' ([guid]::NewGuid().ToString('N'))
+    $stale=Invoke-Update stale $expectedVersion ([guid]::NewGuid().ToString('N'))
     if($stale.Exit -ne 1 -or $stale.Result.id -cne 'ModpackTools.SelfUpdate.GenerationChanged' -or $stale.Result.download_calls -ne 0 -or (Snapshot $app) -cne $before){throw 'Stale update generation reached download or changed installation'}
-    $applied=Invoke-Update applied '4.0.2' $installed.generation
+    $applied=Invoke-Update applied $expectedVersion $installed.generation
     if($applied.Exit -ne 0 -or !$applied.Result.ok -or $applied.Result.download_calls -ne 1 -or !$applied.Result.result.control_switched -or !$applied.Result.result.active_ready -or $applied.Result.result.build_id -ceq $installed.build_id -or (Snapshot (Join-Path $app 'bin')) -cne $stable){throw "Selected native release did not apply: $($applied.Result|ConvertTo-Json -Depth 8 -Compress)"}
     if(@(Get-ChildItem -LiteralPath $privateTemp -Force).Count){throw 'Applied release update leaked owned temporary data'}
     'PASS: selected-release download/hash/install composition, package-version binding, pre-download generation CAS and immutable stable binaries; injected HTTP only'

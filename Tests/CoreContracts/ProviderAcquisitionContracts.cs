@@ -26,7 +26,7 @@ internal static class ProviderAcquisitionContracts
         {
             var handler = new Handler(async (request, token) =>
             {
-                if (request.Method != HttpMethod.Get || request.Headers.UserAgent.ToString() != "R3Neer-ModpackTools/4.0.2") throw new InvalidOperationException("Provider request contract changed.");
+                if (request.Method != HttpMethod.Get || request.Headers.UserAgent.ToString() != "R3Neer-ModpackTools/" + ProductVersion.Current.Version) throw new InvalidOperationException("Provider request contract changed.");
                 await Task.Delay(25, token);
                 return Response("{\"id\":\"v1\",\"date_published\":\"2024-01-02T03:04:05Z\",\"files\":[{\"primary\":true,\"size\":9223372036854775807}]}");
             });
