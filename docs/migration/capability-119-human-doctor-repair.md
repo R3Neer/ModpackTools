@@ -93,4 +93,5 @@ Views158/159 SHA256 3F58F38E062F276F7791DB9B211634D5805180E73D5F9426BD3E26C78276
 Render158/159 SHA256 D47036C33381938DA32589A5ECEE085D84032779D0C43B6D6C48EA11F53A0B1E.
 Presentation Nu remains byte-identical to105. Installer, launcher and self-update
 are still pending. No live installation, profile/import change, release or push.
-`nFinal159 full fresh-process Nu integration PASS, including the newly integrated retained-target canary. No final-suite failures.
+
+Final159 full fresh-process Nu integration PASS, including the newly integrated retained-target canary. No final-suite failures.
