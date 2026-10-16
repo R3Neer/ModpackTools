@@ -19,7 +19,7 @@ public static class NativeTool
         if (cancellation.IsCancellationRequested) throw new DomainException("Core.OperationCancelled", "Native tool execution was cancelled", "retry when ready", "OperationStopped");
         var payload = Payload(executable, arguments, directory, limits.MaximumOutputBytes);
         using var job = new WindowsToolJob();
-        using var process = new Process
+        using var process = new WindowsProcess
         {
             StartInfo = new(nativeHost)
             {
@@ -60,8 +60,13 @@ public static class NativeTool
             if (process.ExitCode != 0 || stderr.Result.Length != 0) throw Error("InvalidHelperResult", "Native helper failed outside its private result protocol", nativeHost,
                 Encoding.UTF8.GetString(stderr.Result));
             result = ReadResult(stdout.Result);
-            if (result.FailureId is { } id) throw Error(id["ModpackTools.Build.".Length..], "Native tool execution failed", executable, result.FailureMessage,
-                id.EndsWith("OutputLimit", StringComparison.Ordinal) ? "LimitsExceeded" : "OperationStopped");
+            if (result.FailureId is { } id)
+            {
+                var childFailure = Error(id["ModpackTools.Build.".Length..], "Native tool execution failed", executable, result.FailureMessage,
+                    id.EndsWith("OutputLimit", StringComparison.Ordinal) ? "LimitsExceeded" : "OperationStopped");
+                if (id == "ModpackTools.Build.ProcessOwnershipUncertain") childFailure.Data["ModpackTools.RetainStage"] = true;
+                throw childFailure;
+            }
             if (result.ExitCode != 0) throw Error("ProcessFailed", $"Native tool exited with code {result.ExitCode}", executable,
                 result.Stdout + result.Stderr, "OperationStopped");
         }

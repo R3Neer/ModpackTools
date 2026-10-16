@@ -49,6 +49,10 @@ jobs:
           $ErrorActionPreference = 'Stop'
           ./artifacts/contracts/CoreContracts.exe
           if ($LASTEXITCODE) { throw 'Native core contracts failed' }
+          ./artifacts/contracts/CoreContracts.exe --verify-native-tools
+          if ($LASTEXITCODE) { throw 'Native process ownership failed' }
+          ./artifacts/contracts/CoreContracts.exe --verify-long-processes
+          if ($LASTEXITCODE) { throw 'Long-path native process contracts failed' }
           ./Tests/compatibility/Test-NativeProtocol.ps1 -Executable ./artifacts/cli/modpacktools.exe
           ./Tests/compatibility/Test-NativeVersion.ps1 -Executable ./artifacts/cli/modpacktools.exe
           $version = (& ./artifacts/setup/modpacktools-setup.exe --version).Trim()
@@ -75,6 +79,8 @@ jobs:
           Expand-Archive -LiteralPath $archive.FullName -DestinationPath artifacts/package
           nu --no-config-file Tests/compatibility/Test-NativeNuOnly.nu (Join-Path $PWD 'artifacts/package')
           if ($LASTEXITCODE) { throw 'Native-only Nu routing failed' }
+          nu --no-config-file Tests/compatibility/Test-NativeNuLongPaths.nu (Join-Path $PWD 'artifacts/package')
+          if ($LASTEXITCODE) { throw 'Long-path Nu bridge failed' }
       - name: Verify complete Nu command surface with pinned real Packwiz
         shell: pwsh
         run: |

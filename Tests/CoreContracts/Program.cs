@@ -52,6 +52,7 @@ if (args.FirstOrDefault() == "--tool-fixture") return NativeToolFixture.Run(args
 if (args.Length == 1 && args[0] == "refresh") return NativeToolFixture.Refresh();
 if (args.FirstOrDefault() == "--inspect-packwiz-refresh") return PackwizRefreshInspection.Run(args);
 if (args.Length == 1 && args[0] == "--verify-native-tools") { NativeToolContracts.VerifyAsync(nativeProcessCases: true).GetAwaiter().GetResult(); Console.WriteLine("Native process ownership contracts passed"); return 0; }
+if (args.Length == 1 && args[0] == "--verify-long-processes") { WindowsProcessContracts.VerifyAsync().GetAwaiter().GetResult(); Console.WriteLine("Native long executable/cwd, quoting, environment and concurrent EOF contracts passed"); return 0; }
 if (args.FirstOrDefault() == "--inspect-project-transaction") return ProjectTransactionInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-content-materialization") return ContentMaterializationInspection.Run(args);
 if (args.FirstOrDefault() == "--inspect-content-operation") return ContentOperationInspection.Run(args);

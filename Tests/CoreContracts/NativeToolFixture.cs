@@ -43,6 +43,16 @@ internal static class NativeToolFixture
         var mode = args.FirstOrDefault() ?? "zero-invalid";
         switch (mode)
         {
+            case "roundtrip":
+                File.WriteAllText("relative-marker.txt", "correct cwd");
+                Console.Error.WriteLine("fixture stderr");
+                using (var writer = new System.Text.Json.Utf8JsonWriter(Console.OpenStandardOutput()))
+                {
+                    writer.WriteStartObject(); writer.WriteString("environment", Environment.GetEnvironmentVariable("MODPACKTOOLS_PROCESS_TEST"));
+                    writer.WriteStartArray("arguments"); foreach (var value in args.Skip(1)) writer.WriteStringValue(value);
+                    writer.WriteEndArray(); writer.WriteEndObject();
+                }
+                return 0;
             case "both-fail": Console.WriteLine("fixture stdout"); Console.Error.WriteLine("fixture stderr"); return 7;
             case "both-ok": Console.WriteLine("fixture stdout"); Console.Error.WriteLine("fixture stderr"); return 0;
             case "flood":

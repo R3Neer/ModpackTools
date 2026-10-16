@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using ModpackTools.Core;
 using ModpackTools.Core.Distribution;
+using ModpackTools.Core.Processes;
 
 if (args is ["--launcher-protocol"]) { Console.WriteLine("1"); return 0; }
 try
@@ -25,7 +26,7 @@ try
         { start.ArgumentList.Add("--no-config-file"); start.ArgumentList.Add(Path.Combine(pin.Directory, "cli.nu")); }
         else if (!stable && !options.Contains("--json", StringComparer.Ordinal)) start.ArgumentList.Add("--json");
         foreach (var argument in args) start.ArgumentList.Add(argument);
-        using var child = Process.Start(start) ?? throw new IOException("Selected version could not be started");
+        using var child = WindowsProcess.StartNew(start);
         Console.CancelKeyPress += (_, eventArgs) => eventArgs.Cancel = true;
         await child.WaitForExitAsync().ConfigureAwait(false); return child.ExitCode;
     }

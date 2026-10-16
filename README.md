@@ -52,6 +52,14 @@ with `modpack config set packwiz <path>`, or review `modpack doctor --fix` to ob
 the pinned hash-verified Windows build. R3CLI's Nu presentation is bundled.
 Git and a local Minecraft installation are optional integrations.
 
+Executable paths may exceed the traditional Windows path limit. External tools
+also have a Windows working-directory limit: ModpackTools uses an existing 8.3
+short name only after checking that it identifies the same physical directory.
+It does not create aliases or change Windows settings. If no usable short name
+exists, the error identifies the directory; select a shorter
+`MODPACKTOOLS_STATE_HOME` before retrying. Preserve and resolve any pending
+transaction/recovery state before changing that location.
+
 ## Updates and rollback
 
 ```nu

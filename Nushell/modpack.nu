@@ -55,7 +55,14 @@ def native-executable [] {
     if not ($executable | path exists) or ($executable | path type) != 'file' {
         error make {msg: $'ModpackTools native executable is missing: ($executable). Reinstall a complete native package or correct MODPACKTOOLS_CORE_PATH.'}
     }
-    $executable
+    # Nu's Windows external resolver also needs the extended executable name.
+    # This affects only process startup; user arguments and public paths stay intact.
+    if $nu.os-info.name == 'windows' and ($executable | str length) >= 248 {
+        let absolute = ($executable | path expand | str replace --all '/' '\')
+        if ($absolute | str starts-with '\\?\') { $absolute } else if ($absolute | str starts-with '\\') {
+            ['\\?\UNC\' ($absolute | str substring 2..)] | str join
+        } else { ['\\?\' $absolute] | str join }
+    } else { $executable }
 }
 
 def validate-string-fields [value: any, names: list<string>, nullable: bool = false] {
