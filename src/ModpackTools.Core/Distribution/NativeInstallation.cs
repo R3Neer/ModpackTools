@@ -35,6 +35,7 @@ public static class NativeInstallation
             await NativeInstallationSmoke.VerifyAsync(prepared, selectedNu, nativeHost, cancellation).ConfigureAwait(false);
             if (install) { _ = NativeInstallationRoot.Create(root, selectedNu); created = true; }
             await using var admission = await NativeInstallationRoot.AcquireAsync(root).ConfigureAwait(false);
+            NativeRetirement.AssertAvailable(root, prepared.Manifest.BuildId);
             var controlRoot = Path.Combine(root, "control"); var previous = NativeInstallationControl.Read(controlRoot);
             if (previous is not null)
             {
@@ -50,6 +51,8 @@ public static class NativeInstallation
             var control = await NativeInstallationControl.SwitchAsync(FileTreeTransaction.InspectIdentity(controlRoot), stateDirectory, version.Package,
                 previous?.Generation, cancellation, verifyBootstrap: (path, token) => NativeInstallationSmoke.VerifyBootstrapAsync(path, selectedNu, nativeHost, token)).ConfigureAwait(false);
             result = Receipt(install ? "install" : "update", root, control, created, published);
+            if (control.Applied && NativeRetirementCensus.Capture(admission.Owner, control.Current) is { } census)
+                result = result with { Diagnostics = result.Diagnostics.Add(census) };
         }
         catch (Exception error)
         {
@@ -94,12 +97,16 @@ public static class NativeInstallation
         buildId ??= previous.PreviousBuildId;
         var selected = previous.Retired.SingleOrDefault(value => value.BuildId == buildId)
             ?? throw Error("RollbackUnavailable", "The requested previous version is not retained", buildId ?? root);
+        NativeRetirement.AssertAvailable(root, selected.BuildId);
         var version = NativePackageArchive.OpenInstalled(Path.Combine(root, "versions", selected.BuildId), selected, cancellation);
         await NativeInstallationSmoke.VerifyAsync(version, admission.Owner.NuExecutable, nativeHost, cancellation).ConfigureAwait(false);
         NativeInstallationBootstrap.Ensure(root, version, active: true, cancellation);
         var control = await NativeInstallationControl.SwitchAsync(FileTreeTransaction.InspectIdentity(controlRoot), stateDirectory, version,
             previous.Generation, cancellation, verifyBootstrap: (path, token) => NativeInstallationSmoke.VerifyBootstrapAsync(path, admission.Owner.NuExecutable, nativeHost, token)).ConfigureAwait(false);
-        return Receipt("rollback", root, control, false, false);
+        var result = Receipt("rollback", root, control, false, false);
+        if (control.Applied && NativeRetirementCensus.Capture(admission.Owner, control.Current) is { } census)
+            result = result with { Diagnostics = result.Diagnostics.Add(census) };
+        return result;
     }
 
     private static NativeInstallationResult Receipt(string action, string root, NativeControlSwitch control, bool created, bool published) =>

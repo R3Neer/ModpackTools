@@ -137,6 +137,7 @@ public sealed class NativeInstallationLease : IAsyncDisposable
     private NativeLaunchPin Pin(NativeVersionReference current)
     {
         var root = Owner.Root.CanonicalRoot;
+        NativeRetirement.AssertAvailable(root, current.BuildId);
         var version = Path.Combine(root, "versions", current.BuildId);
         using var versionIdentity = WindowsProjectIdentity.Open(version);
         if (versionIdentity.Value.FileIdentity != current.FileIdentity) throw NativeInstallationRoot.Error("VersionChanged", "Active version directory identity changed", version);

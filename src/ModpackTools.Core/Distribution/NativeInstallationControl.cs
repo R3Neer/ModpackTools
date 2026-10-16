@@ -59,6 +59,7 @@ public static class NativeInstallationControl
         using var protectedControl = WindowsProjectIdentity.Open(controlRoot.CanonicalRoot);
         if (protectedControl.Value != controlRoot) throw Error("ControlChanged", "Installation control directory identity changed", controlRoot.CanonicalRoot);
         var applicationRoot = Path.GetDirectoryName(controlRoot.CanonicalRoot)!;
+        NativeRetirement.AssertAvailable(applicationRoot, version.Manifest.BuildId);
         var expectedVersionPath = Path.Combine(applicationRoot, "versions", version.Manifest.BuildId);
         if (Path.GetFileName(controlRoot.CanonicalRoot) != "control" || !StringComparer.OrdinalIgnoreCase.Equals(expectedVersionPath, version.Identity.CanonicalRoot))
             throw Error("UnsafeVersion", "Selected version must belong to this installation's immutable version store", version.Directory);
@@ -112,6 +113,30 @@ public static class NativeInstallationControl
         }
         catch (EncoderFallbackException error)
         { throw Error("InvalidBootstrapPath", "Installation paths must be representable as valid UTF-8", versionDirectory, error.Message); }
+    }
+
+    internal static async Task<NativeControlSwitch> PruneAsync(string root, string state, string expectedGeneration, string build,
+        CancellationToken cancellation)
+    {
+        NativeControlGeneration? previous = null;
+        var tree = new SourceTreeReadLimits(MaximumFiles: 2, MaximumDirectories: 2, MaximumBytes: 128 * 1024, MaximumPathCharacters: 32768);
+        var result = await FileTreeTransaction.ExecuteAsync(root, state, (stage, token) =>
+        {
+            token.ThrowIfCancellationRequested();
+            previous = Read(stage) ?? throw Error("NotReady", "Installation has no active version", root);
+            if (previous.Generation != expectedGeneration || previous.Current.BuildId == build)
+                throw Error("GenerationChanged", "Installation changed before retirement was finalized", root);
+            var next = previous with
+            {
+                Generation = Guid.NewGuid().ToString("N"),
+                Retired = previous.Retired.Where(value => value.BuildId != build).ToImmutableArray(),
+                PreviousBuildId = previous.PreviousBuildId == build ? null : previous.PreviousBuildId
+            };
+            Validate(next, root); Write(Path.Combine(stage, "current.json"), JsonSerializer.SerializeToUtf8Bytes(next, NativeControlJson.Default.NativeControlGeneration));
+            return Task.FromResult(next);
+        }, (stage, token) => { token.ThrowIfCancellationRequested(); _ = Read(stage); return Task.CompletedTask; },
+            limits: new(Tree: tree, RecoveryTree: tree, MaximumChanges: 1), cancellation: cancellation).ConfigureAwait(false);
+        return new(result.Result, previous, result.Applied, result.Diagnostics);
     }
 
     private static string NuLiteral(string path)

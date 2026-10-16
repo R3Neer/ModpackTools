@@ -38,7 +38,7 @@ try
     if (args is ["--version"]) { Console.WriteLine(ProductVersion.Current.Version); return 0; }
     if (args.Length == 0 || args is ["--help"])
     {
-        Console.WriteLine("ModpackTools native setup\npack --core EXE --launcher EXE --assets SOURCE --output ZIP\ninstall --root NEW_DIRECTORY --nu NU_EXE --package ZIP --sha256 HASH\nupdate --root DIRECTORY --package ZIP --sha256 HASH [--allow-downgrade]\nrollback --root DIRECTORY [--build-id ID]\nCommon: --state DIRECTORY --json\nNo profiles, PATH, plugins or configuration are changed automatically."); return 0;
+        Console.WriteLine("ModpackTools native setup\npack --core EXE --launcher EXE --assets SOURCE --output ZIP\ninstall --root NEW_DIRECTORY --nu NU_EXE --package ZIP --sha256 HASH\nupdate --root DIRECTORY --package ZIP --sha256 HASH [--allow-downgrade]\nrollback --root DIRECTORY [--build-id ID]\ncleanup --root DIRECTORY\nCommon: --state DIRECTORY --json\nNo profiles, PATH, plugins or configuration are changed automatically."); return 0;
     }
     var command = args[0]; var options = new Dictionary<string, string?>(StringComparer.Ordinal);
     for (var index = 1; index < args.Length; index++)
@@ -58,6 +58,7 @@ try
         "install" => ["--root", "--nu", "--package", "--sha256", "--state", "--json"],
         "update" => ["--root", "--package", "--sha256", "--state", "--allow-downgrade", "--json"],
         "rollback" => ["--root", "--build-id", "--state", "--json"],
+        "cleanup" => ["--root", "--state", "--json"],
         _ => throw Invalid("Unknown native setup command: " + command)
     };
     foreach (var name in options.Keys) if (!allowed.Contains(name, StringComparer.Ordinal)) throw Invalid("Option does not apply to " + command + ": " + name);
@@ -77,6 +78,13 @@ try
     var root = Required("--root"); applicationRoot = Path.GetFullPath(root);
     var state = options.GetValueOrDefault("--state") ?? Environment.GetEnvironmentVariable("MODPACKTOOLS_STATE_HOME")
         ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModpackTools", "native-state");
+    if (command == "cleanup")
+    {
+        var retirement = await NativeRetirement.CollectAsync(root, state, cancellation.Token, Progress).ConfigureAwait(false);
+        if (json) Console.WriteLine(JsonSerializer.Serialize(retirement, SetupJson.Default.NativeRetirementResult));
+        else foreach (var item in retirement.Items) Console.WriteLine($"{item.Status}: {item.Path}" + (item.Reason is null ? "" : " — " + item.Reason));
+        return 0;
+    }
     var result = command == "rollback"
         ? await NativeInstallation.RollbackAsync(root, state, host, options.GetValueOrDefault("--build-id"), cancellation.Token).ConfigureAwait(false)
         : await NativeInstallation.ApplyAsync(Required("--package"), Required("--sha256"), root, options.GetValueOrDefault("--nu"), state, host,
@@ -115,4 +123,5 @@ static DomainException Invalid(string message) => new("Installation.InvalidArgum
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower)]
 [JsonSerializable(typeof(NativeInstallationResult))]
 [JsonSerializable(typeof(NativePackageBuild))]
+[JsonSerializable(typeof(NativeRetirementResult))]
 internal sealed partial class SetupJson : JsonSerializerContext;
