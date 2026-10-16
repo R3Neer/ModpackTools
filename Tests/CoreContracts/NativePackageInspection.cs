@@ -25,6 +25,12 @@ internal static class NativePackageInspection
                     var executable = File.ReadAllBytes(input.GetProperty("Executable").GetString()!);
                     var files = NativePackageManifest.PayloadPaths.ToDictionary(name => name,
                         name => name.EndsWith(".exe", StringComparison.Ordinal) ? executable : Encoding.UTF8.GetBytes("Native package format fixture: " + name + "\n"), StringComparer.Ordinal);
+                    if (input.TryGetProperty("FixtureMarker", out var marker))
+                    {
+                        var text = marker.GetString()!;
+                        if (text.Length is < 1 or > 64 || text.Any(character => !char.IsAsciiLetterOrDigit(character))) throw new ArgumentException("FixtureMarker must be bounded ASCII alphanumeric text.");
+                        files["Nushell/modpack.nu"] = Encoding.UTF8.GetBytes("export def package-marker [] { '" + text + "' }\n");
+                    }
                     var manifest = NativePackageManifest.Create("4.0.2", files.Select(pair => new NativePackageFile(pair.Key, pair.Value.Length, Convert.ToHexString(SHA256.HashData(pair.Value)))));
                     var manifestBytes = manifest.ToBytes();
                     if (input.TryGetProperty("CorruptPayload", out var corrupt)) files[corrupt.GetString()!] = Encoding.UTF8.GetBytes("corrupted payload\n");
@@ -77,8 +83,28 @@ internal static class NativePackageInspection
                         }).GetAwaiter().GetResult();
                         prepared = publication.Package;
                     }
+                    NativeControlSwitch? switched = null;
+                    if (input.TryGetProperty("ControlRoot", out var controlRoot))
+                    {
+                        var controlPath = controlRoot.GetString()!; Directory.CreateDirectory(controlPath);
+                        var expected = input.TryGetProperty("ExpectedGeneration", out var generation) ? generation.GetString() : null;
+                        switched = NativeInstallationControl.SwitchAsync(FileTreeTransaction.InspectIdentity(controlPath), input.GetProperty("StateDirectory").GetString()!,
+                            prepared, expected, cancellation: cancellation.Token, observer: value =>
+                            {
+                                if (value.Phase == TransactionPhase.FileCommitted && value.CompletedFiles == 1
+                                    && input.TryGetProperty("FailAfterControlFile", out var fail) && fail.GetBoolean())
+                                    throw new IOException("Controlled first-file publication failure");
+                                return ValueTask.CompletedTask;
+                            }).GetAwaiter().GetResult();
+                    }
                     writer.WriteStartObject(); writer.WriteString("Directory", prepared.Directory); writer.WriteString("BuildId", prepared.Manifest.BuildId);
                     if (publication is not null) writer.WriteBoolean("Published", publication.Published);
+                    if (switched is not null)
+                    {
+                        writer.WriteBoolean("ControlApplied", switched.Applied); writer.WriteString("Generation", switched.Current.Generation);
+                        writer.WriteString("PreviousGeneration", switched.Previous?.Generation); writer.WriteString("PreviousBuildId", switched.Current.PreviousBuildId);
+                        writer.WriteNumber("RetiredCount", switched.Current.Retired.Length); writer.WriteNumber("ControlDiagnostics", switched.Diagnostics.Length);
+                    }
                     writer.WriteString("ArchiveSha256", prepared.ArchiveSha256); writer.WriteString("FileIdentity", prepared.Identity.FileIdentity);
                     writer.WriteStartArray("Files");
                     foreach (var file in prepared.Files)
