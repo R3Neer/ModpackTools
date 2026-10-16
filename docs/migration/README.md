@@ -1,5 +1,11 @@
 # Hybrid-core migration records
 
+Release preparation, 2026-10-16: the user accepted the completed D migration and
+authorized 5.0.0, push and publication after successful CI. The long-path fix and
+local 5.0.0 acceptance are complete; see [release readiness](native-5-release-readiness.md).
+Hosted CI and publication are pending at this checkpoint. Earlier activation
+records below describe the previously installed native 4.0.2 image.
+
 Current status, 2026-10-16: native Windows x64 package implemented and locally
 accepted, including installer/update/Nu without PowerShell. The user subsequently
 authorized personal activation; installation on D and the real Nu import are now
