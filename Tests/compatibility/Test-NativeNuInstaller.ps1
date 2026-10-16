@@ -1,5 +1,6 @@
 param([Parameter(Mandatory)][string]$Setup,[Parameter(Mandatory)][string]$Launcher,[Parameter(Mandatory)][string]$NativeExecutable,[Parameter(Mandatory)][string]$NuExecutable)
 $ErrorActionPreference='Stop'
+$expectedVersion=[string](Import-PowerShellDataFile (Join-Path $PSScriptRoot '../../ModpackTools.psd1')).ModuleVersion
 . (Join-Path $PSScriptRoot 'NativeProcess.ps1')
 $source=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $setupPath=[IO.Path]::GetFullPath($Setup);$launcherPath=[IO.Path]::GetFullPath($Launcher);$corePath=[IO.Path]::GetFullPath($NativeExecutable);$nuPath=[IO.Path]::GetFullPath($NuExecutable)
@@ -25,7 +26,7 @@ try {
     $receipt=$installed.Stdout|ConvertFrom-Json
     if(-not $receipt.root_created -or -not $receipt.control_switched -or $receipt.root -cne $root){throw 'Native install receipt mismatch'}
     $version=Invoke-NativeTestProcess (Join-Path $root 'bin/modpack.exe') @('--version','--no-human') -TimeoutMilliseconds 30000
-    if($version.Exit -ne 0 -or $version.Stderr -or ($version.Stdout|ConvertFrom-Json).data.version.version -cne '4.0.2'){throw 'Installed native launcher failed'}
+    if($version.Exit -ne 0 -or $version.Stderr -or ($version.Stdout|ConvertFrom-Json).data.version.version -cne $expectedVersion){throw 'Installed native launcher failed'}
     if(@(Get-ChildItem -LiteralPath $env:APPDATA -Recurse -Force).Count -or @(Get-ChildItem -LiteralPath $env:MODPACKTOOLS_CONFIG_HOME -Recurse -Force).Count){throw 'Installer changed profiles or configuration'}
     if(@(Get-ChildItem -LiteralPath $env:TEMP -Recurse -Force).Count){throw 'Installer left temporary evidence unexpectedly'}
     'Nu installer, shipped native README, installed launcher and no-profile/no-PowerShell payload checks passed with empty PATH'

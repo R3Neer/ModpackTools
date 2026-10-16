@@ -1,5 +1,6 @@
 param([Parameter(Mandatory)][string]$Setup,[Parameter(Mandatory)][string]$Launcher,[Parameter(Mandatory)][string]$NativeExecutable,[Parameter(Mandatory)][string]$NuExecutable,[Parameter(Mandatory)][string]$Inspector)
 $ErrorActionPreference='Stop'
+$expectedVersion=[string](Import-PowerShellDataFile (Join-Path $PSScriptRoot '../../ModpackTools.psd1')).ModuleVersion
 . (Join-Path $PSScriptRoot 'NativeProcess.ps1')
 $setupPath=[IO.Path]::GetFullPath($Setup);$launcherPath=[IO.Path]::GetFullPath($Launcher);$corePath=[IO.Path]::GetFullPath($NativeExecutable);$inspectorPath=[IO.Path]::GetFullPath($Inspector);$nuPath=[IO.Path]::GetFullPath($NuExecutable)
 $source=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'));$temporary=[IO.Path]::GetFullPath([IO.Path]::GetTempPath());$run=Join-Path $temporary ('modpacktools-native setup-'+[guid]::NewGuid().ToString('N'))
@@ -37,7 +38,7 @@ try {
     $installed=Invoke-Setup @('install','--root',$app,'--nu',$nuPath,'--package',$firstZip,'--sha256',$first.Result.sha256,'--state',$state)
     if($installed.Exit -ne 0 -or !$installed.Result.root_created -or !$installed.Result.version_published -or !$installed.Result.bin_ready -or !$installed.Result.control_switched -or !$installed.Result.active_ready -or $installed.Result.build_id -cne $first.Result.build_id){throw "Native install failed: $($installed.Result|ConvertTo-Json -Depth 8 -Compress)"}
     $native=Invoke-NativeTestProcess $installed.Result.launcher @('--version','--no-human')
-    if($native.Exit -ne 0 -or $native.Stderr -or ($native.Stdout|ConvertFrom-Json).data.version.version -cne '4.0.2'){throw 'Installed native launcher cannot execute machine version'}
+    if($native.Exit -ne 0 -or $native.Stderr -or ($native.Stdout|ConvertFrom-Json).data.version.version -cne $expectedVersion){throw 'Installed native launcher cannot execute machine version'}
     $versionRoot=Join-Path $app ('versions/'+$first.Result.build_id);$original=Snapshot $versionRoot
     [IO.File]::AppendAllText((Join-Path $assets 'README.md'),"`nIsolated native update fixture.`n")
     $secondZip=Join-Path $run 'second package.zip';$second=Invoke-Setup @('pack','--core',$corePath,'--launcher',$launcherPath,'--assets',$assets,'--output',$secondZip)

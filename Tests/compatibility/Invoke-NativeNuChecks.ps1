@@ -1,6 +1,8 @@
 param([Parameter(Mandatory)][string]$Executable, [Parameter(Mandatory)][string]$NuExecutable, [Parameter(Mandatory)][string]$StubExecutable, [Parameter(Mandatory)][string]$PackwizExecutable)
 $ErrorActionPreference='Stop'
 $fixture=Join-Path ([IO.Path]::GetTempPath()) ('modpacktools-nu-checks-'+[guid]::NewGuid().ToString('N'))
+$previousExpectedVersion=$env:MODPACKTOOLS_TEST_EXPECTED_VERSION
+$env:MODPACKTOOLS_TEST_EXPECTED_VERSION=[string](Import-PowerShellDataFile (Join-Path $PSScriptRoot '../../ModpackTools.psd1')).ModuleVersion
 $previousCore=$env:MODPACKTOOLS_CORE_PATH
 $previousConfig=$env:MODPACKTOOLS_CONFIG_HOME
 $previousState=$env:MODPACKTOOLS_STATE_HOME
@@ -85,6 +87,7 @@ try {
     & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuDoctorFailure.nu') ([IO.Path]::GetFullPath($StubExecutable))
     if($LASTEXITCODE -ne 0){throw 'Native Nu doctor retained-evidence failure check failed'}
 } finally {
+    $env:MODPACKTOOLS_TEST_EXPECTED_VERSION=$previousExpectedVersion
     $env:MODPACKTOOLS_CORE_PATH=$previousCore; $env:MODPACKTOOLS_CONFIG_HOME=$previousConfig; $env:MODPACKTOOLS_STATE_HOME=$previousState
     $env:APPDATA=$previousAppData; $env:LOCALAPPDATA=$previousLocalAppData
     $resolved=[IO.Path]::GetFullPath($fixture)

@@ -1,8 +1,9 @@
 def main [package: path] {
     $env.PATH = []
     hide-env --ignore-errors MODPACKTOOLS_CORE_PATH
+    $env.MODPACKTOOLS_TEST_EXPECTED_VERSION = (open ($package | path join 'package.json') | get version)
     let module = ($package | path join 'Nushell' 'modpack.nu')
-    let script = (r###'use '__MODULE__'; let value = (modpack --version --no-human); if $value.version != '4.0.2' {error make {msg: 'Packaged default native executable failed'}}; let failure = (try {modpack deliberately-unknown --no-human; null} catch {|err| $err.msg}); if $failure == null or $failure !~ 'Command.Unknown' {error make {msg: 'Unknown command did not stay native'}}'### | str replace '__MODULE__' ($module | str replace --all "'" "''"))
+    let script = (r###'use '__MODULE__'; let value = (modpack --version --no-human); if $value.version != $env.MODPACKTOOLS_TEST_EXPECTED_VERSION {error make {msg: 'Packaged default native executable failed'}}; let failure = (try {modpack deliberately-unknown --no-human; null} catch {|err| $err.msg}); if $failure == null or $failure !~ 'Command.Unknown' {error make {msg: 'Unknown command did not stay native'}}'### | str replace '__MODULE__' ($module | str replace --all "'" "''"))
     ^$nu.current-exe --no-config-file -c $script
     if $env.LAST_EXIT_CODE != 0 {error make {msg: 'Default packaged native routing failed'}}
     $env.MODPACKTOOLS_CORE_PATH = ($package | path join 'missing-native.exe')

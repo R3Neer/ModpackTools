@@ -5,7 +5,7 @@ def main [] {
     let previous_path = $env.PATH
     $env.PATH = []
     let version = (modpack --version --no-human)
-    if $version != {version: '4.0.2'} { error make {msg: 'Native Nu version mismatch'} }
+    if $version != {version: $env.MODPACKTOOLS_TEST_EXPECTED_VERSION} { error make {msg: 'Native Nu version mismatch'} }
     let alias = (modpack -V --no-human)
     if $alias != $version { error make {msg: 'Native Nu alias mismatch'} }
     for extra in ['extra' 'current'] {

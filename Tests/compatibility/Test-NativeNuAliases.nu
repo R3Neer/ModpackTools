@@ -20,7 +20,7 @@ def main [packwiz_executable: string] {
     if not $removal.dry_run or $removal.applied or $removal.preview {error make {msg: 'Short yes/dry-run removal aliases failed'}}
     let build = (modpack build -n --no-human)
     if ($build | columns) != ['health'] {error make {msg: 'Short dry-run build alias failed'}}
-    if (modpack -V --no-human).version != '4.0.2' {error make {msg: 'Short version alias failed'}}
+    if (modpack -V --no-human).version != $env.MODPACKTOOLS_TEST_EXPECTED_VERSION {error make {msg: 'Short version alias failed'}}
     if (source-bytes $root) != $before or $env.MODPACKTOOLS_PROJECT != 'nu-created' {error make {msg: 'Short aliases changed sources or session'}}
     modpack config set packwiz auto --no-human | ignore
     $env.PATH = $previous_path
