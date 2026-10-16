@@ -1,0 +1,2866 @@
+{
+  "timestamp": "2026-10-16T06:35:29.3107677+02:00",
+  "run": "C:\\Users\\Usuario\\Desktop\\ReorganizacionPC\\assessment\\benchmarks\\public-native-759bafc4848148dfab7791852f9c8c30",
+  "samples": [
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 0,
+      "milliseconds": 997.4776
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 0,
+      "milliseconds": 23.9856
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 1,
+      "milliseconds": 21.9521
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 1,
+      "milliseconds": 926.9665
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 2,
+      "milliseconds": 910.2192
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 2,
+      "milliseconds": 21.0702
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 3,
+      "milliseconds": 20.1108
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 3,
+      "milliseconds": 939.3982
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 4,
+      "milliseconds": 1004.4777
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 4,
+      "milliseconds": 48.3396
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 5,
+      "milliseconds": 43.8779
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 5,
+      "milliseconds": 972.6909
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 6,
+      "milliseconds": 1020.1889
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 6,
+      "milliseconds": 42.8229
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 7,
+      "milliseconds": 36.0271
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 7,
+      "milliseconds": 922.6552
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 8,
+      "milliseconds": 952.1675
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 8,
+      "milliseconds": 36.8317
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 9,
+      "milliseconds": 41.1966
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 9,
+      "milliseconds": 979.4699
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 10,
+      "milliseconds": 975.8173
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 10,
+      "milliseconds": 35.1561
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 11,
+      "milliseconds": 37.5308
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 11,
+      "milliseconds": 921.2372
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 12,
+      "milliseconds": 945.8763
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 12,
+      "milliseconds": 54.5253
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 13,
+      "milliseconds": 44.5839
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 13,
+      "milliseconds": 942.365
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 14,
+      "milliseconds": 1011.4878
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 14,
+      "milliseconds": 55.2311
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 15,
+      "milliseconds": 40.0065
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 15,
+      "milliseconds": 1013.0514
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 16,
+      "milliseconds": 1050.3104
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 16,
+      "milliseconds": 46.0672
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 17,
+      "milliseconds": 50.3265
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 17,
+      "milliseconds": 936.6974
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 18,
+      "milliseconds": 1016.5592
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 18,
+      "milliseconds": 49.3987
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 19,
+      "milliseconds": 41.5796
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 19,
+      "milliseconds": 937.76
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 20,
+      "milliseconds": 933.4021
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 20,
+      "milliseconds": 47.7227
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 21,
+      "milliseconds": 51.2762
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 21,
+      "milliseconds": 929.5031
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 22,
+      "milliseconds": 941.6522
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 22,
+      "milliseconds": 52.2791
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 23,
+      "milliseconds": 48.8801
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 23,
+      "milliseconds": 937.7438
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 24,
+      "milliseconds": 902.544
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 24,
+      "milliseconds": 37.9749
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 25,
+      "milliseconds": 34.0831
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 25,
+      "milliseconds": 923.7916
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 26,
+      "milliseconds": 1036.7789
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 26,
+      "milliseconds": 40.4968
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 27,
+      "milliseconds": 38.0153
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 27,
+      "milliseconds": 936.2559
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 28,
+      "milliseconds": 977.112
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 28,
+      "milliseconds": 46.791
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 29,
+      "milliseconds": 46.3443
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 29,
+      "milliseconds": 965.258
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 30,
+      "milliseconds": 890.6736
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 30,
+      "milliseconds": 45.0901
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "sample": 31,
+      "milliseconds": 34.1005
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "sample": 31,
+      "milliseconds": 934.7658
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 0,
+      "milliseconds": 1483.9156
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 0,
+      "milliseconds": 108.5888
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 1,
+      "milliseconds": 91.5731
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 1,
+      "milliseconds": 1493.8535
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 2,
+      "milliseconds": 1468.0642
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 2,
+      "milliseconds": 105.7342
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 3,
+      "milliseconds": 99.9816
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 3,
+      "milliseconds": 1486.2452
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 4,
+      "milliseconds": 1400.8504
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 4,
+      "milliseconds": 109.6921
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 5,
+      "milliseconds": 101.5592
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 5,
+      "milliseconds": 1572.2329
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 6,
+      "milliseconds": 1475.7718
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 6,
+      "milliseconds": 104.67
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 7,
+      "milliseconds": 78.0439
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 7,
+      "milliseconds": 1486.2641
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 8,
+      "milliseconds": 1442.9198
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 8,
+      "milliseconds": 133.6473
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 9,
+      "milliseconds": 150.3
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 9,
+      "milliseconds": 1480.9536
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 10,
+      "milliseconds": 1461.3654
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 10,
+      "milliseconds": 102.3683
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 11,
+      "milliseconds": 95.5351
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 11,
+      "milliseconds": 1447.5125
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 12,
+      "milliseconds": 1569.3714
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 12,
+      "milliseconds": 119.1588
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 13,
+      "milliseconds": 122.3615
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 13,
+      "milliseconds": 1455.1923
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 14,
+      "milliseconds": 1477.6662
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 14,
+      "milliseconds": 104.1431
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 15,
+      "milliseconds": 94.6259
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 15,
+      "milliseconds": 1533.2617
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 16,
+      "milliseconds": 1448.2492
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 16,
+      "milliseconds": 106.6394
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 17,
+      "milliseconds": 109.2838
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 17,
+      "milliseconds": 1450.0075
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 18,
+      "milliseconds": 1427.4827
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 18,
+      "milliseconds": 113.2109
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 19,
+      "milliseconds": 107.3901
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 19,
+      "milliseconds": 1459.2907
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 20,
+      "milliseconds": 1550.8218
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 20,
+      "milliseconds": 96.5183
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 21,
+      "milliseconds": 81.8311
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 21,
+      "milliseconds": 1492.2302
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 22,
+      "milliseconds": 1441.6281
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 22,
+      "milliseconds": 87.9925
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 23,
+      "milliseconds": 101.6165
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 23,
+      "milliseconds": 1440.5787
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 24,
+      "milliseconds": 1459.178
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 24,
+      "milliseconds": 101.2538
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 25,
+      "milliseconds": 108.565
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 25,
+      "milliseconds": 1483.926
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 26,
+      "milliseconds": 1444.3518
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 26,
+      "milliseconds": 109.4494
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 27,
+      "milliseconds": 95.6644
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 27,
+      "milliseconds": 1481.656
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 28,
+      "milliseconds": 1473.358
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 28,
+      "milliseconds": 113.6613
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 29,
+      "milliseconds": 100.2107
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 29,
+      "milliseconds": 1480.35
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 30,
+      "milliseconds": 1452.3985
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 30,
+      "milliseconds": 104.6581
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "sample": 31,
+      "milliseconds": 101.9075
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "sample": 31,
+      "milliseconds": 1511.2849
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 0,
+      "milliseconds": 2107.4959
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 0,
+      "milliseconds": 300.0806
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 1,
+      "milliseconds": 273.4296
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 1,
+      "milliseconds": 2065.8974
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 2,
+      "milliseconds": 2051.7844
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 2,
+      "milliseconds": 319.3834
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 3,
+      "milliseconds": 322.3414
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 3,
+      "milliseconds": 2069.5131
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 4,
+      "milliseconds": 2071.0684
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 4,
+      "milliseconds": 261.3683
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 5,
+      "milliseconds": 276.3879
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 5,
+      "milliseconds": 2074.3555
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 6,
+      "milliseconds": 1998.2346
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 6,
+      "milliseconds": 304.2442
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 7,
+      "milliseconds": 326.355
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 7,
+      "milliseconds": 2039.7406
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 8,
+      "milliseconds": 2052.011
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 8,
+      "milliseconds": 279.1001
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 9,
+      "milliseconds": 282.315
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 9,
+      "milliseconds": 2072.4612
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 10,
+      "milliseconds": 2070.9533
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 10,
+      "milliseconds": 310.9593
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 11,
+      "milliseconds": 308.8896
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 11,
+      "milliseconds": 2036.5133
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 12,
+      "milliseconds": 1999.5425
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 12,
+      "milliseconds": 304.3385
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 13,
+      "milliseconds": 267.8057
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 13,
+      "milliseconds": 2081.7644
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 14,
+      "milliseconds": 1976.7218
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 14,
+      "milliseconds": 331.6918
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 15,
+      "milliseconds": 320.4786
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 15,
+      "milliseconds": 1983.9995
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 16,
+      "milliseconds": 2176.0606
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 16,
+      "milliseconds": 250.7235
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 17,
+      "milliseconds": 270.5539
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 17,
+      "milliseconds": 2306.0154
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 18,
+      "milliseconds": 2007.8326
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 18,
+      "milliseconds": 316.8292
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 19,
+      "milliseconds": 313.2582
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 19,
+      "milliseconds": 2002.836
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 20,
+      "milliseconds": 2161.3482
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 20,
+      "milliseconds": 268.9482
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 21,
+      "milliseconds": 297.0501
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 21,
+      "milliseconds": 2091.6625
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 22,
+      "milliseconds": 2065.1935
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 22,
+      "milliseconds": 316.4284
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 23,
+      "milliseconds": 286.7272
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 23,
+      "milliseconds": 2025.6006
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 24,
+      "milliseconds": 1999.5396
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 24,
+      "milliseconds": 294.9413
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 25,
+      "milliseconds": 300.3403
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 25,
+      "milliseconds": 2085.462
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 26,
+      "milliseconds": 2027.6433
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 26,
+      "milliseconds": 326.6183
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 27,
+      "milliseconds": 344.4841
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 27,
+      "milliseconds": 2021.3808
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 28,
+      "milliseconds": 2034.008
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 28,
+      "milliseconds": 255.5381
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 29,
+      "milliseconds": 272.6557
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 29,
+      "milliseconds": 2146.4172
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 30,
+      "milliseconds": 1975.4079
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 30,
+      "milliseconds": 290.9777
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "sample": 31,
+      "milliseconds": 319.2493
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "sample": 31,
+      "milliseconds": 2021.8677
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 0,
+      "milliseconds": 1504.8713
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 0,
+      "milliseconds": 365.9114
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 1,
+      "milliseconds": 256.6634
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 1,
+      "milliseconds": 1526.8787
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 2,
+      "milliseconds": 1488.989
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 2,
+      "milliseconds": 267.9698
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 3,
+      "milliseconds": 344.2627
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 3,
+      "milliseconds": 1486.0429
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 4,
+      "milliseconds": 1506.1498
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 4,
+      "milliseconds": 272.0782
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 5,
+      "milliseconds": 269.0665
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 5,
+      "milliseconds": 1433.7703
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 6,
+      "milliseconds": 1612.1621
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 6,
+      "milliseconds": 251.0444
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 7,
+      "milliseconds": 454.4721
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 7,
+      "milliseconds": 1528.1092
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 8,
+      "milliseconds": 1405.4628
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 8,
+      "milliseconds": 242.2006
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 9,
+      "milliseconds": 235.5365
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 9,
+      "milliseconds": 1503.9428
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 10,
+      "milliseconds": 1445.7452
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 10,
+      "milliseconds": 401.2819
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 11,
+      "milliseconds": 273.5498
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 11,
+      "milliseconds": 1461.0666
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 12,
+      "milliseconds": 1468.2249
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 12,
+      "milliseconds": 310.0818
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 13,
+      "milliseconds": 298.2989
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 13,
+      "milliseconds": 1529.4143
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 14,
+      "milliseconds": 1471.5387
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 14,
+      "milliseconds": 300.5511
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 15,
+      "milliseconds": 301.6179
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 15,
+      "milliseconds": 1472.6557
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 16,
+      "milliseconds": 1449.1384
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 16,
+      "milliseconds": 301.7601
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 17,
+      "milliseconds": 310.3052
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 17,
+      "milliseconds": 1448.1381
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 18,
+      "milliseconds": 1468.9453
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 18,
+      "milliseconds": 417.6516
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 19,
+      "milliseconds": 217.8016
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 19,
+      "milliseconds": 1607.4864
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 20,
+      "milliseconds": 1524.1173
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 20,
+      "milliseconds": 264.2426
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 21,
+      "milliseconds": 241.492
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 21,
+      "milliseconds": 1492.0862
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 22,
+      "milliseconds": 1494.1553
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 22,
+      "milliseconds": 258.7108
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 23,
+      "milliseconds": 247.1291
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 23,
+      "milliseconds": 1460.2486
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 24,
+      "milliseconds": 1461.494
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 24,
+      "milliseconds": 316.1726
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 25,
+      "milliseconds": 273.4889
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 25,
+      "milliseconds": 1474.2061
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 26,
+      "milliseconds": 1463.0742
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 26,
+      "milliseconds": 255.5838
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 27,
+      "milliseconds": 262.0047
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 27,
+      "milliseconds": 1488.5292
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 28,
+      "milliseconds": 1448.1631
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 28,
+      "milliseconds": 398.0971
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 29,
+      "milliseconds": 254.8004
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 29,
+      "milliseconds": 1514.3634
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 30,
+      "milliseconds": 1459.5522
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 30,
+      "milliseconds": 281.2806
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "sample": 31,
+      "milliseconds": 328.7046
+    },
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "sample": 31,
+      "milliseconds": 1506.789
+    }
+  ],
+  "summary": [
+    {
+      "workload": "local20-human",
+      "engine": "legacy",
+      "n": 31,
+      "median_ms": 1474.2061,
+      "p95_ms": 1607.4864
+    },
+    {
+      "workload": "local20-human",
+      "engine": "native",
+      "n": 31,
+      "median_ms": 273.4889,
+      "p95_ms": 417.6516
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "legacy",
+      "n": 31,
+      "median_ms": 1473.358,
+      "p95_ms": 1569.3714
+    },
+    {
+      "workload": "local20-inventory",
+      "engine": "native",
+      "n": 31,
+      "median_ms": 104.1431,
+      "p95_ms": 133.6473
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "legacy",
+      "n": 31,
+      "median_ms": 2051.7844,
+      "p95_ms": 2176.0606
+    },
+    {
+      "workload": "managed100-inventory",
+      "engine": "native",
+      "n": 31,
+      "median_ms": 300.3403,
+      "p95_ms": 331.6918
+    },
+    {
+      "workload": "version",
+      "engine": "legacy",
+      "n": 31,
+      "median_ms": 941.6522,
+      "p95_ms": 1036.7789
+    },
+    {
+      "workload": "version",
+      "engine": "native",
+      "n": 31,
+      "median_ms": 42.8229,
+      "p95_ms": 54.5253
+    }
+  ],
+  "fresh_process_samples": [
+    {
+      "entry": "core",
+      "sample": 0,
+      "milliseconds": 30.3664
+    },
+    {
+      "entry": "launcher",
+      "sample": 0,
+      "milliseconds": 347.7582
+    },
+    {
+      "entry": "launcher",
+      "sample": 1,
+      "milliseconds": 224.8712
+    },
+    {
+      "entry": "core",
+      "sample": 1,
+      "milliseconds": 20.1516
+    },
+    {
+      "entry": "core",
+      "sample": 2,
+      "milliseconds": 22.7926
+    },
+    {
+      "entry": "launcher",
+      "sample": 2,
+      "milliseconds": 234.6333
+    },
+    {
+      "entry": "launcher",
+      "sample": 3,
+      "milliseconds": 246.6093
+    },
+    {
+      "entry": "core",
+      "sample": 3,
+      "milliseconds": 35.2564
+    },
+    {
+      "entry": "core",
+      "sample": 4,
+      "milliseconds": 32.5209
+    },
+    {
+      "entry": "launcher",
+      "sample": 4,
+      "milliseconds": 231.6665
+    },
+    {
+      "entry": "launcher",
+      "sample": 5,
+      "milliseconds": 226.0661
+    },
+    {
+      "entry": "core",
+      "sample": 5,
+      "milliseconds": 20.1852
+    },
+    {
+      "entry": "core",
+      "sample": 6,
+      "milliseconds": 18.7359
+    },
+    {
+      "entry": "launcher",
+      "sample": 6,
+      "milliseconds": 222.3754
+    },
+    {
+      "entry": "launcher",
+      "sample": 7,
+      "milliseconds": 225.6432
+    },
+    {
+      "entry": "core",
+      "sample": 7,
+      "milliseconds": 20.7517
+    },
+    {
+      "entry": "core",
+      "sample": 8,
+      "milliseconds": 23.5853
+    },
+    {
+      "entry": "launcher",
+      "sample": 8,
+      "milliseconds": 242.0687
+    },
+    {
+      "entry": "launcher",
+      "sample": 9,
+      "milliseconds": 223.9947
+    },
+    {
+      "entry": "core",
+      "sample": 9,
+      "milliseconds": 21.5626
+    },
+    {
+      "entry": "core",
+      "sample": 10,
+      "milliseconds": 18.212
+    },
+    {
+      "entry": "launcher",
+      "sample": 10,
+      "milliseconds": 216.7847
+    },
+    {
+      "entry": "launcher",
+      "sample": 11,
+      "milliseconds": 233.0153
+    },
+    {
+      "entry": "core",
+      "sample": 11,
+      "milliseconds": 26.9766
+    },
+    {
+      "entry": "core",
+      "sample": 12,
+      "milliseconds": 19.7928
+    },
+    {
+      "entry": "launcher",
+      "sample": 12,
+      "milliseconds": 215.4371
+    },
+    {
+      "entry": "launcher",
+      "sample": 13,
+      "milliseconds": 215.7263
+    },
+    {
+      "entry": "core",
+      "sample": 13,
+      "milliseconds": 22.72
+    },
+    {
+      "entry": "core",
+      "sample": 14,
+      "milliseconds": 20.3336
+    },
+    {
+      "entry": "launcher",
+      "sample": 14,
+      "milliseconds": 241.933
+    },
+    {
+      "entry": "launcher",
+      "sample": 15,
+      "milliseconds": 264.4992
+    },
+    {
+      "entry": "core",
+      "sample": 15,
+      "milliseconds": 26.2915
+    },
+    {
+      "entry": "core",
+      "sample": 16,
+      "milliseconds": 23.6365
+    },
+    {
+      "entry": "launcher",
+      "sample": 16,
+      "milliseconds": 228.3494
+    },
+    {
+      "entry": "launcher",
+      "sample": 17,
+      "milliseconds": 226.3459
+    },
+    {
+      "entry": "core",
+      "sample": 17,
+      "milliseconds": 27.4934
+    },
+    {
+      "entry": "core",
+      "sample": 18,
+      "milliseconds": 28.8491
+    },
+    {
+      "entry": "launcher",
+      "sample": 18,
+      "milliseconds": 237.1166
+    },
+    {
+      "entry": "launcher",
+      "sample": 19,
+      "milliseconds": 244.8422
+    },
+    {
+      "entry": "core",
+      "sample": 19,
+      "milliseconds": 22.3693
+    },
+    {
+      "entry": "core",
+      "sample": 20,
+      "milliseconds": 25.3714
+    },
+    {
+      "entry": "launcher",
+      "sample": 20,
+      "milliseconds": 228.1871
+    },
+    {
+      "entry": "launcher",
+      "sample": 21,
+      "milliseconds": 227.7448
+    },
+    {
+      "entry": "core",
+      "sample": 21,
+      "milliseconds": 31.355
+    },
+    {
+      "entry": "core",
+      "sample": 22,
+      "milliseconds": 22.0864
+    },
+    {
+      "entry": "launcher",
+      "sample": 22,
+      "milliseconds": 218.5373
+    },
+    {
+      "entry": "launcher",
+      "sample": 23,
+      "milliseconds": 222.5406
+    },
+    {
+      "entry": "core",
+      "sample": 23,
+      "milliseconds": 22.9837
+    },
+    {
+      "entry": "core",
+      "sample": 24,
+      "milliseconds": 24.4897
+    },
+    {
+      "entry": "launcher",
+      "sample": 24,
+      "milliseconds": 234.1088
+    },
+    {
+      "entry": "launcher",
+      "sample": 25,
+      "milliseconds": 218.6114
+    },
+    {
+      "entry": "core",
+      "sample": 25,
+      "milliseconds": 26.7014
+    },
+    {
+      "entry": "core",
+      "sample": 26,
+      "milliseconds": 26.1504
+    },
+    {
+      "entry": "launcher",
+      "sample": 26,
+      "milliseconds": 221.8452
+    },
+    {
+      "entry": "launcher",
+      "sample": 27,
+      "milliseconds": 221.4385
+    },
+    {
+      "entry": "core",
+      "sample": 27,
+      "milliseconds": 22.4609
+    },
+    {
+      "entry": "core",
+      "sample": 28,
+      "milliseconds": 20.1014
+    },
+    {
+      "entry": "launcher",
+      "sample": 28,
+      "milliseconds": 212.5977
+    },
+    {
+      "entry": "launcher",
+      "sample": 29,
+      "milliseconds": 234.0807
+    },
+    {
+      "entry": "core",
+      "sample": 29,
+      "milliseconds": 27.3218
+    },
+    {
+      "entry": "core",
+      "sample": 30,
+      "milliseconds": 22.1984
+    },
+    {
+      "entry": "launcher",
+      "sample": 30,
+      "milliseconds": 213.8297
+    },
+    {
+      "entry": "launcher",
+      "sample": 31,
+      "milliseconds": 222.1956
+    },
+    {
+      "entry": "core",
+      "sample": 31,
+      "milliseconds": 30.9754
+    }
+  ],
+  "project_manifests": {
+    "managed": [
+      {
+        "path": "benchmark\\.modpack\\metadata.psd1",
+        "length": 18,
+        "attributes": 32,
+        "sha256": "D75D53226D629CCDD6B198C61FF9B33C95418961647DC85F3B8AF8F73F4659F1"
+      },
+      {
+        "path": "benchmark\\.modpack\\project.psd1",
+        "length": 50,
+        "attributes": 32,
+        "sha256": "EC974993A44395B1C67369065FA6EAA1B778F0AB78F9224EF8344F48861D2CA3"
+      },
+      {
+        "path": "benchmark\\index.toml",
+        "length": 21,
+        "attributes": 32,
+        "sha256": "B6669C6B5438F83EA81E739561D6E8EC45FFED448F5264936810B0D3795ABB3D"
+      },
+      {
+        "path": "benchmark\\mods\\bench0000.pw.toml",
+        "length": 97,
+        "attributes": 32,
+        "sha256": "1F090C7A61D1F7BD6C9BD0CF04FDBDF021A73C96EB6594CCF662F70227582A81"
+      },
+      {
+        "path": "benchmark\\mods\\bench0001.pw.toml",
+        "length": 97,
+        "attributes": 32,
+        "sha256": "8E0D14150C6EC3DA9ABB2FE33B7942C4D61488370675DE99D733232267BA6B14"
+      },
+      {
+        "path": "benchmark\\mods\\bench0002.pw.toml",
+        "length": 97,
+        "attributes": 32,
+        "sha256": "EADC774E56288F944D67601AF88CE598CBDD3C1C35A6C995D9B3189B80E150BA"
+      },
+      {
+        "path": "benchmark\\mods\\bench0003.pw.toml",
+        "length": 97,
+        "attributes": 32,
+        "sha256": "78F69EA6D358241A2958B8B5A474C672A92998B996DFCE2C5D67AA031C89F052"
+      },
+      {
+        "path": "benchmark\\mods\\bench0004.pw.toml",
+        "length": 97,
+        "attributes": 32,
+        "sha256": "7644CFEC1B90D2AC8BD7D3311F588B368BDA5E96073C63EA6B1B073A7AA53F9A"
+      },
+      {
+        "path": "benchmark\\mods\\bench0005.pw.toml",
+        "length": 97,
+        "attributes": 32,
+        "sha256": "8DE664412248EB26D59B1B860DFB41F9CF3B3BD0307124D63448BE7625F2CF9E"
+      },
+      {
+        "path": "benchmark\\mods\\bench0006.pw.toml",
+        "length": 97,
+        "attributes": 32,
+        "sha256": "0B1DA0F4B3D02EDCDFC7396D12E2FD24ECA550294292843F631647448D230725"
+      },
+      {
+        "path": "benchmark\\mods\\bench0007.pw.toml",
+        "length": 97,
+        "attributes": 32,
+        "sha256": "D54E2CFCCB5FB13BCDE2241DF8EE3BB9DD01AD5CE116CDD30A739FD9D3153076"
+      },
+      {
+        "path": "benchmark\\mods\\bench0008.pw.toml",
+        "length": 97,
+        "attributes": 32,
+        "sha256": "1A8C198BD4F82EEE8A3042D3E4D5D935252A0FBD357D1061A1732B92EEA6938D"
+      },
+      {
+        "path": "benchmark\\mods\\bench0009.pw.toml",
+        "length": 97,
+        "attributes": 32,
+        "sha256": "40D419395B43C41AF5F4F9634CD28C6FD5D754D9AAA5E92DF67CAEB7D9F09256"
+      },
+      {
+        "path": "benchmark\\mods\\bench0010.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "A3890FDC31745B3BEA556139EFA6050DF22E916A30FFB471B24C8B4A39268CF6"
+      },
+      {
+        "path": "benchmark\\mods\\bench0011.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "482DC7C4608AE911E21999E60FFF3748A097683624F244F24CD1BBA58645B49D"
+      },
+      {
+        "path": "benchmark\\mods\\bench0012.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "32E2CE5927E1A2CFBAF43F4ED1A04671ACA171358DD08DBE7593A38885F48FA4"
+      },
+      {
+        "path": "benchmark\\mods\\bench0013.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "59AB44154FE6A9655A4F4CEEAF02FFA3CAB3A7E0165D56CA2C4F5483B3B02E31"
+      },
+      {
+        "path": "benchmark\\mods\\bench0014.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "25CF130F777763BD772F335776C397776851E024FA9A4FB461E859DBEE1A420B"
+      },
+      {
+        "path": "benchmark\\mods\\bench0015.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "53816648EE5943E6034A6897F14C8001FF31F76DB0E2B073D08AC5ACB4880A33"
+      },
+      {
+        "path": "benchmark\\mods\\bench0016.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "269A279DD4ABA038730A9D8FE12D1E1CAD6B587109B2C7393E2813E15929203C"
+      },
+      {
+        "path": "benchmark\\mods\\bench0017.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "4C71A39D606EDA45B81E7EB7E6A74F9459D1D8017A947FDF3D7AD2A97A15AFCA"
+      },
+      {
+        "path": "benchmark\\mods\\bench0018.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "FF555F9877A5CD7106991A258CC00DA8B02EA0BD0E499E54FB822E28341D27A8"
+      },
+      {
+        "path": "benchmark\\mods\\bench0019.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "F915D03639B78B861ADECD1224106944FAAA71F9F628584CFE9C6C2D214230A8"
+      },
+      {
+        "path": "benchmark\\mods\\bench0020.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "8B6B7B38CE25B2D3F926A80592F22A191FA317E25623D854E98D31788C51DEBF"
+      },
+      {
+        "path": "benchmark\\mods\\bench0021.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "385317B7CBF65710E5943C3E124C607387BC0D7368843CC4224379EACC53EBA6"
+      },
+      {
+        "path": "benchmark\\mods\\bench0022.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "3622E8474E9880AD6C0D2551F8E6EFD0786CFAB2EA1EF50043CA6D7FA7DF4AD0"
+      },
+      {
+        "path": "benchmark\\mods\\bench0023.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "1D165D63A12539FBA4575C041362E4B62049FA3A7F15835CB0099894D409601D"
+      },
+      {
+        "path": "benchmark\\mods\\bench0024.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "10AB59C1C08ED2E5A2D6CF55869DAB1AA5461B34C4DB2E5812E3246DA4D84100"
+      },
+      {
+        "path": "benchmark\\mods\\bench0025.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "21B201700DF364C52CDEDF803B69F9F3CAE591E5EA3D4A318D08C1052D77117C"
+      },
+      {
+        "path": "benchmark\\mods\\bench0026.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "39F8EA0A1188ECBC10F2512E5C8D6B6ED121DDD496321CCAFB31F9378BFC054A"
+      },
+      {
+        "path": "benchmark\\mods\\bench0027.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "1153F8286B2EC859D4AFD8336DEC08700717D116D72FA0B445FE6D368AD49FF5"
+      },
+      {
+        "path": "benchmark\\mods\\bench0028.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "A46B0F81A17A8F5B1C5A446F49766DEAC840FB6026D17E3667221218ABB27685"
+      },
+      {
+        "path": "benchmark\\mods\\bench0029.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "01C992BFEC333B59057B043BB3EA799D11EDAF88FE9658F76DA5239BF49739F4"
+      },
+      {
+        "path": "benchmark\\mods\\bench0030.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "00FBA305D9A212CBAD0B6D544BF9D7194ABE1CBAC0F1C841A78F5DFA37C367CA"
+      },
+      {
+        "path": "benchmark\\mods\\bench0031.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "2534CEFC4AB3CF6DE5B52E9233ACDD708DD805D6FDB36B66FF327247550EFC75"
+      },
+      {
+        "path": "benchmark\\mods\\bench0032.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "D706BF2B25B41F880112A6573C401FCA632CC190A1B16A33EA7922E9855B1820"
+      },
+      {
+        "path": "benchmark\\mods\\bench0033.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "E435C3BE68DFDF6DEB82071CF342C0AB7E942051184ABEBC9F77B0FAE6A3CFB0"
+      },
+      {
+        "path": "benchmark\\mods\\bench0034.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "2554DBD3ADAC85ABEF4F590FFE4973A0C673323E4355A96D544827A17C4F7222"
+      },
+      {
+        "path": "benchmark\\mods\\bench0035.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "E4C4997126C78C00E1D6D65323C11F50C6A245C977936FDE0E32015BEE35577C"
+      },
+      {
+        "path": "benchmark\\mods\\bench0036.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "5F8FCB6B5BD274E0BCDB0FC2B703175040867994FF7CF15B79E59AEA7ED46C97"
+      },
+      {
+        "path": "benchmark\\mods\\bench0037.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "6A478EEF2EDC7200C850CD002815A74A146FA242E8382AD14B1D741BDAD5EBE2"
+      },
+      {
+        "path": "benchmark\\mods\\bench0038.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "176DE5270B9918C55B2058C9BF2C219D531386879444D8981B973B86BF6961FE"
+      },
+      {
+        "path": "benchmark\\mods\\bench0039.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "0749A8D7EEBC8BE485757FBA932216516E78BF798B37AC913C47BC0966838B75"
+      },
+      {
+        "path": "benchmark\\mods\\bench0040.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "01D6798F59BCB8D688F082729A2FEDE77DD7038B04A5CCDF21F7AF56AAE5D4F1"
+      },
+      {
+        "path": "benchmark\\mods\\bench0041.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "FF5DE1C8F18257D64A136E831E8B07BCE092E9D26FE07037160E01945B4A2D67"
+      },
+      {
+        "path": "benchmark\\mods\\bench0042.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "AE54279F1C0399EDD306773F9AEFE560AA0A475A0F75F925291123C9FA7A4941"
+      },
+      {
+        "path": "benchmark\\mods\\bench0043.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "1D5DED645A446DF218F51996AA448291D891402DDD2833337975E3A3EA0A50F1"
+      },
+      {
+        "path": "benchmark\\mods\\bench0044.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "B159EBE635E7119A6239A204BF72731D56373AC2B0B2CC4514953344FD3FDD35"
+      },
+      {
+        "path": "benchmark\\mods\\bench0045.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "0548181FAEC19D2789D32772135C4052AA9A29E31953E972653F2E9759790E85"
+      },
+      {
+        "path": "benchmark\\mods\\bench0046.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "5A5DF7D39144C18455A66C926CF86065D651F8A02E9B0589B953C5C360655E77"
+      },
+      {
+        "path": "benchmark\\mods\\bench0047.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "979801733065214D00BE5C951D87635A4C957189F00483CD73D2BF67EB32D399"
+      },
+      {
+        "path": "benchmark\\mods\\bench0048.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "4094FBDB9E99D8A30448E76195B851B98055273E8F8BFE7CAA964F1C7F7503DE"
+      },
+      {
+        "path": "benchmark\\mods\\bench0049.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "53BD3E17A9632DA1D6333E0CA762D546532A0A2D67AA2070A23CF86AD72A95C6"
+      },
+      {
+        "path": "benchmark\\mods\\bench0050.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "784A1ADC3ECED88EA7CBAE351B8C9BF390E8DA6AB4E37CB608FE68C4271AC066"
+      },
+      {
+        "path": "benchmark\\mods\\bench0051.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "FA8051F724834BD79B90F9BB8530C2CF309FC980614C20B786A9505FEE86BE78"
+      },
+      {
+        "path": "benchmark\\mods\\bench0052.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "246E292C5EF69CBA9FDFED9F8CF73905A6836BD5ED8BCE042D3B41FAAF5089D3"
+      },
+      {
+        "path": "benchmark\\mods\\bench0053.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "196802BA9642C913118E4FDDB0CDCC140848CCE754234E915BE692D2EFA49AF7"
+      },
+      {
+        "path": "benchmark\\mods\\bench0054.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "7B99D81870C068AF18827855CDCA228FC865E05F8CCAF5FD1C13599BB7944E25"
+      },
+      {
+        "path": "benchmark\\mods\\bench0055.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "38E0A2F9EF57071CC0C43F517532A41B5D7F752490374EC494D727021168421A"
+      },
+      {
+        "path": "benchmark\\mods\\bench0056.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "F7618A908AC39E139B801080A52BBB991EEBF4B8E6212D5F6DAF4DB9791D369D"
+      },
+      {
+        "path": "benchmark\\mods\\bench0057.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "B4C98E73428EE7AEE14D1FCDD3F362853D28A0D7196EF43FDA8AD6EE7FA1C569"
+      },
+      {
+        "path": "benchmark\\mods\\bench0058.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "2C616542F3C34F2FF224BBC3F791F2D14F4942983122F5856B6CBD30A8996160"
+      },
+      {
+        "path": "benchmark\\mods\\bench0059.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "BD42C0B52A449B088E647B09E498DDF2768C30DC056142F6DE651C72EDFC1CBD"
+      },
+      {
+        "path": "benchmark\\mods\\bench0060.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "39A7C68D70A1A1214B7033E5AB5A351DE68EADEE10FE2B0E7259D2EC1326E751"
+      },
+      {
+        "path": "benchmark\\mods\\bench0061.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "2E347F65B111777746E078B40394A4D238CF8E5F4D8784A42122453155133828"
+      },
+      {
+        "path": "benchmark\\mods\\bench0062.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "3D6199F662EC1EFCFBCD6AD7D4EFA4C76924D08812D1006B83FB6AFBDFDE63A3"
+      },
+      {
+        "path": "benchmark\\mods\\bench0063.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "1F1A3C74C0B3F46D438A4EA39FF79103001B237BB3292C496A8D387E0F9547BC"
+      },
+      {
+        "path": "benchmark\\mods\\bench0064.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "77FD246F0B2DBD3B7BBC7808350A71A4995C3607DCAEEDD61CC53A6B16419195"
+      },
+      {
+        "path": "benchmark\\mods\\bench0065.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "D351C5D1FEAE2FF5FD4043D73374F88CC75D1FA887C6D84844FA9EECBF5E2EC0"
+      },
+      {
+        "path": "benchmark\\mods\\bench0066.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "A40DA84CC9113404FE5DABBCBBCDA4506C761AADF8AFBABBFA33753063523596"
+      },
+      {
+        "path": "benchmark\\mods\\bench0067.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "9E0E103462A1E3B915A02C0B8A854DE5A876D65914EB01EFD14165F78BFB10F0"
+      },
+      {
+        "path": "benchmark\\mods\\bench0068.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "41C0ED284B999718F254563557AA8C249FA159F63DAC3AF3F16CB9E5E22578D9"
+      },
+      {
+        "path": "benchmark\\mods\\bench0069.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "0B8686D4CA0DE91B192EB4EA03C8D031DC47968B9BF178A515C92590064052C0"
+      },
+      {
+        "path": "benchmark\\mods\\bench0070.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "39FF415BABD75E17FECC4FDBEEB84AF43E712C4F9FCBED22CEE30EE0E0AADE02"
+      },
+      {
+        "path": "benchmark\\mods\\bench0071.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "FCE23C2F119CEEB632F5C81BEE5AEA16C3E58E30D9DE2AC1E43BAA28EF2416DD"
+      },
+      {
+        "path": "benchmark\\mods\\bench0072.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "258D977D9DFA809D5C41A45726BADFF791C05A7A9B3013DB5B122F6A2ECAB261"
+      },
+      {
+        "path": "benchmark\\mods\\bench0073.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "78EBBA348BBD2CB9A324CD24B0041B98891A7013FED0728A86DA121798749232"
+      },
+      {
+        "path": "benchmark\\mods\\bench0074.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "6803089D2E9CAF597ADF29AA147A6B36E95693F002DB369E7CBC1A94DB294B1D"
+      },
+      {
+        "path": "benchmark\\mods\\bench0075.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "ECE3F52B62CF3EEAE6333AA869E705850EB505729BEF4F0A81914CCD7AF34A4E"
+      },
+      {
+        "path": "benchmark\\mods\\bench0076.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "3AD26685BC5319A0D0A44E57EC09C7E9E7AC87A73CB14EB88D7F55805685A064"
+      },
+      {
+        "path": "benchmark\\mods\\bench0077.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "DCF7787AFCF0A7EDA1E3D36CC799FDD02278DFA18969BD93C3C1EBA96AF4058C"
+      },
+      {
+        "path": "benchmark\\mods\\bench0078.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "7D6D9549CC6EC33C09A98CA3592734A2642D08DA0FFB4E5BB79B2BDC6D42D38D"
+      },
+      {
+        "path": "benchmark\\mods\\bench0079.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "64E4BF1298C3AA4AA933FCD4966FF3A5DD31638B99F6F8FED87852CAF4D6EBAE"
+      },
+      {
+        "path": "benchmark\\mods\\bench0080.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "CD7B251E545F2696E3753E12B1C530305A0AED8AF3B7051858BA6F51B5540651"
+      },
+      {
+        "path": "benchmark\\mods\\bench0081.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "FAD627C7B9DB25B14A2980C7473E97E2C2C6FBB6726D87B8BDE10EDF456C8CA8"
+      },
+      {
+        "path": "benchmark\\mods\\bench0082.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "6AB068DB266F59F50B1D9D6D1E6016126EB7CD86DF406935CF23A294B555F187"
+      },
+      {
+        "path": "benchmark\\mods\\bench0083.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "E511C5C8590D8C2E9A414201D95106A5F34680E345C94DE70FB5A0618771332C"
+      },
+      {
+        "path": "benchmark\\mods\\bench0084.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "CAF84CCC8F43A3C686789E3C04D866022B1187F524B38839BB85C800628F9E86"
+      },
+      {
+        "path": "benchmark\\mods\\bench0085.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "FB5F58F3DAC6C3C971D64BA992D6A9071CC5F56CE57745EF4D9A74C39CE6F685"
+      },
+      {
+        "path": "benchmark\\mods\\bench0086.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "4286932431BD0D1E5D9D7864E5F887173345EFF92489BD8DF7AF74253F5930FD"
+      },
+      {
+        "path": "benchmark\\mods\\bench0087.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "3E33EE60E930DAFEB406D611AB5F8EDF0CA30FC11E2E7CD003D95B13C7559627"
+      },
+      {
+        "path": "benchmark\\mods\\bench0088.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "9AAEE3EF63C3052EAD414195E32F7875BEE9A42C8120CF89CEBBA261EBDEDB4D"
+      },
+      {
+        "path": "benchmark\\mods\\bench0089.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "0B257C91748AD51A97BE20DB49489CEFC24CB659B2A680DEA2505D714C3CB2B0"
+      },
+      {
+        "path": "benchmark\\mods\\bench0090.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "446E7182BCB859F1A459F6F0ACAFE72B36E1E2B899BC2B676E0A0B5B4BF2C0BF"
+      },
+      {
+        "path": "benchmark\\mods\\bench0091.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "6A3EA9A063F8CE0278E7C279277E048F290E7825102305E4128B271B16A6CC6D"
+      },
+      {
+        "path": "benchmark\\mods\\bench0092.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "247184911576041B252E91756216947AD2B49B95F4A7E416B1AEB7A8783C4AFE"
+      },
+      {
+        "path": "benchmark\\mods\\bench0093.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "9C5D959E035F5549B572DADABE45BA18453EA21985B6578C6F842F9FF13B4891"
+      },
+      {
+        "path": "benchmark\\mods\\bench0094.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "CE6269038B5E6CED23291796B1780AF2671D9D984D87F84594F446E6E3263201"
+      },
+      {
+        "path": "benchmark\\mods\\bench0095.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "B8ECF69F5194AFA61D696279DDA04C5FFF6261BE2B539D4747A5F2BD6A3671C4"
+      },
+      {
+        "path": "benchmark\\mods\\bench0096.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "84482A32212AE03DA9D5A7EBD84AE9FA8D5D5B9174B48C7E1AD703F77E037330"
+      },
+      {
+        "path": "benchmark\\mods\\bench0097.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "9E0CA9D24ADA6B5DEBC570E59FFB310BE51E8A2E01DF267DFE106F36A21FE2BF"
+      },
+      {
+        "path": "benchmark\\mods\\bench0098.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "AC4513CA52729C05F5028467B931A481CE81E12E5E2F1A8FC2C20CB976F6B06B"
+      },
+      {
+        "path": "benchmark\\mods\\bench0099.pw.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "60811ADE2E6A519AD486FEE6E5E2EB5690E3B789A61F68A01C9DB6081231BA51"
+      },
+      {
+        "path": "benchmark\\pack.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "67BCC1D50F5A0AC25B2BA34B985A6754D977CAD3AC05AEB8FA892ECD605F8C75"
+      }
+    ],
+    "local": [
+      {
+        "path": "benchmark\\.modpack\\metadata.psd1",
+        "length": 18,
+        "attributes": 32,
+        "sha256": "D75D53226D629CCDD6B198C61FF9B33C95418961647DC85F3B8AF8F73F4659F1"
+      },
+      {
+        "path": "benchmark\\.modpack\\project.psd1",
+        "length": 50,
+        "attributes": 32,
+        "sha256": "EC974993A44395B1C67369065FA6EAA1B778F0AB78F9224EF8344F48861D2CA3"
+      },
+      {
+        "path": "benchmark\\index.toml",
+        "length": 21,
+        "attributes": 32,
+        "sha256": "B6669C6B5438F83EA81E739561D6E8EC45FFED448F5264936810B0D3795ABB3D"
+      },
+      {
+        "path": "benchmark\\mods\\bench0000.jar",
+        "length": 262523,
+        "attributes": 32,
+        "sha256": "E10F3BB7D295FC25976E04B1C44474C1358D54472ECB21A57335C7AC588DC791"
+      },
+      {
+        "path": "benchmark\\mods\\bench0001.jar",
+        "length": 262524,
+        "attributes": 32,
+        "sha256": "21467713D981DC093E1D1FBEA3B2B3DC44924ED174AA0FB188912F97075BB316"
+      },
+      {
+        "path": "benchmark\\mods\\bench0002.jar",
+        "length": 262524,
+        "attributes": 32,
+        "sha256": "F6B13D497E12750B44362A7111E3C591B32CAF663CA853D8B5091A866B432D43"
+      },
+      {
+        "path": "benchmark\\mods\\bench0003.jar",
+        "length": 262524,
+        "attributes": 32,
+        "sha256": "C8FB6E931DA840C6F8EBBCC67E2C9CAC09950553EC3AFD1B8AD52587148378AD"
+      },
+      {
+        "path": "benchmark\\mods\\bench0004.jar",
+        "length": 262524,
+        "attributes": 32,
+        "sha256": "EC71AAE36ADEAB0AD59D2FF494438B918B08A7D9D5EA26EF9DE73423465ED054"
+      },
+      {
+        "path": "benchmark\\mods\\bench0005.jar",
+        "length": 262524,
+        "attributes": 32,
+        "sha256": "F6C12422F19D66819E3820EEE617A3C135FE988703CC6469FB1C95B2BBB223F3"
+      },
+      {
+        "path": "benchmark\\mods\\bench0006.jar",
+        "length": 262524,
+        "attributes": 32,
+        "sha256": "94A755744D5891EBA70C13FA7CC73BB2A35123115D8B7AADCF88DC3483E75214"
+      },
+      {
+        "path": "benchmark\\mods\\bench0007.jar",
+        "length": 262524,
+        "attributes": 32,
+        "sha256": "0D95DE42A1BC8399004E5172FCE360D54270982025B577F0F82536D2ED730E7F"
+      },
+      {
+        "path": "benchmark\\mods\\bench0008.jar",
+        "length": 262524,
+        "attributes": 32,
+        "sha256": "6AD933E9064E2E4884F0AEFFFAEB3954BF1FB46F58CB5967EDAE010DBB7C5DF3"
+      },
+      {
+        "path": "benchmark\\mods\\bench0009.jar",
+        "length": 262524,
+        "attributes": 32,
+        "sha256": "0A96F8A3F0239D14DA5F6CFB614E5D8D2477597B4147FD877B7F6F386D84FCCA"
+      },
+      {
+        "path": "benchmark\\mods\\bench0010.jar",
+        "length": 262523,
+        "attributes": 32,
+        "sha256": "153E6A969C0238AF00B9B4B61D0FE12A71A418DC3F2B23A65C806B4A75B5E8CD"
+      },
+      {
+        "path": "benchmark\\mods\\bench0011.jar",
+        "length": 262524,
+        "attributes": 32,
+        "sha256": "4522A05C120717E4933A27BC9EC0F2C63FBAC7E0040B202693C857C9FA0656A5"
+      },
+      {
+        "path": "benchmark\\mods\\bench0012.jar",
+        "length": 262524,
+        "attributes": 32,
+        "sha256": "0C7CFB0CCD9C5E4ECC7FA2326D90DA873CACDE0582B49DC8AF6DD7F39F6BFBEB"
+      },
+      {
+        "path": "benchmark\\mods\\bench0013.jar",
+        "length": 262524,
+        "attributes": 32,
+        "sha256": "FC00D23273B7195089248B107AD48A99CD489AA84951DE5C70EE84645EF68352"
+      },
+      {
+        "path": "benchmark\\mods\\bench0014.jar",
+        "length": 262524,
+        "attributes": 32,
+        "sha256": "A4E84477C30BC0C2AD329F85B212A2691B617512560DEDD4799CD421AFFD2A75"
+      },
+      {
+        "path": "benchmark\\mods\\bench0015.jar",
+        "length": 262524,
+        "attributes": 32,
+        "sha256": "ACA4A3791F21FFB784F57961022EA91518086A0A2D37D23037273732CC7B4426"
+      },
+      {
+        "path": "benchmark\\mods\\bench0016.jar",
+        "length": 262524,
+        "attributes": 32,
+        "sha256": "50666BD6A82CFC67A4588868D489576FC781244FC141C9853A4D72735E0BA17F"
+      },
+      {
+        "path": "benchmark\\mods\\bench0017.jar",
+        "length": 262524,
+        "attributes": 32,
+        "sha256": "62B1D412A6D88277AED92264F1D264D271C382C73F3CBC7FCC22F133D51F4D76"
+      },
+      {
+        "path": "benchmark\\mods\\bench0018.jar",
+        "length": 262524,
+        "attributes": 32,
+        "sha256": "00DEB43CB943281F993A20E1403BA05685F717BA0AEEDB08D78336470126B1AF"
+      },
+      {
+        "path": "benchmark\\mods\\bench0019.jar",
+        "length": 262524,
+        "attributes": 32,
+        "sha256": "C415AA947D7A5D854045904DE808836AD124E9FE5E651D472B2F42B4D35FBD2D"
+      },
+      {
+        "path": "benchmark\\pack.toml",
+        "length": 99,
+        "attributes": 32,
+        "sha256": "67BCC1D50F5A0AC25B2BA34B985A6754D977CAD3AC05AEB8FA892ECD605F8C75"
+      }
+    ]
+  },
+  "package_manifest": [
+    {
+      "path": "cli.nu",
+      "length": 206,
+      "attributes": 32,
+      "sha256": "2154E85FF68594171AF4EAEADDB9CA1EA3ABFAD3E05A67DA47E8B8B49A8A1A87"
+    },
+    {
+      "path": "LICENSE",
+      "length": 1084,
+      "attributes": 32,
+      "sha256": "B13BED406960B964DE0DDC6E6D5431076E09D6D8FBD12A197E950A9A0AA2DB1C"
+    },
+    {
+      "path": "licenses\\Newtonsoft.Json.txt",
+      "length": 1120,
+      "attributes": 32,
+      "sha256": "65ADD21B036B655A02F6334F3471EEE69162726F4EC9F350CAB0381340F41194"
+    },
+    {
+      "path": "licenses\\Tomlyn.txt",
+      "length": 1330,
+      "attributes": 32,
+      "sha256": "0B42AA8026EC8168BCAB9D26E70330EFD36FC86A5218ADE531C68D49AA3E11B4"
+    },
+    {
+      "path": "modpack.exe",
+      "length": 3269120,
+      "attributes": 32,
+      "sha256": "741EE01160703511747158ED25FECF0631361D5D97A587630FBF011E6661A214"
+    },
+    {
+      "path": "modpacktools-setup.exe",
+      "length": 5687808,
+      "attributes": 32,
+      "sha256": "576A5DF76E45193E1FAE2823DCBEDCEA96B30935AA2BB27DCAE211603373AFC7"
+    },
+    {
+      "path": "modpacktools.exe",
+      "length": 14546432,
+      "attributes": 32,
+      "sha256": "FE94DB06E2F68EAB2EA8AE529AA1D9E8CFFF3768683F375660B7D37337E2A7C9"
+    },
+    {
+      "path": "Nushell\\modpack.nu",
+      "length": 71302,
+      "attributes": 32,
+      "sha256": "F1ECCDC90242A058670891A5B0DC5CEB43CED6CC2594773FFE0E257DE43BA5FD"
+    },
+    {
+      "path": "Nushell\\Native-Presentation.nu",
+      "length": 3159,
+      "attributes": 32,
+      "sha256": "0DBEDFBF405B2E6736074E41E101BF7A88190EB1A59F2D6A6679CE25EBA9D006"
+    },
+    {
+      "path": "Nushell\\Native-Views.nu",
+      "length": 24869,
+      "attributes": 32,
+      "sha256": "611186BB6AA831EBC5792751076910445D800C967264429BB49BD3C21EBEF315"
+    },
+    {
+      "path": "Nushell\\Render-Native.nu",
+      "length": 3161,
+      "attributes": 32,
+      "sha256": "D47036C33381938DA32589A5ECEE085D84032779D0C43B6D6C48EA11F53A0B1E"
+    },
+    {
+      "path": "package.json",
+      "length": 2318,
+      "attributes": 32,
+      "sha256": "53C1116DBE5870405C66C1BEA9181C2F3BA619F0D8BCBD05D08D855E89618C6D"
+    },
+    {
+      "path": "presentation\\r3cli\\hashes.json",
+      "length": 252,
+      "attributes": 32,
+      "sha256": "CAB77E536CEA0E6D3EFA0A99B300DB8F16051E650108B0201FBC9905318F95FB"
+    },
+    {
+      "path": "presentation\\r3cli\\LICENSE",
+      "length": 1063,
+      "attributes": 32,
+      "sha256": "259008D9FD943DB8DFE710B74A542FD182A6A3EA980256177B46A86BDA9B9E47"
+    },
+    {
+      "path": "presentation\\r3cli\\manifest.json",
+      "length": 465,
+      "attributes": 32,
+      "sha256": "77B48536B20868F7808C34AEA5EDCEA8ED6EB4B7A115F3D24768C1E1186ED3A3"
+    },
+    {
+      "path": "presentation\\r3cli\\mod.nu",
+      "length": 18810,
+      "attributes": 32,
+      "sha256": "56D93CCABB5476E9A17F01B49A0820E0436FD51FCD045114E2764753F0F0C30A"
+    },
+    {
+      "path": "presentation\\r3cli\\resources.json",
+      "length": 583,
+      "attributes": 32,
+      "sha256": "8F3C42B9A7F6939D6ACEED8694DE9DCD3E96A8C00F357F2CC2422C62A97693FA"
+    },
+    {
+      "path": "README.md",
+      "length": 18920,
+      "attributes": 32,
+      "sha256": "423923B6C5460CA4A145DDE13F23E559FC3F014134BBDAD419BE426B0F253CA8"
+    }
+  ],
+  "preflight": [
+    {
+      "workload": "local",
+      "engine": "legacy",
+      "mods": 20,
+      "errors": 0,
+      "unknown": 0,
+      "warnings": 0
+    },
+    {
+      "workload": "local",
+      "engine": "native",
+      "mods": 20,
+      "errors": 0,
+      "unknown": 0,
+      "warnings": 0
+    },
+    {
+      "workload": "managed",
+      "engine": "legacy",
+      "mods": 100,
+      "errors": 0,
+      "unknown": 0,
+      "warnings": 0
+    },
+    {
+      "workload": "managed",
+      "engine": "native",
+      "mods": 100,
+      "errors": 0,
+      "unknown": 0,
+      "warnings": 0
+    }
+  ],
+  "legacy_anchors": [
+    {
+      "path": "ModpackTools.psd1",
+      "sha256": "D1AA8A81B1C92642347E49FC17988D0AD03DC22FBE427399C45848E6444788D7"
+    },
+    {
+      "path": "Nushell/modpack.nu",
+      "sha256": "5A36E0BC42E831FC411D0A02CA664DA0C00DCD76D9CF8DF2708E9AC6F6B256FB"
+    },
+    {
+      "path": "Nushell/Invoke-ModpackBridge.ps1",
+      "sha256": "05CF4138D3837B3B14B53692318C3568DE30712820F3B01BB736F5E2ADC67BAE"
+    },
+    {
+      "path": "Private/Inventory.ps1",
+      "sha256": "DB8081CDC22505B0E222D1993839D77755C7D75A80891283C62D0CC48D4DAA97"
+    }
+  ],
+  "legacy_revision": "025b7f32200484070fe6ec5e5aa1a3ef49c3bfa2",
+  "native_sha256": "FE94DB06E2F68EAB2EA8AE529AA1D9E8CFFF3768683F375660B7D37337E2A7C9",
+  "nu_version": "0.116.2",
+  "ps_version": "7.6.6",
+  "os": "Microsoft Windows NT 10.0.26200.0",
+  "scope": "Alternating engines within one already-running Nu process; full public command including child startup, request/result validation, cache IO and human rendering where named. Separate fresh core/stable installed launcher includes PS harness setup and full admission/hashing/delegation; no startup medians subtracted.",
+  "conditions": "31 measured samples plus retained first observation. OS caches warmed by fixture copy/hash; no cache eviction or disk-cold claim. Copied metadata mtimes renewed before health preflight. Private per-engine caches; no network verification requested. Shared host, reviewers idle during timing; no SDK builds. Human null result comparison is not text/render equivalence; functional presentation acceptance is separate. Process-tree memory was not measured.",
+  "unchanged_projects": true
+}

@@ -1,7 +1,61 @@
 # Performance evaluation and acceptance targets
 
-Date: 2026-10-12. This is an exploratory local baseline, not a release benchmark
-or evidence that a replacement engine already meets the targets.
+Initial baseline date: 2026-10-12. The baseline sections remain historical;
+the current implemented-package measurements below have their own scope.
+
+## Installed-distribution closure, 2026-10-16
+
+Final Native AOT CLI196/package build0D475640 is compared with unchanged main
+025b7f3 through their actual imported Nu commands in one running Nu0.116.2 process.
+31 measured samples per engine/workload plus separately retained first observation;
+engine order alternates. Both use the same copied project and separate private
+configuration/cache roots. Raw health preflight confirms20 local or100 managed
+mods and zero errors/warnings/unknown for both engines. Copied provider metadata
+mtimes are refreshed to exercise fresh cached verification; original fixtures are
+unchanged. Managed JARs contain256KiB deterministic payload each, with SHA512 verified.
+
+| Public Nu operation | Legacy median / p95 ms | Native median / p95 ms | Median ratio |
+|---|---:|---:|---:|
+| Version, machine | 941.65 /1036.78 | 42.82 /54.53 | 21.99x |
+| Inventory20 local, machine | 1473.36 /1569.37 | 104.14 /133.65 | 14.15x |
+| Inventory100 managed, machine | 2051.78 /2176.06 | 300.34 /331.69 | 6.83x |
+| Inventory20 local, human | 1474.21 /1607.49 | 273.49 /417.65 | 5.39x |
+
+These are complete command times, including child process startup, request/result
+validation, cache IO and human rendering where named. Machine Nu values compare
+canonically in full before the series and remain unchanged in each sample. Human
+commands return null: that equality is not a comparison of rendered text. Functional
+presentation acceptance is covered separately. Output is redirected, ASCII/color
+never, COLUMNS80; captured human stderr is retained outside Git.
+
+Separate31-sample fresh-process version measurements, including PowerShell test
+harness setup: core median22.98/p9532.52ms; stable installed launcher median226.07/
+p95246.61ms. The stable path includes full-package hashing, admission, pinning
+and helper delegation. These costs were retained for integrity; no medians are
+subtracted to invent a core-only duration.
+
+Measured Nu latency/ratio thresholds and direct-version threshold are met on these
+synthetic fixtures. This does not certify every original target or workload:
+standalone core inventory, large/nested graphs, transaction phase scaling and live
+process-tree memory were not remeasured here. Earlier focused data remains below.
+OS caches were warmed by copying/hashing; even sample0 is not physical-disk cold.
+No network verification was requested. This is a shared PC, not a dedicated host;
+reviewer runtime tests and SDK builds were idle during timing. One small progress
+snapshot read occurred during the series; no competing test/build was launched.
+
+All package/project/original fixture manifests and legacy source anchors remain
+unchanged. First preflight failed because an internal fixture lacked public
+metadata.psd1; the new copied fixture adds that file before its baseline snapshot.
+Failed run is retained, no product changes or discarded slow timing series.
+
+Reproducer: [PS driver](benchmarks/Measure-NativePublic.ps1),
+[Nu driver](benchmarks/Measure-NativePublic.nu). The Nu imports are deliberately
+bound to this environment's legacy source and frozen final package; the PS driver
+rejects a different package. Raw samples, preflight coverage, hashes and manifests:
+[public-native-results.json](benchmarks/public-native-results.json).
+Additional raw envelopes/stdout/stderr and failed preflight are under
+assessment/benchmarks/public-native-759bafc4848148dfab7791852f9c8c30 and
+public-native-83c0772fc2e84ef8a5b50fe42e41ce39.
 
 ## Implemented raw inventory checkpoint, 2026-10-13
 
