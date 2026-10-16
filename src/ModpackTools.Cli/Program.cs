@@ -46,14 +46,24 @@ try
     var reviewedRemoval = command.Equals("content", StringComparison.OrdinalIgnoreCase) &&
         commandArguments.FirstOrDefault()?.Equals("remove", StringComparison.OrdinalIgnoreCase) == true;
     var reviewedDoctor = command.Equals("doctor", StringComparison.OrdinalIgnoreCase) && doctorScope == DoctorRepairScope.Project;
-    if (reviewToken is not null && ((!reviewedRemoval && !reviewedDoctor) ||
+    var reviewedSelfUpdate = command.Equals("self-update", StringComparison.OrdinalIgnoreCase);
+    if (reviewToken is not null && ((!reviewedRemoval && !reviewedDoctor && !reviewedSelfUpdate) ||
         !commandArguments.Contains("--yes", StringComparer.OrdinalIgnoreCase) ||
         commandArguments.Contains("--dry-run", StringComparer.OrdinalIgnoreCase) || HelpCommand.Applies(command, commandArguments)))
-        throw new DomainException("Transaction.InvalidReview", "A review token requires content remove --yes or a project doctor repair --yes",
+        throw new DomainException("Transaction.InvalidReview", "A review token requires content remove --yes, project doctor repair --yes or self-update --yes",
             "submit the reviewed operation without --dry-run or --help", "InvalidArgument");
     if (HelpCommand.Applies(command, commandArguments))
     {
         HelpCommand.Run(command, commandArguments);
+        return 0;
+    }
+    if (command.Equals("self-update", StringComparison.OrdinalIgnoreCase))
+    {
+        using var cancellation = new CancellationTokenSource();
+        ConsoleCancelEventHandler cancel = (_, signal) => { signal.Cancel = true; cancellation.Cancel(); };
+        Console.CancelKeyPress += cancel;
+        try { await SelfUpdateCommand.RunAsync(command, commandArguments, options.Project, reviewToken, !options.NoHuman, cancellation.Token); }
+        finally { Console.CancelKeyPress -= cancel; }
         return 0;
     }
     if (new[] { "build", "diff", "doctor" }.Contains(command, StringComparer.OrdinalIgnoreCase) && !commandArguments.Contains("--help", StringComparer.OrdinalIgnoreCase))
@@ -373,7 +383,7 @@ try
 catch (OperationCanceledException)
 {
     var cancelled = FailureEnvelope.Create(command, commandArguments,
-        Failure.From("ModpackTools.Core.OperationCancelled", "Listing was cancelled. Try: retry when ready.", "OperationStopped", null));
+        Failure.From("ModpackTools.Core.OperationCancelled", "Operation was cancelled. Try: retry when ready.", "OperationStopped", null));
     Console.WriteLine(JsonSerializer.Serialize(cancelled, WireJsonContext.Default.FailureEnvelope));
     return 1;
 }

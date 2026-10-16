@@ -86,6 +86,7 @@ internal sealed record Failure(string Id, string Message, string Category, JsonE
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower)]
 [JsonSerializable(typeof(EmptySuccessEnvelope))]
+[JsonSerializable(typeof(SelfUpdateEnvelope))]
 [JsonSerializable(typeof(HelpEnvelope))]
 [JsonSerializable(typeof(ConfigurationEnvelope))]
 [JsonSerializable(typeof(ProjectCreationEnvelope))]

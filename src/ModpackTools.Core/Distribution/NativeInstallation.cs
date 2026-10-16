@@ -17,9 +17,7 @@ public static class NativeInstallation
         root = FileTreeTransaction.CanonicalFutureDirectory(root); stateDirectory = FileTreeTransaction.CanonicalFutureDirectory(stateDirectory);
         if (StringComparer.OrdinalIgnoreCase.Equals(root, stateDirectory) || TransactionFiles.IsBelow(root, stateDirectory) || TransactionFiles.IsBelow(stateDirectory, root))
             throw Error("UnsafeState", "Application and recovery-state directories must be separate trees", stateDirectory);
-        var temporary = FileTreeTransaction.CanonicalFutureDirectory(Path.GetTempPath());
-        if (StringComparer.OrdinalIgnoreCase.Equals(temporary, root) || TransactionFiles.IsBelow(temporary, root))
-            throw Error("UnsafePreparation", "Temporary package preparation must remain outside the application directory", temporary);
+        var temporary = GetPreparationParent(root, stateDirectory);
         var prepared = NativePackageArchive.Prepare(archive, sha256, temporary, cancellation: cancellation, progress: progress);
         NativeInstallationResult result;
         var created = false; var published = false; var binReady = false;
@@ -68,7 +66,7 @@ public static class NativeInstallation
             error.Data["ModpackTools.Installation.BinReady"] = binReady;
             if (error.Data["ModpackTools.RetainStage"] is not true)
             {
-                try { Release(prepared); }
+                try { ReleasePreparedPackage(prepared); }
                 catch (Exception cleanup) when (cleanup is IOException or UnauthorizedAccessException or DomainException)
                 {
                     var retained = Error("PreparationRetained", "Installation failed; preserve its prepared package for inspection", prepared.Directory, error.Message + "; " + cleanup.Message);
@@ -82,7 +80,7 @@ public static class NativeInstallation
             }
             throw;
         }
-        try { Release(prepared); return result; }
+        try { ReleasePreparedPackage(prepared); return result; }
         catch (Exception cleanup) when (cleanup is IOException or UnauthorizedAccessException or DomainException)
         {
             return result with { Diagnostics = result.Diagnostics.Add(new("Installation.PreparationCleanupPending", prepared.Directory, cleanup.Message)) };
@@ -118,7 +116,22 @@ public static class NativeInstallation
             created, published, true, control.Applied, true, Path.Combine(root, "bin", "modpack.exe"), Path.Combine(root, "control", "Nushell", "modpack.nu"),
             control.Diagnostics.Take(8).ToImmutableArray(), Math.Max(0, control.Diagnostics.Length - 8));
 
-    private static void Release(NativePreparedPackage prepared)
+    public static string GetPreparationParent(string root, string? stateDirectory = null)
+    {
+        root = FileTreeTransaction.CanonicalFutureDirectory(root);
+        var temporary = FileTreeTransaction.CanonicalFutureDirectory(Path.GetTempPath());
+        if (StringComparer.OrdinalIgnoreCase.Equals(temporary, root) || TransactionFiles.IsBelow(temporary, root))
+            throw Error("UnsafePreparation", "Temporary package preparation must remain outside the application directory", temporary);
+        if (stateDirectory is not null)
+        {
+            stateDirectory = FileTreeTransaction.CanonicalFutureDirectory(stateDirectory);
+            if (StringComparer.OrdinalIgnoreCase.Equals(temporary, stateDirectory) || TransactionFiles.IsBelow(temporary, stateDirectory))
+                throw Error("UnsafeState", "Temporary package preparation must remain outside the recovery-state directory", temporary);
+        }
+        return temporary;
+    }
+
+    public static void ReleasePreparedPackage(NativePreparedPackage prepared)
     {
         var files = prepared.Files.ToDictionary(file => file.Path, file => (NativePackageFile?)file, StringComparer.Ordinal);
         var directories = new HashSet<string>(StringComparer.Ordinal);

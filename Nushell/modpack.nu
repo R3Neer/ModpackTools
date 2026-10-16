@@ -92,7 +92,7 @@ def owns-native-command [args: list<string>] {
         if $name == 'mod' {return ($operation == 'set-side')}
         if $name == 'resource-pack' {return ($operation in ['enable' 'move' 'disable'])}
         if $name == 'config' {return ($operation in ['get' 'set'])}
-        return ($name in ['diff' 'build'])
+        return ($name in ['diff' 'build' 'self-update'])
     }
     if $command in ['--version' '-V'] { return true }
     let operation = ($args | get --optional 1 | default '')
@@ -105,7 +105,7 @@ def owns-native-command [args: list<string>] {
     if (($command | str lowercase) == 'content') and (($operation | str lowercase) in ['versions' 'search' 'add' 'update' 'pin' 'unpin' 'remove']) {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
-    if ($command | str lowercase) in ['resource-pack' 'config' 'mod' 'build' 'diff'] {
+    if ($command | str lowercase) in ['resource-pack' 'config' 'mod' 'build' 'diff' 'self-update'] {
         return (not ($args | any {|token| $token in ['--help' '-h'] }))
     }
     if (($command | str lowercase) == 'category') and (($operation | str lowercase) in ['assign' 'clear' 'remove' 'create']) {
@@ -157,7 +157,7 @@ def order-global-options [args: list<string>] {
 def validate-read-presentation [result: record, args: list<string>, doctor_scope: any = null] {
     let command = ($args.0 | str lowercase)
     let operation = ($args | get --optional 1 | default '' | str lowercase)
-    let expected = if $command == 'doctor' and $doctor_scope == 'project' {'doctor-repair'} else if $command == 'content' and $operation == 'list' {'inventory'} else if $command == 'content' and $operation == 'remove' {'removal'} else if $command == 'config' and $operation in ['get' 'set'] {'configuration'} else if $command == 'project' and $operation == 'use' {'session'} else if $command == 'project' and $operation == 'create' {'project-creation'} else if $command == 'project' and $operation == 'register' {'project-registration'} else if $command == 'content' and $operation in ['add' 'update'] {'content-plan'} else if $command == 'build' {'build'} else if $command == 'diff' {'diff'} else {null}
+    let expected = if $command == 'self-update' {'self-update'} else if $command == 'doctor' and $doctor_scope == 'project' {'doctor-repair'} else if $command == 'content' and $operation == 'list' {'inventory'} else if $command == 'content' and $operation == 'remove' {'removal'} else if $command == 'config' and $operation in ['get' 'set'] {'configuration'} else if $command == 'project' and $operation == 'use' {'session'} else if $command == 'project' and $operation == 'create' {'project-creation'} else if $command == 'project' and $operation == 'register' {'project-registration'} else if $command == 'content' and $operation in ['add' 'update'] {'content-plan'} else if $command == 'build' {'build'} else if $command == 'diff' {'diff'} else {null}
     let presentation = (field $result presentation null)
     if '--no-human' in $args or $expected == null {
         if $presentation != null {error make {msg: 'Native executable returned unrequested presentation.'}}
@@ -165,6 +165,25 @@ def validate-read-presentation [result: record, args: list<string>, doctor_scope
     }
     if (field $presentation kind null) != $expected {error make {msg: 'Native executable returned mismatched read presentation.'}}
     match $expected {
+        'self-update' => {
+            validate-string-fields $presentation ['status' 'current_version' 'target_version' 'root' 'source' 'notice']
+            if $presentation.status not-in ['current' 'available' 'updated' 'unavailable'] or (($presentation.native_available | describe) != 'bool') or (($presentation.needs_confirmation | describe) != 'bool') {error make {msg: 'Native self-update returned invalid status.'}}
+            if $presentation.needs_confirmation != ($presentation.status == 'available') or $presentation.root == '' or $presentation.source == '' {error make {msg: 'Native self-update returned inconsistent review state.'}}
+            if $presentation.needs_confirmation {
+                validate-string-fields $presentation ['review_token']
+                if $presentation.status != 'available' or not $presentation.native_available or $presentation.review_token !~ '^[0-9a-fA-F]{64}$' {error make {msg: 'Native self-update returned an invalid review.'}}
+            } else if $presentation.review_token != null {error make {msg: 'Native self-update returned an unexpected review token.'}}
+            if $presentation.installation != null {
+                let receipt = $presentation.installation
+                if '--yes' not-in $args or '--check' in $args or not $presentation.native_available or $presentation.status not-in ['current' 'updated'] or $presentation.needs_confirmation or $presentation.review_token != null {error make {msg: 'Native self-update returned an installation receipt during preview or a contradictory result.'}}
+                validate-string-fields $receipt ['action' 'root' 'version' 'build_id' 'generation' 'launcher' 'nu_module']
+                if $receipt.action != 'update' or $receipt.root != $presentation.root or $receipt.version != $presentation.target_version or $receipt.build_id !~ '^[0-9A-F]{64}$' or $receipt.generation !~ '^[0-9a-f]{32}$' or $receipt.launcher != ($receipt.root | path join 'bin' 'modpack.exe') or $receipt.nu_module != ($receipt.root | path join 'control' 'Nushell' 'modpack.nu') {error make {msg: 'Native self-update returned mismatched installation identity.'}}
+                for name in ['root_created' 'version_published' 'bin_ready' 'control_switched' 'active_ready'] {if (($receipt | get $name | describe) != 'bool') {error make {msg: 'Native self-update returned invalid installation phases.'}}}
+                if $receipt.root_created or not $receipt.bin_ready or not $receipt.active_ready or ($receipt.control_switched != ($presentation.status == 'updated')) {error make {msg: 'Native self-update returned contradictory installation phases.'}}
+                if (($receipt.diagnostics | describe) !~ '^(list|table)') or ($receipt.diagnostics | length) > 8 or (($receipt.diagnostics_omitted | describe) != 'int') or $receipt.diagnostics_omitted < 0 {error make {msg: 'Native self-update returned invalid diagnostics.'}}
+                for diagnostic in $receipt.diagnostics {validate-string-fields $diagnostic ['code' 'path' 'message']}
+            } else if $presentation.status == 'updated' {error make {msg: 'Native self-update omitted its installation receipt.'}}
+        }
         'project-creation' | 'project-registration' => {
             let project = (field $presentation project null)
             validate-string-fields $project ['id' 'root' 'output_name']
@@ -443,6 +462,8 @@ def invoke-native-command [requested_args: list<string>, review_token: any = nul
             if $result.command != '--version' or ((field (field (field $result data {}) version {}) version null | describe) != 'string') {
                 error make { msg: 'ModpackTools native executable returned an invalid version result.' }
             }
+        } else if ($args.0 | str lowercase) == 'self-update' {
+            if $result.command != $args.0 or $result.arguments != (command-tokens $args | skip 1) or ((field $result data null | describe) !~ '^record') or not ($result.data | columns | is-empty) {error make {msg: 'Native self-update returned an invalid empty-data result.'}}
         } else if ($args.0 | str lowercase) == 'doctor' {
             let doctor = (field (field $result data {}) doctor {})
             if $result.command != $args.0 or ((field $doctor checks null | describe) !~ '^(list|table)') {
@@ -843,11 +864,15 @@ def render-doctor-result [envelope: record, args: list<string>, view: string = '
 }
 
 def assert-doctor-success [envelope: record] {
+    assert-target-success $envelope
+}
+
+def assert-target-success [envelope: record] {
     if (field $envelope ok false) {return}
     let failure = (field $envelope error {})
     let target = (field $failure target null)
     if ($target | describe) == 'string' and $target != '' {
-        assert-success ($envelope | update error.message ((field $failure message 'Doctor repair failed.') + "\nTarget: " + $target))
+        assert-success ($envelope | update error.message ((field $failure message 'ModpackTools failed.') + "\nTarget: " + $target))
     } else {assert-success $envelope}
 }
 
@@ -944,17 +969,18 @@ export def --env --wrapped main [...args: string] {
     let native_config_set = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'config') and (($args | get --optional 1 | default '' | str lowercase) == 'set') and (not ($args | any {|token| $token in ['--help' '-h']}))
     let native_project_create = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'project') and (($args | get --optional 1 | default '' | str lowercase) == 'create') and (not ($args | any {|token| $token in ['--help' '-h']}))
     let native_project_register = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'project') and (($args | get --optional 1 | default '' | str lowercase) == 'register') and (not ($args | any {|token| $token in ['--help' '-h']}))
+    let native_self_update = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'self-update') and (not ($args | any {|token| $token in ['--help' '-h']}))
     let native_build = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'build') and (not ($args | any {|token| $token in ['--help' '-h']}))
     let native_removal = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'content') and (($args | get --optional 1 | default '' | str lowercase) == 'remove') and (not ($args | any {|token| $token in ['--help' '-h']}))
     # Even explicit --yes first validates and renders a nonmutating observation.
-    let first_args = if $native_removal {$args | where {|token| $token not-in ['--yes' '-y']}} else {$args}
+    let first_args = if $native_removal or ($native_self_update and '--check' not-in $args) {$args | where {|token| $token not-in ['--yes' '-y']}} else {$args}
     if $native_build {
         Native-Presentation progress $args 'Building project...'
     } else if $native_project_create {
         Native-Presentation progress $args ("Creating project '" + ($args | get --optional 2 | default '') + "'...")
     } else if $native_project_register {
         Native-Presentation progress $args ("Registering Packwiz project as '" + ($args | get --optional 2 | default '') + "'...")
-    } else if $native_receipt or $native_category_create or $native_config_set {Native-Presentation preflight $args}
+    } else if $native_receipt or $native_category_create or $native_config_set or $native_self_update {Native-Presentation preflight $args}
     let request = ({
         arguments: $args
         human_stderr_terminal: (is-terminal --stderr)
@@ -972,11 +998,28 @@ export def --env --wrapped main [...args: string] {
         error make { msg: $'ModpackTools returned invalid JSON: ($err.msg)' }
     }
 
-    assert-success $envelope
+    if (($args | get --optional 0 | default '' | str lowercase) == 'self-update') {assert-target-success $envelope} else {assert-success $envelope}
 
     if 'help' in (field $envelope presentation {} | columns) {
         if $machine_output {return (unwrap-result $envelope)}
         Native-Presentation render $envelope $args
+        return
+    }
+    if $native_self_update {
+        Native-Presentation render $envelope $args
+        if '--check' in $args or not $envelope.presentation.needs_confirmation {return}
+        let approved = if ($args | any {|token| $token in ['--yes' '-y']}) {true} else if not (is-terminal --stdin) {false} else {
+            Native-Presentation render $envelope $args 'Update ModpackTools? [y/N]'
+            let answer = (try {input --reedline} catch {null})
+            $answer != null and (($answer | str trim | str lowercase) in ['y' 'yes'])
+        }
+        if not $approved {Native-Presentation render $envelope $args 'Update cancelled.'; return}
+        let applied = (invoke-native-command ($first_args | append '--yes') $envelope.presentation.review_token | from json)
+        assert-target-success $applied
+        try {Native-Presentation render $applied $args} catch {|err|
+            let status = if $applied.presentation.installation.control_switched {'The update was installed, but its presentation failed.'} else {'The update completed without changing the active version, but its presentation failed.'}
+            error make {msg: $'($status) ($err.msg)'}
+        }
         return
     }
     if $native_removal {

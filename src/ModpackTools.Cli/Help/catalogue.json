@@ -729,7 +729,8 @@
       "description": "Check and install the latest stable official release while preserving configuration and theme.",
       "usage": [
         "modpack self-update [--yes]",
-        "modpack self-update --check"
+        "modpack self-update --check",
+        "modpack self-update --package ZIP --sha256 HASH [--yes] [--allow-downgrade]"
       ],
       "items": [
         {
@@ -739,6 +740,14 @@
         {
           "label": "-y, --yes",
           "description": "Install without interactive confirmation."
+        },
+        {
+          "label": "--package <ZIP> --sha256 <HASH>",
+          "description": "Select a trusted local native package instead of the official stable release."
+        },
+        {
+          "label": "--allow-downgrade",
+          "description": "Allow an explicitly selected local package with an older public version."
         },
         {
           "label": "-h, --help",
@@ -763,7 +772,9 @@
       ],
       "notes": [
         "No project is required.",
-        "Package identity, official URL, SHA256, effective path, theme, and fresh-process help are verified."
+        "Package identity, official URL, SHA256, effective path, theme, and fresh-process help are verified.",
+        "Native packages are installed only into the managed installation running this command. Configuration and theme are preserved.",
+        "Open a new Nushell session after an update. Existing sessions keep their loaded version."
       ],
       "examples": [
         "modpack self-update --check",

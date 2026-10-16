@@ -189,6 +189,21 @@ export def render [ui: record, envelope: record] {
         return
     }
     match ($envelope.command | str lowercase) {
+        'self-update' => {
+            let update = $envelope.presentation
+            r3cli heading $ui 'ModpackTools update'
+            r3cli key-value $ui Current $update.current_version
+            if $update.target_version != $update.current_version {r3cli key-value $ui Available $update.target_version}
+            r3cli key-value $ui Installation $update.root
+            r3cli key-value $ui Source $update.source
+            if $update.status == 'updated' {r3cli status $ui success $'ModpackTools ($update.target_version) installed and verified.'}
+            if $update.status == 'available' {r3cli status $ui info 'An update is ready for review.'}
+            if $update.notice != '' {r3cli status $ui (if $update.status == 'unavailable' {'warning'} else {'info'}) $update.notice}
+            if $update.installation != null {
+                for diagnostic in $update.installation.diagnostics {r3cli status $ui warning $'($diagnostic.message) [($diagnostic.path)]'}
+                if $update.installation.diagnostics_omitted > 0 {r3cli status $ui warning 'Additional installation diagnostics are pending; inspect native recovery state.'}
+            }
+        }
         'project' => {
             match $operation {
                 'register' => {
