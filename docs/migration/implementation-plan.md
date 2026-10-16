@@ -2,8 +2,8 @@
 
 Current closure, 2026-10-16: the native package is implemented and locally accepted
 through public Nu, installer, self-update and installed C-to-D workflow. The current
-[handoff](native-activation-handoff.md) records package hashes, evidence, remaining
-manual activation and validation limitations. Capabilities120-131 close package,
+[handoff](native-activation-handoff.md) records package hashes, evidence, completed
+authorized personal activation, rollback and validation limitations. Capabilities120-131 close package,
 root/control/launcher, setup/retirement, official channel/update and native-only Nu.
 Product checkpoints end at4404974; measured public performance is b349a6a.
 The phased plan and older checkpoint text below are retained historical records,

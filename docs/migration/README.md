@@ -1,8 +1,9 @@
 # Hybrid-core migration: branch-only records
 
 Current status, 2026-10-16: native Windows x64 package implemented and locally
-accepted, including installer/update/Nu without PowerShell. Personal activation
-remains pending explicit user instruction. Read the current
+accepted, including installer/update/Nu without PowerShell. The user subsequently
+authorized personal activation; installation on D and the real Nu import are now
+active and verified. Legacy retirement remains separate. Read the current
 [activation handoff](native-activation-handoff.md) and
 [public command measurements](performance.md) first. Numbered records preserve
 historical scope; their old pending notes are not the current progress report.
