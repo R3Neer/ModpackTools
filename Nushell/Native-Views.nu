@@ -141,6 +141,7 @@ export def render [ui: record, envelope: record] {
         }
         'category' => {
             let view = $data.categories
+            if $operation == 'create' {r3cli status $ui success ("Category '" + $envelope.arguments.1 + "' was created.")}
             r3cli key-value $ui Project $view.project.id
             r3cli section $ui CLASSIFICATIONS ($view.items | length)
             let width = ($view.items | each {|item| $item.number | into string | str length} | math max)
@@ -151,6 +152,7 @@ export def render [ui: record, envelope: record] {
             }
             r3cli line $ui
             r3cli status $ui info 'Use a category ID or number with category assign. Only defined categories can be removed.'
+            for item in ($data | get --optional diagnostics | default []) {r3cli status $ui warning $'($item.code): ($item.path) · ($item.message)'}
         }
         'config' => {
             r3cli key-value $ui $envelope.presentation.name $envelope.presentation.value

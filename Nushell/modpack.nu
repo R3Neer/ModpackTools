@@ -88,7 +88,7 @@ def owns-native-command [args: list<string>] {
         if $name == 'doctor' {return (not ($args | any {|token| ($token | str lowercase) == '--fix' or ($token | str lowercase | str starts-with '--fix=') }))}
         if $name == 'project' {return ($operation in ['list' 'current' 'use' 'status'])}
         if $name == 'content' {return ($operation in ['list' 'search' 'versions' 'remove' 'pin' 'unpin'])}
-        if $name == 'category' {return ($operation in ['list' 'assign' 'clear' 'remove'])}
+        if $name == 'category' {return ($operation in ['list' 'create' 'assign' 'clear' 'remove'])}
         if $name == 'mod' {return ($operation == 'set-side')}
         if $name == 'resource-pack' {return ($operation in ['enable' 'move' 'disable'])}
         if $name == 'config' {return ($operation == 'get')}
@@ -768,10 +768,11 @@ export def --env --wrapped main [...args: string] {
     let args = (order-global-options $args)
     let machine_output = (wants-machine-output $args)
     let native_receipt = (not $machine_output) and (owns-native-command $args) and (is-transaction-receipt $args) and (not ($args | any {|token| $token in ['--help' '-h']}))
+    let native_category_create = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'category') and (($args | get --optional 1 | default '' | str lowercase) == 'create') and (not ($args | any {|token| $token in ['--help' '-h']}))
     let native_removal = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'content') and (($args | get --optional 1 | default '' | str lowercase) == 'remove') and (not ($args | any {|token| $token in ['--help' '-h']}))
     # Even explicit --yes first validates and renders a nonmutating observation.
     let first_args = if $native_removal {$args | where {|token| $token not-in ['--yes' '-y']}} else {$args}
-    if $native_receipt {Native-Presentation preflight $args}
+    if $native_receipt or $native_category_create {Native-Presentation preflight $args}
     let request = ({
         arguments: $args
         human_stderr_terminal: (is-terminal --stderr)
@@ -835,9 +836,9 @@ export def --env --wrapped main [...args: string] {
     if $machine_output {
         return (unwrap-result $envelope)
     }
-    if $native_receipt {
+    if $native_receipt or $native_category_create {
         try {Native-Presentation render $envelope $args} catch {|err|
-            let receipt = if $envelope.data.transaction.applied {'The transaction was applied, but its presentation failed.'} else {'The transaction returned without applying changes, but its presentation failed.'}
+            let receipt = if $native_category_create {'The category was created, but its presentation failed.'} else if $envelope.data.transaction.applied {'The transaction was applied, but its presentation failed.'} else {'The transaction returned without applying changes, but its presentation failed.'}
             error make {msg: $'($receipt) ($err.msg)'}
         }
     } else if (owns-native-command $args) {Native-Presentation render $envelope $args}

@@ -29,7 +29,9 @@ url = "https://example.invalid/receipt.zip"
 hash-format = "sha256"
 hash = "0000000000000000000000000000000000000000000000000000000000000000"
 ' | save $managed
-    modpack category create ui-receipts --name 'UI Receipts' --no-human | ignore
+    human ['category' 'create' 'ui-receipts' '--name' 'UI Receipts' '--order=-7']
+    let created = (modpack category list --no-human | where id == 'ui-receipts' | first)
+    if $created.name != 'UI Receipts' or $created.order != -7 or $created.mod_count != 0 {error make {msg: 'Human category creation/readback mismatch'}}
     for tokens in [['category' 'assign' 'ui-receipts' 'side_fixture.jar'] ['mod' 'set-side' 'client' 'side_fixture.jar'] ['content' 'pin' 'receipt.zip']] {
         let before = (source-bytes $root)
         human ($tokens | append '--dry-run')
