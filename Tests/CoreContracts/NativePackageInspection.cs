@@ -25,6 +25,12 @@ internal static class NativePackageInspection
                     var executable = File.ReadAllBytes(input.GetProperty("Executable").GetString()!);
                     var files = NativePackageManifest.PayloadPaths.ToDictionary(name => name,
                         name => name.EndsWith(".exe", StringComparison.Ordinal) ? executable : Encoding.UTF8.GetBytes("Native package format fixture: " + name + "\n"), StringComparer.Ordinal);
+                    if (input.TryGetProperty("PayloadDirectory", out var payloadDirectory))
+                        foreach (var name in NativePackageManifest.PayloadPaths.Where(name => !name.EndsWith(".exe", StringComparison.Ordinal)))
+                        {
+                            var sourcePath = Path.Combine(payloadDirectory.GetString()!, name);
+                            if (File.Exists(sourcePath)) files[name] = File.ReadAllBytes(sourcePath);
+                        }
                     if (input.TryGetProperty("FixtureMarker", out var marker))
                     {
                         var text = marker.GetString()!;
@@ -65,6 +71,8 @@ internal static class NativePackageInspection
                             }
                         });
                     NativePackageArchive.Verify(prepared);
+                    if (input.TryGetProperty("InitializeInstallation", out var initialize))
+                        _ = NativeInstallationRoot.Create(initialize.GetString()!, input.GetProperty("NuExecutable").GetString()!);
                     NativePublishedVersion? publication = null;
                     if (input.TryGetProperty("PublishParent", out var publishParent))
                     {
@@ -96,6 +104,23 @@ internal static class NativePackageInspection
                                     throw new IOException("Controlled first-file publication failure");
                                 return ValueTask.CompletedTask;
                             }).GetAwaiter().GetResult();
+                    }
+                    if (input.TryGetProperty("VerifyAdmissionPin", out var verifyPin))
+                    {
+                        NativeLaunchPin pin;
+                        var root = verifyPin.GetString()!;
+                        var admission = NativeInstallationRoot.AcquireAsync(root).GetAwaiter().GetResult();
+                        try { pin = admission.PinCurrent(); }
+                        finally { admission.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+                        try { using var unexpected = admission.PinCurrent(); throw new InvalidOperationException("Disposed admission could still create a version pin"); }
+                        catch (ObjectDisposedException) { }
+                        var path = Path.Combine(root, "pins", pin.Version.BuildId + ".lease");
+                        using (pin)
+                        {
+                            try { using var exclusive = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None); throw new InvalidOperationException("Active admission pin did not prevent retirement access"); }
+                            catch (IOException) { }
+                        }
+                        using var released = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
                     }
                     writer.WriteStartObject(); writer.WriteString("Directory", prepared.Directory); writer.WriteString("BuildId", prepared.Manifest.BuildId);
                     if (publication is not null) writer.WriteBoolean("Published", publication.Published);

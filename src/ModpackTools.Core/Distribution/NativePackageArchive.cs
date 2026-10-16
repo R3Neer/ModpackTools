@@ -22,6 +22,25 @@ public sealed record NativePreparedPackage(string Directory, ProjectPhysicalIden
 
 public static class NativePackageArchive
 {
+    public static NativePreparedPackage OpenInstalled(string directory, NativeVersionReference reference, CancellationToken cancellation = default)
+    {
+        ArgumentNullException.ThrowIfNull(reference);
+        using var identity = WindowsProjectIdentity.Open(directory);
+        if (identity.Value.FileIdentity != reference.FileIdentity) throw Error("StageChanged", "Installed version directory identity changed", directory);
+        var path = Path.Combine(directory, "package.json"); WindowsProjectIdentity.GuardAncestors(path);
+        using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        WindowsProjectIdentity.AssertStreamBytes(input.SafeFileHandle, 64 * 1024, path, defaultStreamOnly: true);
+        if (input.Length > 64 * 1024) throw Error("ArchiveLimit", "Installed native manifest exceeds its byte quota", path);
+        var bytes = new byte[checked((int)input.Length)]; input.ReadExactly(bytes);
+        var manifest = NativePackageManifest.Read(bytes);
+        if (manifest.BuildId != reference.BuildId || manifest.Version != reference.Version) throw Error("StageChanged", "Installed native manifest does not match active control", path);
+        var canonical = manifest.ToBytes();
+        var files = manifest.Files.Add(new("package.json", canonical.Length, Convert.ToHexString(SHA256.HashData(canonical))))
+            .OrderBy(file => file.Path, StringComparer.Ordinal).ToImmutableArray();
+        var result = new NativePreparedPackage(directory, identity.Value, manifest, files, reference.ArchiveSha256);
+        Verify(result, cancellation: cancellation); identity.AssertCurrent(); return result;
+    }
+
     public static NativePreparedPackage Prepare(string archivePath, string expectedSha256, string stagingParent,
         NativePackageLimits? limits = null, CancellationToken cancellation = default, Action<NativePackageProgress>? progress = null)
     {
