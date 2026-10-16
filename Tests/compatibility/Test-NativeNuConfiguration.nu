@@ -10,6 +10,10 @@ def main [stub_executable: string] {
     for arguments in [['set' 'root' $catalog] ['get' 'root'] ['set' 'packwiz' 'auto'] ['get' 'packwiz']] {
         if (modpack config ...$arguments --no-human) != {} {error make {msg: 'Native config changed its empty machine payload'}}
     }
+    let config_path = ($env.MODPACKTOOLS_CONFIG_HOME | path join 'config.psd1')
+    let before_human = (open --raw $config_path | hash sha256)
+    if (modpack config set root ($catalog | path join '.') --ascii --color never) != null or (modpack config set packwiz AUTO --ascii --color never) != null {error make {msg: 'Human config set leaked a pipeline value'}}
+    if (open --raw $config_path | hash sha256) != $before_human {error make {msg: 'Human normalized config publication disagrees with machine data'}}
     if $env.MODPACKTOOLS_PROJECT != 'unrelated-active-project' {error make {msg: 'Global config mutated the active project'}}
     let failure = try {modpack config get root --project fixture --no-human; null} catch {|err| $err.msg}
     if $failure == null or $failure !~ 'ModpackTools.Option.ForbiddenCombination' {error make {msg: 'Native config accepted explicit project context'}}

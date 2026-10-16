@@ -155,6 +155,10 @@ export def render [ui: record, envelope: record] {
             for item in ($data | get --optional diagnostics | default []) {r3cli status $ui warning $'($item.code): ($item.path) · ($item.message)'}
         }
         'config' => {
+            if $operation == 'set' {
+                r3cli status $ui success ($envelope.presentation.name + ' = ' + $envelope.presentation.value)
+                return
+            }
             r3cli key-value $ui $envelope.presentation.name $envelope.presentation.value
             if $envelope.presentation.source != null {r3cli key-value $ui source $envelope.presentation.source}
         }

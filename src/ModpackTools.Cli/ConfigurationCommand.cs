@@ -25,7 +25,19 @@ internal static class ConfigurationCommand
             new EmptySuccessEnvelope(1, true, command, arguments, new()), WireJsonContext.Default.EmptySuccessEnvelope);
         cancellation.ThrowIfCancellationRequested();
         if (verb.Equals("set", StringComparison.OrdinalIgnoreCase))
-            _ = await ConfigurationStore.SetAsync(configurationDirectory, new(name == "root" ? ConfigurationSetting.Root : ConfigurationSetting.Packwiz, arguments[2]), cancellation).ConfigureAwait(false);
+            _ = await ConfigurationStore.SetAsync(configurationDirectory, new(name == "root" ? ConfigurationSetting.Root : ConfigurationSetting.Packwiz, arguments[2]), cancellation,
+                prepareOutput: (preview, token) =>
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (includePresentation)
+                    {
+                        output.SetLength(0); output.Position = 0;
+                        using var writer = new Utf8JsonWriter(output);
+                        JsonSerializer.Serialize(writer, new ConfigurationEnvelope(1, true, command, arguments, new(),
+                            new("configuration", name, preview.Value, null)), WireJsonContext.Default.ConfigurationEnvelope);
+                    }
+                    return ValueTask.CompletedTask;
+                }).ConfigureAwait(false);
         else
         {
             ConfigurationPresentation? presentation;
