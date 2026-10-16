@@ -45,7 +45,9 @@ internal sealed partial class WindowsProjectIdentity : IDisposable
         if (current.Value != Value) throw Error("ConcurrentChange", "Project directory identity changed during the operation", Value.CanonicalRoot);
     }
 
-    internal static unsafe void AssertStreamBytes(SafeFileHandle file, long maximum, string path)
+    internal void AssertDefaultStreamOnly() => AssertStreamBytes(handle, long.MaxValue, Value.CanonicalRoot, defaultStreamOnly: true);
+
+    internal static unsafe void AssertStreamBytes(SafeFileHandle file, long maximum, string path, bool defaultStreamOnly = false)
     {
         var buffer = ArrayPool<byte>.Shared.Rent(65536);
         try
@@ -69,6 +71,8 @@ internal sealed partial class WindowsProjectIdentity : IDisposable
                 if (nameBytes > remaining.Length - 24 || size < 0 || next != 0 && (next < 24 + nameBytes || next > remaining.Length))
                     throw Error("StreamMetadataReadFailed", "File stream metadata is invalid", path);
                 if (size > maximum - bytes) throw new DomainException("Transaction.ResourceLimit", "File data streams exceed the copy byte quota", "use an explicit bounded byte quota", "LimitsExceeded", path);
+                if (defaultStreamOnly && (nameBytes % 2 != 0 || !MemoryMarshal.Cast<byte, char>(remaining.Slice(24, checked((int)nameBytes))).SequenceEqual("::$DATA")))
+                    throw Error("UnexpectedStream", "Owned package files must not contain additional data streams", path);
                 bytes += size; if (next == 0) return; offset += checked((int)next);
             }
         }
