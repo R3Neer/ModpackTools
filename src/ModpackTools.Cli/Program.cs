@@ -162,7 +162,7 @@ try
             else if (mutation.Equals("pin", StringComparison.OrdinalIgnoreCase) || mutation.Equals("unpin", StringComparison.OrdinalIgnoreCase))
                 await PinCommand.RunAsync(command, commandArguments, options.Project, active, Path.GetFullPath(configurationDirectory), cancellation.Token);
             else
-                await ContentMutationCommand.RunAsync(command, commandArguments, options.Project, active, Path.GetFullPath(configurationDirectory), cancellation.Token);
+                await ContentMutationCommand.RunAsync(command, commandArguments, options.Project, active, Path.GetFullPath(configurationDirectory), cancellation.Token, !options.NoHuman);
         }
         finally { Console.CancelKeyPress -= cancel; }
         return 0;

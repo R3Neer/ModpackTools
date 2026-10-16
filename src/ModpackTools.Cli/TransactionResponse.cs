@@ -13,6 +13,13 @@ internal sealed class TransactionResponse(string command, string[] arguments, bo
     private PublicTransactionChange[]? changes;
     private PublicInventoryItem[]? resources;
     private RemovalPresentation? presentation;
+    private ContentPlanPresentation? contentPresentation;
+
+    public ValueTask PrepareContentAsync(TransactionPreview<ContentPlan> preview, CancellationToken token)
+    {
+        contentPresentation = ContentPlanPresentation.From(preview.Result);
+        return PrepareAsync(preview, token);
+    }
 
     public ValueTask PrepareRemovalAsync(TransactionPreview<RemovalPlan> preview, CancellationToken token)
     {
@@ -32,6 +39,7 @@ internal sealed class TransactionResponse(string command, string[] arguments, bo
         // Windows paths (32767 UTF16 chars) under worst-case JSON escaping.
         if (buffer!.Length > 60L * 1024 * 1024)
             throw new DomainException("Core.OutputLimit", "Content transaction output leaves no diagnostic reserve", "reduce the requested batch", "LimitsExceeded");
+        buffer.Capacity = checked((int)buffer.Length + 4 * 1024 * 1024);
         return ValueTask.CompletedTask;
     }
 
@@ -49,9 +57,12 @@ internal sealed class TransactionResponse(string command, string[] arguments, bo
 
     private void Serialize(PublicTransaction transaction)
     {
-        buffer?.Dispose(); buffer = new("Content transaction", "reduce the requested batch before applying it");
+        buffer ??= new("Content transaction", "reduce the requested batch before applying it");
+        buffer.SetLength(0); buffer.Position = 0;
         using var writer = new Utf8JsonWriter(buffer);
-        JsonSerializer.Serialize(writer, new TransactionEnvelope(1, true, command, arguments, new(transaction, resources), presentation), WireJsonContext.Default.TransactionEnvelope);
+        if (contentPresentation is not null)
+            JsonSerializer.Serialize(writer, new ContentPlanEnvelope(1, true, command, arguments, new(transaction, resources), contentPresentation), WireJsonContext.Default.ContentPlanEnvelope);
+        else JsonSerializer.Serialize(writer, new TransactionEnvelope(1, true, command, arguments, new(transaction, resources), presentation), WireJsonContext.Default.TransactionEnvelope);
     }
     public void Dispose() => buffer?.Dispose();
 }

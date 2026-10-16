@@ -12,7 +12,7 @@ namespace ModpackTools.Cli;
 internal static class ContentMutationCommand
 {
     public static async Task RunAsync(string command, string[] arguments, string? requestedProject, string? activeProject,
-        string configurationDirectory, CancellationToken cancellation)
+        string configurationDirectory, CancellationToken cancellation, bool includePresentation = false)
     {
         var request = Parse(arguments);
         var effectiveId = ProjectSelection.EffectiveId(requestedProject, activeProject);
@@ -23,7 +23,7 @@ internal static class ContentMutationCommand
         if (string.IsNullOrWhiteSpace(state)) state = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModpackTools", "native-state");
         using var output = new TransactionResponse(command, arguments, request.DryRun, project.Root);
         var result = await ContentOperation.ExecuteAsync(project, request, configurationDirectory, Path.GetFullPath(state), DateTimeOffset.UtcNow,
-            ResolveTool, Environment.ProcessPath!, cancellation: cancellation, prepareOutput: output.PrepareAsync<ContentPlan>).ConfigureAwait(false);
+            ResolveTool, Environment.ProcessPath!, cancellation: cancellation, prepareOutput: includePresentation ? output.PrepareContentAsync : output.PrepareAsync<ContentPlan>).ConfigureAwait(false);
         output.Write(result);
         PackwizObservation ResolveTool()
         {

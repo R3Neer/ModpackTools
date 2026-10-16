@@ -87,7 +87,7 @@ def owns-native-command [args: list<string>] {
         if $name == '--version' or $command == '-V' {return true}
         if $name == 'doctor' {return (not ($args | any {|token| ($token | str lowercase) == '--fix' or ($token | str lowercase | str starts-with '--fix=') }))}
         if $name == 'project' {return ($operation in ['list' 'current' 'use' 'status' 'create' 'register'])}
-        if $name == 'content' {return ($operation in ['list' 'search' 'versions' 'remove' 'pin' 'unpin'])}
+        if $name == 'content' {return ($operation in ['list' 'search' 'versions' 'remove' 'pin' 'unpin' 'add' 'update'])}
         if $name == 'category' {return ($operation in ['list' 'create' 'assign' 'clear' 'remove'])}
         if $name == 'mod' {return ($operation == 'set-side')}
         if $name == 'resource-pack' {return ($operation in ['enable' 'move' 'disable'])}
@@ -157,7 +157,7 @@ def order-global-options [args: list<string>] {
 def validate-read-presentation [result: record, args: list<string>] {
     let command = ($args.0 | str lowercase)
     let operation = ($args | get --optional 1 | default '' | str lowercase)
-    let expected = if $command == 'content' and $operation == 'list' {'inventory'} else if $command == 'content' and $operation == 'remove' {'removal'} else if $command == 'config' and $operation in ['get' 'set'] {'configuration'} else if $command == 'project' and $operation == 'use' {'session'} else if $command == 'project' and $operation == 'create' {'project-creation'} else if $command == 'project' and $operation == 'register' {'project-registration'} else if $command == 'build' {'build'} else if $command == 'diff' {'diff'} else {null}
+    let expected = if $command == 'content' and $operation == 'list' {'inventory'} else if $command == 'content' and $operation == 'remove' {'removal'} else if $command == 'config' and $operation in ['get' 'set'] {'configuration'} else if $command == 'project' and $operation == 'use' {'session'} else if $command == 'project' and $operation == 'create' {'project-creation'} else if $command == 'project' and $operation == 'register' {'project-registration'} else if $command == 'content' and $operation in ['add' 'update'] {'content-plan'} else if $command == 'build' {'build'} else if $command == 'diff' {'diff'} else {null}
     let presentation = (field $result presentation null)
     if '--no-human' in $args or $expected == null {
         if $presentation != null {error make {msg: 'Native executable returned unrequested presentation.'}}
@@ -179,6 +179,18 @@ def validate-read-presentation [result: record, args: list<string>] {
             if 'diagnostics' in ($presentation | columns) {
                 if (($presentation.diagnostics | describe) !~ '^(list|table)') {error make {msg: 'Native project creation returned invalid diagnostics.'}}
                 for diagnostic in $presentation.diagnostics {validate-string-fields $diagnostic ['code' 'path' 'message']}
+            }
+        }
+        'content-plan' => {
+            for name in ['items' 'health_items'] {if ((field $presentation $name null | describe) !~ '^(list|table)') {error make {msg: 'Native content plan returned invalid lists.'}}}
+            for item in $presentation.items {
+                validate-string-fields $item ['id' 'name' 'previous' 'next' 'reason']
+                if $item.id == '' or $item.reason not-in ['requested' 'dependency'] {error make {msg: 'Native content plan returned invalid change metadata.'}}
+            }
+            if ($presentation.items | get id | uniq | length) != ($presentation.items | length) {error make {msg: 'Native content plan duplicated a change identity.'}}
+            for item in $presentation.health_items {
+                validate-string-fields $item ['status' 'text']
+                if $item.status not-in ['pass' 'fail' 'warn' 'info'] {error make {msg: 'Native content plan returned invalid health status.'}}
             }
         }
         'build' => {
@@ -808,7 +820,7 @@ def assert-success [envelope: record] {
 def is-transaction-receipt [args: list<string>] {
     let command = ($args | get --optional 0 | default '' | str lowercase)
     let operation = ($args | get --optional 1 | default '' | str lowercase)
-    ($command == 'category' and $operation in ['assign' 'clear' 'remove']) or ($command == 'mod' and $operation == 'set-side') or ($command == 'content' and $operation in ['pin' 'unpin']) or ($command == 'resource-pack' and $operation in ['enable' 'move' 'disable'])
+    ($command == 'category' and $operation in ['assign' 'clear' 'remove']) or ($command == 'mod' and $operation == 'set-side') or ($command == 'content' and $operation in ['pin' 'unpin' 'add' 'update']) or ($command == 'resource-pack' and $operation in ['enable' 'move' 'disable'])
 }
 
 export def --env --wrapped main [...args: string] {

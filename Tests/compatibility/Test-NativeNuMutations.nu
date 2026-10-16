@@ -10,6 +10,8 @@ def main [stub_executable: string] {
     if (modpack content update --all --no-human) != $expected {
         error make {msg: 'Native Nu empty update transaction mismatch'}
     }
+    if (modpack content update --all --ascii --color never) != null or $env.MODPACKTOOLS_PROJECT != 'fixture' {error make {msg: 'Human empty update leaked output or changed selection'}}
+    if (modpack content update --all --dry-run --ascii --color never) != null {error make {msg: 'Human empty update dry-run leaked output'}}
     for arguments in [['content' 'add'] ['content' 'update' 'one' '--all']] {
         let failure = try { modpack ...$arguments --no-human; null } catch {|err| $err.msg }
         if $failure == null or $failure !~ 'ModpackTools.(Command.InvalidArguments|Option.ForbiddenCombination)' {
@@ -30,6 +32,9 @@ def main [stub_executable: string] {
     let good = {schema_version: 1, ok: true, command: 'content', arguments: ['add' 'example'], data: {transaction: $transaction}}
     $good | to json | save --force $response_path
     if (modpack content add example --no-human) != $transaction { error make {msg: 'Native Nu transaction unwrap changed its fields'} }
+    let human_plan = {kind: 'content-plan', items: [{id: 'modrinth:example', name: 'Example 雪', previous: 'not installed', next: 'version-1', reason: requested}], health_items: [{status: info, text: 'Controlled plan presentation'}]}
+    ($good | insert presentation $human_plan) | to json | save --force $response_path
+    if (modpack content add example --ascii --color never) != null or $env.MODPACKTOOLS_PROJECT != 'fixture' {error make {msg: 'Human controlled add plan leaked output or changed session'}}
     for index in 0..5 {
         let reply = match $index {
             0 => ($good | update data.transaction.change_count '1')

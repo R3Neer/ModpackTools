@@ -156,6 +156,12 @@ export def render [ui: record, envelope: record] {
         if not $data.transaction.dry_run {resources $ui $data.resource_packs 1 true}
         return
     }
+    if ($envelope.command | str lowercase) == 'content' and $operation in ['add' 'update'] {
+        for item in $envelope.presentation.items {r3cli status $ui info ($item.name + ': ' + $item.previous + ' -> ' + $item.next + ' (' + $item.reason + ')')}
+        for item in $envelope.presentation.health_items {r3cli status $ui (if $item.status == 'fail' {'error'} else if $item.status == 'warn' {'warning'} else {'info'}) $item.text}
+        transaction-summary $ui $data.transaction
+        return
+    }
     if (($envelope.command | str lowercase) == 'category' and $operation in ['assign' 'clear' 'remove']) or (($envelope.command | str lowercase) == 'mod') or (($envelope.command | str lowercase) == 'content' and $operation in ['pin' 'unpin']) {
         transaction-summary $ui $data.transaction
         return
