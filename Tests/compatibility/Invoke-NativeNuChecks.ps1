@@ -36,7 +36,7 @@ try {
     if($LASTEXITCODE -ne 0){throw 'Native Nu configuration check failed'}
     & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuRegistration.nu') ([IO.Path]::GetFullPath($StubExecutable))
     if($LASTEXITCODE -ne 0){throw 'Native Nu registration check failed'}
-    & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuCreation.nu') ([IO.Path]::GetFullPath($StubExecutable))
+    & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuCreation.nu') ([IO.Path]::GetFullPath($StubExecutable)) ([IO.Path]::GetFullPath($PackwizExecutable))
     if($LASTEXITCODE -ne 0){throw 'Native Nu creation check failed'}
     $sideMods=Join-Path $projects 'Nu Native Pack-1.21.1/mods'
     [void][IO.Directory]::CreateDirectory($sideMods)

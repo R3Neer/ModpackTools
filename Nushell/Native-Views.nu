@@ -128,6 +128,10 @@ export def render [ui: record, envelope: record] {
     match ($envelope.command | str lowercase) {
         'project' => {
             match $operation {
+                'create' => {
+                    r3cli status $ui success ('Project created at ' + $envelope.presentation.project.root)
+                    for item in ($envelope.presentation | get --optional diagnostics | default []) {r3cli status $ui warning $'($item.code): ($item.path) · ($item.message)'}
+                }
                 'list' => {
                     r3cli line $ui [{text: $'Root: ($data.projects.root)', role: secondary}]
                     r3cli line $ui

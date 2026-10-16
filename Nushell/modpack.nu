@@ -86,7 +86,7 @@ def owns-native-command [args: list<string>] {
         let operation = ($args | get --optional 1 | default '' | str lowercase)
         if $name == '--version' or $command == '-V' {return true}
         if $name == 'doctor' {return (not ($args | any {|token| ($token | str lowercase) == '--fix' or ($token | str lowercase | str starts-with '--fix=') }))}
-        if $name == 'project' {return ($operation in ['list' 'current' 'use' 'status'])}
+        if $name == 'project' {return ($operation in ['list' 'current' 'use' 'status' 'create'])}
         if $name == 'content' {return ($operation in ['list' 'search' 'versions' 'remove' 'pin' 'unpin'])}
         if $name == 'category' {return ($operation in ['list' 'create' 'assign' 'clear' 'remove'])}
         if $name == 'mod' {return ($operation == 'set-side')}
@@ -157,7 +157,7 @@ def order-global-options [args: list<string>] {
 def validate-read-presentation [result: record, args: list<string>] {
     let command = ($args.0 | str lowercase)
     let operation = ($args | get --optional 1 | default '' | str lowercase)
-    let expected = if $command == 'content' and $operation == 'list' {'inventory'} else if $command == 'content' and $operation == 'remove' {'removal'} else if $command == 'config' and $operation in ['get' 'set'] {'configuration'} else if $command == 'project' and $operation == 'use' {'session'} else if $command == 'diff' {'diff'} else {null}
+    let expected = if $command == 'content' and $operation == 'list' {'inventory'} else if $command == 'content' and $operation == 'remove' {'removal'} else if $command == 'config' and $operation in ['get' 'set'] {'configuration'} else if $command == 'project' and $operation == 'use' {'session'} else if $command == 'project' and $operation == 'create' {'project-creation'} else if $command == 'diff' {'diff'} else {null}
     let presentation = (field $result presentation null)
     if '--no-human' in $args or $expected == null {
         if $presentation != null {error make {msg: 'Native executable returned unrequested presentation.'}}
@@ -165,6 +165,16 @@ def validate-read-presentation [result: record, args: list<string>] {
     }
     if (field $presentation kind null) != $expected {error make {msg: 'Native executable returned mismatched read presentation.'}}
     match $expected {
+        'project-creation' => {
+            let project = (field $presentation project null)
+            validate-string-fields $project ['id' 'root' 'output_name']
+            validate-string-fields $project ['name' 'version' 'minecraft' 'loader' 'loader_version'] true
+            if $project.id != $args.2 or $project.root == '' {error make {msg: 'Native project creation returned mismatched project identity.'}}
+            if 'diagnostics' in ($presentation | columns) {
+                if (($presentation.diagnostics | describe) !~ '^(list|table)') {error make {msg: 'Native project creation returned invalid diagnostics.'}}
+                for diagnostic in $presentation.diagnostics {validate-string-fields $diagnostic ['code' 'path' 'message']}
+            }
+        }
         'removal' => {
             validate-string-fields $presentation ['kind' 'review_token']
             if $presentation.review_token !~ '^[0-9a-fA-F]{64}$' {error make {msg: 'Native removal returned an invalid review identifier.'}}
@@ -770,10 +780,13 @@ export def --env --wrapped main [...args: string] {
     let native_receipt = (not $machine_output) and (owns-native-command $args) and (is-transaction-receipt $args) and (not ($args | any {|token| $token in ['--help' '-h']}))
     let native_category_create = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'category') and (($args | get --optional 1 | default '' | str lowercase) == 'create') and (not ($args | any {|token| $token in ['--help' '-h']}))
     let native_config_set = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'config') and (($args | get --optional 1 | default '' | str lowercase) == 'set') and (not ($args | any {|token| $token in ['--help' '-h']}))
+    let native_project_create = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'project') and (($args | get --optional 1 | default '' | str lowercase) == 'create') and (not ($args | any {|token| $token in ['--help' '-h']}))
     let native_removal = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'content') and (($args | get --optional 1 | default '' | str lowercase) == 'remove') and (not ($args | any {|token| $token in ['--help' '-h']}))
     # Even explicit --yes first validates and renders a nonmutating observation.
     let first_args = if $native_removal {$args | where {|token| $token not-in ['--yes' '-y']}} else {$args}
-    if $native_receipt or $native_category_create or $native_config_set {Native-Presentation preflight $args}
+    if $native_project_create {
+        Native-Presentation progress $args ("Creating project '" + ($args | get --optional 2 | default '') + "'...")
+    } else if $native_receipt or $native_category_create or $native_config_set {Native-Presentation preflight $args}
     let request = ({
         arguments: $args
         human_stderr_terminal: (is-terminal --stderr)
@@ -837,9 +850,9 @@ export def --env --wrapped main [...args: string] {
     if $machine_output {
         return (unwrap-result $envelope)
     }
-    if $native_receipt or $native_category_create or $native_config_set {
+    if $native_receipt or $native_category_create or $native_config_set or $native_project_create {
         try {Native-Presentation render $envelope $args} catch {|err|
-            let receipt = if $native_category_create {'The category was created, but its presentation failed.'} else if $native_config_set {'The configuration was saved, but its presentation failed.'} else if $envelope.data.transaction.applied {'The transaction was applied, but its presentation failed.'} else {'The transaction returned without applying changes, but its presentation failed.'}
+            let receipt = if $native_project_create {'The project was created, but its presentation failed.'} else if $native_category_create {'The category was created, but its presentation failed.'} else if $native_config_set {'The configuration was saved, but its presentation failed.'} else if $envelope.data.transaction.applied {'The transaction was applied, but its presentation failed.'} else {'The transaction returned without applying changes, but its presentation failed.'}
             error make {msg: $'($receipt) ($err.msg)'}
         }
     } else if (owns-native-command $args) {Native-Presentation render $envelope $args}

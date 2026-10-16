@@ -1,4 +1,3 @@
-using System.Text.Json;
 using ModpackTools.Core;
 using ModpackTools.Core.Data;
 using ModpackTools.Core.Processes;
@@ -8,7 +7,7 @@ namespace ModpackTools.Cli;
 
 internal static class ProjectCreationCommand
 {
-    public static async Task RunAsync(string command, string[] arguments, string? requestedProject, string configurationDirectory, CancellationToken cancellation)
+    public static async Task RunAsync(string command, string[] arguments, string? requestedProject, string configurationDirectory, CancellationToken cancellation, bool includePresentation = false)
     {
         if (requestedProject is not null) throw new DomainException("Option.ForbiddenCombination", "Option '--project' is not valid for this operation", "modpack project create --help", target: requestedProject);
         string[] names = ["name", "minecraft", "loader", "path", "loader-version", "pack-version", "display-version"];
@@ -40,12 +39,11 @@ internal static class ProjectCreationCommand
         ProjectCreation.ValidateRequest(request);
         configurationDirectory = Path.GetFullPath(configurationDirectory);
         var root = ConfigurationReader.ReadRoot(configurationDirectory);
-        using var output = new NativeOutputBuffer("Project creation", "reduce creation arguments");
-        using (var writer = new Utf8JsonWriter(output)) JsonSerializer.Serialize(writer,
-            new EmptySuccessEnvelope(1, true, command, arguments, new()), WireJsonContext.Default.EmptySuccessEnvelope);
-        _ = await ProjectCreation.ExecuteAsync(root, request, new(false, null, "unresolved", null), Environment.ProcessPath!, cancellation: cancellation,
+        using var output = new ProjectCreationResponse(command, arguments, root, includePresentation);
+        var result = await ProjectCreation.ExecuteAsync(root, request, new(false, null, "unresolved", null), Environment.ProcessPath!, cancellation: cancellation,
+            prepareOutput: output.PrepareAsync,
             resolveTool: () => PackwizRefresh.Resolve(ConfigurationReader.ReadPackwizPath(configurationDirectory), Environment.GetEnvironmentVariable("PATH"),
                 Path.Combine(configurationDirectory, "tools", "packwiz", "dfd8b68", "packwiz.exe"), "dfd8b68")).ConfigureAwait(false);
-        Console.OpenStandardOutput().Write(output.GetBuffer(), 0, checked((int)output.Length)); Console.WriteLine();
+        output.Write(result);
     }
 }
