@@ -406,7 +406,7 @@ catch (Exception exception) when (exception is IOException or UnauthorizedAccess
 }
 
 var failure = FailureEnvelope.Create(command, commandArguments,
-    Failure.From("Core.CapabilityUnavailable", "This native host currently supports version, project list, project current, project use, project status, content list, content versions, content search and category list.", "InvalidOperation", null));
+    Failure.From("Command.Unknown", "Unknown command or operation. Try: modpack --help", "InvalidArgument", new TextTarget(command)));
 Console.WriteLine(JsonSerializer.Serialize(failure, WireJsonContext.Default.FailureEnvelope));
 return 1;
 

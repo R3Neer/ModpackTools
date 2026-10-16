@@ -1,5 +1,5 @@
 const MODULE_DIR = path self .
-const BRIDGE = ($MODULE_DIR | path join 'Invoke-ModpackBridge.ps1')
+const CORE = ($MODULE_DIR | path dirname | path join 'modpacktools.exe')
 use ./Native-Presentation.nu
 
 def field [value: any, name: string, default_value: any = null] {
@@ -46,72 +46,16 @@ def validate-nu-option-style [args: list<string>] {
     }
 }
 
-def invoke-bridge [request: string] {
-    # Keep stdin attached to the terminal so interactive confirmations inside the
-    # PowerShell engine can wait for an answer. The request and stdout use separate
-    # temporary files; explicit decoding preserves the external UTF-8 byte stream.
-    let request_path = ($nu.temp-dir | path join $'modpacktools-((random uuid)).request.json')
-    let capture_path = ($nu.temp-dir | path join $'modpacktools-((random uuid)).json')
-    $request | save --force $request_path
-    let stdout = try {
-        ^pwsh -NoLogo -NoProfile -File $BRIDGE -RequestPath $request_path o> $capture_path
-        if ($capture_path | path exists) {
-            let captured = (open --raw $capture_path)
-            if (($captured | describe) == 'binary') {
-                $captured | decode utf-8
-            } else {
-                $captured
-            }
-        } else {
-            ''
-        }
-    } catch {|err|
-        if ($request_path | path exists) { rm --force $request_path }
-        if ($capture_path | path exists) { rm --force $capture_path }
-        error make { msg: $'Could not run the ModpackTools bridge: ($err.msg)' }
+def native-executable [] {
+    let configured = ($env.MODPACKTOOLS_CORE_PATH? | default '')
+    if ($configured | describe) != 'string' {
+        error make {msg: 'MODPACKTOOLS_CORE_PATH must be a path string.'}
     }
-
-    if ($request_path | path exists) { rm --force $request_path }
-    if ($capture_path | path exists) { rm --force $capture_path }
-    $stdout
-}
-
-def owns-native-command [args: list<string>] {
-    let executable = ($env.MODPACKTOOLS_CORE_PATH? | default '')
-    if $executable == '' { return false }
-    if (command-tokens $args | is-empty) or ($args | any {|token| ($token | str lowercase) in ['--help' '-h'] }) {return true}
-    let command = ($args | get --optional 0 | default '')
-    if not (wants-machine-output $args) {
-        let name = ($command | str lowercase)
-        let operation = ($args | get --optional 1 | default '' | str lowercase)
-        if $name == '--version' or $command == '-V' {return true}
-        if $name == 'doctor' {return true}
-        if $name == 'project' {return ($operation in ['list' 'current' 'use' 'status' 'create' 'register'])}
-        if $name == 'content' {return ($operation in ['list' 'search' 'versions' 'remove' 'pin' 'unpin' 'add' 'update'])}
-        if $name == 'category' {return ($operation in ['list' 'create' 'assign' 'clear' 'remove'])}
-        if $name == 'mod' {return ($operation == 'set-side')}
-        if $name == 'resource-pack' {return ($operation in ['enable' 'move' 'disable'])}
-        if $name == 'config' {return ($operation in ['get' 'set'])}
-        return ($name in ['diff' 'build' 'self-update'])
+    let executable = if $configured == '' {$CORE} else {$configured}
+    if not ($executable | path exists) or ($executable | path type) != 'file' {
+        error make {msg: $'ModpackTools native executable is missing: ($executable). Reinstall a complete native package or correct MODPACKTOOLS_CORE_PATH.'}
     }
-    if $command in ['--version' '-V'] { return true }
-    let operation = ($args | get --optional 1 | default '')
-    if ($command | str lowercase) == 'doctor' {
-        return (not ($args | any {|token| ($token | str lowercase) in ['--help' '-h'] }))
-    }
-    if (($command | str lowercase) in ['content' 'category']) and (($operation | str lowercase) == 'list') {
-        return (not ($args | any {|token| $token in ['--help' '-h'] }))
-    }
-    if (($command | str lowercase) == 'content') and (($operation | str lowercase) in ['versions' 'search' 'add' 'update' 'pin' 'unpin' 'remove']) {
-        return (not ($args | any {|token| $token in ['--help' '-h'] }))
-    }
-    if ($command | str lowercase) in ['resource-pack' 'config' 'mod' 'build' 'diff' 'self-update'] {
-        return (not ($args | any {|token| $token in ['--help' '-h'] }))
-    }
-    if (($command | str lowercase) == 'category') and (($operation | str lowercase) in ['assign' 'clear' 'remove' 'create']) {
-        return (not ($args | any {|token| $token in ['--help' '-h'] }))
-    }
-    (($command | str lowercase) == 'project') and (($operation | str lowercase) in ['list' 'current' 'use' 'status' 'register' 'create']) and not ($args | any {|token| $token in ['--help' '-h'] })
+    $executable
 }
 
 def validate-string-fields [value: any, names: list<string>, nullable: bool = false] {
@@ -418,10 +362,7 @@ def invoke-native-command [requested_args: list<string>, review_token: any = nul
         '-h' => '--help'
         _ => $token
     }})
-    let executable = $env.MODPACKTOOLS_CORE_PATH
-    if not ($executable | path exists) {
-        error make { msg: 'The configured ModpackTools native executable does not exist.' }
-    }
+    let executable = (native-executable)
     let native_args = if '--json' in $args { $args } else { $args | append '--json' }
     let request_path = ($nu.temp-dir | path join $'modpacktools-((random uuid)).native.json')
     # The child inherits Nu's exported environment, including ENV_CONVERSIONS.
@@ -960,18 +901,18 @@ export def --env --wrapped main [...args: string] {
     validate-nu-option-style $args
     let args = (order-global-options $args)
     let machine_output = (wants-machine-output $args)
-    if not $machine_output and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'doctor') and ('--fix' in $args) and (not ($args | any {|token| $token in ['--help' '-h']})) {
+    if not $machine_output and (($args | get --optional 0 | default '' | str lowercase) == 'doctor') and ('--fix' in $args) and (not ($args | any {|token| $token in ['--help' '-h']})) {
         native-human-doctor-fix $args
         return
     }
-    let native_receipt = (not $machine_output) and (owns-native-command $args) and (is-transaction-receipt $args) and (not ($args | any {|token| $token in ['--help' '-h']}))
-    let native_category_create = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'category') and (($args | get --optional 1 | default '' | str lowercase) == 'create') and (not ($args | any {|token| $token in ['--help' '-h']}))
-    let native_config_set = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'config') and (($args | get --optional 1 | default '' | str lowercase) == 'set') and (not ($args | any {|token| $token in ['--help' '-h']}))
-    let native_project_create = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'project') and (($args | get --optional 1 | default '' | str lowercase) == 'create') and (not ($args | any {|token| $token in ['--help' '-h']}))
-    let native_project_register = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'project') and (($args | get --optional 1 | default '' | str lowercase) == 'register') and (not ($args | any {|token| $token in ['--help' '-h']}))
-    let native_self_update = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'self-update') and (not ($args | any {|token| $token in ['--help' '-h']}))
-    let native_build = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'build') and (not ($args | any {|token| $token in ['--help' '-h']}))
-    let native_removal = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'content') and (($args | get --optional 1 | default '' | str lowercase) == 'remove') and (not ($args | any {|token| $token in ['--help' '-h']}))
+    let native_receipt = (not $machine_output) and (is-transaction-receipt $args) and (not ($args | any {|token| $token in ['--help' '-h']}))
+    let native_category_create = (not $machine_output) and (($args | get --optional 0 | default '' | str lowercase) == 'category') and (($args | get --optional 1 | default '' | str lowercase) == 'create') and (not ($args | any {|token| $token in ['--help' '-h']}))
+    let native_config_set = (not $machine_output) and (($args | get --optional 0 | default '' | str lowercase) == 'config') and (($args | get --optional 1 | default '' | str lowercase) == 'set') and (not ($args | any {|token| $token in ['--help' '-h']}))
+    let native_project_create = (not $machine_output) and (($args | get --optional 0 | default '' | str lowercase) == 'project') and (($args | get --optional 1 | default '' | str lowercase) == 'create') and (not ($args | any {|token| $token in ['--help' '-h']}))
+    let native_project_register = (not $machine_output) and (($args | get --optional 0 | default '' | str lowercase) == 'project') and (($args | get --optional 1 | default '' | str lowercase) == 'register') and (not ($args | any {|token| $token in ['--help' '-h']}))
+    let native_self_update = (not $machine_output) and (($args | get --optional 0 | default '' | str lowercase) == 'self-update') and (not ($args | any {|token| $token in ['--help' '-h']}))
+    let native_build = (not $machine_output) and (($args | get --optional 0 | default '' | str lowercase) == 'build') and (not ($args | any {|token| $token in ['--help' '-h']}))
+    let native_removal = (not $machine_output) and (($args | get --optional 0 | default '' | str lowercase) == 'content') and (($args | get --optional 1 | default '' | str lowercase) == 'remove') and (not ($args | any {|token| $token in ['--help' '-h']}))
     # Even explicit --yes first validates and renders a nonmutating observation.
     let first_args = if $native_removal or ($native_self_update and '--check' not-in $args) {$args | where {|token| $token not-in ['--yes' '-y']}} else {$args}
     if $native_build {
@@ -981,15 +922,11 @@ export def --env --wrapped main [...args: string] {
     } else if $native_project_register {
         Native-Presentation progress $args ("Registering Packwiz project as '" + ($args | get --optional 2 | default '') + "'...")
     } else if $native_receipt or $native_category_create or $native_config_set or $native_self_update {Native-Presentation preflight $args}
-    let request = ({
-        arguments: $args
-        human_stderr_terminal: (is-terminal --stderr)
-    } | to json)
-    let raw = if (owns-native-command $args) { invoke-native-command $first_args } else { invoke-bridge $request }
+    let raw = (invoke-native-command $first_args)
     let text = ($raw | str trim)
 
     if $text == '' {
-        error make { msg: 'ModpackTools bridge returned no JSON data.' }
+        error make { msg: 'ModpackTools native executable returned no JSON data.' }
     }
 
     let envelope = try {
@@ -1043,7 +980,7 @@ export def --env --wrapped main [...args: string] {
         return
     }
     if ((field $envelope command '') == 'project') and (($envelope.arguments | get --optional 0 | default '') == 'use') {
-        if not $machine_output and (owns-native-command $args) {Native-Presentation render $envelope $args}
+        if not $machine_output {Native-Presentation render $envelope $args}
         let use_args = (field $envelope arguments [])
         if not ($use_args | any {|token| $token == '--help' }) {
             let active_project = (data-field (field $envelope data {}) active_project)
@@ -1066,5 +1003,5 @@ export def --env --wrapped main [...args: string] {
             let receipt = if $native_build {if ('--dry-run' in $envelope.arguments) {'The build dry-run completed without applying changes, but its presentation failed.'} else {'The build was published, but its presentation failed.'}} else if $native_project_register {'The project was registered, but its presentation failed.'} else if $native_project_create {'The project was created, but its presentation failed.'} else if $native_category_create {'The category was created, but its presentation failed.'} else if $native_config_set {'The configuration was saved, but its presentation failed.'} else if $envelope.data.transaction.applied {'The transaction was applied, but its presentation failed.'} else {'The transaction returned without applying changes, but its presentation failed.'}
             error make {msg: $'($receipt) ($err.msg)'}
         }
-    } else if (owns-native-command $args) {Native-Presentation render $envelope $args}
+    } else {Native-Presentation render $envelope $args}
 }
