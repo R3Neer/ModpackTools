@@ -38,3 +38,9 @@ White-box design review required the pre-effect scope/token guard, strict phase
 separation, coherent configuration/tool observation and independent publication
 truth above. Typed contracts, AOT execution and focused failure/success tests are
 required before this design is accepted as implemented.
+
+118 implements the native backend; capability-118-reviewed-doctor.md records actual
+AOT acceptance. Token mismatch category is ResourceBusy, reflecting obsolete
+state/policy; no historical change to removal108 category. Project scope preserves
+config.psd1 settings while existing diagnostic/build-health caches remain allowed.
+Nu interactive phase orchestration remains119, not accepted by118.
