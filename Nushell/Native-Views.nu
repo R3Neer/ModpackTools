@@ -147,8 +147,30 @@ def build-view [ui: record, envelope: record] {
     for item in ($data | get --optional diagnostics | default []) {r3cli status $ui warning $'($item.code): ($item.path) · ($item.message)'}
 }
 
+export def repair [ui: record, envelope: record] {
+    let receipt = $envelope.data.doctor.repair
+    if $receipt.packwiz_installed {r3cli status $ui success ('Verified Packwiz installed: ' + $receipt.packwiz_path)}
+    if $receipt.configuration_updated {r3cli status $ui success 'Packwiz was saved as the ModpackTools executable without changing PATH.'}
+    if (field (field $envelope presentation {}) kind '') == 'doctor-repair' {
+        if not $receipt.project_applied {
+            for item in $envelope.presentation.items {r3cli status $ui info ($item.name + ': ' + $item.previous + ' -> ' + $item.next + ' (' + $item.reason + ')')}
+            for item in $envelope.presentation.health_items {r3cli status $ui (if $item.status == 'fail' {'error'} else if $item.status == 'warn' {'warning'} else {'info'}) $item.text}
+        }
+        if $receipt.change_count == 0 {r3cli status $ui success 'No repairable project changes are required.'} else {
+            let transaction = {applied: $receipt.project_applied, dry_run: $receipt.dry_run, preview: $receipt.preview, change_count: $receipt.change_count, changes: ($receipt.changes | each {|item| {action: $item.kind, path: $item.path}})}
+            transaction-summary $ui $transaction
+        }
+    }
+    for item in $receipt.diagnostics {
+        r3cli status $ui warning $'($item.code): ($item.path) · ($item.message)'
+        if $item.retained_evidence {r3cli status $ui warning ('Retained recovery evidence: ' + $item.path)}
+    }
+    if $receipt.diagnostics_omitted > 0 {r3cli status $ui warning (($receipt.diagnostics_omitted | into string) + ' additional repair diagnostics; inspect native recovery state.')}
+}
+
 export def render [ui: record, envelope: record] {
     let data = $envelope.data
+    if ($envelope.command | str lowercase) == 'doctor-repair' {repair $ui $envelope; return}
     if ($envelope.command | str lowercase) == 'build' {build-view $ui $envelope; return}
     let operation = ($envelope.arguments | get --optional 0 | default '' | str lowercase)
     if ($envelope.command | str lowercase) == 'resource-pack' {

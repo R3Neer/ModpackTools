@@ -82,6 +82,8 @@ try {
     if($LASTEXITCODE -ne 0){throw 'Native Nu doctor repair check failed'}
     & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuHelp.nu') ([IO.Path]::GetFullPath($StubExecutable))
     if($LASTEXITCODE -ne 0){throw 'Native Nu help check failed'}
+    & $NuExecutable --no-config-file (Join-Path $PSScriptRoot 'Test-NativeNuDoctorFailure.nu') ([IO.Path]::GetFullPath($StubExecutable))
+    if($LASTEXITCODE -ne 0){throw 'Native Nu doctor retained-evidence failure check failed'}
 } finally {
     $env:MODPACKTOOLS_CORE_PATH=$previousCore; $env:MODPACKTOOLS_CONFIG_HOME=$previousConfig; $env:MODPACKTOOLS_STATE_HOME=$previousState
     $env:APPDATA=$previousAppData; $env:LOCALAPPDATA=$previousLocalAppData

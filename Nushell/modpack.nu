@@ -85,7 +85,7 @@ def owns-native-command [args: list<string>] {
         let name = ($command | str lowercase)
         let operation = ($args | get --optional 1 | default '' | str lowercase)
         if $name == '--version' or $command == '-V' {return true}
-        if $name == 'doctor' {return (not ($args | any {|token| ($token | str lowercase) == '--fix' or ($token | str lowercase | str starts-with '--fix=') }))}
+        if $name == 'doctor' {return true}
         if $name == 'project' {return ($operation in ['list' 'current' 'use' 'status' 'create' 'register'])}
         if $name == 'content' {return ($operation in ['list' 'search' 'versions' 'remove' 'pin' 'unpin' 'add' 'update'])}
         if $name == 'category' {return ($operation in ['list' 'create' 'assign' 'clear' 'remove'])}
@@ -154,10 +154,10 @@ def order-global-options [args: list<string>] {
     $domain | append $global
 }
 
-def validate-read-presentation [result: record, args: list<string>] {
+def validate-read-presentation [result: record, args: list<string>, doctor_scope: any = null] {
     let command = ($args.0 | str lowercase)
     let operation = ($args | get --optional 1 | default '' | str lowercase)
-    let expected = if $command == 'content' and $operation == 'list' {'inventory'} else if $command == 'content' and $operation == 'remove' {'removal'} else if $command == 'config' and $operation in ['get' 'set'] {'configuration'} else if $command == 'project' and $operation == 'use' {'session'} else if $command == 'project' and $operation == 'create' {'project-creation'} else if $command == 'project' and $operation == 'register' {'project-registration'} else if $command == 'content' and $operation in ['add' 'update'] {'content-plan'} else if $command == 'build' {'build'} else if $command == 'diff' {'diff'} else {null}
+    let expected = if $command == 'doctor' and $doctor_scope == 'project' {'doctor-repair'} else if $command == 'content' and $operation == 'list' {'inventory'} else if $command == 'content' and $operation == 'remove' {'removal'} else if $command == 'config' and $operation in ['get' 'set'] {'configuration'} else if $command == 'project' and $operation == 'use' {'session'} else if $command == 'project' and $operation == 'create' {'project-creation'} else if $command == 'project' and $operation == 'register' {'project-registration'} else if $command == 'content' and $operation in ['add' 'update'] {'content-plan'} else if $command == 'build' {'build'} else if $command == 'diff' {'diff'} else {null}
     let presentation = (field $result presentation null)
     if '--no-human' in $args or $expected == null {
         if $presentation != null {error make {msg: 'Native executable returned unrequested presentation.'}}
@@ -181,7 +181,11 @@ def validate-read-presentation [result: record, args: list<string>] {
                 for diagnostic in $presentation.diagnostics {validate-string-fields $diagnostic ['code' 'path' 'message']}
             }
         }
-        'content-plan' => {
+        'content-plan' | 'doctor-repair' => {
+            if $expected == 'doctor-repair' {
+                validate-string-fields $presentation ['review_token']
+                if $presentation.review_token !~ '^[0-9a-fA-F]{64}$' {error make {msg: 'Native doctor repair returned an invalid review identifier.'}}
+            }
             for name in ['items' 'health_items'] {if ((field $presentation $name null | describe) !~ '^(list|table)') {error make {msg: 'Native content plan returned invalid lists.'}}}
             for item in $presentation.items {
                 validate-string-fields $item ['id' 'name' 'previous' 'next' 'reason']
@@ -387,7 +391,7 @@ def validate-native-transaction [result: record, args: list<string>] {
     }
 }
 
-def invoke-native-command [requested_args: list<string>, review_token: any = null] {
+def invoke-native-command [requested_args: list<string>, review_token: any = null, doctor_scope: any = null] {
     let args = ($requested_args | each {|token| match $token {
         '-n' => '--dry-run'
         '-y' => '--yes'
@@ -403,7 +407,7 @@ def invoke-native-command [requested_args: list<string>, review_token: any = nul
     let request_path = ($nu.temp-dir | path join $'modpacktools-((random uuid)).native.json')
     # The child inherits Nu's exported environment, including ENV_CONVERSIONS.
     # A raw JSON snapshot would bypass those conversions for session values.
-    let request = ({schema_version: 1, arguments: $native_args} | merge (if $review_token == null {{}} else {{review_token: $review_token}}))
+    let request = ({schema_version: 1, arguments: $native_args} | merge (if $review_token == null {{}} else {{review_token: $review_token}}) | merge (if $doctor_scope == null {{}} else {{doctor_scope: $doctor_scope}}))
     $request | to json | save --force $request_path
     let capture = try {
         ^$executable --request-path $request_path | complete
@@ -432,7 +436,7 @@ def invoke-native-command [requested_args: list<string>, review_token: any = nul
             error make { msg: 'ModpackTools native executable returned contradictory success fields.' }
         }
         let help_request = ((command-tokens $args | is-empty) or ('--help' in ($args | each {|token| $token | str lowercase})))
-        if not $help_request {validate-read-presentation $result $args}
+        if not $help_request {validate-read-presentation $result $args $doctor_scope}
         if $help_request {
             validate-native-help $result $args
         } else if ($args | get 0) in ['--version' '-V'] {
@@ -823,10 +827,118 @@ def is-transaction-receipt [args: list<string>] {
     ($command == 'category' and $operation in ['assign' 'clear' 'remove']) or ($command == 'mod' and $operation == 'set-side') or ($command == 'content' and $operation in ['pin' 'unpin' 'add' 'update']) or ($command == 'resource-pack' and $operation in ['enable' 'move' 'disable'])
 }
 
+def confirm-doctor [args: list<string>, prompt: string] {
+    if not (is-terminal --stdin) {return false}
+    Native-Presentation render {command: doctor, data: {}} $args ($prompt + ' [Y/n]')
+    let answer = (try {input --reedline} catch {null})
+    $answer != null and (($answer | str trim | str lowercase) in ['' 'y' 'yes'])
+}
+
+def render-doctor-result [envelope: record, args: list<string>, view: string = 'doctor'] {
+    try {Native-Presentation render ($envelope | update command $view) $args} catch {|err|
+        let applied = (field (field (field (field $envelope data {}) doctor {}) repair {}) applied false)
+        let receipt = if $applied {'Doctor repair applied changes, but its presentation failed.'} else {'Doctor repair returned without applying changes, but its presentation failed.'}
+        error make {msg: $'($receipt) ($err.msg)'}
+    }
+}
+
+def assert-doctor-success [envelope: record] {
+    if (field $envelope ok false) {return}
+    let failure = (field $envelope error {})
+    let target = (field $failure target null)
+    if ($target | describe) == 'string' and $target != '' {
+        assert-success ($envelope | update error.message ((field $failure message 'Doctor repair failed.') + "\nTarget: " + $target))
+    } else {assert-success $envelope}
+}
+
+def native-human-doctor-fix [args: list<string>] {
+    Native-Presentation preflight $args
+    let explicit = ($args | any {|token| $token in ['--yes' '-y']})
+    let dry = ($args | any {|token| $token in ['--dry-run' '-n']})
+    let preview_args = ($args | where {|token| $token not-in ['--yes' '-y']})
+    let environment_args = ($preview_args | where {|token| $token not-in ['--dry-run' '-n']})
+    let report_args = ($preview_args | where {|token| $token not-in ['--fix' '--dry-run' '-n']})
+    if $dry {Native-Presentation render {command: doctor, data: {}} $args 'Dry run: environment and configuration changes will not be applied.'}
+    let environment = (invoke-native-command $environment_args null environment | from json)
+    assert-doctor-success $environment
+    mut tool_ready = ($environment.data.doctor.checks | any {|check| $check.section == 'PACKWIZ' and $check.label == 'Executable' and $check.status == 'pass'})
+    if not $tool_ready and not $dry {
+        let approved = $explicit or (confirm-doctor $args 'Install the verified Packwiz build recommended for this ModpackTools release?')
+        if $approved {
+            let installed = (invoke-native-command ($environment_args | append '--yes') null environment | from json)
+            assert-doctor-success $installed
+            render-doctor-result $installed $args doctor-repair
+            if not ($installed.data.doctor.repair.diagnostics | is-empty) {
+                Native-Presentation render $installed $args 'Repair stopped after the environment phase; inspect its diagnostics and retained evidence before continuing.'
+                return
+            }
+            $tool_ready = ($installed.data.doctor.checks | any {|check| $check.section == 'PACKWIZ' and $check.label == 'Executable' and $check.status == 'pass'})
+        }
+    }
+    let root = (invoke-native-command ['config' 'get' 'root' '--no-human'] | from json)
+    if not $root.ok {
+        if $root.error.id not-in ['ModpackTools.Configuration.MissingRoot' 'ModpackTools.Configuration.RootNotFound'] {assert-doctor-success $root}
+        let configure = (not $explicit) and (not $dry) and (confirm-doctor $args 'Configure the modpack project root now?')
+        if $configure {
+            Native-Presentation render $environment $args 'Project root directory:'
+            let directory = (try {input --reedline} catch {null})
+            if $directory != null and ($directory | str trim) != '' {
+                let saved = (invoke-native-command ['config' 'set' 'root' $directory] | from json)
+                assert-doctor-success $saved
+                Native-Presentation render $saved $args
+            } else {
+                Native-Presentation render $environment $args 'Project root configuration cancelled.'
+                let report = (invoke-native-command $report_args | from json)
+                assert-doctor-success $report
+                render-doctor-result $report $args doctor-report
+                return
+            }
+        } else {
+            let report = (invoke-native-command $report_args | from json)
+            assert-doctor-success $report
+            render-doctor-result $report $args doctor-report
+            return
+        }
+    }
+    if not $tool_ready {
+        let report = (invoke-native-command $report_args | from json)
+        assert-doctor-success $report
+        render-doctor-result $report $args doctor-report
+        Native-Presentation render $report $args 'Packwiz is unavailable; no project repair was applied. Run doctor --fix --yes or retry interactively to install the verified build.'
+        return
+    }
+    let preview = (invoke-native-command $preview_args null project | from json)
+    if not $preview.ok and $preview.error.id in ['ModpackTools.Project.NotSelected' 'ModpackTools.Project.NotFound' 'ModpackTools.Project.Ambiguous'] {
+        let report = (invoke-native-command $report_args | from json)
+        assert-doctor-success $report
+        render-doctor-result $report $args doctor-report
+        return
+    }
+    assert-doctor-success $preview
+    render-doctor-result $preview $args doctor-repair
+    if $dry or $preview.data.doctor.repair.change_count == 0 {
+        render-doctor-result $preview $args doctor-report
+        return
+    }
+    let approved = $explicit or (confirm-doctor $args 'Apply the project repair?')
+    if not $approved {
+        Native-Presentation render $preview $args 'Project repair cancelled; no project changes applied.'
+        render-doctor-result $preview $args doctor-report
+        return
+    }
+    let applied = (invoke-native-command ($preview_args | append '--yes') $preview.presentation.review_token project | from json)
+    assert-doctor-success $applied
+    render-doctor-result $applied $args
+}
+
 export def --env --wrapped main [...args: string] {
     validate-nu-option-style $args
     let args = (order-global-options $args)
     let machine_output = (wants-machine-output $args)
+    if not $machine_output and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'doctor') and ('--fix' in $args) and (not ($args | any {|token| $token in ['--help' '-h']})) {
+        native-human-doctor-fix $args
+        return
+    }
     let native_receipt = (not $machine_output) and (owns-native-command $args) and (is-transaction-receipt $args) and (not ($args | any {|token| $token in ['--help' '-h']}))
     let native_category_create = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'category') and (($args | get --optional 1 | default '' | str lowercase) == 'create') and (not ($args | any {|token| $token in ['--help' '-h']}))
     let native_config_set = (not $machine_output) and (owns-native-command $args) and (($args | get --optional 0 | default '' | str lowercase) == 'config') and (($args | get --optional 1 | default '' | str lowercase) == 'set') and (not ($args | any {|token| $token in ['--help' '-h']}))

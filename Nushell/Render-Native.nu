@@ -27,11 +27,12 @@ def main [request_path: string] {
         r3cli help $ui $request.envelope.presentation.help $request.envelope.presentation.topic
         return
     }
-    if ($request.envelope.command | str lowercase) != 'doctor' {
+    if ($request.envelope.command | str lowercase) not-in ['doctor' 'doctor-report'] {
         Native-Views render $ui $request.envelope
         return
     }
     let doctor = $request.envelope.data.doctor
+    if $request.envelope.command == 'doctor' and 'repair' in ($doctor | columns) {Native-Views repair $ui $request.envelope}
     for section in ['SYSTEM' 'PACKWIZ' 'PROJECT ROOT' 'PROJECT' 'BUILD ARTIFACT' 'OPTIONAL'] {
         let checks = ($doctor.checks | where section == $section)
         if ($checks | is-empty) {continue}
