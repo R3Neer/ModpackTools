@@ -1,5 +1,14 @@
 # Complete-branch integration readiness
 
+## Migration acceptance and local integration authorization
+
+On 2026-10-16 the user confirmed that the migration to D works and has passed
+technical and manual tests. This closes Gate A on the user's acceptance evidence;
+it is not a claim that the implementer independently reran the final personal
+profile checks. The user then requested proceeding to local complete-branch
+integration and discussing push/release. Local merge is authorized; push, tag,
+publication and the proposed release version remain pending.
+
 ## Scope and authority
 
 The user clarified that migration documents were to stay out of `main` until the
