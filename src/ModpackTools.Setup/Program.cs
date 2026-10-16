@@ -30,7 +30,7 @@ try
             {
                 var start = new ProcessStartInfo(Path.Combine(pin.Directory, "modpacktools-setup.exe")) { UseShellExecute = false };
                 foreach (var argument in args) start.ArgumentList.Add(argument);
-                using var child = Process.Start(start) ?? throw new IOException("Versioned native setup could not start");
+                using var child = WindowsProcess.StartNew(start);
                 await child.WaitForExitAsync().ConfigureAwait(false); return child.ExitCode;
             }
         }

@@ -1,5 +1,6 @@
 param([Parameter(Mandatory)][string]$Executable,[Parameter(Mandatory)][string]$NuExecutable,[Parameter(Mandatory)][string]$PackwizExecutable,[Parameter(Mandatory)][string]$StubExecutable)
 $ErrorActionPreference='Stop'
+$expectedVersion=[string](Import-PowerShellDataFile (Join-Path $PSScriptRoot '../../ModpackTools.psd1')).ModuleVersion
 . (Join-Path $PSScriptRoot 'NativeProcess.ps1')
 $sourceRoot=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $temporaryBase=[IO.Path]::GetFullPath([IO.Path]::GetTempPath())
@@ -55,7 +56,7 @@ def main [packwiz: string, projects: string, jar: string, stub: string] {
 '@)
     $capture=Invoke-NativeTestProcess $NuExecutable @('--no-config-file',$driver,([IO.Path]::GetFullPath($PackwizExecutable)),$projects,$jar,([IO.Path]::GetFullPath($StubExecutable))) -TimeoutMilliseconds 120000
     if($capture.Exit -ne 0 -or $capture.Stdout.Trim() -cne 'Native human read views passed' -or $capture.Stderr.Contains([char]27)){throw "Native human read views failed: $($capture.Stdout) $($capture.Stderr)"}
-    foreach($text in @('Native UI Pack','UI Local Mod','UNCLASSIFIED','CLASSIFICATIONS','No differences from the latest build.','ModpackTools 4.0.2','Search UI Result','Fixture Author','12345','Version UI Item','LATEST','fixture-version')){if(-not $capture.Stderr.Contains($text)){throw ('Missing native human view information: '+$text)}}
+    foreach($text in @('Native UI Pack','UI Local Mod','UNCLASSIFIED','CLASSIFICATIONS','No differences from the latest build.',"ModpackTools $expectedVersion",'Search UI Result','Fixture Author','12345','Version UI Item','LATEST','fixture-version')){if(-not $capture.Stderr.Contains($text)){throw ('Missing native human view information: '+$text)}}
     if($capture.Stderr -notmatch 'source\s+configured'){throw 'Human config did not show the executable discovery source'}
     'Bridge-free native human read views passed with empty PATH and preserved project bytes'
 } finally {

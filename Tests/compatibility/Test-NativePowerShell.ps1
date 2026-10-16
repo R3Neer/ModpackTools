@@ -1,5 +1,6 @@
 param([Parameter(Mandatory)][string]$Executable)
 $ErrorActionPreference = 'Stop'
+$expectedVersion=[string](Import-PowerShellDataFile (Join-Path $PSScriptRoot '../../ModpackTools.psd1')).ModuleVersion
 $previous = $env:MODPACKTOOLS_CORE_PATH
 try {
     $env:MODPACKTOOLS_CORE_PATH = $Executable
@@ -9,7 +10,7 @@ try {
     & $module { function script:Initialize-MpConsole { throw 'Renderer must not be initialized' } }
     foreach ($alias in @('--version','-V','--VERSION')) {
         $raw = @(modpack $alias --json --no-human)
-        if ($raw.Count -ne 1 -or ($raw[0] | ConvertFrom-Json).data.version.version -cne '4.0.2') { throw 'Native PS version mismatch' }
+        if ($raw.Count -ne 1 -or ($raw[0] | ConvertFrom-Json).data.version.version -cne $expectedVersion) { throw 'Native PS version mismatch' }
     }
     $output = [Collections.Generic.List[string]]::new()
     try { modpack --version extra --json --no-human | ForEach-Object { $output.Add($_) }; throw 'Domain failure not thrown' }

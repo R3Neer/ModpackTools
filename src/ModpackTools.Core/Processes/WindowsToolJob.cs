@@ -17,7 +17,7 @@ internal sealed partial class WindowsToolJob : IDisposable
         if (SetInformationJobObject(handle, 9, in information, (uint)sizeof(ExtendedLimits)) == 0)
         { handle.Dispose(); throw Failure("Tool job limits could not be set"); }
     }
-    public void Assign(Process process)
+    public void Assign(WindowsProcess process)
     { if (AssignProcessToJobObject(handle, process.SafeHandle) == 0) throw Failure("Waiting tool helper could not be assigned to its job"); }
     public void Terminate()
     { if (TerminateJobObject(handle, 1) == 0) throw Failure("Owned tool job could not be terminated"); }

@@ -1,5 +1,6 @@
 param([Parameter(Mandatory)][string]$Inspector,[Parameter(Mandatory)][string]$Launcher,[Parameter(Mandatory)][string]$NativeExecutable,[Parameter(Mandatory)][string]$NuExecutable)
 $ErrorActionPreference='Stop'
+$expectedVersion=[string](Import-PowerShellDataFile (Join-Path $PSScriptRoot '../../ModpackTools.psd1')).ModuleVersion
 . (Join-Path $PSScriptRoot 'NativeProcess.ps1')
 $inspectorPath=[IO.Path]::GetFullPath($Inspector);$launcherPath=[IO.Path]::GetFullPath($Launcher)
 $payload=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
@@ -34,9 +35,9 @@ try {
     $protocol=Invoke-NativeTestProcess $launcherPath @('--launcher-protocol')
     if($protocol.Exit -ne 0 -or $protocol.Stdout.Trim() -cne '1' -or $protocol.Stderr){throw 'Launcher protocol mismatch'}
     $machine=Invoke-NativeTestProcess $stable @('--version','--no-human')
-    if($machine.Exit -ne 0 -or $machine.Stderr -or ($machine.Stdout|ConvertFrom-Json).data.version.version -cne '4.0.2'){throw "Stable machine launcher failed without PATH: $($machine|ConvertTo-Json -Compress)"}
+    if($machine.Exit -ne 0 -or $machine.Stderr -or ($machine.Stdout|ConvertFrom-Json).data.version.version -cne $expectedVersion){throw "Stable machine launcher failed without PATH: $($machine|ConvertTo-Json -Compress)"}
     $human=Invoke-NativeTestProcess $stable @('--version') -TimeoutMilliseconds 60000 -CloseInput
-    if($human.Exit -ne 0 -or ($human.Stderr+$human.Stdout) -notmatch '4\.0\.2' -or ($human.Stderr+$human.Stdout).Contains([string][char]27)){throw "Stable human launcher failed without PowerShell: $($human.Stdout) $($human.Stderr)"}
+    if($human.Exit -ne 0 -or ($human.Stderr+$human.Stdout) -notmatch [regex]::Escape($expectedVersion) -or ($human.Stderr+$human.Stdout).Contains([string][char]27)){throw "Stable human launcher failed without PowerShell: $($human.Stdout) $($human.Stderr)"}
     $occupied=Invoke-InstallationFixture @{ArchivePath=$fixture.ArchivePath;ArchiveSha256=$fixture.ArchiveSha256;StagingParent=(Join-Path $run 'prepared');InitializeInstallation=$app;NuExecutable=[IO.Path]::GetFullPath($NuExecutable)}
     if($occupied.Exit -ne 1 -or $occupied.Result.Id -ne 'ModpackTools.Installation.RootOccupied' -or (Get-Content -LiteralPath (Join-Path $app 'installation.json') -Raw|ConvertFrom-Json).root.file_identity -notmatch '^[0-9a-f]{48}$'){throw 'Existing managed root was adopted or damaged'}
     [IO.File]::AppendAllText((Join-Path $installed.Directory 'cli.nu'),'foreign edit')

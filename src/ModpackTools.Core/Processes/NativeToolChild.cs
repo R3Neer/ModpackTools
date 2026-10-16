@@ -22,7 +22,10 @@ public static class NativeToolChild
             result = await Execute(executable, arguments, directory, maximum).ConfigureAwait(false);
         }
         catch (Exception error) when (error is DomainException or IOException or UnauthorizedAccessException or JsonException or ArgumentException or InvalidOperationException or KeyNotFoundException)
-        { result = new(null, "", "", error is DomainException domain ? domain.Id : "ModpackTools.Build.InvalidHelperRequest", error.Message); }
+        { result = new(null, "", "", error is DomainException domain ? domain.Id : "ModpackTools.Build.InvalidHelperRequest",
+            error is DomainException detail ? detail.Message + "; Try: " + detail.Hint
+                + (detail.Target is TextTarget target ? "; Target: " + target.Value : "")
+                + (detail.Details is null ? "" : "; Details: " + detail.Details) : error.Message); }
         using var output = new Utf8JsonWriter(Console.OpenStandardOutput());
         output.WriteStartObject();
         if (result.ExitCode is { } code) output.WriteNumber("ExitCode", code); else output.WriteNull("ExitCode");
@@ -43,7 +46,7 @@ public static class NativeToolChild
             RedirectStandardInput = true
         };
         foreach (var argument in arguments) start.ArgumentList.Add(argument);
-        using var process = new Process { StartInfo = start };
+        using var process = new WindowsProcess { StartInfo = start };
         try { if (!process.Start()) return new(null, "", "", "ModpackTools.Build.ProcessStartFailed", "Tool did not start"); }
         catch (Exception error) when (error is System.ComponentModel.Win32Exception or IOException or InvalidOperationException)
         { return new(null, "", "", "ModpackTools.Build.ProcessStartFailed", error.Message); }

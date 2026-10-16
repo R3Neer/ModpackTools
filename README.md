@@ -13,8 +13,8 @@ incomplete verification must block an operation.
 
 Use a trusted native package named `ModpackTools-Native-win-x64-X.Y.Z.zip` and its
 independently trusted SHA256. A release containing only a legacy module ZIP cannot
-be installed or updated through the native installer. Native assets may not yet
-be available on the public release channel.
+be installed or updated through the native installer. Download the package and
+`SHA256SUMS` from the [releases page](https://github.com/R3Neer/ModpackTools/releases).
 
 In Nu, verify the downloaded archive before extracting or executing it:
 
@@ -51,6 +51,14 @@ Packwiz is needed for creation, refresh and export. Configure an existing execut
 with `modpack config set packwiz <path>`, or review `modpack doctor --fix` to obtain
 the pinned hash-verified Windows build. R3CLI's Nu presentation is bundled.
 Git and a local Minecraft installation are optional integrations.
+
+Executable paths may exceed the traditional Windows path limit. External tools
+also have a Windows working-directory limit: ModpackTools uses an existing 8.3
+short name only after checking that it identifies the same physical directory.
+It does not create aliases or change Windows settings. If no usable short name
+exists, the error identifies the directory; select a shorter
+`MODPACKTOOLS_STATE_HOME` before retrying. Preserve and resolve any pending
+transaction/recovery state before changing that location.
 
 ## Updates and rollback
 

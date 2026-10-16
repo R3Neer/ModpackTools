@@ -4,7 +4,7 @@ public sealed record VersionInfo(string Version);
 
 public static class ProductVersion
 {
-    public static VersionInfo Current { get; } = new("4.0.2");
+    public static VersionInfo Current { get; } = new("5.0.0");
 
     public static VersionInfo Read(string[] arguments, string? project)
     {

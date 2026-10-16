@@ -39,9 +39,15 @@ internal static class BuildCommand
             configurationDirectory, Path.GetFullPath(state), DateTimeOffset.UtcNow, ResolveTool, Environment.ProcessPath!, cancellation: cancellation, prepareOutput: output.PrepareAsync).ConfigureAwait(false);
         if (switches.Contains("open") && !dryRun)
         {
-            try { using var process = Process.Start(new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe")) { UseShellExecute = false, ArgumentList = { "/select," + result.Result.Path } }); }
-            catch (Exception error) when (error is System.ComponentModel.Win32Exception or IOException or InvalidOperationException)
-            { result = result with { Diagnostics = result.Diagnostics.Add(new TransactionDiagnostic("Build.OpenFailed", result.Result.Path, error.Message)) }; }
+            try { using var process = ModpackTools.Core.Processes.WindowsProcess.StartNew(new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe")) { UseShellExecute = false, ArgumentList = { "/select," + result.Result.Path } }); }
+            catch (Exception error) when (error is System.ComponentModel.Win32Exception or IOException or InvalidOperationException or DomainException)
+            {
+                result = result with
+                {
+                    Diagnostics = result.Diagnostics.Add(new TransactionDiagnostic("Build.OpenFailed", result.Result.Path,
+                error is DomainException domain ? domain.Id + ": " + domain.Message + "; " + domain.Details : error.Message))
+                };
+            }
         }
         output.Write(result);
         PackwizObservation ResolveTool() => PackwizRefresh.Resolve(ConfigurationReader.ReadPackwizPath(configurationDirectory), Environment.GetEnvironmentVariable("PATH"),
