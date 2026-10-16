@@ -1,4 +1,27 @@
-# Entrega nativa y activación pendiente
+# Entrega nativa y registro de activación
+
+## Actualización: activación ejecutada el16-oct-2026
+
+El usuario autorizó instalar y configurar Nu. Ya está instalada la imagen de este
+documento en `D:\Juegos\Minecraft\Herramientas\ModpackTools-App` y el bloque Nu
+real importa su control. El resto del documento conserva el plan/estado previo
+como registro histórico; sus referencias a activación pendiente quedan superadas.
+
+Respaldo con hashes y restauración verificada en
+`D:\Backup\Previos\ModpackTools-Native-20261016-Activacion-01`. Sólo cambió la línea
+del import Nu; configuración/cache anterior473 archivos y módulo legacy67 archivos
+mantienen hashes. Env.nu, scripts, Helix, Show-Tree y registro de plugins conservados.
+No se cambió PATH ni se retiró legacy. Se añadió sólo el estado normal del instalador.
+
+Pasan Nu nuevo con configuración real, versión/ayuda/catálogo (vp26), resolución D,
+comandos con PATH vacío, launcher estable y self-update del mismo paquete. Un nuevo
+proyecto aislado pasa clasificación/doctor/build/diff con Packwiz real: MRPack3917
+bytes, seis entradas/overrides verificados, diff0 y dry-run sin cambios.
+Evidencia `assessment/native-activation-20261016/`. Registro operativo separado:
+`09-Logs/2026-10-16/ActivacionModpackToolsNativo.md` en la reorganización.
+
+No push/publicación/merge. Abrir una sesión Nu nueva para cargar el import activo;
+no se han cerrado sesiones ajenas. Retirada legacy queda fuera de esta activación.
 
 Fecha: 2026-10-16. Este documento sustituye como procedimiento vigente las rutas
 previas a la reorganización; no vuelve a autorizar ni ejecutar un traslado.
