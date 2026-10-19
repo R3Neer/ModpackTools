@@ -26,7 +26,7 @@ jobs:
           global-json-file: global.json
       - uses: hustcer/setup-nu@v3
         with:
-          version: '0.116.2'
+          version: '0.116.1'
       - name: Restore locked dependencies and publish native executables
         shell: pwsh
         run: |
