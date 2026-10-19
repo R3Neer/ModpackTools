@@ -1,6 +1,6 @@
 # Nushell usage
 
-Requires Nushell 0.116.2 or newer and a complete native Windows x64 package.
+Requires Nushell 0.116.1 or newer and a complete native Windows x64 package.
 Use the native setup executable with an explicit application root, Nu executable,
 archive and trusted SHA256; see the README. It does not edit profiles or plugins.
 

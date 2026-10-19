@@ -2,7 +2,7 @@
 
 ModpackTools manages Minecraft Java modpacks built with Packwiz on Windows x64.
 The executable is compiled with C# Native AOT. PowerShell and the .NET runtime are
-not required. Nushell 0.116.2 or newer provides the human interface and structured
+not required. Nushell 0.116.1 or newer provides the human interface and structured
 pipeline values. The machine executable can run without Nushell.
 
 Dependency checks inspect declared metadata; they do not launch Minecraft or prove

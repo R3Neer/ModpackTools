@@ -54,8 +54,8 @@ internal static class NativeInstallationSmoke
     {
         WindowsProjectIdentity.GuardAncestors(nu);
         var nuVersion = await NativeTool.RunAsync(nu, ["--version"], directory, host, new(10000, 65536), cancellation).ConfigureAwait(false);
-        if (!Version.TryParse(nuVersion.Stdout.Trim(), out var parsed) || parsed < new Version(0, 116, 2))
-            throw Error("NuUnsupported", "Native integration requires Nushell 0.116.2 or newer", nu);
+        if (!Version.TryParse(nuVersion.Stdout.Trim(), out var parsed) || parsed < new Version(0, 116, 1))
+            throw Error("NuUnsupported", "Native integration requires Nushell 0.116.1 or newer", nu);
         var root = Path.Combine(Path.GetTempPath(), ".modpacktools-smoke-" + Guid.NewGuid().ToString("N"));
         WindowsProjectIdentity.GuardAncestors(root);
         if (!WindowsDirectoryReservation.TryCreate(root)) throw Error("SmokeStageCreateFailed", "Private smoke configuration could not be reserved", root);
